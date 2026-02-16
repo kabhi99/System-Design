@@ -367,7 +367,7 @@ COST COMPARISON (AWS):
 |                                                                         |
 |  WITHOUT INGRESS:                                                      |
 |  -----------------                                                     |
-|  10 LoadBalancer services × $18/month = $180/month                    |
+|  10 LoadBalancer services x $18/month = $180/month                    |
 |                                         = $2,160/year                  |
 |                                                                         |
 |  WITH INGRESS:                                                         |
@@ -381,10 +381,10 @@ COST COMPARISON (AWS):
 |                                                                         |
 |  50 MICROSERVICES SCENARIO                                             |
 |                                                                         |
-|  WITHOUT INGRESS: 50 × $18 = $900/month = $10,800/year               |
-|  WITH INGRESS:    1 × $18 = $18/month  = $216/year                   |
+|  WITHOUT INGRESS: 50 x $18 = $900/month = $10,800/year               |
+|  WITH INGRESS:    1 x $18 = $18/month  = $216/year                   |
 |                                                                         |
-|  SAVINGS: $10,584/year! 💰                                            |
+|  SAVINGS: $10,584/year!                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -601,7 +601,7 @@ spec:
                 port:
                   number: 80
 
-⚠️  ORDER MATTERS! Most specific paths should come FIRST.
+  ORDER MATTERS! Most specific paths should come FIRST.
     /api matches before / because it's more specific.
 
 USE WHEN:

@@ -52,7 +52,7 @@ CMD ["npm", "start"]
 
 ## SECTION 3.2: DOCKERFILE INSTRUCTIONS REFERENCE
 
-### FROM — THE BASE IMAGE
+### FROM - THE BASE IMAGE
 
 Every Dockerfile must start with FROM (except ARG before it):
 
@@ -92,7 +92,7 @@ FROM nginx:alpine
 +-------------------------------------------------------------------------+
 ```
 
-### RUN — EXECUTE COMMANDS
+### RUN - EXECUTE COMMANDS
 
 RUN executes commands and creates a new layer:
 
@@ -135,7 +135,7 @@ BEST PRACTICES:
 +-------------------------------------------------------------------------+
 ```
 
-### COPY and ADD — TRANSFER FILES
+### COPY and ADD - TRANSFER FILES
 
 COPY copies files from build context to image:
 
@@ -170,7 +170,7 @@ ADD archive.tar.gz /app/                     # Auto-extracts archives
 +-------------------------------------------------------------------------+
 ```
 
-### WORKDIR — SET WORKING DIRECTORY
+### WORKDIR - SET WORKING DIRECTORY
 
 WORKDIR sets the working directory for subsequent instructions:
 
@@ -190,7 +190,7 @@ WORKDIR src       # Now in /app/src
 WORKDIR /new/directory   # Created automatically
 ```
 
-### ENV — SET ENVIRONMENT VARIABLES
+### ENV - SET ENVIRONMENT VARIABLES
 
 ENV sets environment variables:
 
@@ -207,7 +207,7 @@ ENV NODE_ENV=production
 RUN echo $NODE_ENV           # production
 ```
 
-### ARG — BUILD-TIME VARIABLES
+### ARG - BUILD-TIME VARIABLES
 
 ARG defines variables only available during build:
 
@@ -245,7 +245,7 @@ RUN echo "Building version $VERSION"
 +-------------------------------------------------------------------------+
 ```
 
-### EXPOSE — DOCUMENT PORTS
+### EXPOSE - DOCUMENT PORTS
 
 EXPOSE documents which ports the container listens on:
 
@@ -264,7 +264,7 @@ IMPORTANT:
 docker run -p 8080:80 myimage
 ```
 
-### CMD and ENTRYPOINT — CONTAINER STARTUP
+### CMD and ENTRYPOINT - CONTAINER STARTUP
 
 CMD specifies the default command:
 
@@ -312,7 +312,7 @@ CMD ["app.py"]       # Default argument
 +-------------------------------------------------------------------------+
 ```
 
-### USER — SET USER
+### USER - SET USER
 
 USER sets the user for RUN, CMD, ENTRYPOINT:
 
@@ -328,7 +328,7 @@ USER appuser
 # SECURITY: Always run as non-root in production!
 ```
 
-### VOLUME — DECLARE MOUNT POINTS
+### VOLUME - DECLARE MOUNT POINTS
 
 VOLUME declares that a path should be a volume:
 
@@ -340,7 +340,7 @@ VOLUME ["/var/log", "/var/db"]
 # Data persists even if container removed
 ```
 
-### HEALTHCHECK — CONTAINER HEALTH
+### HEALTHCHECK - CONTAINER HEALTH
 
 HEALTHCHECK defines how to check if container is healthy:
 

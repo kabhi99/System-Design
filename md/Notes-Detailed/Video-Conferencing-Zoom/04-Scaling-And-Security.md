@@ -12,7 +12,7 @@ SECTION 4.1: SCALING THE SFU
 *|  |                                                                 |  |*
 *|  |  One SFU server capacity:                                      |  |*
 *|  |  * CPU: Packet processing, encryption                         |  |*
-*|  |  * Bandwidth: Input × (N-1) output per participant           |  |*
+*|  |  * Bandwidth: Input x (N-1) output per participant           |  |*
 *|  |  * Memory: Connection state, buffers                          |  |*
 *|  |                                                                 |  |*
 *|  |  Typical capacity: ~100-200 participants per SFU              |  |*

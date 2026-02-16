@@ -433,8 +433,8 @@ Route to server with lowest response time + fewest connections.
 |  Considers both speed and load.                                       |
 |                                                                         |
 |  FORMULA OPTIONS:                                                      |
-|  * response_time × connections                                        |
-|  * response_time + (connections × weight)                             |
+|  * response_time x connections                                        |
+|  * response_time + (connections x weight)                             |
 |  * Just response_time (ignoring connections)                         |
 |                                                                         |
 |  PROS:                                                                 |
@@ -532,7 +532,7 @@ Load balancers must know if servers are healthy:
 |  LB < RST (connection refused - unhealthy!)                          |
 |                                                                         |
 |  PROS: Fast, simple, works for any TCP service                       |
-|  CONS: Port open ≠ app working (process might be hung)              |
+|  CONS: Port open ! app working (process might be hung)              |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -668,7 +668,7 @@ Load balancers must know if servers are healthy:
 |                                                                         |
 |  SSL RE-ENCRYPTION:                                                    |
 |  Client --HTTPS--> LB (decrypt, inspect) --HTTPS--> Servers          |
-|  Two TLS sessions: client↔LB, LB↔server                              |
+|  Two TLS sessions: client-LB, LB-server                              |
 |                                                                         |
 |  PROS:                                                                 |
 |  Y Traffic encrypted at all times                                    |

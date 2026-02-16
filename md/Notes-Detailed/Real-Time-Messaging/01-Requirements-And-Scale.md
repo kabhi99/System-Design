@@ -157,11 +157,11 @@ SECTION 4: SCALE ESTIMATION
 *|  * Messages received: 150 (including groups)                         |*
 *|                                                                         |*
 *|  Daily totals:                                                         |*
-*|  * 500M DAU × 50 messages = 25 billion sent/day                      |*
+*|  * 500M DAU x 50 messages = 25 billion sent/day                      |*
 *|  * With groups: ~100 billion message deliveries/day                  |*
 *|                                                                         |*
 *|  Per second:                                                           |*
-*|  * Average: 100B / 86400 ≈ 1.15 million messages/second             |*
+*|  * Average: 100B / 86400 ~ 1.15 million messages/second             |*
 *|  * Peak (3x): 3.5 million messages/second                           |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -178,13 +178,13 @@ SECTION 4: SCALE ESTIMATION
 *|                                                                         |*
 *|  Text messages:                                                        |*
 *|  * Average message size: 100 bytes                                   |*
-*|  * 25B messages × 100 bytes = 2.5 TB/day                            |*
+*|  * 25B messages x 100 bytes = 2.5 TB/day                            |*
 *|  * Keep 30 days: 75 TB                                               |*
 *|                                                                         |*
 *|  Media (images, videos):                                               |*
 *|  * 10% of messages have media                                        |*
 *|  * Average media size: 500 KB                                        |*
-*|  * 2.5B × 500 KB = 1.25 PB/day                                      |*
+*|  * 2.5B x 500 KB = 1.25 PB/day                                      |*
 *|  * Keep 30 days: 37.5 PB                                            |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -192,10 +192,10 @@ SECTION 4: SCALE ESTIMATION
 *|  BANDWIDTH                                                             |*
 *|                                                                         |*
 *|  Text messages:                                                        |*
-*|  * 1.15M messages/sec × 100 bytes = 115 MB/s = 920 Mbps             |*
+*|  * 1.15M messages/sec x 100 bytes = 115 MB/s = 920 Mbps             |*
 *|                                                                         |*
 *|  Media (peak):                                                         |*
-*|  * 115K media/sec × 500 KB = 57.5 GB/s = 460 Gbps                   |*
+*|  * 115K media/sec x 500 KB = 57.5 GB/s = 460 Gbps                   |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*

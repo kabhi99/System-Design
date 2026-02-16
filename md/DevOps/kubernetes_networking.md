@@ -1,4 +1,4 @@
-# KUBERNETES NETWORKING — FROM ZERO TO HERO
+# KUBERNETES NETWORKING - FROM ZERO TO HERO
 *Complete Guide: Basics to Advanced*
 
 ### Table of Contents
@@ -20,7 +20,7 @@ Part 3: Container Network Interface (CNI)
 3.3 CNI Plugin Comparison
 3.4 How CNI Works
 
-Part 4: Services — The Heart of Kubernetes Networking
+Part 4: Services - The Heart of Kubernetes Networking
 4.1 Why Services?
 4.2 ClusterIP Service
 4.3 NodePort Service
@@ -493,7 +493,7 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 ```
 
-## PART 4: SERVICES — THE HEART OF KUBERNETES NETWORKING
+## PART 4: SERVICES - THE HEART OF KUBERNETES NETWORKING
 
 ### 4.1 WHY SERVICES?
 

@@ -3,7 +3,7 @@
 
 Before we can understand how Docker networking works, we must first understand
 the Linux kernel features that make it possible. Docker doesn't invent new
-networking technology—it cleverly combines existing Linux kernel features to
+networking technology-it cleverly combines existing Linux kernel features to
 create isolated network environments for containers.
 
 This chapter covers the fundamental Linux concepts you absolutely must understand:
@@ -14,7 +14,7 @@ This chapter covers the fundamental Linux concepts you absolutely must understan
 - Network Address Translation (NAT)
 
 By the end of this chapter, you'll be able to build your own container networking
-from scratch using only Linux commands—which is essentially what Docker does.
+from scratch using only Linux commands-which is essentially what Docker does.
 
 ## SECTION 1.1: UNDERSTANDING NETWORK NAMESPACES
 
@@ -99,7 +99,7 @@ sudo ip netns exec red ip link
 ```
 
 Notice that the new namespace only has a loopback interface (lo), and it's DOWN.
-This namespace is completely isolated—it has no connection to the outside world.
+This namespace is completely isolated-it has no connection to the outside world.
 
 ```bash
 # Step 4: Try to reach the internet from inside the namespace
@@ -122,7 +122,7 @@ new network namespace for that container. This is why:
 - Each container has its own IP address
 - Each container has its own routing table
 
-But wait—if namespaces are isolated, how do containers communicate with each
+But wait-if namespaces are isolated, how do containers communicate with each
 other or the outside world? That's where veth pairs come in.
 
 ## SECTION 1.2: VIRTUAL ETHERNET (VETH) PAIRS
@@ -130,7 +130,7 @@ other or the outside world? That's where veth pairs come in.
 ### THE ISOLATION PROBLEM
 
 We just learned that network namespaces are isolated. But complete isolation
-isn't useful—containers need to communicate! We need a way to connect namespaces
+isn't useful-containers need to communicate! We need a way to connect namespaces
 together or to the host network.
 
 This is where Virtual Ethernet pairs (veth pairs) come in.
@@ -259,7 +259,7 @@ We created the simplest possible container network:
 +-----------------------+          +-----------------------+
 ```
 
-This is exactly how Docker connects containers—with veth pairs!
+This is exactly how Docker connects containers-with veth pairs!
 
 ### THE LIMITATION OF VETH PAIRS
 
@@ -267,12 +267,12 @@ Veth pairs are perfect for connecting TWO namespaces. But what if you have
 10 containers that all need to communicate with each other?
 
 With just veth pairs, you'd need:
-- 10 × 9 / 2 = 45 veth pairs!
+- 10 x 9 / 2 = 45 veth pairs!
 
-This doesn't scale. We need something that acts like a network switch—enter
+This doesn't scale. We need something that acts like a network switch-enter
 the Linux Bridge.
 
-## SECTION 1.3: LINUX BRIDGES — THE VIRTUAL SWITCH
+## SECTION 1.3: LINUX BRIDGES - THE VIRTUAL SWITCH
 
 ### THE PROBLEM WITH MANY-TO-MANY CONNECTIVITY
 
@@ -284,14 +284,14 @@ Container 1
 /|\
 / | \
 /  |  \
-C2 --●   ●   ●-- C3
+C2 --o   o   o-- C3
 \  |  /
 \ | /
 \|/
 Container 4 ------ Container 5
 
 This requires 10 veth pairs! And adding a 6th container means creating
-5 more veth pairs. This is O(n²) complexity—it doesn't scale.
+5 more veth pairs. This is O(n2) complexity-it doesn't scale.
 
 ```
 WITH A BRIDGE (Star topology):
@@ -309,7 +309,7 @@ C4 -------+------- C5
 
 Each container needs only ONE veth pair to connect to the bridge.
 Adding a 6th container means creating just 1 more veth pair.
-This is O(n) complexity—much better!
+This is O(n) complexity-much better!
 ```
 
 ### WHAT IS A LINUX BRIDGE?
@@ -342,7 +342,7 @@ The bridge looks up the destination MAC address in its table:
 3. FORWARDING
 The frame is sent out the appropriate port(s).
 
-This is identical to how a physical switch works—the Linux kernel implements
+This is identical to how a physical switch works-the Linux kernel implements
 the switching logic in software.
 
 ### DOCKER'S docker0 BRIDGE
@@ -446,7 +446,7 @@ sudo ip netns exec container1 ping 192.168.15.3
 This is EXACTLY what Docker does when you run containers on the default
 bridge network! The only difference is Docker automates all these steps.
 
-### BUT WAIT—CONTAINERS STILL CAN'T REACH THE INTERNET!
+### BUT WAIT-CONTAINERS STILL CAN'T REACH THE INTERNET!
 
 Try this:
 
@@ -460,9 +460,9 @@ the outside world. Why?
 
 Because the containers use private IP addresses (192.168.15.0/24) that aren't
 routable on the internet. We need NAT (Network Address Translation) to solve
-this—which brings us to our next topic.
+this-which brings us to our next topic.
 
-## SECTION 1.4: IPTABLES AND NETFILTER — THE LINUX FIREWALL
+## SECTION 1.4: IPTABLES AND NETFILTER - THE LINUX FIREWALL
 
 ### WHAT IS NETFILTER?
 
@@ -583,7 +583,7 @@ Containers use private IP addresses (like 172.17.0.2). These addresses:
 
 NAT solves this by translating private addresses to public addresses.
 
-### SNAT (SOURCE NAT) — OUTGOING TRAFFIC
+### SNAT (SOURCE NAT) - OUTGOING TRAFFIC
 
 When a container wants to reach the internet:
 
@@ -625,7 +625,7 @@ AFTER REVERSE NAT (host forwards to container):
 +-------------------------------------------------------------+
 ```
 
-### MASQUERADE — DYNAMIC SNAT
+### MASQUERADE - DYNAMIC SNAT
 
 MASQUERADE is a special type of SNAT that automatically uses the outgoing
 interface's IP address. This is perfect for situations where the host's IP
@@ -645,7 +645,7 @@ Translation:
 
 This single rule allows ALL containers to reach the internet!
 
-### DNAT (DESTINATION NAT) — INCOMING TRAFFIC / PORT FORWARDING
+### DNAT (DESTINATION NAT) - INCOMING TRAFFIC / PORT FORWARDING
 
 When someone wants to reach a container from outside:
 
@@ -755,7 +755,7 @@ Docker does ALL of the following automatically:
 7. Creates DNAT rule: host:8080 > container:80
 8. MASQUERADE rule already exists for outbound traffic
 
-All the complexity we explored manually—Docker handles it in milliseconds!
+All the complexity we explored manually-Docker handles it in milliseconds!
 
 ## CHAPTER SUMMARY
 

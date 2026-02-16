@@ -247,7 +247,7 @@ SECTION 1: API GATEWAY
 *|  |  4. REQUEST/RESPONSE TRANSFORMATION                            |  |*
 *|  |     * Add/remove headers                                       |  |*
 *|  |     * Transform payloads                                       |  |*
-*|  |     * Protocol translation (REST ↔ gRPC)                       |  |*
+*|  |     * Protocol translation (REST - gRPC)                       |  |*
 *|  |                                                                 |  |*
 *|  |  5. LOAD BALANCING                                             |  |*
 *|  |     * Distribute requests across service instances             |  |*
@@ -523,7 +523,7 @@ SECTION 3: CONFIGURATION MANAGEMENT
 *|  |                                                                 |  |*
 *|  |  CHALLENGES:                                                    |  |*
 *|  |                                                                 |  |*
-*|  |  * 50 services × 4 environments = 200 config files             |  |*
+*|  |  * 50 services x 4 environments = 200 config files             |  |*
 *|  |  * Config changes require redeployment (bad)                   |  |*
 *|  |  * Secrets mixed with config (security risk)                   |  |*
 *|  |  * Hard to audit who changed what                              |  |*

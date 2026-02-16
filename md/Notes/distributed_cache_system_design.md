@@ -393,7 +393,7 @@ Part 14: Theoretical Foundations
 |                    CACHE-ASIDE PATTERN                                 |
 |                                                                         |
 |  APPLICATION is responsible for managing cache.                       |
-|  Cache is "aside" from the data flow — not inline.                    |
+|  Cache is "aside" from the data flow - not inline.                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -963,7 +963,7 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |     |  25K ops | |  25K ops | |  25K ops | |  25K ops |               |
 |     +----------+ +----------+ +----------+ +----------+               |
 |                                                                         |
-|     Total: 1 TB, 100K ops — same capacity, horizontally scaled        |
+|     Total: 1 TB, 100K ops - same capacity, horizontally scaled        |
 |            Can add more shards for more capacity                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1076,19 +1076,19 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |                                                                         |
 |                    0 / 2^32                                            |
 |                      |                                                 |
-|                 -----●-----                                            |
+|                 -----o-----                                            |
 |              /               \                                         |
 |           /       Node A       \                                       |
-|         ●                        ●  Node B                             |
+|         o                        o  Node B                             |
 |        /                          \                                    |
-|       |     key1●                  |                                   |
+|       |     key1o                  |                                   |
 |       |        v                   |                                   |
 |       |   (goes to Node B)        |                                   |
 |        \                          /                                    |
-|         ●    ●key2               ●  Node C                             |
+|         o    okey2               o  Node C                             |
 |           \   v   (to Node C)  /                                       |
 |              \               /                                         |
-|                 -----●-----                                            |
+|                 -----o-----                                            |
 |                   Node D                                               |
 |                                                                         |
 |  ALGORITHM:                                                            |
@@ -1129,16 +1129,16 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |                                                                         |
 |  With only a few physical nodes, distribution can be uneven:          |
 |                                                                         |
-|              -----●---------------------------●-----                   |
+|              -----o---------------------------o-----                   |
 |           /      Node A                      Node B  \                 |
-|         ●                                              ●               |
+|         o                                              o               |
 |        /                                                \              |
 |       |   A covers HUGE arc                              |             |
 |       |   B covers small arc                             |             |
 |        \                                                /              |
-|         ●                                              ●               |
+|         o                                              o               |
 |           \                                          /                 |
-|              -----●---------------------------●-----                   |
+|              -----o---------------------------o-----                   |
 |                 Node C                      Node D                     |
 |                                                                         |
 |  Uneven key distribution!                                              |
@@ -1156,16 +1156,16 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  Physical Node A has virtual nodes: A1, A2, A3, A4, A5               |
 |  Physical Node B has virtual nodes: B1, B2, B3, B4, B5               |
 |                                                                         |
-|              -----●A1---●B2----●A3-----●B4-----                        |
+|              -----oA1---oB2----oA3-----oB4-----                        |
 |           /                                      \                     |
-|         ●B1                                      ●A4                   |
+|         oB1                                      oA4                   |
 |        /                                            \                  |
 |       |   Now keys are evenly distributed!           |                 |
 |       |   Each physical node owns ~50% of ring       |                 |
 |        \                                            /                  |
-|         ●A2                                      ●B3                   |
+|         oA2                                      oB3                   |
 |           \                                      /                     |
-|              -----●B5---●A5-----------------●-----                     |
+|              -----oB5---oA5-----------------o-----                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1395,14 +1395,14 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  In a distributed system, you can only guarantee 2 of 3:              |
 |                                                                         |
 |                    CONSISTENCY                                         |
-|                        ●                                               |
+|                        o                                               |
 |                       / \                                              |
 |                      /   \                                             |
 |                     /     \                                            |
 |                    /       \                                           |
 |                   /   CA    \                                          |
 |                  /           \                                         |
-|                 ●-------------●                                        |
+|                 o-------------o                                        |
 |           AVAILABILITY    PARTITION                                    |
 |                           TOLERANCE                                    |
 |                                                                         |
@@ -1542,7 +1542,7 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 ## PART 8: CACHE INVALIDATION STRATEGIES
 
 "There are only two hard things in Computer Science: cache invalidation
-and naming things." — Phil Karlton
+and naming things." - Phil Karlton
 
 ### 8.1 TTL-BASED INVALIDATION
 
@@ -1577,9 +1577,9 @@ and naming things." — Phil Karlton
 |  * Long TTL: Stale data, better hit rate                              |
 |                                                                         |
 |  PROS:                                                                 |
-|  Y Simple — no complex invalidation logic                             |
-|  Y Automatic — no application changes needed                          |
-|  Y Bounded staleness — data never older than TTL                     |
+|  Y Simple - no complex invalidation logic                             |
+|  Y Automatic - no application changes needed                          |
+|  Y Bounded staleness - data never older than TTL                     |
 |                                                                         |
 |  CONS:                                                                 |
 |  X Data might be stale until TTL expires                              |
@@ -1652,7 +1652,7 @@ and naming things." — Phil Karlton
 |  OPTION A: Delete cache entry                                         |
 |  cache.delete("user:123")                                             |
 |  * Next read will fetch from DB and repopulate                        |
-|  * Safer — no race condition                                          |
+|  * Safer - no race condition                                          |
 |                                                                         |
 |  OPTION B: Update cache entry                                         |
 |  cache.set("user:123", newData)                                       |
@@ -1860,8 +1860,8 @@ and naming things." — Phil Karlton
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  Y Compact single file — easy to backup                              |
-|  Y Fast restart — load binary directly                               |
+|  Y Compact single file - easy to backup                              |
+|  Y Fast restart - load binary directly                               |
 |  Y Good for disaster recovery                                        |
 |                                                                         |
 |  CONS:                                                                 |
@@ -2411,14 +2411,14 @@ and naming things." — Phil Karlton
 |  * Key belongs to next node clockwise                                 |
 |                                                                         |
 |        Node A                                                          |
-|           ●                                                            |
+|           o                                                            |
 |      /         \                                                       |
-|     /    k1●    \    k1 > Node B (next clockwise)                     |
-|    ●             ●                                                     |
+|     /    k1o    \    k1 > Node B (next clockwise)                     |
+|    o             o                                                     |
 |  Node D         Node B                                                 |
-|     \     k2●   /    k2 > Node C (next clockwise)                     |
+|     \     k2o   /    k2 > Node C (next clockwise)                     |
 |      \         /                                                       |
-|           ●                                                            |
+|           o                                                            |
 |        Node C                                                          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -2545,9 +2545,9 @@ and naming things." — Phil Karlton
 |  5. Database overwhelmed > crash                                       |
 |                                                                         |
 |       Requests   Cache Miss!   Database                                |
-|       ●●●●●● ---> ❌ --------> 💥                                     |
-|       ●●●●●●                   (overloaded)                            |
-|       ●●●●●●                                                           |
+|       oooooo --->  -------->                                      |
+|       oooooo                   (overloaded)                            |
+|       oooooo                                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2572,7 +2572,7 @@ and naming things." — Phil Karlton
 |  * Refresh before actual expiration                                   |
 |  * Random jitter prevents synchronized expiry                         |
 |                                                                         |
-|  ttl = base_ttl * (1 + random(-0.1, 0.1))  // ±10% jitter            |
+|  ttl = base_ttl * (1 + random(-0.1, 0.1))  // ~10% jitter            |
 |                                                                         |
 |  3. BACKGROUND REFRESH:                                                |
 |  -----------------------                                                |

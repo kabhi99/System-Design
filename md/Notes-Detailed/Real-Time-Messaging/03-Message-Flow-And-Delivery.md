@@ -189,7 +189,7 @@ SECTION 3: MESSAGE STATUS TRACKING
 *|  |                                                                 |  |*
 *|  |  Option 1: Full tracking (like WhatsApp)                      |  |*
 *|  |  * Track per-member read status                               |  |*
-*|  |  * Storage: O(messages × members)                             |  |*
+*|  |  * Storage: O(messages x members)                             |  |*
 *|  |  * UI: "Read by 50 of 100 members"                           |  |*
 *|  |                                                                 |  |*
 *|  |  Option 2: Simplified                                         |  |*
@@ -486,7 +486,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
-*|  |  |  Retry #    Base Delay    With Jitter (±10%)             ||  |*
+*|  |  |  Retry #    Base Delay    With Jitter (~10%)             ||  |*
 *|  |  |  -------    ----------    -----------------              ||  |*
 *|  |  |  1          1 second      0.9 - 1.1 seconds              ||  |*
 *|  |  |  2          2 seconds     1.8 - 2.2 seconds              ||  |*
@@ -494,7 +494,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |  4          8 seconds     7.2 - 8.8 seconds              ||  |*
 *|  |  |  5          16 seconds    14.4 - 17.6 seconds            ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  Formula: delay = min(base × 2^attempt, max_delay)       ||  |*
+*|  |  |  Formula: delay = min(base x 2^attempt, max_delay)       ||  |*
 *|  |  |           + random(0, 10% of delay)                      ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Cap at max delay (e.g., 60 seconds) to prevent          ||  |*
@@ -603,7 +603,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |  * Score = future timestamp when should retry            ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Scheduler (polls every second):                         ||  |*
-*|  |  |  * Query: All messages with score ≤ current time        ||  |*
+*|  |  |  * Query: All messages with score < current time        ||  |*
 *|  |  |  * For each due message:                                 ||  |*
 *|  |  |    - Produce back to main Kafka topic                   ||  |*
 *|  |  |    - Remove from sorted set                              ||  |*
@@ -747,7 +747,7 @@ SECTION 5: TYPING INDICATORS & PRESENCE
 *|  |  SUBSCRIBING TO PRESENCE:                                      |  |*
 *|  |  * User subscribes to presence of their contacts              |  |*
 *|  |  * Redis PubSub or polling                                    |  |*
-*|  |  * Challenge: 500 contacts × 100M users = massive fan-out    |  |*
+*|  |  * Challenge: 500 contacts x 100M users = massive fan-out    |  |*
 *|  |                                                                 |  |*
 *|  |  OPTIMIZATION:                                                 |  |*
 *|  |  * Only subscribe to presence of open conversations          |  |*

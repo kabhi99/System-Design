@@ -24,7 +24,7 @@ While NodePort and LoadBalancer services work, they have issues:
 |  LOADBALANCER LIMITATIONS                                              |
 |                                                                         |
 |  * One LoadBalancer per service = EXPENSIVE!                          |
-|    - 10 services = 10 load balancers = 10× the cost                  |
+|    - 10 services = 10 load balancers = 10x the cost                  |
 |    - Each LB has its own public IP                                   |
 |                                                                         |
 |  * No path-based routing                                              |
@@ -81,7 +81,7 @@ Ingress provides HTTP/HTTPS routing at Layer 7:
 1. INGRESS RESOURCE
 - Kubernetes API object
 - Declares routing rules (host, path > service)
-- Just configuration—doesn't do anything by itself
+- Just configuration-doesn't do anything by itself
 
 2. INGRESS CONTROLLER
 - Software that implements Ingress rules
@@ -169,7 +169,7 @@ You must install one separately.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.3: INGRESS RESOURCES — CONFIGURATION
+## SECTION 4.3: INGRESS RESOURCES - CONFIGURATION
 
 ### BASIC INGRESS EXAMPLE
 
@@ -462,7 +462,7 @@ upstream upstream_backend {
 }
 ```
 
-## SECTION 4.5: GATEWAY API — THE FUTURE OF INGRESS
+## SECTION 4.5: GATEWAY API - THE FUTURE OF INGRESS
 
 ### WHY GATEWAY API?
 
@@ -757,7 +757,7 @@ spec:
 |  |  * NGINX: Most popular, mature                                  | |
 |  |  * Traefik: Modern, auto-config                                 | |
 |  |  * AWS ALB: Native AWS integration                              | |
-|  |  * Must install separately—K8s doesn't include one             | |
+|  |  * Must install separately-K8s doesn't include one             | |
 |  |                                                                   | |
 |  +-------------------------------------------------------------------+ |
 |  |                                                                   | |

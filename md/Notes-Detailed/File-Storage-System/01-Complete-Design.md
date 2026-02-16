@@ -118,13 +118,13 @@ SECTION 3: SCALE ESTIMATION
 *|  STORAGE ESTIMATION                                                    |*
 *|                                                                         |*
 *|  Total files:                                                          |*
-*|  500M users × 200 files = 100 billion files                           |*
+*|  500M users x 200 files = 100 billion files                           |*
 *|                                                                         |*
 *|  Total storage (if all users max out):                                |*
-*|  500M users × 15 GB = 7.5 Exabytes (EB)                              |*
+*|  500M users x 15 GB = 7.5 Exabytes (EB)                              |*
 *|                                                                         |*
 *|  Realistic storage (average 5 GB per user):                           |*
-*|  500M × 5 GB = 2.5 Exabytes (EB)                                     |*
+*|  500M x 5 GB = 2.5 Exabytes (EB)                                     |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -132,17 +132,17 @@ SECTION 3: SCALE ESTIMATION
 *|                                                                         |*
 *|  Uploads per day:                                                      |*
 *|  * Assume each DAU uploads 2 files/day                               |*
-*|  * 100M × 2 = 200 million uploads/day                                |*
+*|  * 100M x 2 = 200 million uploads/day                                |*
 *|  * 200M / 86400 = ~2,300 uploads/second                              |*
 *|                                                                         |*
 *|  Downloads per day:                                                    |*
 *|  * Assume each DAU downloads 5 files/day                             |*
-*|  * 100M × 5 = 500 million downloads/day                              |*
+*|  * 100M x 5 = 500 million downloads/day                              |*
 *|  * 500M / 86400 = ~5,800 downloads/second                            |*
 *|                                                                         |*
 *|  Bandwidth:                                                            |*
-*|  * Upload: 2300/s × 500 KB = 1.15 GB/s                              |*
-*|  * Download: 5800/s × 500 KB = 2.9 GB/s                             |*
+*|  * Upload: 2300/s x 500 KB = 1.15 GB/s                              |*
+*|  * Download: 5800/s x 500 KB = 2.9 GB/s                             |*
 *|  * Peak (5x): ~15 GB/s total                                        |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -161,7 +161,7 @@ SECTION 3: SCALE ESTIMATION
 *|  * Total: ~500 bytes per file                                        |*
 *|                                                                         |*
 *|  Total metadata:                                                       |*
-*|  100 billion files × 500 bytes = 50 TB                               |*
+*|  100 billion files x 500 bytes = 50 TB                               |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -605,7 +605,7 @@ SECTION 7: CONFLICT RESOLUTION
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
-*|  STRATEGY 2: Create Conflicting Copies (Dropbox approach) ⭐         |*
+*|  STRATEGY 2: Create Conflicting Copies (Dropbox approach)          |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  * Detect conflict                                             |  |*
@@ -668,7 +668,7 @@ SECTION 8: DEDUPLICATION
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
-*|  LEVEL 2: Block-Level Dedup ⭐ (Better)                              |*
+*|  LEVEL 2: Block-Level Dedup  (Better)                              |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  * Hash each block separately                                  |  |*
@@ -690,7 +690,7 @@ SECTION 8: DEDUPLICATION
 *|  * Simple, no privacy concerns                                        |*
 *|  * Limited savings                                                     |*
 *|                                                                         |*
-*|  Global: Dedup across ALL users ⭐                                    |*
+*|  Global: Dedup across ALL users                                     |*
 *|  * Maximum storage savings                                            |*
 *|  * Privacy consideration: Can't tell users "you already have this"  |*
 *|  * Security: Encrypted blocks can't be deduplicated                 |*
@@ -1025,7 +1025,7 @@ SECTION 11: ADDITIONAL FEATURES
 *|  |  STORAGE EFFICIENCY:                                           |  |*
 *|  |  * Only new/changed blocks stored                            |  |*
 *|  |  * Blocks [abc, def] shared across versions                  |  |*
-*|  |  * 3 versions of 10 MB file ≠ 30 MB storage                 |  |*
+*|  |  * 3 versions of 10 MB file ! 30 MB storage                 |  |*
 *|  |  * Actual storage might be only 15 MB (shared blocks)        |  |*
 *|  |                                                                 |  |*
 *|  |  ============================================================ |  |*
@@ -1467,7 +1467,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  | Hot (S3 Std)   | < 30 days       | $$$                |   |  |*
 *|  |  | Warm (S3 IA)   | 30-90 days      | $$                 |   |  |*
 *|  |  | Cold (Glacier) | 90-365 days     | $                  |   |  |*
-*|  |  | Archive        | > 365 days      | ¢                  |   |  |*
+*|  |  | Archive        | > 365 days      | c                  |   |  |*
 *|  |  +----------------+-----------------+--------------------+   |  |*
 *|  |                                                                 |  |*
 *|  |  Implementation:                                               |  |*

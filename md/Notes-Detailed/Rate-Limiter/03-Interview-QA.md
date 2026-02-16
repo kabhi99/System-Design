@@ -499,7 +499,7 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|  |  * Leaky Bucket - Smooth output, used by NGINX                |  |*
 *|  |  * Fixed Window - Simple but has boundary problem             |  |*
 *|  |  * Sliding Log - Accurate but memory intensive                |  |*
-*|  |  * Sliding Window Counter - ⭐ Best balance (recommended)     |  |*
+*|  |  * Sliding Window Counter -  Best balance (recommended)     |  |*
 *|  |                                                                 |  |*
 *|  |  PLACEMENT:                                                     |  |*
 *|  |  * API Gateway - Centralized, no app changes needed          |  |*
@@ -507,7 +507,7 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|  |  * Both (layered) - Best practice                            |  |*
 *|  |                                                                 |  |*
 *|  |  STORAGE:                                                       |  |*
-*|  |  * Redis - ⭐ Best choice (fast, atomic, TTL, clustering)    |  |*
+*|  |  * Redis -  Best choice (fast, atomic, TTL, clustering)    |  |*
 *|  |  * Local Memory - Single server only                         |  |*
 *|  |  * Database - Too slow                                        |  |*
 *|  |                                                                 |  |*
@@ -541,16 +541,16 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|                                                                         |*
 *|  INTERVIEW CHECKLIST                                                  |*
 *|                                                                         |*
-*|  ☐ Clarify: What to limit? What rate? Distributed?                  |*
-*|  ☐ Choose algorithm (default: Sliding Window Counter)               |*
-*|  ☐ Design: Client > Gateway > Rate Limiter > Service               |*
-*|  ☐ Storage: Redis (centralized counters)                            |*
-*|  ☐ Handle race conditions (atomic ops)                              |*
-*|  ☐ Handle Redis failure (fail open + local fallback)               |*
-*|  ☐ Support multiple dimensions (user, IP, API key)                 |*
-*|  ☐ Support tiered limits (free vs premium)                         |*
-*|  ☐ Return proper headers (429, Retry-After)                        |*
-*|  ☐ Monitoring and alerting                                          |*
+*|  o Clarify: What to limit? What rate? Distributed?                  |*
+*|  o Choose algorithm (default: Sliding Window Counter)               |*
+*|  o Design: Client > Gateway > Rate Limiter > Service               |*
+*|  o Storage: Redis (centralized counters)                            |*
+*|  o Handle race conditions (atomic ops)                              |*
+*|  o Handle Redis failure (fail open + local fallback)               |*
+*|  o Support multiple dimensions (user, IP, API key)                 |*
+*|  o Support tiered limits (free vs premium)                         |*
+*|  o Return proper headers (429, Retry-After)                        |*
+*|  o Monitoring and alerting                                          |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*

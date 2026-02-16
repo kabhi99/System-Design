@@ -79,7 +79,7 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  delay = base_delay × 2^attempt                                       | |*
+*|  |  delay = base_delay x 2^attempt                                       | |*
 *|  |                                                                        | |*
 *|  |  Timing: Retry 1 at 1s, Retry 2 at 2s, Retry 3 at 4s, Retry 4 at 8s  | |*
 *|  |                                                                        | |*
@@ -119,9 +119,9 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  delay = base_delay × 2^attempt + random(0, base_delay × 2^attempt)  | |*
+*|  |  delay = base_delay x 2^attempt + random(0, base_delay x 2^attempt)  | |*
 *|  |                                                                        | |*
-*|  |  Or: delay = random(0, base_delay × 2^attempt)  [Full Jitter]        | |*
+*|  |  Or: delay = random(0, base_delay x 2^attempt)  [Full Jitter]        | |*
 *|  |                                                                        | |*
 *|  |  +-----------------------------------------------------------------+  | |*
 *|  |  |                                                                 |  | |*
@@ -147,9 +147,9 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  JITTER TYPES:                                                               |*
 *|                                                                              |*
-*|  Full Jitter:        delay = random(0, base × 2^attempt)                   |*
-*|  Equal Jitter:       delay = (base × 2^attempt)/2 + random(0, half)        |*
-*|  Decorrelated:       delay = random(base, prev_delay × 3)                  |*
+*|  Full Jitter:        delay = random(0, base x 2^attempt)                   |*
+*|  Equal Jitter:       delay = (base x 2^attempt)/2 + random(0, half)        |*
+*|  Decorrelated:       delay = random(base, prev_delay x 3)                  |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
 *|  Y Prevents thundering herd                                                |*
@@ -173,7 +173,7 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  delay = base_delay × attempt                                         | |*
+*|  |  delay = base_delay x attempt                                         | |*
 *|  |                                                                        | |*
 *|  |  Timing: Retry 1 at 1s, Retry 2 at 2s, Retry 3 at 3s, Retry 4 at 4s  | |*
 *|  |                                                                        | |*
@@ -199,7 +199,7 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  delay = fibonacci(attempt) × base_delay                              | |*
+*|  |  delay = fibonacci(attempt) x base_delay                              | |*
 *|  |                                                                        | |*
 *|  |  Timing: 1s, 1s, 2s, 3s, 5s, 8s, 13s, 21s...                         | |*
 *|  |                                                                        | |*
@@ -672,7 +672,7 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  |  APPROACH B: Point-in-Time Recovery                                   | |*
 *|  |                                                                        | |*
 *|  |  Restore database to timestamp before migration                      | |*
-*|  |  ⚠️ WARNING: Loses all data written after that point!               | |*
+*|  |   WARNING: Loses all data written after that point!               | |*
 *|  |                                                                        | |*
 *|  |  ------------------------------------------------------------------  | |*
 *|  |                                                                        | |*

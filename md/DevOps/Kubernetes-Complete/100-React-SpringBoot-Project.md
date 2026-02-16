@@ -92,7 +92,7 @@ kubectl get nodes
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  📚 LOCAL DEVELOPMENT: Build images INSIDE Minikube                   |
+|   LOCAL DEVELOPMENT: Build images INSIDE Minikube                   |
 |                                                                         |
 |  IMPORTANT: Use Minikube's Docker daemon!                             |
 |                                                                         |
@@ -114,7 +114,7 @@ kubectl get nodes
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  🔥 CRITICAL STEP: Connect to Minikube's Docker                        |
+|   CRITICAL STEP: Connect to Minikube's Docker                        |
 |  ============================================                           |
 |                                                                         |
 |  # Run this FIRST (in every new terminal!)                             |
@@ -215,7 +215,7 @@ docker run -p 3000:80 react-frontend:v1.0
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ⚠️  REMEMBER: In Kubernetes YAML, you MUST add:                       |
+|    REMEMBER: In Kubernetes YAML, you MUST add:                       |
 |                                                                         |
 |  image: react-frontend:v1.0                                            |
 |  imagePullPolicy: Never     < CRITICAL! Don't try to pull             |
@@ -311,7 +311,7 @@ docker images | grep springboot-api
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ⚠️  REMEMBER: In Kubernetes YAML, you MUST add:                       |
+|    REMEMBER: In Kubernetes YAML, you MUST add:                       |
 |                                                                         |
 |  image: springboot-api:v1.0                                            |
 |  imagePullPolicy: Never     < CRITICAL! Don't try to pull             |
@@ -507,7 +507,7 @@ kubectl exec -it postgres-0 -- psql -U appuser -d appdb -c "\dt"
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED: postgres-0 should be Running and Ready (1/1)             |
+|   EXPECTED: postgres-0 should be Running and Ready (1/1)             |
 +-------------------------------------------------------------------------+
 ```
 
@@ -581,7 +581,7 @@ spec:
 
 ```
 +-------------------------------------------------------------------------+
-|  🔍 UNDERSTAND THE CONFIG                                               |
+|   UNDERSTAND THE CONFIG                                               |
 |                                                                         |
 |  envFrom:                                                               |
 |    - configMapRef:                                                      |
@@ -615,9 +615,9 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://springboot-service
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED: 2 springboot-api pods Running and Ready (1/1)            |
+|   EXPECTED: 2 springboot-api pods Running and Ready (1/1)            |
 |                                                                         |
-|  ⚠️  IF PODS CRASH (CrashLoopBackOff):                                 |
+|    IF PODS CRASH (CrashLoopBackOff):                                 |
 |  1. Check logs: kubectl logs <pod-name>                                |
 |  2. Common issues:                                                     |
 |     - Database not ready (wait for postgres-0 first)                  |
@@ -705,7 +705,7 @@ kubectl get pods
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ AT THIS POINT YOU SHOULD HAVE:                                     |
+|   AT THIS POINT YOU SHOULD HAVE:                                     |
 |                                                                         |
 |  $ kubectl get pods                                                    |
 |  NAME                              READY   STATUS    AGE               |
@@ -723,7 +723,7 @@ kubectl get pods
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  📚 HOW INGRESS ROUTES TRAFFIC                                         |
+|   HOW INGRESS ROUTES TRAFFIC                                         |
 |                                                                         |
 |  User Request: http://myapp.local/api/users                           |
 |                                                                         |
@@ -1377,13 +1377,13 @@ kubectl logs -l app=react-frontend --tail=50
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ✅ SUCCESS CHECKLIST                                                  |
+|   SUCCESS CHECKLIST                                                  |
 |                                                                         |
-|  □ minikube status shows "Running"                                     |
-|  □ docker images shows react-frontend:v1.0 and springboot-api:v1.0    |
-|  □ kubectl get pods shows 5 pods Running (1 postgres, 2 api, 2 react) |
-|  □ http://myapp.local shows React app                                  |
-|  □ http://myapp.local/api/actuator/health returns {"status":"UP"}     |
+|  o minikube status shows "Running"                                     |
+|  o docker images shows react-frontend:v1.0 and springboot-api:v1.0    |
+|  o kubectl get pods shows 5 pods Running (1 postgres, 2 api, 2 react) |
+|  o http://myapp.local shows React app                                  |
+|  o http://myapp.local/api/actuator/health returns {"status":"UP"}     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

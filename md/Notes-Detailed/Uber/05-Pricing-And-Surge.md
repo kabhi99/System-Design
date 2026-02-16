@@ -38,13 +38,13 @@ algorithms, and implementation challenges.
 |     * Supply increases from 1,200 to 2,000                          |
 |                                                                         |
 |  3. MARKET EQUILIBRIUM                                                 |
-|     * Price adjusts until supply ≈ demand                           |
+|     * Price adjusts until supply ~ demand                           |
 |     * Wait times stay reasonable (5-10 min)                         |
 |                                                                         |
 |  WITHOUT SURGE:                    WITH SURGE:                        |
 |                                                                         |
-|  Demand: ████████████████████     Demand: ████████████               |
-|  Supply: ████████                 Supply: █████████████             |
+|  Demand: ####################     Demand: ############               |
+|  Supply: ########                 Supply: #############             |
 |          ^                                ^                           |
 |          Gap (30 min wait)                Balanced (5 min)           |
 |                                                                         |
@@ -173,7 +173,7 @@ algorithms, and implementation challenges.
 |  * 6 neighbors vs 4/8 for squares                                    |
 |                                                                         |
 |  H3 library provides hierarchical hex grid                           |
-|  Resolution 7 ≈ 5km² cells (good for surge)                         |
+|  Resolution 7 ~ 5km2 cells (good for surge)                         |
 |                                                                         |
 |  2. DYNAMIC CLUSTERING                                                |
 |  =====================                                                  |
@@ -255,14 +255,14 @@ algorithms, and implementation challenges.
 |  FARE COMPONENTS                                                       |
 |                                                                         |
 |  fare = base_fare                                                      |
-|       + (distance_rate × distance_km)                                 |
-|       + (time_rate × duration_minutes)                                |
+|       + (distance_rate x distance_km)                                 |
+|       + (time_rate x duration_minutes)                                |
 |       + booking_fee                                                    |
 |       + tolls                                                          |
 |       + airport_fee                                                    |
 |                                                                         |
 |  WITH SURGE:                                                           |
-|  fare = (base_fare + distance + time) × surge_multiplier             |
+|  fare = (base_fare + distance + time) x surge_multiplier             |
 |       + booking_fee  (not surged)                                     |
 |       + tolls        (not surged)                                     |
 |       + fees         (not surged)                                     |
@@ -270,12 +270,12 @@ algorithms, and implementation challenges.
 |  EXAMPLE:                                                              |
 |  ---------                                                              |
 |  Base fare: $2.50                                                     |
-|  Distance: 5 km × $1.50/km = $7.50                                   |
-|  Time: 15 min × $0.30/min = $4.50                                    |
+|  Distance: 5 km x $1.50/km = $7.50                                   |
+|  Time: 15 min x $0.30/min = $4.50                                    |
 |  Subtotal: $14.50                                                     |
 |                                                                         |
 |  Surge: 1.8x                                                          |
-|  Surged subtotal: $14.50 × 1.8 = $26.10                              |
+|  Surged subtotal: $14.50 x 1.8 = $26.10                              |
 |                                                                         |
 |  Booking fee: $2.00                                                   |
 |  Total: $28.10                                                        |
@@ -397,13 +397,13 @@ algorithms, and implementation challenges.
 |  |                                                                 |  |
 |  |   +-------------------------------------------------------+    |  |
 |  |   |                                                       |    |  |
-|  |   |   📍 Surge Area Nearby!                              |    |  |
+|  |   |    Surge Area Nearby!                              |    |  |
 |  |   |                                                       |    |  |
-|  |   |   Downtown (2.3x)         ███████████████████  2.3x  |    |  |
-|  |   |   Airport (1.8x)          ██████████████       1.8x  |    |  |
-|  |   |   Stadium (3.0x)          ████████████████████ 3.0x  |    |  |
+|  |   |   Downtown (2.3x)         ###################  2.3x  |    |  |
+|  |   |   Airport (1.8x)          ##############       1.8x  |    |  |
+|  |   |   Stadium (3.0x)          #################### 3.0x  |    |  |
 |  |   |                                                       |    |  |
-|  |   |   🚗 Drive to Stadium to earn 3x on next trip       |    |  |
+|  |   |    Drive to Stadium to earn 3x on next trip       |    |  |
 |  |   |                                                       |    |  |
 |  |   +-------------------------------------------------------+    |  |
 |  |                                                                 |  |
@@ -413,7 +413,7 @@ algorithms, and implementation challenges.
 |  ----------------                                                       |
 |                                                                         |
 |  Base trip: Driver earns $15                                         |
-|  With 2.0x surge: Driver earns $15 × 2.0 = $30                      |
+|  With 2.0x surge: Driver earns $15 x 2.0 = $30                      |
 |                                                                         |
 |  (Platform fee applies to base, not surge in some markets)           |
 |                                                                         |

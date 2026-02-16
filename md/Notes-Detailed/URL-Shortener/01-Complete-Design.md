@@ -92,18 +92,18 @@ SECTION 3: SCALE ESTIMATION (BACK OF ENVELOPE)
 *|                                                                         |*
 *|  WRITES (URL Creation):                                               |*
 *|  * 100 million / month                                               |*
-*|  * 100M / (30 × 24 × 3600) ≈ 40 URLs per second                     |*
+*|  * 100M / (30 x 24 x 3600) ~ 40 URLs per second                     |*
 *|                                                                         |*
 *|  READS (Redirections):                                                |*
-*|  * 100:1 ratio means 100 × 40 = 4,000 redirects per second          |*
-*|  * Peak: 5× average = 20,000 redirects per second                   |*
+*|  * 100:1 ratio means 100 x 40 = 4,000 redirects per second          |*
+*|  * Peak: 5x average = 20,000 redirects per second                   |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
 *|  STORAGE ESTIMATES                                                     |*
 *|                                                                         |*
 *|  Total URLs over 10 years:                                            |*
-*|  * 100 million × 12 months × 10 years = 12 billion URLs              |*
+*|  * 100 million x 12 months x 10 years = 12 billion URLs              |*
 *|                                                                         |*
 *|  Storage per URL:                                                      |*
 *|  * Short URL (7 chars):     7 bytes                                  |*
@@ -115,7 +115,7 @@ SECTION 3: SCALE ESTIMATION (BACK OF ENVELOPE)
 *|  * Total:                   ~250 bytes per URL                       |*
 *|                                                                         |*
 *|  Total storage:                                                        |*
-*|  * 12 billion × 250 bytes = 3 TB                                     |*
+*|  * 12 billion x 250 bytes = 3 TB                                     |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -306,7 +306,7 @@ SECTION 5: THE CORE PROBLEM - GENERATING UNIQUE SHORT CODES
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  APPROACH 4: COUNTER + KEY RANGE (Distributed Counters) ⭐ BEST      |*
+*|  APPROACH 4: COUNTER + KEY RANGE (Distributed Counters)  BEST      |*
 *|                                                                         |*
 *|  Concept:                                                              |*
 *|  * Pre-allocate ranges of IDs to each server                        |*
@@ -527,7 +527,7 @@ SECTION 7: CACHING STRATEGY
 *|  * 80/20 rule: 20% of URLs get 80% of traffic                      |*
 *|                                                                         |*
 *|  Cache size: Calculate based on memory budget                        |*
-*|  Example: 1 million entries × 300 bytes = 300 MB                    |*
+*|  Example: 1 million entries x 300 bytes = 300 MB                    |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*

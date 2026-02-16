@@ -32,7 +32,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |     |                           | (crashes!)                    |   |
 |  |     |     (no response...)      |                               |   |
 |  |     |                           |                               |   |
-|  |     |  Did I get the lock? 🤷                                 |   |
+|  |     |  Did I get the lock?                                  |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -336,7 +336,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |  +---------+  +---------+  +---------+                        |   |
 |  |  | Node A  |  | Node B  |  | Node C  |                        |   |
 |  |  | LEADER  |  | follower|  | follower|                        |   |
-|  |  |   ★     |  |         |  |         |                        |   |
+|  |  |   *     |  |         |  |         |                        |   |
 |  |  +----+----+  +----+----+  +----+----+                        |   |
 |  |       |            |            |                               |   |
 |  |       +------------+------------+                               |   |

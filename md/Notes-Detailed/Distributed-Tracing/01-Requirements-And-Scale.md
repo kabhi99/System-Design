@@ -40,7 +40,7 @@ SECTION 1.1: PROBLEM STATEMENT
 *|  |  * Different log formats                                       |  |*
 *|  |  * No causal relationship                                      |  |*
 *|  |                                                                 |  |*
-*|  |  DEBUGGING: Search each service's logs manually 😰             |  |*
+*|  |  DEBUGGING: Search each service's logs manually              |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -58,7 +58,7 @@ SECTION 1.1: PROBLEM STATEMENT
 *|  |  | +-- 502 Bad Gateway                                      |  |  |*
 *|  |  +----------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
-*|  |  DEBUGGING: Single view shows entire request flow 🎯          |  |*
+*|  |  DEBUGGING: Single view shows entire request flow           |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -157,13 +157,13 @@ SECTION 1.4: SCALE ESTIMATION
 *|  SPAN GENERATION RATE                                                  |*
 *|                                                                         |*
 *|  Total spans generated:                                               |*
-*|  100,000 req/s × 20 spans/req = 2,000,000 spans/second              |*
+*|  100,000 req/s x 20 spans/req = 2,000,000 spans/second              |*
 *|                                                                         |*
 *|  After 10% sampling:                                                   |*
-*|  2,000,000 × 0.1 = 200,000 spans/second                              |*
+*|  2,000,000 x 0.1 = 200,000 spans/second                              |*
 *|                                                                         |*
 *|  Per day:                                                              |*
-*|  200,000 × 86,400 = 17.28 billion spans/day                          |*
+*|  200,000 x 86,400 = 17.28 billion spans/day                          |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -186,19 +186,19 @@ SECTION 1.4: SCALE ESTIMATION
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  Daily storage (uncompressed):                                        |*
-*|  17.28B spans × 500 bytes = 8.64 TB/day                              |*
+*|  17.28B spans x 500 bytes = 8.64 TB/day                              |*
 *|                                                                         |*
 *|  With compression (5:1 ratio):                                        |*
 *|  8.64 TB / 5 = 1.73 TB/day                                           |*
 *|                                                                         |*
 *|  7-day retention:                                                      |*
-*|  1.73 TB × 7 = ~12 TB total storage                                  |*
+*|  1.73 TB x 7 = ~12 TB total storage                                  |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
 *|  WRITE THROUGHPUT                                                      |*
 *|                                                                         |*
-*|  200,000 spans/second × 500 bytes = 100 MB/second writes            |*
+*|  200,000 spans/second x 500 bytes = 100 MB/second writes            |*
 *|                                                                         |*
 *|  This requires:                                                        |*
 *|  * Multiple collector instances                                       |*
@@ -210,7 +210,7 @@ SECTION 1.4: SCALE ESTIMATION
 *|  NETWORK BANDWIDTH                                                     |*
 *|                                                                         |*
 *|  Spans from services > Collectors:                                    |*
-*|  200,000 spans/s × 500 bytes = 100 MB/s                              |*
+*|  200,000 spans/s x 500 bytes = 100 MB/s                              |*
 *|                                                                         |*
 *|  With protocol overhead and retries: ~150 MB/s                       |*
 *|                                                                         |*

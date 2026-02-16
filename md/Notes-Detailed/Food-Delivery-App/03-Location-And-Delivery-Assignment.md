@@ -122,12 +122,12 @@ SECTION 2: GEOSPATIAL DATA STORAGE
 *|  |  |                                                         |  |  |*
 *|  |  |  Geohash Length  >  Cell Size                          |  |  |*
 *|  |  |  -----------------------------                          |  |  |*
-*|  |  |  1 character     >  5,000 km × 5,000 km                |  |  |*
-*|  |  |  4 characters    >  39 km × 19 km                      |  |  |*
-*|  |  |  5 characters    >  5 km × 5 km                        |  |  |*
-*|  |  |  6 characters    >  1.2 km × 0.6 km                    |  |  |*
-*|  |  |  7 characters    >  150m × 150m                        |  |  |*
-*|  |  |  8 characters    >  38m × 19m                          |  |  |*
+*|  |  |  1 character     >  5,000 km x 5,000 km                |  |  |*
+*|  |  |  4 characters    >  39 km x 19 km                      |  |  |*
+*|  |  |  5 characters    >  5 km x 5 km                        |  |  |*
+*|  |  |  6 characters    >  1.2 km x 0.6 km                    |  |  |*
+*|  |  |  7 characters    >  150m x 150m                        |  |  |*
+*|  |  |  8 characters    >  38m x 19m                          |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
@@ -330,7 +330,7 @@ SECTION 4: ASSIGNMENT FLOW DIAGRAM
 *|  |   |  "New delivery request!"            |                     |  |*
 *|  |   |  Restaurant: Pizza Palace           |                     |  |*
 *|  |   |  Distance: 1.2 km                   |                     |  |*
-*|  |   |  Earnings: ₹45                      |                     |  |*
+*|  |   |  Earnings: R45                      |                     |  |*
 *|  |   |  [ACCEPT]  [REJECT]                 |                     |  |*
 *|  |   |                                       |                     |  |*
 *|  |   +--------------+------------------------+                    |  |*
@@ -424,7 +424,7 @@ SECTION 5: LIVE TRACKING
 *|  |              +----------------+                               |  |*
 *|  |              |  Customer App  |                               |  |*
 *|  |              |                |                               |  |*
-*|  |              |  📍 Live map   |                               |  |*
+*|  |              |   Live map   |                               |  |*
 *|  |              |  ETA: 5 mins   |                               |  |*
 *|  |              |                |                               |  |*
 *|  |              +----------------+                               |  |*

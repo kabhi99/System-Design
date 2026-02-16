@@ -105,7 +105,7 @@ spec:
 
 IMPORTANT: DON'T USE REPLICASETS DIRECTLY!
 
-Use Deployments instead—they manage ReplicaSets for you and provide
+Use Deployments instead-they manage ReplicaSets for you and provide
 rolling updates, rollbacks, and more.
 
 ## SECTION 3.3: DEPLOYMENTS
@@ -447,7 +447,7 @@ spec:
 |  ----------                                                            |
 |  * Ensures specified number of pod replicas                           |
 |  * Self-healing (recreates failed pods)                               |
-|  * Don't use directly—use Deployments                                 |
+|  * Don't use directly-use Deployments                                 |
 |                                                                         |
 |  DEPLOYMENT                                                            |
 |  ----------                                                            |

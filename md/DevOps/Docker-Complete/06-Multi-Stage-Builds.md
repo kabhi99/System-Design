@@ -32,7 +32,7 @@ separating build-time dependencies from runtime requirements.
 |  | CMD ["./myapp"]                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
-|  Image size: ~1.1 GB! 😱                                              |
+|  Image size: ~1.1 GB!                                               |
 |                                                                         |
 |  Contains:                                                             |
 |  * Full Go compiler (not needed at runtime)                         |
@@ -68,7 +68,7 @@ separating build-time dependencies from runtime requirements.
 |  | CMD ["/myapp"]                                                 |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
-|  Image size: ~15 MB! 🎉                                              |
+|  Image size: ~15 MB!                                               |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -198,7 +198,7 @@ separating build-time dependencies from runtime requirements.
 |  =================================                                      |
 |                                                                         |
 |  For statically compiled binaries (Go, Rust).                        |
-|  Zero base image—just your binary!                                    |
+|  Zero base image-just your binary!                                    |
 |                                                                         |
 |  FROM golang:1.21 AS builder                                          |
 |  WORKDIR /app                                                          |

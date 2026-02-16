@@ -3,89 +3,89 @@
 
 ### TABLE OF CONTENTS
 
-· A Real-World Problem
-· Part 1: Requirements & Core Challenges
-∘ 1.1 Functional Requirements
-∘ 1.2 Non-Functional Requirements
-∘ 1.3 Scale Estimation
-∘ 1.4 Main Challenges
-· Part 2: Core Architecture — Real-Time Location Tracking
-∘ 2.1 The Location Update Problem
-∘ 2.2 WebSocket vs HTTP Polling: A Critical Decision
-∘ 2.3 Location Gateway Architecture
-∘ 2.4 Connection Registry Pattern
-∘ 2.5 Location Update Flow (Complete Sequence)
-· Part 3: Geospatial Indexing — Finding Nearby Drivers
-∘ 3.1 The Proximity Search Problem
-∘ 3.2 Geohash: Encoding Location as Strings
-∘ 3.3 Quadtree: Adaptive Spatial Partitioning
-∘ 3.4 S2 Geometry: Google's Approach
-∘ 3.5 H3: Uber's Hexagonal Grid (Deep Dive)
-∘ 3.6 Redis Geospatial Implementation
-· Part 4: Driver-Rider Matching — The Heart of Uber
-∘ 4.1 The Matching Problem
-∘ 4.2 Greedy vs Optimal Matching
-∘ 4.3 Batched Matching Algorithm
-∘ 4.4 Handling Race Conditions (Multiple Drivers)
-∘ 4.5 Distributed Locking Deep Dive
-∘ 4.6 Complete Matching Sequence
-· Part 5: ETA Prediction — Accuracy Matters
-∘ 5.1 Why ETA is Hard
-∘ 5.2 Road Network Graph
-∘ 5.3 Routing Algorithms (Dijkstra, A*, Contraction Hierarchies)
-∘ 5.4 Machine Learning for ETA
-∘ 5.5 Real-Time Traffic Integration
-· Part 6: Surge Pricing — Balancing Supply and Demand
-∘ 6.1 The Economics of Surge
-∘ 6.2 Demand-Supply Calculation
-∘ 6.3 Zone-Based Pricing with H3
-∘ 6.4 Surge Smoothing and Caps
-· Part 7: Ride State Machine — Managing Ride Lifecycle
-∘ 7.1 State Transitions
-∘ 7.2 Concurrent State Modifications
-∘ 7.3 Saga Pattern for Distributed Transactions
-· Part 8: Payment Processing — Reliability at Scale
-∘ 8.1 Two-Phase Payment (Authorize + Capture)
-∘ 8.2 Idempotency Implementation
-∘ 8.3 Handling Payment Failures
-· Part 9: Ride Sharing (UberPool) — Optimization at Scale
-∘ 9.1 The Pooling Problem (TSP Variant)
-∘ 9.2 Matching Multiple Riders
-∘ 9.3 Dynamic Re-Routing
-∘ 9.4 Fair Pricing
-· Part 10: Database Architecture — Choosing the Right Storage
-∘ 10.1 PostgreSQL for Transactional Data
-∘ 10.2 Redis for Real-Time Data
-∘ 10.3 Cassandra for Time-Series Data
-∘ 10.4 Kafka for Event Streaming
-· Part 11: Failure Handling — When Things Go Wrong
-∘ 11.1 Driver Goes Offline Mid-Ride
-∘ 11.2 Payment Gateway Timeout
-∘ 11.3 GPS Accuracy Issues
-∘ 11.4 Data Center Failure
-· Part 12: Complete System Architecture
-∘ 12.1 High-Level Architecture
-∘ 12.2 End-to-End Ride Flow
-∘ 12.3 Service Responsibilities
-· Part 13: Scaling to Millions
-∘ 13.1 Horizontal Scaling Strategy
-∘ 13.2 Geographic Sharding
-∘ 13.3 Handling Traffic Spikes
-· Part 14: Trade-offs and Design Decisions
-∘ 14.1 Critical Trade-offs
-∘ 14.2 What We Learned
-· Final Architecture Summary
-· Part 15: Theoretical Foundations
-∘ 15.1 CAP Theorem
-∘ 15.2 ACID vs BASE
-∘ 15.3 Consistency Models
-∘ 15.4 Database Scaling Concepts
-∘ 15.5 Caching Patterns
-∘ 15.6 Load Balancing
-∘ 15.7 Rate Limiting
-∘ 15.8 Message Queue Semantics
-∘ 15.9 Microservices Patterns
-∘ 15.10 API Design
+. A Real-World Problem
+. Part 1: Requirements & Core Challenges
+o 1.1 Functional Requirements
+o 1.2 Non-Functional Requirements
+o 1.3 Scale Estimation
+o 1.4 Main Challenges
+. Part 2: Core Architecture - Real-Time Location Tracking
+o 2.1 The Location Update Problem
+o 2.2 WebSocket vs HTTP Polling: A Critical Decision
+o 2.3 Location Gateway Architecture
+o 2.4 Connection Registry Pattern
+o 2.5 Location Update Flow (Complete Sequence)
+. Part 3: Geospatial Indexing - Finding Nearby Drivers
+o 3.1 The Proximity Search Problem
+o 3.2 Geohash: Encoding Location as Strings
+o 3.3 Quadtree: Adaptive Spatial Partitioning
+o 3.4 S2 Geometry: Google's Approach
+o 3.5 H3: Uber's Hexagonal Grid (Deep Dive)
+o 3.6 Redis Geospatial Implementation
+. Part 4: Driver-Rider Matching - The Heart of Uber
+o 4.1 The Matching Problem
+o 4.2 Greedy vs Optimal Matching
+o 4.3 Batched Matching Algorithm
+o 4.4 Handling Race Conditions (Multiple Drivers)
+o 4.5 Distributed Locking Deep Dive
+o 4.6 Complete Matching Sequence
+. Part 5: ETA Prediction - Accuracy Matters
+o 5.1 Why ETA is Hard
+o 5.2 Road Network Graph
+o 5.3 Routing Algorithms (Dijkstra, A*, Contraction Hierarchies)
+o 5.4 Machine Learning for ETA
+o 5.5 Real-Time Traffic Integration
+. Part 6: Surge Pricing - Balancing Supply and Demand
+o 6.1 The Economics of Surge
+o 6.2 Demand-Supply Calculation
+o 6.3 Zone-Based Pricing with H3
+o 6.4 Surge Smoothing and Caps
+. Part 7: Ride State Machine - Managing Ride Lifecycle
+o 7.1 State Transitions
+o 7.2 Concurrent State Modifications
+o 7.3 Saga Pattern for Distributed Transactions
+. Part 8: Payment Processing - Reliability at Scale
+o 8.1 Two-Phase Payment (Authorize + Capture)
+o 8.2 Idempotency Implementation
+o 8.3 Handling Payment Failures
+. Part 9: Ride Sharing (UberPool) - Optimization at Scale
+o 9.1 The Pooling Problem (TSP Variant)
+o 9.2 Matching Multiple Riders
+o 9.3 Dynamic Re-Routing
+o 9.4 Fair Pricing
+. Part 10: Database Architecture - Choosing the Right Storage
+o 10.1 PostgreSQL for Transactional Data
+o 10.2 Redis for Real-Time Data
+o 10.3 Cassandra for Time-Series Data
+o 10.4 Kafka for Event Streaming
+. Part 11: Failure Handling - When Things Go Wrong
+o 11.1 Driver Goes Offline Mid-Ride
+o 11.2 Payment Gateway Timeout
+o 11.3 GPS Accuracy Issues
+o 11.4 Data Center Failure
+. Part 12: Complete System Architecture
+o 12.1 High-Level Architecture
+o 12.2 End-to-End Ride Flow
+o 12.3 Service Responsibilities
+. Part 13: Scaling to Millions
+o 13.1 Horizontal Scaling Strategy
+o 13.2 Geographic Sharding
+o 13.3 Handling Traffic Spikes
+. Part 14: Trade-offs and Design Decisions
+o 14.1 Critical Trade-offs
+o 14.2 What We Learned
+. Final Architecture Summary
+. Part 15: Theoretical Foundations
+o 15.1 CAP Theorem
+o 15.2 ACID vs BASE
+o 15.3 Consistency Models
+o 15.4 Database Scaling Concepts
+o 15.5 Caching Patterns
+o 15.6 Load Balancing
+o 15.7 Rate Limiting
+o 15.8 Message Queue Semantics
+o 15.9 Microservices Patterns
+o 15.10 API Design
 
 ## A REAL-WORLD PROBLEM
 
@@ -109,7 +109,7 @@ All of this happens in under 5 seconds, and the system handles 20 million
 rides per day globally.
 
 In this deep dive, we'll build Uber from scratch. Not a toy version, but the
-real system with all its complexity — the distributed locking, the geospatial
+real system with all its complexity - the distributed locking, the geospatial
 indexing, the failure handling, and the trade-offs that make it work at scale.
 
 ## PART 1: REQUIREMENTS & CORE CHALLENGES
@@ -177,9 +177,9 @@ Let's work through the numbers to understand what we're dealing with:
 
 **LOCATION UPDATES:**
 Each driver sends a location update every 4 seconds while online.
-- 5 million drivers × 1 update/4 seconds = 1.25 million updates/second
+- 5 million drivers x 1 update/4 seconds = 1.25 million updates/second
 - Each update: ~200 bytes (driver_id, lat, lng, timestamp, heading, speed)
-- Write throughput: 1.25M × 200 bytes = 250 MB/second
+- Write throughput: 1.25M x 200 bytes = 250 MB/second
 
 This is our first major challenge. Traditional databases cannot handle 1.25
 million writes per second with low latency.
@@ -199,8 +199,8 @@ For each ride request, we need to:
 This multiplies our read load by 10-20x per ride request.
 
 **STORAGE:**
-- Trip data: 20M trips/day × 5 KB = 100 GB/day = 36 TB/year
-- Location history: 1.25M updates/sec × 200 bytes × 86400 sec = 21 TB/day
+- Trip data: 20M trips/day x 5 KB = 100 GB/day = 36 TB/year
+- Location history: 1.25M updates/sec x 200 bytes x 86400 sec = 21 TB/day
 - Total: ~50+ TB/year (with compression and TTL)
 
 ### 1.4 MAIN CHALLENGES
@@ -210,12 +210,12 @@ challenges we need to solve:
 
 CHALLENGE 1: Real-Time Location Tracking
 How do we handle 1.25 million location updates per second? Traditional
-REST APIs won't work — the overhead of establishing HTTP connections and
+REST APIs won't work - the overhead of establishing HTTP connections and
 sending headers would consume more bandwidth than the data itself.
 
 CHALLENGE 2: Geospatial Queries at Scale
 When a rider requests a ride, we need to find drivers within a certain
-radius — fast. Scanning 5 million driver locations for each request is not
+radius - fast. Scanning 5 million driver locations for each request is not
 feasible. We need specialized geospatial indexing.
 
 CHALLENGE 3: Race Conditions in Matching
@@ -224,7 +224,7 @@ what if two riders request simultaneously and both get matched to the same
 driver? We need distributed locking without sacrificing performance.
 
 CHALLENGE 4: Accurate ETA Prediction
-Users expect accurate ETAs. But predicting travel time is hard — it depends
+Users expect accurate ETAs. But predicting travel time is hard - it depends
 on traffic, road conditions, time of day, weather, and countless other
 factors. We need ML-based predictions updated in real-time.
 
@@ -297,8 +297,8 @@ This establishes the contract between components.
 |                                                                         |
 |  Indexes:                                                              |
 |  * PRIMARY KEY (id)                                                    |
-|  * INDEX (is_online) — for finding available drivers                  |
-|  * SPATIAL INDEX (current_location) — for proximity queries           |
+|  * INDEX (is_online) - for finding available drivers                  |
+|  * SPATIAL INDEX (current_location) - for proximity queries           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -367,10 +367,10 @@ This establishes the contract between components.
 |                                                                         |
 |  Indexes:                                                              |
 |  * PRIMARY KEY (id)                                                    |
-|  * INDEX (rider_id, status) — rider's active/past rides               |
-|  * INDEX (driver_id, status) — driver's active/past rides             |
-|  * INDEX (status, requested_at) — for matching queue                  |
-|  * SPATIAL INDEX (pickup_location) — for surge calculation            |
+|  * INDEX (rider_id, status) - rider's active/past rides               |
+|  * INDEX (driver_id, status) - driver's active/past rides             |
+|  * INDEX (status, requested_at) - for matching queue                  |
+|  * SPATIAL INDEX (pickup_location) - for surge calculation            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -397,7 +397,7 @@ This establishes the contract between components.
 |                                                                         |
 |  Indexes:                                                              |
 |  * PRIMARY KEY (id)                                                    |
-|  * UNIQUE INDEX (idempotency_key) — prevents double charge            |
+|  * UNIQUE INDEX (idempotency_key) - prevents double charge            |
 |  * INDEX (ride_id)                                                     |
 |  * INDEX (rider_id, status)                                           |
 |                                                                         |
@@ -420,9 +420,9 @@ This establishes the contract between components.
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  PRIMARY KEY: (driver_id, timestamp)                                   |
-|  * Partition by driver_id — all history for one driver together       |
-|  * Cluster by timestamp DESC — recent locations first                 |
-|  * TTL: 30 days — auto-delete old location data                       |
+|  * Partition by driver_id - all history for one driver together       |
+|  * Cluster by timestamp DESC - recent locations first                 |
+|  * TTL: 30 days - auto-delete old location data                       |
 |                                                                         |
 |  Query pattern:                                                        |
 |  SELECT * FROM driver_locations                                        |
@@ -896,10 +896,10 @@ SERVER > RIDER (Driver Location Updates):
 +-------------------------------------------------------------------------+
 ```
 
-## PART 2: CORE ARCHITECTURE — REAL-TIME LOCATION TRACKING
+## PART 2: CORE ARCHITECTURE - REAL-TIME LOCATION TRACKING
 
 The foundation of Uber is knowing where drivers are in real-time. Without
-accurate, up-to-date location data, nothing else works — we can't find nearby
+accurate, up-to-date location data, nothing else works - we can't find nearby
 drivers, can't show accurate ETAs, can't track rides on a map.
 
 ### 2.1 THE LOCATION UPDATE PROBLEM
@@ -930,8 +930,8 @@ Let's calculate the cost of this approach:
 - HTTP headers: ~500 bytes per request (cookies, auth tokens, content-type)
 - Payload: ~200 bytes
 - Total: ~700 bytes per update
-- 5 million drivers × 1 update/4 sec = 1.25M requests/second
-- Bandwidth: 1.25M × 700 bytes = 875 MB/second just for overhead
+- 5 million drivers x 1 update/4 sec = 1.25M requests/second
+- Bandwidth: 1.25M x 700 bytes = 875 MB/second just for overhead
 
 This is wasteful. The actual data is 200 bytes, but we're sending 700 bytes
 due to HTTP overhead. Worse, each request requires a new TCP connection
@@ -972,7 +972,7 @@ For Uber, WebSocket is the clear winner:
 |      |<--- 200 OK ---------------------------------|                    |
 |      |                    (repeat forever)         |                    |
 |                                                                         |
-|  Problem: 700 bytes × 1.25M/sec = 875 MB/sec bandwidth waste            |
+|  Problem: 700 bytes x 1.25M/sec = 875 MB/sec bandwidth waste            |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
@@ -991,7 +991,7 @@ For Uber, WebSocket is the clear winner:
 |      |                                             |                    |
 |      |<--- Ride request push (instant) ------------|                    |
 |      |                                             |                    |
-|  Benefit: 206 bytes × 1.25M/sec = 257 MB/sec (70% reduction)            |
+|  Benefit: 206 bytes x 1.25M/sec = 257 MB/sec (70% reduction)            |
 |  Bonus: Server can push ride requests instantly                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1091,13 +1091,13 @@ Solution: CONSISTENT HASHING
 |                    CONSISTENT HASHING RING                          |
 |                                                                     |
 |                         Gateway-1                                   |
-|                            ●                                        |
+|                            o                                        |
 |                      /           \                                  |
 |                    /               \                                |
-|        Gateway-4 ●                   ● Gateway-2                    |
+|        Gateway-4 o                   o Gateway-2                    |
 |                    \               /                                |
 |                      \           /                                  |
-|                            ●                                        |
+|                            o                                        |
 |                         Gateway-3                                   |
 |                                                                     |
 |   Client IP hashes to a point, walks clockwise to find server      |
@@ -1133,7 +1133,7 @@ Here's a critical problem: A rider is matched with a driver. We need to send
 a ride request to that driver. But which Gateway server holds the driver's
 WebSocket connection?
 
-We solve this with a Connection Registry — a distributed map of
+We solve this with a Connection Registry - a distributed map of
 driver_id > gateway_server_id stored in Redis:
 
 ```
@@ -1443,7 +1443,7 @@ which server has the target connection.
 
 **HOW IT WORKS:**
 ```
-1. Maintain a "Connection Registry" — a distributed map of 
+1. Maintain a "Connection Registry" - a distributed map of 
    {user_id > server_hostname}
 2. When Server A needs to send to User B:
    a. Lookup: "Which server has User B?" > Server B
@@ -1490,7 +1490,7 @@ which server has the target connection.
 - TIGHT COUPLING: Gateways must know about each other
 - CONNECTION MANAGEMENT: Must maintain connection pools between servers
 - FAILURE HANDLING: What if Server B is temporarily unreachable?
-- SCALABILITY: N servers = N×N potential connections (mesh topology)
+- SCALABILITY: N servers = NxN potential connections (mesh topology)
 - REGISTRY STALENESS: User might have moved to different server
 
 VERDICT: Works for moderate scale, gets complex with many servers.
@@ -1503,9 +1503,9 @@ and subscribers receive them. Complete decoupling.
 
 PRINCIPLE: PUBLISH-SUBSCRIBE PATTERN
 ```
-- PUBLISHER: Sends message to a "channel" or "topic" — doesn't know/care 
+- PUBLISHER: Sends message to a "channel" or "topic" - doesn't know/care 
   who receives it
-- SUBSCRIBER: Listens to channels — doesn't know/care who publishes
+- SUBSCRIBER: Listens to channels - doesn't know/care who publishes
 - BROKER: Routes messages from publishers to all subscribers
 
 +-------------------------------------------------------------------------+
@@ -1547,7 +1547,7 @@ multiple devices, or if we add a monitoring system, all receive updates.
 
 3. LOCATION TRANSPARENCY
 Publisher doesn't need to know WHERE subscriber is. Broker handles it.
-User can reconnect to different server — new server just subscribes.
+User can reconnect to different server - new server just subscribes.
 
 4. FAILURE ISOLATION
 If Gateway B is slow, Gateway A doesn't block. It publishes and moves on.
@@ -1625,7 +1625,7 @@ BROKER CHOICE: REDIS PUB/SUB vs KAFKA
 |                 * Real-time streaming      * Event sourcing             |
 |                                                                         |
 |  FOR LOCATION STREAMING: Redis Pub/Sub wins.                            |
-|  Location is ephemeral — old location is worthless.                     |
+|  Location is ephemeral - old location is worthless.                     |
 |  New update comes in 4 seconds anyway.                                  |
 |  Speed (1-2ms) matters more than reliability.                           |
 |                                                                         |
@@ -1687,11 +1687,11 @@ Polling interval of 1 second = up to 1 second delay.
 Pub/Sub delivers in 1-2 milliseconds.
 
 2. DATABASE LOAD
-1 million active rides × 1 poll/second = 1 million queries/second
+1 million active rides x 1 poll/second = 1 million queries/second
 This will crush any database.
 
 3. INEFFICIENCY
-Most polls return "no new data" — wasted work.
+Most polls return "no new data" - wasted work.
 Pub/Sub only delivers when there's actual data.
 
 4. SCALING
@@ -1783,7 +1783,7 @@ VERDICT: Good for medium scale. Uber likely uses custom implementation.
 |     Sessions                 (hotspots)               prototypes        |
 |                                                                         |
 |  2. Direct         ~2-5ms    Medium       Medium      Moderate scale,   |
-|     Server-to-                (N×N mesh)              low infra budget  |
+|     Server-to-                (NxN mesh)              low infra budget  |
 |     Server                                                              |
 |                                                                         |
 |  3. Pub/Sub        ~2-5ms    Excellent    Medium      Large scale,      |
@@ -1969,7 +1969,7 @@ subscription. This wastes resources (messages delivered to no one).
 |                                               |              |          |
 |                                               |  +--------+  |          |
 |                                               |  | Map UI |  |          |
-|                                               |  |  📍🚗  |  |          |
+|                                               |  |    |  |          |
 |                                               |  +--------+  |          |
 |                                               +--------------+          |
 |                                                                         |
@@ -1987,7 +1987,7 @@ subscription. This wastes resources (messages delivered to no one).
 +-------------------------------------------------------------------------+
 ```
 
-## PART 3: GEOSPATIAL INDEXING — FINDING NEARBY DRIVERS
+## PART 3: GEOSPATIAL INDEXING - FINDING NEARBY DRIVERS
 
 Now that we're receiving location updates, we need to answer the most
 fundamental question in ride-hailing: "Which drivers are near this rider?"
@@ -2110,7 +2110,7 @@ This creates a recursive spatial partitioning where nearby points often
 ```
 +---------+---------+
 |  9q8yx  |  9q8yy  |  
-|    *    |   ★     |  * and ★ are 100m apart but in DIFFERENT cells!
+|    *    |   *     |  * and * are 100m apart but in DIFFERENT cells!
 +---------+---------+
 ```
 
@@ -2147,7 +2147,7 @@ Advantages:
 Disadvantages:
 - Edge effects (need to query 9 cells instead of 1)
 - Cells are not uniform (vary by latitude due to Earth's curvature)
-- Square cells don't align with movement (diagonals are √2 times farther)
+- Square cells don't align with movement (diagonals are V2 times farther)
 
 ### 3.3 H3: UBER'S HEXAGONAL GRID (DEEP DIVE)
 
@@ -2161,13 +2161,13 @@ limitations. Why hexagons?
 |  SQUARES (Geohash):                 HEXAGONS (H3):                     |
 |  +---+---+---+                         /\ /\ /\                        |
 |  |   |   |   |                        /  \/  \/  \                      |
-|  +---+-★-+---+                        \  /\★ /\  /                      |
+|  +---+-*-+---+                        \  /\* /\  /                      |
 |  |   |   |   |                         \/  \/  \/                       |
 |  +---+---+---+                         /\ /\ /\                        |
 |                                                                         |
 |  8 neighbors                       6 neighbors                         |
 |  4 at distance d                   ALL at distance d                   |
-|  4 at distance √2×d                                                    |
+|  4 at distance V2xd                                                    |
 |                                                                         |
 |  For a car, moving to diagonal     All neighbors are equidistant      |
 |  neighbor takes 41% longer         Better for travel time estimates   |
@@ -2183,10 +2183,10 @@ we're estimating travel time, not just straight-line distance.
 
 2. HIERARCHICAL RESOLUTIONS
 H3 has 16 resolution levels (0-15):
-- Resolution 0: ~4.3 million km² (continental)
-- Resolution 7: ~5.2 km² (city analysis)
-- Resolution 9: ~0.1 km² (driver matching)
-- Resolution 12: ~300 m² (pickup precision)
+- Resolution 0: ~4.3 million km2 (continental)
+- Resolution 7: ~5.2 km2 (city analysis)
+- Resolution 9: ~0.1 km2 (driver matching)
+- Resolution 12: ~300 m2 (pickup precision)
 
 3. CONSISTENT CELL IDS
 Each cell has a 64-bit ID that encodes its position and resolution.
@@ -2254,7 +2254,7 @@ This partitioning serves two purposes:
 1. PERFORMANCE: Smaller indexes mean faster queries
 2. SCALING: We can put different cities on different Redis clusters
 
-## PART 4: DRIVER-RIDER MATCHING — THE HEART OF UBER
+## PART 4: DRIVER-RIDER MATCHING - THE HEART OF UBER
 
 We can track drivers and find nearby ones. Now comes the core algorithm:
 matching a rider with the best available driver.
@@ -2270,7 +2270,7 @@ When a rider requests a ride, we need to:
 6. Handle acceptance/rejection/timeout
 7. Prevent race conditions if multiple riders want the same driver
 
-This isn't just a proximity problem — it's an optimization problem with
+This isn't just a proximity problem - it's an optimization problem with
 multiple constraints and objectives.
 
 ### 4.2 GREEDY VS OPTIMAL MATCHING
@@ -2441,7 +2441,7 @@ CONCEPT: Use the database's ACID properties to create a lock table.
 
 **WHY IT WORKS:**
 - Database guarantees unique constraint on resource_id
-- INSERT is atomic — only one will succeed
+- INSERT is atomic - only one will succeed
 - ACID properties ensure consistency
 
 **PROBLEMS:**
@@ -2796,7 +2796,7 @@ FOR UBER'S RIDE MATCHING, WE LOCK AT THE ROW LEVEL:
 +-------------------------------------------------------------------------+
 ```
 
-DRIVER LOCKING — ALSO ROW LEVEL:
+DRIVER LOCKING - ALSO ROW LEVEL:
 
 ```
 +-------------------------------------------------------------------------+
@@ -3072,11 +3072,11 @@ understanding the RACE CONDITION you're trying to prevent.
 |                                                                         |
 |  Time ---------------------------------------------------------->      |
 |                                                                         |
-|  ride:123    ████████████████████████████████████████████             |
+|  ride:123    ############################################             |
 |              ^                                          ^              |
 |              acquire                                    release        |
 |                                                                         |
-|  driver:D1               ███████████████████                           |
+|  driver:D1               ###################                           |
 |                          ^                 ^                            |
 |                          acquire           release                      |
 |                                                                         |
@@ -3389,7 +3389,7 @@ the difference and when to use each.
 +-------------------------------------------------------------------------+
 ```
 
-COMPOSITE LOCKS — WHEN YOU NEED MULTIPLE RESOURCES:
+COMPOSITE LOCKS - WHEN YOU NEED MULTIPLE RESOURCES:
 
 ```
 +-------------------------------------------------------------------------+
@@ -3576,7 +3576,7 @@ SOLUTION: FENCING TOKEN
 |                                                                         |
 |  Every write includes the fencing token.                               |
 |  The database tracks the highest token it has seen.                    |
-|  It REJECTS any write with a token ≤ the highest seen.                |
+|  It REJECTS any write with a token < the highest seen.                |
 |                                                                         |
 |  Server B writes: token = 43 > DB accepts, records max_token = 43     |
 |  Server A writes: token = 42 > DB rejects (42 < 43)                   |
@@ -3795,7 +3795,7 @@ The UPDATE uses a WHERE clause to ensure atomicity.
 The lock has a 30-second TTL. If our server crashes while holding the
 lock, it will auto-release, preventing deadlocks.
 
-## PART 5: ETA PREDICTION — ACCURACY MATTERS
+## PART 5: ETA PREDICTION - ACCURACY MATTERS
 
 "Your driver will arrive in 3 minutes." This simple message drives countless
 user decisions. If we say 3 minutes and it takes 10, users lose trust. If
@@ -3804,7 +3804,7 @@ accuracy is critical to user experience.
 
 ### 5.1 WHY ETA IS HARD
 
-Calculating travel time seems simple: distance ÷ speed. But real-world
+Calculating travel time seems simple: distance / speed. But real-world
 travel is far more complex:
 
 - ROAD NETWORK: You can't travel in straight lines. Roads have turns,
@@ -3846,7 +3846,7 @@ We model the road network as a weighted directed graph:
 |  * A > C > D: 3 + 4 = 7 min                                           |
 |                                                                         |
 |  Edge weight varies by:                                                |
-|  * Base travel time (distance ÷ speed limit)                          |
+|  * Base travel time (distance / speed limit)                          |
 |  * Current traffic (from live driver data)                            |
 |  * Historical patterns (weekday 8am = rush hour)                      |
 |                                                                         |
@@ -3893,7 +3893,7 @@ shortcuts for these common paths.
 |        |           |                                                   |
 |        +--- F -----+                                                   |
 |                                                                         |
-|  Preprocessing: O(V × E × log V) - done once, takes hours             |
+|  Preprocessing: O(V x E x log V) - done once, takes hours             |
 |  Query time: O(log V) - sub-millisecond!                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -3944,7 +3944,7 @@ predictions that account for factors the graph doesn't capture.
 +-------------------------------------------------------------------------+
 ```
 
-## PART 6: SURGE PRICING — BALANCING SUPPLY AND DEMAND
+## PART 6: SURGE PRICING - BALANCING SUPPLY AND DEMAND
 
 At 2 AM on New Year's Eve, everyone wants a ride home. There aren't enough
 drivers. What do you do?
@@ -4063,13 +4063,13 @@ willing to pay, matching supply.
 |                                                                         |
 |  OPTION A: Calculate surge for each rider's exact location            |
 |  ---------------------------------------------------------              |
-|  * 1000 ride requests/second × surge calculation = massive load       |
+|  * 1000 ride requests/second x surge calculation = massive load       |
 |  * Two riders 10 meters apart might see different prices              |
 |  * Confusing UX ("I moved one block and price changed!")              |
 |                                                                         |
 |  OPTION B: Divide city into zones, calculate once per zone (Used)     |
 |  ---------------------------------------------------------              |
-|  * ~500 zones per city × 1 calc/zone/2min = 250 calculations/min     |
+|  * ~500 zones per city x 1 calc/zone/2min = 250 calculations/min     |
 |  * All riders in same zone see same price (fair and predictable)        |
 |  * Can cache aggressively (same zone = same surge)                      |
 |                                                                         |
@@ -4088,7 +4088,7 @@ willing to pay, matching supply.
 |  * Squares have diagonal neighbors 41% farther than edge neighbors      |
 |  * Better for "spread" calculations (surge bleeding between zones)      |
 |                                                                         |
-|  Zone resolution: ~100m × 100m (H3 resolution 9)                        |
+|  Zone resolution: ~100m x 100m (H3 resolution 9)                        |
 |  * Small enough for local price differentiation                         |
 |  * Large enough to have meaningful supply/demand counts                 |
 |                                                                         |
@@ -4145,10 +4145,10 @@ To prevent jarring price jumps, we smooth surge transitions:
 - Don't decrease more than 0.25x per update
 - Average with neighboring zones to reduce edge effects
 
-## PART 7: RIDE STATE MACHINE — MANAGING RIDE LIFECYCLE
+## PART 7: RIDE STATE MACHINE - MANAGING RIDE LIFECYCLE
 
 A ride goes through multiple states from request to completion. Managing
-these transitions correctly is critical — we can't have a ride stuck in
+these transitions correctly is critical - we can't have a ride stuck in
 an invalid state or allow illegal transitions.
 
 ### 7.1 STATE TRANSITIONS
@@ -4509,7 +4509,7 @@ There are two fundamentally different ways to coordinate a saga.
 |  what to do and when. Services don't talk to each other.               |
 |                                                                         |
 |  Like a conductor leading an orchestra. Musicians don't decide         |
-|  when to play — they follow the conductor's instructions.              |
+|  when to play - they follow the conductor's instructions.              |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -4598,7 +4598,7 @@ There are two fundamentally different ways to coordinate a saga.
 
 ### 7.4 UBER'S IMPLEMENTATION: CADENCE WORKFLOW ENGINE
 
-Uber built and open-sourced CADENCE — a workflow engine for orchestration.
+Uber built and open-sourced CADENCE - a workflow engine for orchestration.
 
 ```
 +-------------------------------------------------------------------------+
@@ -4734,7 +4734,7 @@ Uber built and open-sourced CADENCE — a workflow engine for orchestration.
 +-------------------------------------------------------------------------+
 ```
 
-## PART 8: PAYMENT PROCESSING — RELIABILITY AT SCALE
+## PART 8: PAYMENT PROCESSING - RELIABILITY AT SCALE
 
 Processing payments at Uber's scale (20 million rides/day) requires
 bulletproof reliability. We cannot double-charge customers or miss payments.
@@ -4799,7 +4799,7 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |    |                 |                   |                            |
 |    | (timeout, retry)|                   |                            |
 |    |-- Charge $20 -->|------------------>|                            |
-|    |                 |                   |-- Charges card AGAIN! ❌   |
+|    |                 |                   |-- Charges card AGAIN!    |
 |    |                 |                   |                            |
 |                                                                         |
 |  WITHOUT IDEMPOTENCY: Customer charged $40 instead of $20!            |
@@ -5169,7 +5169,7 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 +-------------------------------------------------------------------------+
 ```
 
-## PART 9: RIDE SHARING (UBERPOOL) — OPTIMIZATION AT SCALE
+## PART 9: RIDE SHARING (UBERPOOL) - OPTIMIZATION AT SCALE
 
 UberPool matches multiple riders going in the same direction, sharing a
 single vehicle. This is a significantly more complex problem than 1:1 matching.
@@ -5209,7 +5209,7 @@ With these constraints, we can enumerate valid orderings efficiently.
 +-------------------------------------------------------------------------+
 ```
 
-### STEP 1: SPATIAL FILTERING — FIND NEARBY POOLS
+### STEP 1: SPATIAL FILTERING - FIND NEARBY POOLS
 
 ```
 +-------------------------------------------------------------------------+
@@ -5236,7 +5236,7 @@ With these constraints, we can enumerate valid orderings efficiently.
 +-------------------------------------------------------------------------+
 ```
 
-### STEP 2: DIRECTION FILTERING — SAME GENERAL HEADING
+### STEP 2: DIRECTION FILTERING - SAME GENERAL HEADING
 
 ```
 +-------------------------------------------------------------------------+
@@ -5245,32 +5245,32 @@ With these constraints, we can enumerate valid orderings efficiently.
 |  APPROACH:                                                             |
 |  * Calculate heading/bearing for pool (current location > destination)|
 |  * Calculate heading for new rider (pickup > dropoff)                 |
-|  * If angle difference > threshold (e.g., 45°), skip this pool        |
+|  * If angle difference > threshold (e.g., 45o), skip this pool        |
 |                                                                         |
-|                        N (0°)                                          |
+|                        N (0o)                                          |
 |                          ^                                             |
 |                          |                                             |
-|              Pool -------+--------> E (90°)                           |
+|              Pool -------+--------> E (90o)                           |
 |              heading     |                                             |
 |                   \      |                                             |
-|                    \45°  |                                             |
+|                    \45o  |                                             |
 |                     \    |                                             |
-|                      ↘   |                                             |
+|                      v   |                                             |
 |                   New rider heading                                    |
 |                                                                         |
-|  If both headings within ~45°, riders are going "same direction"      |
+|  If both headings within ~45o, riders are going "same direction"      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  WHY 45°?                                                              |
-|  * Too strict (10°): Miss valid pools, fewer matches                  |
-|  * Too loose (90°): Excessive detours, unhappy riders                 |
-|  * 45° is a practical balance                                         |
+|  WHY 45o?                                                              |
+|  * Too strict (10o): Miss valid pools, fewer matches                  |
+|  * Too loose (90o): Excessive detours, unhappy riders                 |
+|  * 45o is a practical balance                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### STEP 3: DETOUR CALCULATION — CAN WE ADD RIDER WITHOUT TOO MUCH DETOUR?
+### STEP 3: DETOUR CALCULATION - CAN WE ADD RIDER WITHOUT TOO MUCH DETOUR?
 
 ```
 +-------------------------------------------------------------------------+
@@ -5299,7 +5299,7 @@ With these constraints, we can enumerate valid orderings efficiently.
 +-------------------------------------------------------------------------+
 ```
 
-### STEP 4: OPTIMAL WAYPOINT ORDERING — THE HARD PART
+### STEP 4: OPTIMAL WAYPOINT ORDERING - THE HARD PART
 
 ```
 +-------------------------------------------------------------------------+
@@ -5358,8 +5358,8 @@ With these constraints, we can enumerate valid orderings efficiently.
 |                                                                         |
 |  ALTERNATIVE SCORING FUNCTIONS:                                        |
 |                                                                         |
-|  * Minimize MAX detour (fairness — no one suffers too much)           |
-|  * Minimize TOTAL detour (efficiency — optimize overall time)         |
+|  * Minimize MAX detour (fairness - no one suffers too much)           |
+|  * Minimize TOTAL detour (efficiency - optimize overall time)         |
 |  * Minimize DRIVER empty miles (cost optimization)                    |
 |  * Weighted combination of above                                      |
 |                                                                         |
@@ -5368,7 +5368,7 @@ With these constraints, we can enumerate valid orderings efficiently.
 +-------------------------------------------------------------------------+
 ```
 
-### STEP 6: NO MATCH FOUND — CREATE NEW POOL
+### STEP 6: NO MATCH FOUND - CREATE NEW POOL
 
 ```
 +-------------------------------------------------------------------------+
@@ -5400,7 +5400,7 @@ With these constraints, we can enumerate valid orderings efficiently.
 |             v                                                          |
 |  +---------------------+                                              |
 |  |  DIRECTION FILTER   |  "Keep only same-direction pools"           |
-|  |  (Heading < 45°)    |                                              |
+|  |  (Heading < 45o)    |                                              |
 |  +----------+----------+                                              |
 |             | Compatible pools                                        |
 |             v                                                          |
@@ -5449,15 +5449,15 @@ With these constraints, we can enumerate valid orderings efficiently.
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  Step 1 (Spatial): O(log M) where M = total pools (index lookup)      |
-|  Step 2 (Direction): O(P) — check each nearby pool                    |
-|  Step 3-4 (Ordering): O(P × V × N) — for each pool, enumerate orders  |
+|  Step 2 (Direction): O(P) - check each nearby pool                    |
+|  Step 3-4 (Ordering): O(P x V x N) - for each pool, enumerate orders  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  With N = 3: V = 90 orderings                                         |
-|  With P = 50 nearby pools: 50 × 90 × 3 = 13,500 operations            |
+|  With P = 50 nearby pools: 50 x 90 x 3 = 13,500 operations            |
 |                                                                         |
-|  This is very tractable — completes in milliseconds.                  |
+|  This is very tractable - completes in milliseconds.                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -5515,7 +5515,7 @@ Only 6 valid orderings out of 24 total permutations (4!).
 +-------------------------------------------------------------------------+
 ```
 
-## PART 10: DATABASE ARCHITECTURE — CHOOSING THE RIGHT STORAGE
+## PART 10: DATABASE ARCHITECTURE - CHOOSING THE RIGHT STORAGE
 
 Different data has different access patterns. Using one database for
 everything would be a mistake. We use specialized storage for each use case.
@@ -5551,9 +5551,9 @@ everything would be a mistake. We use specialized storage for each use case.
 +-------------------------------------------------------------------------+
 ```
 
-## PART 11: FAILURE HANDLING — WHEN THINGS GO WRONG
+## PART 11: FAILURE HANDLING - WHEN THINGS GO WRONG
 
-In a distributed system, failures are not exceptions — they're the norm.
+In a distributed system, failures are not exceptions - they're the norm.
 Networks partition, servers crash, disks fail. Our system must handle these
 gracefully.
 
@@ -5602,8 +5602,8 @@ gracefully.
 |  Combine GPS with accelerometer and gyroscope data to smooth          |
 |  erratic readings and predict position when GPS is unreliable.        |
 |                                                                         |
-|  predicted_position = last_position + velocity × time                  |
-|  smoothed_position = predicted × (1-K) + GPS × K                      |
+|  predicted_position = last_position + velocity x time                  |
+|  smoothed_position = predicted x (1-K) + GPS x K                      |
 |  where K = confidence in GPS reading                                  |
 |                                                                         |
 |  Solution 2: MAP MATCHING                                              |
@@ -5617,7 +5617,7 @@ gracefully.
 |  Solution 3: DEAD RECKONING                                            |
 |  -------------------------                                             |
 |  When GPS is completely lost (tunnel), estimate position using:       |
-|  position = last_known + speed × time × heading                       |
+|  position = last_known + speed x time x heading                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -5741,7 +5741,7 @@ and 20M rides per day. Here's how we scale each component.
 |  STATELESS SERVICES (Ride, Matching, ETA):                            |
 |  * Run in Kubernetes with Horizontal Pod Autoscaler                   |
 |  * Scale based on CPU utilization or request queue depth             |
-|  * No sticky sessions needed — any pod can handle any request        |
+|  * No sticky sessions needed - any pod can handle any request        |
 |                                                                         |
 |  WEBSOCKET GATEWAYS:                                                   |
 |  * Each server handles 50K connections                                |
@@ -5785,10 +5785,10 @@ riders in London. We use this property for geographic sharding:
 |  +---------------+    +---------------+    +---------------+           |
 |                                                                         |
 |  Benefits:                                                             |
-|  * Data locality — queries only touch local data                      |
-|  * Independent scaling — busy cities get more resources               |
-|  * Failure isolation — NYC outage doesn't affect London              |
-|  * Regulatory compliance — EU data stays in EU                       |
+|  * Data locality - queries only touch local data                      |
+|  * Independent scaling - busy cities get more resources               |
+|  * Failure isolation - NYC outage doesn't affect London              |
+|  * Regulatory compliance - EU data stays in EU                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -5831,7 +5831,7 @@ we made and why.
 |  Redis risks: If Redis is partitioned, lock might be inconsistent      |
 |                                                                         |
 |  Mitigation: Database is always the source of truth. Redis lock is   |
-|  an optimization — we verify in DB before committing.                |
+|  an optimization - we verify in DB before committing.                |
 +-------------------------------------------------------------------------+
 |  TRADE-OFF 4: Kafka vs Direct Database Writes                         |
 |  ---------------------------------------------                        |
@@ -6057,9 +6057,9 @@ Exploit this for sharding, caching, and latency optimization.
 |  * "Find drivers near me" = Find drivers in nearby cells             |
 |  * O(1) lookup instead of distance calculation                       |
 |                                                                         |
-|     ⬡ ⬡ ⬡                                                             |
-|    ⬡ ● ⬡ ⬡    ● = rider, search adjacent hexagons                    |
-|     ⬡ ⬡ ⬡                                                             |
+|     o o o                                                             |
+|    o o o o    o = rider, search adjacent hexagons                    |
+|     o o o                                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -6239,7 +6239,7 @@ Exploit this for sharding, caching, and latency optimization.
 |  Ride states with valid transitions:                                   |
 |                                                                         |
 |  REQUESTED > MATCHING > MATCHED > DRIVER_ARRIVED                      |
-|           ↘  CANCELLED   v            v                               |
+|           v  CANCELLED   v            v                               |
 |                    IN_PROGRESS > COMPLETED                            |
 |                         v                                             |
 |                    CANCELLED                                          |

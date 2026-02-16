@@ -21,7 +21,7 @@ covers service types, discovery, and load balancing.
 |  |   Before restart:           After restart:                     |  |
 |  |   Pod: 10.0.1.5             Pod: 10.0.1.99 (NEW IP!)          |  |
 |  |                                                                 |  |
-|  |   Client hardcodes          Client can't find pod! 💥         |  |
+|  |   Client hardcodes          Client can't find pod!          |  |
 |  |   10.0.1.5                                                      |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -436,7 +436,7 @@ USE CASE: Backend services, databases, internal APIs
 |  |                                                                  |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
-|  ❌ INTERNET CANNOT ACCESS (no external IP)                           |
+|   INTERNET CANNOT ACCESS (no external IP)                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 

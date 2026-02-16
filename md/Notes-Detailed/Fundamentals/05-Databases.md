@@ -298,7 +298,7 @@ Relational databases guarantee ACID properties for transactions:
 |  | Row versions:                                                   |   |
 |  | +---------------------------------------------------------+   |   |
 |  | | Version 1 | data="Alice" | xmin=100 | xmax=150        |   |   |
-|  | | Version 2 | data="Alicia" | xmin=150 | xmax=∞         |   |   |
+|  | | Version 2 | data="Alicia" | xmin=150 | xmax=~         |   |   |
 |  | +---------------------------------------------------------+   |   |
 |  |                                                                 |   |
 |  | Transaction 120 sees Version 1 (120 > 100, 120 < 150)        |   |
@@ -677,11 +677,11 @@ Understanding internal data structures helps you make better design decisions.
 |  |  |                                                           ||  |
 |  |  |     Partition Key > Hash > Position on Ring              ||  |
 |  |  |                                                           ||  |
-|  |  |              ●-------●-------●                            ||  |
+|  |  |              o-------o-------o                            ||  |
 |  |  |            /                   \                          ||  |
-|  |  |          ●       Hash Ring      ●                        ||  |
+|  |  |          o       Hash Ring      o                        ||  |
 |  |  |            \                   /                          ||  |
-|  |  |              ●-------●-------●                            ||  |
+|  |  |              o-------o-------o                            ||  |
 |  |  |                                                           ||  |
 |  |  |  Each position owned by a storage node                   ||  |
 |  |  +-----------------------------------------------------------+|  |
@@ -803,13 +803,13 @@ Understanding internal data structures helps you make better design decisions.
 |  |                                                                 |  |
 |  |                    CASSANDRA RING                              |  |
 |  |                                                                 |  |
-|  |              Node A ●---------● Node B                         |  |
+|  |              Node A o---------o Node B                         |  |
 |  |                    /           \                                |  |
 |  |                   /             \                               |  |
-|  |           Node F ●               ● Node C                      |  |
+|  |           Node F o               o Node C                      |  |
 |  |                   \             /                               |  |
 |  |                    \           /                                |  |
-|  |              Node E ●---------● Node D                         |  |
+|  |              Node E o---------o Node D                         |  |
 |  |                                                                 |  |
 |  |  * Each node owns a token range                                |  |
 |  |  * Data replicated to N consecutive nodes                     |  |

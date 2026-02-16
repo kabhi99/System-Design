@@ -297,7 +297,7 @@
 |  |  |   Tokens added: 100/60 = 1.67/sec  |                      |  |
 |  |  |   Max tokens: 10 (burst)           |                      |  |
 |  |  |                                     |                      |  |
-|  |  |   [●][●][●][●][●][●][●][●][●][●]   | < 10 tokens         |  |
+|  |  |   [o][o][o][o][o][o][o][o][o][o]   | < 10 tokens         |  |
 |  |  |                                     |                      |  |
 |  |  |   Request arrives:                  |                      |  |
 |  |  |   - Token available? Take 1, allow |                      |  |

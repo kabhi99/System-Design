@@ -498,15 +498,15 @@ SECTION 5.5: QUICK REFERENCE CHEAT SHEET
 *|                                                                         |*
 *|  INTERVIEW CHECKLIST                                                  |*
 *|                                                                         |*
-*|  ☐ Clarify scale (services, RPS, retention)                         |*
-*|  ☐ Draw high-level architecture                                      |*
-*|  ☐ Explain context propagation                                       |*
-*|  ☐ Discuss sampling strategies                                       |*
-*|  ☐ Choose storage (justify trade-offs)                              |*
-*|  ☐ Design schema for common queries                                 |*
-*|  ☐ Address overhead concerns                                         |*
-*|  ☐ Mention tail sampling for errors                                 |*
-*|  ☐ Discuss cost optimization                                         |*
+*|  o Clarify scale (services, RPS, retention)                         |*
+*|  o Draw high-level architecture                                      |*
+*|  o Explain context propagation                                       |*
+*|  o Discuss sampling strategies                                       |*
+*|  o Choose storage (justify trade-offs)                              |*
+*|  o Design schema for common queries                                 |*
+*|  o Address overhead concerns                                         |*
+*|  o Mention tail sampling for errors                                 |*
+*|  o Discuss cost optimization                                         |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 

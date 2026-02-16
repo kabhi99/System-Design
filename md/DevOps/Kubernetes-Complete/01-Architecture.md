@@ -380,7 +380,7 @@ kubectl explain pod.spec.containers      # Drill into fields
 
 ### WHAT IS A NAMESPACE?
 
-A Namespace is a virtual cluster inside your physical cluster —
+A Namespace is a virtual cluster inside your physical cluster -
 it's a way to isolate and organize resources.
 
 ```
@@ -403,7 +403,7 @@ it's a way to isolate and organize resources.
 |   | (dev version) |  | (test version)|  |               |              |
 |   +---------------+  +---------------+  +---------------+              |
 |                                                                         |
-|   Same name "api-svc" can exist in dev, staging, prod — they're       |
+|   Same name "api-svc" can exist in dev, staging, prod - they're       |
 |   completely separate resources!                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1032,7 +1032,7 @@ The container runtime runs containers:
 
 ## SECTION 1.4: HOW IT ALL WORKS TOGETHER
 
-### CREATING A DEPLOYMENT — END TO END
+### CREATING A DEPLOYMENT - END TO END
 
 ```
 kubectl create deployment nginx --image=nginx --replicas=3

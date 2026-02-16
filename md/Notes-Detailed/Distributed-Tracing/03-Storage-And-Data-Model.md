@@ -619,9 +619,9 @@ SECTION 3.5: DATA RETENTION AND ARCHIVAL
 *|  |                                                                 |  |*
 *|  |  OPTION A: Elasticsearch Only (7 days)                        |  |*
 *|  |  --------------------------------------                        |  |*
-*|  |  Raw: 8.5 TB/day × 7 = 59.5 TB                                |  |*
+*|  |  Raw: 8.5 TB/day x 7 = 59.5 TB                                |  |*
 *|  |  With replicas (2x): 119 TB                                   |  |*
-*|  |  ES cluster: ~40 nodes × m5.4xlarge                          |  |*
+*|  |  ES cluster: ~40 nodes x m5.4xlarge                          |  |*
 *|  |  Cost: ~$50,000/month                                         |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*

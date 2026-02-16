@@ -214,8 +214,8 @@
 |  * card_token, status, timestamps                                     |
 |  * metadata, response codes, etc.                                     |
 |                                                                         |
-|  Daily storage: 10M × 2 KB = 20 GB/day                               |
-|  Annual storage: 20 GB × 365 = 7.3 TB/year (transactions only)       |
+|  Daily storage: 10M x 2 KB = 20 GB/day                               |
+|  Annual storage: 20 GB x 365 = 7.3 TB/year (transactions only)       |
 |                                                                         |
 |  With logs, audit trails, analytics:                                  |
 |  Multiply by 10x = ~75 TB/year                                        |
@@ -227,8 +227,8 @@
 |  Request size: ~1 KB (payment request)                                |
 |  Response size: ~2 KB (with receipt)                                  |
 |                                                                         |
-|  Peak bandwidth: 5,000 TPS × 3 KB = 15 MB/s                          |
-|  Daily bandwidth: 10M × 3 KB = 30 GB/day                             |
+|  Peak bandwidth: 5,000 TPS x 3 KB = 15 MB/s                          |
+|  Daily bandwidth: 10M x 3 KB = 30 GB/day                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

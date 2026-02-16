@@ -117,11 +117,11 @@ SECTION 3: SCALE ESTIMATION
 *|  POSTS/TWEETS                                                          |*
 *|                                                                         |*
 *|  Posts per day:                                                        |*
-*|  * 500M DAU × 2 posts/week ÷ 7 = ~140 million posts/day              |*
+*|  * 500M DAU x 2 posts/week / 7 = ~140 million posts/day              |*
 *|  * Let's assume 500 million posts/day (including reposts)            |*
 *|                                                                         |*
 *|  Posts per second:                                                     |*
-*|  * 500M / 86400 ≈ 6,000 posts/second                                 |*
+*|  * 500M / 86400 ~ 6,000 posts/second                                 |*
 *|  * Peak (2x): 12,000 posts/second                                    |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -129,13 +129,13 @@ SECTION 3: SCALE ESTIMATION
 *|  FEED READS                                                            |*
 *|                                                                         |*
 *|  Feed requests per day:                                                |*
-*|  * 500M DAU × 10 feed views/day = 5 billion feed requests/day        |*
+*|  * 500M DAU x 10 feed views/day = 5 billion feed requests/day        |*
 *|                                                                         |*
 *|  Feed requests per second:                                             |*
-*|  * 5B / 86400 ≈ 58,000 feed requests/second                          |*
+*|  * 5B / 86400 ~ 58,000 feed requests/second                          |*
 *|  * Peak: 100,000+ requests/second                                    |*
 *|                                                                         |*
-*|  READ:WRITE RATIO = 58,000 : 6,000 ≈ 10:1                            |*
+*|  READ:WRITE RATIO = 58,000 : 6,000 ~ 10:1                            |*
 *|  (Read heavy system!)                                                  |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -151,8 +151,8 @@ SECTION 3: SCALE ESTIMATION
 *|  * Total: ~400 bytes per post                                        |*
 *|                                                                         |*
 *|  Posts per year:                                                       |*
-*|  * 500M posts/day × 365 = 182.5 billion posts/year                   |*
-*|  * Storage: 182.5B × 400 bytes = 73 TB/year (just text)             |*
+*|  * 500M posts/day x 365 = 182.5 billion posts/year                   |*
+*|  * Storage: 182.5B x 400 bytes = 73 TB/year (just text)             |*
 *|                                                                         |*
 *|  Media storage:                                                        |*
 *|  * 20% of posts have images (avg 200 KB)                             |*
@@ -164,9 +164,9 @@ SECTION 3: SCALE ESTIMATION
 *|  FOLLOWERS GRAPH                                                       |*
 *|                                                                         |*
 *|  Follow relationships:                                                 |*
-*|  * 1B users × 200 avg follows = 200 billion edges                    |*
+*|  * 1B users x 200 avg follows = 200 billion edges                    |*
 *|  * Each edge: 16 bytes (follower_id + followee_id)                  |*
-*|  * Total: 200B × 16 = 3.2 TB                                        |*
+*|  * Total: 200B x 16 = 3.2 TB                                        |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -442,7 +442,7 @@ SECTION 6: NEWS FEED - THE CORE CHALLENGE
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  APPROACH 2: PUSH MODEL (Fan-out on Write)  ⭐ PREFERRED             |*
+*|  APPROACH 2: PUSH MODEL (Fan-out on Write)   PREFERRED             |*
 *|  ------------------------------------------------------               |*
 *|                                                                         |*
 *|  When user posts:                                                      |*
@@ -514,7 +514,7 @@ SECTION 6: NEWS FEED - THE CORE CHALLENGE
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  APPROACH 3: HYBRID MODEL ⭐⭐ BEST (Twitter's Approach)             |*
+*|  APPROACH 3: HYBRID MODEL  BEST (Twitter's Approach)             |*
 *|  ------------------------------------------------------               |*
 *|                                                                         |*
 *|  Combine push and pull based on who is posting:                       |*
@@ -588,11 +588,11 @@ SECTION 7: FEED CACHE DESIGN
 *|  * Post ID: 8 bytes                                                   |*
 *|  * Score (timestamp): 8 bytes                                        |*
 *|  * Per entry: ~20 bytes (with Redis overhead)                       |*
-*|  * Per user: 800 × 20 = 16 KB                                       |*
-*|  * 500M users: 500M × 16 KB = 8 TB                                  |*
+*|  * Per user: 800 x 20 = 16 KB                                       |*
+*|  * 500M users: 500M x 16 KB = 8 TB                                  |*
 *|                                                                         |*
 *|  Note: Only cache active users (logged in last 7 days)              |*
-*|  100M active users × 16 KB = 1.6 TB (manageable!)                  |*
+*|  100M active users x 16 KB = 1.6 TB (manageable!)                  |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -656,7 +656,7 @@ SECTION 8: POST CREATION FLOW
 *|  |  STEP 2: VALIDATION                                           |  |*
 *|  |  ------------------                                            |  |*
 *|  |  * Authenticate user                                          |  |*
-*|  |  * Validate content length (≤280 chars)                      |  |*
+*|  |  * Validate content length (<280 chars)                      |  |*
 *|  |  * Check rate limits                                          |  |*
 *|  |  * Scan for spam/abuse                                        |  |*
 *|  |                                                                 |  |*
@@ -1004,7 +1004,7 @@ SECTION 12: SEARCH AND TRENDING
 *|  |  2. Calculate velocity (rate of change)                       |  |*
 *|  |     velocity = current_count / avg_historical_count          |  |*
 *|  |                                                                 |  |*
-*|  |  3. Score = volume × velocity                                 |  |*
+*|  |  3. Score = volume x velocity                                 |  |*
 *|  |     High volume + high velocity = trending                   |  |*
 *|  |                                                                 |  |*
 *|  |  4. Filter spam/abuse                                         |  |*
@@ -1354,10 +1354,10 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |                                                                 |  |*
 *|  |  FORMULA (Simplified):                                        |  |*
 *|  |  score = engagement_score                                    |  |*
-*|  |        × relationship_weight                                 |  |*
-*|  |        × content_relevance                                   |  |*
-*|  |        × time_decay(age)                                     |  |*
-*|  |        × quality_multiplier                                  |  |*
+*|  |        x relationship_weight                                 |  |*
+*|  |        x content_relevance                                   |  |*
+*|  |        x time_decay(age)                                     |  |*
+*|  |        x quality_multiplier                                  |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -1470,7 +1470,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  2. Feed service calls Ad Service in parallel                |  |*
 *|  |  3. Ad Service runs auction:                                 |  |*
 *|  |     * Find eligible ads (targeting matches user)            |  |*
-*|  |     * Rank by: bid × predicted_engagement                   |  |*
+*|  |     * Rank by: bid x predicted_engagement                   |  |*
 *|  |     * Apply frequency caps (don't show same ad too often)   |  |*
 *|  |  4. Insert winning ads at positions 3, 7, 12, etc.          |  |*
 *|  |                                                                 |  |*
@@ -1509,7 +1509,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  MATCH (me)-[:FOLLOWS]->()-[:FOLLOWS]->(suggestion)          |  |*
 *|  |  WHERE NOT (me)-[:FOLLOWS]->(suggestion)                     |  |*
 *|  |  RETURN suggestion                                            |  |*
-*|  |  -- Traverses graph directly, O(edges) not O(nodes²)         |  |*
+*|  |  -- Traverses graph directly, O(edges) not O(nodes2)         |  |*
 *|  |                                                                 |  |*
 *|  |  Options:                                                      |  |*
 *|  |  * Neo4j (mature, ACID)                                       |  |*

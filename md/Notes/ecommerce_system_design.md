@@ -1,4 +1,4 @@
-# E-COMMERCE SYSTEM DESIGN — DEEP DIVE
+# E-COMMERCE SYSTEM DESIGN - DEEP DIVE
 *Amazon/Flipkart Style Shopping Platform*
 
 ### Table of Contents
@@ -88,11 +88,11 @@ Both complete payment.
 QUESTIONS:
 - Who gets the PS5?
 - How do we prevent overselling 10,000 units to 50,000 customers?
-- When do we "reserve" inventory — at cart add? At checkout? At payment?
+- When do we "reserve" inventory - at cart add? At checkout? At payment?
 - What if User A's payment fails after we reserved their unit?
 - How do we handle 10 million concurrent users for 10,000 items?
 
-This is the E-Commerce problem — a classic example of:
+This is the E-Commerce problem - a classic example of:
 - High-read, low-write with extreme contention on hot products
 - Inventory management with finite resources
 - Distributed transactions across cart, inventory, payment, order
@@ -170,14 +170,14 @@ This is the E-Commerce problem — a classic example of:
 |                                                                         |
 |  PAGE VIEWS:                                                           |
 |  * Average 20 page views per user per session                         |
-|  * 10M × 20 = 200M page views/day                                     |
-|  * Peak: 200M × 0.4 / (4 × 3600) ≈ 5,500 requests/second             |
+|  * 10M x 20 = 200M page views/day                                     |
+|  * Peak: 200M x 0.4 / (4 x 3600) ~ 5,500 requests/second             |
 |  * Flash sale peak: 50,000 requests/second                            |
 |                                                                         |
 |  ORDERS:                                                               |
 |  * 1M orders/day                                                       |
 |  * Peak hours (6 PM - 10 PM): 40% of orders = 400K in 4 hours        |
-|  * Peak TPS: 400K / (4 × 3600) ≈ 28 orders/second                    |
+|  * Peak TPS: 400K / (4 x 3600) ~ 28 orders/second                    |
 |  * Flash sale: 2,000 orders/second                                    |
 |                                                                         |
 |  SEARCH QUERIES:                                                       |
@@ -199,11 +199,11 @@ This is the E-Commerce problem — a classic example of:
 |  * Total: 50 GB                                                        |
 |                                                                         |
 |  PRODUCT IMAGES:                                                       |
-|  * 10M products × 5 images × 500 KB = 25 TB                          |
+|  * 10M products x 5 images x 500 KB = 25 TB                          |
 |  * Served via CDN                                                      |
 |                                                                         |
 |  ORDERS:                                                               |
-|  * 1M orders/day × 365 × 5 years = 1.8B orders                       |
+|  * 1M orders/day x 365 x 5 years = 1.8B orders                       |
 |  * ~2 KB per order                                                     |
 |  * Total: 3.6 TB                                                       |
 |                                                                         |
@@ -213,10 +213,10 @@ This is the E-Commerce problem — a classic example of:
 |  * Total: 2.7 TB                                                       |
 |                                                                         |
 |  USER DATA:                                                            |
-|  * 100M users × 2 KB = 200 GB                                         |
+|  * 100M users x 2 KB = 200 GB                                         |
 |                                                                         |
 |  REVIEWS:                                                              |
-|  * 500M reviews × 1 KB = 500 GB                                       |
+|  * 500M reviews x 1 KB = 500 GB                                       |
 |                                                                         |
 |  TOTAL: ~7 TB + 25 TB images                                          |
 |                                                                         |
@@ -314,12 +314,12 @@ This is the E-Commerce problem — a classic example of:
 |                                                                         |
 |  T1: User adds item at $99                                            |
 |  T2: Price changes to $129 (flash sale ended)                         |
-|  T3: User checks out — what price?                                    |
+|  T3: User checks out - what price?                                    |
 |                                                                         |
 |  OPTIONS:                                                              |
-|  * Honor cart price ($99) — lose money                               |
-|  * Charge new price ($129) — angry customer                          |
-|  * Show warning, ask to re-confirm — friction                        |
+|  * Honor cart price ($99) - lose money                               |
+|  * Charge new price ($129) - angry customer                          |
+|  * Show warning, ask to re-confirm - friction                        |
 |                                                                         |
 |  SOLUTION:                                                             |
 |  * Price lock for limited time (15-30 minutes)                       |
@@ -1210,15 +1210,15 @@ DATA SYNC (PostgreSQL > Elasticsearch):
 |  FILTERS (with counts):                                                |
 |  +-----------------------------------------------------------------+   |
 |  | Brand                    | Price Range                          |   |
-|  | ☐ Apple (45)            | ☐ Under $500 (23)                    |   |
-|  | ☐ Dell (38)             | ☐ $500 - $1000 (67)                  |   |
-|  | ☐ HP (52)               | ☐ $1000 - $1500 (45)                 |   |
-|  | ☐ Lenovo (41)           | ☐ Over $1500 (15)                    |   |
+|  | o Apple (45)            | o Under $500 (23)                    |   |
+|  | o Dell (38)             | o $500 - $1000 (67)                  |   |
+|  | o HP (52)               | o $1000 - $1500 (45)                 |   |
+|  | o Lenovo (41)           | o Over $1500 (15)                    |   |
 |  |                          |                                      |   |
 |  | RAM                      | Customer Rating                      |   |
-|  | ☐ 8 GB (78)             | ☐ 4★ & up (120)                      |   |
-|  | ☐ 16 GB (56)            | ☐ 3★ & up (145)                      |   |
-|  | ☐ 32 GB (16)            |                                      |   |
+|  | o 8 GB (78)             | o 4* & up (120)                      |   |
+|  | o 16 GB (56)            | o 3* & up (145)                      |   |
+|  | o 32 GB (16)            |                                      |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  ELASTICSEARCH AGGREGATION QUERY:                                      |
@@ -1472,12 +1472,12 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 |                                                                         |
 |  VALIDATION CHECKS AT CHECKOUT:                                       |
 |  ---------------------------------                                     |
-|  □ Product still exists and is active?                               |
-|  □ Variant still available?                                          |
-|  □ Sufficient inventory?                                             |
-|  □ Price changed? (show warning)                                     |
-|  □ Quantity within limits?                                           |
-|  □ Shipping available to address?                                    |
+|  o Product still exists and is active?                               |
+|  o Variant still available?                                          |
+|  o Sufficient inventory?                                             |
+|  o Price changed? (show warning)                                     |
+|  o Quantity within limits?                                           |
+|  o Shipping available to address?                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1708,7 +1708,7 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |  KEY POINTS:                                                           |
 |  ------------                                                          |
 |  1. SOFT RESERVATION in Redis (reversible)                           |
-|  2. Timer starts — user has 15 minutes                               |
+|  2. Timer starts - user has 15 minutes                               |
 |  3. Payment processed                                                 |
 |  4. HARD CONFIRMATION in PostgreSQL (permanent)                      |
 |  5. Redis reservation released (stock already deducted in DB)        |
@@ -2327,7 +2327,7 @@ CHOREOGRAPHY PATTERN (Event-Driven):
 |                    CHOREOGRAPHY SAGA FLOW                              |
 |                                                                         |
 |  Each service listens for events and publishes new events.            |
-|  No central coordinator — services react to events.                   |
+|  No central coordinator - services react to events.                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2398,7 +2398,7 @@ CHOREOGRAPHY COMPENSATION (Payment Fails):
 |                                                                         |
 |  KEY PRINCIPLE:                                                        |
 |  Each service knows what to do when it sees a failure event.         |
-|  No central coordinator needed — but harder to debug!                |
+|  No central coordinator needed - but harder to debug!                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3117,7 +3117,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  -----------------------------                                         |
 |  1. Update DB                                                         |
 |  2. Update cache immediately                                          |
-|  3. Critical data — cache must be consistent                         |
+|  3. Critical data - cache must be consistent                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3493,7 +3493,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  Q13: How do you handle high-cardinality product variants?            |
 |  -------------------------------------------------------               |
 |                                                                         |
-|  A: Example: T-shirt with 5 colors × 4 sizes = 20 variants           |
+|  A: Example: T-shirt with 5 colors x 4 sizes = 20 variants           |
 |                                                                         |
 |  DATA MODEL:                                                          |
 |  * Product: Base product info                                        |
@@ -3971,14 +3971,14 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Used in DynamoDB, Cassandra, Redis Cluster                         |
 |                                                                         |
 |        Node A                                                          |
-|           ●                                                            |
+|           o                                                            |
 |      /         \                                                       |
 |     /           \                                                      |
-|    ●             ●                                                     |
+|    o             o                                                     |
 |  Node D         Node B                                                 |
 |     \           /                                                      |
 |      \         /                                                       |
-|           ●                                                            |
+|           o                                                            |
 |        Node C                                                          |
 |                                                                         |
 |  Keys map to points on ring > assigned to next node clockwise         |
@@ -4248,8 +4248,8 @@ EVENT SCHEMAS (Avro/JSON):
 |  * No token = request rejected                                         |
 |                                                                         |
 |         +---------------+                                              |
-|         | ○ ○ ○ ○ ○ ○ ○ | < Bucket (capacity: 10)                     |
-|         |   ○ ○ ○       |                                              |
+|         | o o o o o o o | < Bucket (capacity: 10)                     |
+|         |   o o o       |                                              |
 |         +-------+-------+                                              |
 |                 |                                                      |
 |    Tokens added |  Tokens consumed                                     |
@@ -4360,7 +4360,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  Current window:  20 requests                                          |
 |  Position in current window: 40%                                       |
 |                                                                         |
-|  Estimated count = (50 × 60%) + (20 × 100%) = 30 + 20 = 50            |
+|  Estimated count = (50 x 60%) + (20 x 100%) = 30 + 20 = 50            |
 |                                                                         |
 |  PROS:                                                                  |
 |  * Memory efficient (just 2 counters)                                 |
@@ -4720,14 +4720,14 @@ EVENT SCHEMAS (Avro/JSON):
 |  NATURALLY IDEMPOTENT:                                                  |
 |  ---------------------                                                  |
 |  GET, PUT, DELETE are naturally idempotent                             |
-|  GET /products/123 — always returns same product                      |
-|  PUT /products/123 — replaces with same data                          |
-|  DELETE /products/123 — already deleted = no change                   |
+|  GET /products/123 - always returns same product                      |
+|  PUT /products/123 - replaces with same data                          |
+|  DELETE /products/123 - already deleted = no change                   |
 |                                                                         |
 |  NOT NATURALLY IDEMPOTENT:                                              |
 |  --------------------------                                             |
-|  POST — creates new resource each time                                 |
-|  PATCH — might append                                                  |
+|  POST - creates new resource each time                                 |
+|  PATCH - might append                                                  |
 |                                                                         |
 |  MAKING POST IDEMPOTENT:                                                |
 |  -------------------------                                              |

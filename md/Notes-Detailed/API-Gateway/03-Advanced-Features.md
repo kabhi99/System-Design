@@ -159,9 +159,9 @@
 |  |  Client --(REST/JSON)--> Gateway --(gRPC/Protobuf)--> Backend |  |
 |  |                                                                 |  |
 |  |  Gateway handles:                                              |  |
-|  |  * JSON ↔ Protobuf serialization                              |  |
-|  |  * HTTP methods ↔ gRPC methods                                |  |
-|  |  * HTTP status codes ↔ gRPC status codes                     |  |
+|  |  * JSON - Protobuf serialization                              |  |
+|  |  * HTTP methods - gRPC methods                                |  |
+|  |  * HTTP status codes - gRPC status codes                     |  |
 |  |                                                                 |  |
 |  |  Config:                                                        |  |
 |  |  routes:                                                        |  |
@@ -539,7 +539,7 @@
 |  A: Cross-cutting concerns centralization                             |
 |     * Single place for auth, rate limiting, logging                  |
 |     * Clients don't need to know service topology                    |
-|     * Protocol translation (REST ↔ gRPC)                            |
+|     * Protocol translation (REST - gRPC)                            |
 |     * Response aggregation (reduce round trips)                      |
 |                                                                         |
 |  Q: How do you prevent the gateway from becoming a bottleneck?        |

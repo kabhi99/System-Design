@@ -1,7 +1,7 @@
 # DOCKER DATA PERSISTENCE
 *Chapter 4: Volumes and Bind Mounts*
 
-Containers are ephemeral by design—when they stop, their data is lost.
+Containers are ephemeral by design-when they stop, their data is lost.
 This chapter covers how to persist data beyond the container lifecycle.
 
 ## SECTION 4.1: THE PERSISTENCE PROBLEM
@@ -19,7 +19,7 @@ This chapter covers how to persist data beyond the container lifecycle.
 |  |   Container (Running)              Container Removed           |  |
 |  |   +----------------+               +----------------+          |  |
 |  |   | Writable Layer |               |                |          |  |
-|  |   | (your data)    |  ------->     |   GONE! 💥     |          |  |
+|  |   | (your data)    |  ------->     |   GONE!      |          |  |
 |  |   +----------------+               |                |          |  |
 |  |   | Image Layers   |               +----------------+          |  |
 |  |   | (read-only)    |                                           |  |
@@ -185,7 +185,7 @@ This chapter covers how to persist data beyond the container lifecycle.
 |  DEVELOPMENT WORKFLOW                                                  |
 |  ---------------------                                                  |
 |                                                                         |
-|  Perfect for development—edit code on host, run in container.        |
+|  Perfect for development-edit code on host, run in container.        |
 |                                                                         |
 |  # Mount current directory into container                             |
 |  docker run -it \                                                       |

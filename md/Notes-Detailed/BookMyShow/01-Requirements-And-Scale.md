@@ -257,36 +257,36 @@ Let's estimate the scale for a BookMyShow-like platform.
 |  USERS TABLE:                                                          |
 |  * 75 million users                                                   |
 |  * ~500 bytes per user (profile, preferences)                        |
-|  * Total: 75M × 500 = 37.5 GB                                        |
+|  * Total: 75M x 500 = 37.5 GB                                        |
 |                                                                         |
 |  MOVIES/EVENTS:                                                        |
 |  * 50,000 movies/events (including historical)                       |
 |  * ~10 KB per item (metadata, descriptions)                          |
-|  * Total: 50K × 10KB = 500 MB                                        |
+|  * Total: 50K x 10KB = 500 MB                                        |
 |                                                                         |
 |  SHOWS:                                                                |
-|  * 250,000 shows/day × 365 days × 2 years = 182 million shows       |
+|  * 250,000 shows/day x 365 days x 2 years = 182 million shows       |
 |  * ~1 KB per show                                                     |
-|  * Total: 182M × 1KB = 182 GB                                        |
+|  * Total: 182M x 1KB = 182 GB                                        |
 |                                                                         |
 |  SEATS:                                                                |
-|  * 50 million seats/day × 365 × 2 = 36.5 billion seat records       |
+|  * 50 million seats/day x 365 x 2 = 36.5 billion seat records       |
 |  * ~200 bytes per seat record                                        |
-|  * Total: 36.5B × 200 = 7.3 TB                                       |
+|  * Total: 36.5B x 200 = 7.3 TB                                       |
 |  (This is the largest table - needs partitioning/archival)           |
 |                                                                         |
 |  BOOKINGS:                                                             |
-|  * 2 million bookings/day × 365 × 2 = 1.46 billion bookings         |
+|  * 2 million bookings/day x 365 x 2 = 1.46 billion bookings         |
 |  * ~500 bytes per booking                                            |
-|  * Total: 1.46B × 500 = 730 GB                                       |
+|  * Total: 1.46B x 500 = 730 GB                                       |
 |                                                                         |
 |  TOTAL STRUCTURED DATA: ~10 TB                                        |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
 |  MEDIA STORAGE:                                                        |
-|  * Movie posters, banners: 50K × 5MB = 250 GB                        |
-|  * Venue photos: 10K × 10MB = 100 GB                                 |
+|  * Movie posters, banners: 50K x 5MB = 250 GB                        |
+|  * Venue photos: 10K x 10MB = 100 GB                                 |
 |  * Total media: ~500 GB (served via CDN)                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -303,8 +303,8 @@ Let's estimate the scale for a BookMyShow-like platform.
 |  API RESPONSE: 5 KB average                                           |
 |                                                                         |
 |  OUTBOUND BANDWIDTH:                                                   |
-|  * Page views: 50M × 2MB / 86,400 = 1.16 GB/s average               |
-|  * API calls: 100M × 5KB / 86,400 = 5.8 MB/s                        |
+|  * Page views: 50M x 2MB / 86,400 = 1.16 GB/s average               |
+|  * API calls: 100M x 5KB / 86,400 = 5.8 MB/s                        |
 |                                                                         |
 |  With CDN serving static content:                                     |
 |  * Origin servers: ~100 MB/s                                         |

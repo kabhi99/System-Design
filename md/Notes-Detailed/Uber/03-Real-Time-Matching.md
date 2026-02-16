@@ -1,7 +1,7 @@
 # UBER SYSTEM DESIGN
 *Chapter 3: Real-Time Matching and Dispatch*
 
-The matching system is the brain of Uber—deciding which driver gets
+The matching system is the brain of Uber-deciding which driver gets
 which ride request. This chapter covers matching algorithms, dispatch
 optimization, and the real-time infrastructure that makes it work.
 
@@ -77,9 +77,9 @@ optimization, and the real-time infrastructure that makes it work.
 |  * Total: 4 minutes                                                  |
 |                                                                         |
 |  If we assigned:                                                       |
-|  * R1 gets D2 (7 min) — worse for R1                                |
-|  * R2 gets D1 (7 min) — worse for R2                                |
-|  * Total: 14 minutes — much worse!                                  |
+|  * R1 gets D2 (7 min) - worse for R1                                |
+|  * R2 gets D1 (7 min) - worse for R2                                |
+|  * Total: 14 minutes - much worse!                                  |
 |                                                                         |
 |  In this case, nearest is optimal. But not always...                |
 |                                                                         |
@@ -120,7 +120,7 @@ optimization, and the real-time infrastructure that makes it work.
 |                                                                         |
 |  HUNGARIAN ALGORITHM                                                   |
 |  --------------------                                                   |
-|  * Solves bipartite matching in O(n³)                               |
+|  * Solves bipartite matching in O(n3)                               |
 |  * For N riders, N drivers                                           |
 |  * Guarantees globally optimal solution                              |
 |                                                                         |
@@ -473,7 +473,7 @@ optimization, and the real-time infrastructure that makes it work.
 |   |   Send offer to D1              Send offer to D1                 |
 |   |         |                              |                          |
 |   |         +----------> D1 gets 2 offers!                           |
-|   |                      Chaos! 🔥                                   |
+|   |                      Chaos!                                    |
 |   v                                                                    |
 |                                                                         |
 |  SOLUTION: DRIVER RESERVATION                                         |

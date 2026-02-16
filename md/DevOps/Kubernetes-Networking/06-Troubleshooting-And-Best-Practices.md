@@ -356,38 +356,38 @@ tshark -r capture.pcap
 |                                                                         |
 |  IP ADDRESS PLANNING                                                   |
 |  --------------------                                                  |
-|  □ Plan pod CIDR size for growth (don't use /24 for pod network!)    |
-|  □ Ensure no overlap with existing networks                           |
-|  □ Reserve ranges for future expansion                                |
-|  □ Document all IP ranges                                             |
+|  o Plan pod CIDR size for growth (don't use /24 for pod network!)    |
+|  o Ensure no overlap with existing networks                           |
+|  o Reserve ranges for future expansion                                |
+|  o Document all IP ranges                                             |
 |                                                                         |
 |  Example sizing:                                                       |
-|  * 100 nodes × 100 pods/node = 10,000 pods minimum                   |
+|  * 100 nodes x 100 pods/node = 10,000 pods minimum                   |
 |  * /16 for pods = 65,536 IPs Y                                       |
 |  * /20 for pods = 4,096 IPs X (too small for growth)                |
 |                                                                         |
 |  CNI SELECTION                                                         |
 |  -------------                                                         |
-|  □ Network policies required? Don't use Flannel alone                 |
-|  □ Performance critical? Consider Cilium (eBPF) or Calico BGP        |
-|  □ Multi-cloud/hybrid? Use overlay network                           |
-|  □ AWS EKS? Consider VPC CNI for native integration                  |
+|  o Network policies required? Don't use Flannel alone                 |
+|  o Performance critical? Consider Cilium (eBPF) or Calico BGP        |
+|  o Multi-cloud/hybrid? Use overlay network                           |
+|  o AWS EKS? Consider VPC CNI for native integration                  |
 |                                                                         |
 |  INGRESS DESIGN                                                        |
 |  --------------                                                        |
-|  □ Multiple Ingress Controller replicas for HA                       |
-|  □ TLS termination at Ingress (not pods)                             |
-|  □ cert-manager for automatic certificate management                 |
-|  □ Rate limiting at Ingress level                                    |
-|  □ WAF in front of Ingress for public services                       |
+|  o Multiple Ingress Controller replicas for HA                       |
+|  o TLS termination at Ingress (not pods)                             |
+|  o cert-manager for automatic certificate management                 |
+|  o Rate limiting at Ingress level                                    |
+|  o WAF in front of Ingress for public services                       |
 |                                                                         |
 |  SECURITY                                                              |
 |  --------                                                              |
-|  □ Default deny Network Policies in all namespaces                   |
-|  □ Explicit allow policies for required traffic                      |
-|  □ Don't forget DNS egress rules!                                    |
-|  □ Namespace isolation (separate networks if needed)                 |
-|  □ mTLS between services (consider service mesh)                     |
+|  o Default deny Network Policies in all namespaces                   |
+|  o Explicit allow policies for required traffic                      |
+|  o Don't forget DNS egress rules!                                    |
+|  o Namespace isolation (separate networks if needed)                 |
+|  o mTLS between services (consider service mesh)                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -486,13 +486,13 @@ tshark -r capture.pcap
 |                                                                         |
 |  IP ADDRESS CAPACITY                                                   |
 |  --------------------                                                  |
-|  * Pod CIDR: Calculate max pods × 2 (for rolling deployments)        |
+|  * Pod CIDR: Calculate max pods x 2 (for rolling deployments)        |
 |  * Service CIDR: Usually /12 to /16 is sufficient                    |
 |  * For AWS VPC CNI: Consider ENI limits per instance type            |
 |                                                                         |
 |  IPTABLES SCALING                                                      |
 |  -----------------                                                     |
-|  * 1,000 services ≈ 10,000 iptables rules                            |
+|  * 1,000 services ~ 10,000 iptables rules                            |
 |  * 10,000+ services: Consider IPVS mode                              |
 |  * 50,000+ services: Consider Cilium eBPF                            |
 |                                                                         |

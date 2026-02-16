@@ -139,7 +139,7 @@ covers security best practices from image building to runtime.
 |  NEVER PUT SECRETS IN IMAGES                                          |
 |  ============================                                           |
 |                                                                         |
-|  # WRONG ❌                                                            |
+|  # WRONG                                                             |
 |  ENV DATABASE_PASSWORD=mysecretpassword                               |
 |  COPY .env /app/.env                                                   |
 |                                                                         |
@@ -317,16 +317,16 @@ covers security best practices from image building to runtime.
 |  SECURITY CHECKLIST                                                    |
 |  ==================                                                    |
 |                                                                         |
-|  □ Use specific base image version (not :latest)                     |
-|  □ Scan image for vulnerabilities                                    |
-|  □ Run as non-root user                                              |
-|  □ No secrets in Dockerfile or image                                 |
-|  □ Use COPY, not ADD (unless extracting tar)                        |
-|  □ Multi-stage build for smaller image                              |
-|  □ .dockerignore file present                                        |
-|  □ HEALTHCHECK defined                                               |
-|  □ Only necessary ports exposed                                      |
-|  □ Read-only filesystem where possible                              |
+|  o Use specific base image version (not :latest)                     |
+|  o Scan image for vulnerabilities                                    |
+|  o Run as non-root user                                              |
+|  o No secrets in Dockerfile or image                                 |
+|  o Use COPY, not ADD (unless extracting tar)                        |
+|  o Multi-stage build for smaller image                              |
+|  o .dockerignore file present                                        |
+|  o HEALTHCHECK defined                                               |
+|  o Only necessary ports exposed                                      |
+|  o Read-only filesystem where possible                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

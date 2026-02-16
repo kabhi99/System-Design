@@ -160,7 +160,7 @@ docker run -d --name web --network frontend nginx
 # - web CANNOT reach db (no shared network)
 ```
 
-## SECTION 2.2: LIBNETWORK — DOCKER'S NETWORKING LIBRARY
+## SECTION 2.2: LIBNETWORK - DOCKER'S NETWORKING LIBRARY
 
 ### WHAT IS LIBNETWORK?
 
@@ -226,7 +226,7 @@ type Driver interface {
 }
 ```
 
-## SECTION 2.3: THE BRIDGE DRIVER — DEEP DIVE
+## SECTION 2.3: THE BRIDGE DRIVER - DEEP DIVE
 
 ### WHEN DOCKER CREATES A BRIDGE NETWORK
 
@@ -342,7 +342,7 @@ After running three containers on my-bridge:
                            Internet
 ```
 
-## SECTION 2.4: DOCKER DNS — AUTOMATIC SERVICE DISCOVERY
+## SECTION 2.4: DOCKER DNS - AUTOMATIC SERVICE DISCOVERY
 
 ### THE PROBLEM: HOW DO CONTAINERS FIND EACH OTHER?
 
@@ -522,7 +522,7 @@ WHAT HAPPENS:
 - Containers that only process local files
 - Compliance requirements (air-gapped processing)
 
-## SECTION 2.6: OVERLAY NETWORKS — MULTI-HOST NETWORKING
+## SECTION 2.6: OVERLAY NETWORKS - MULTI-HOST NETWORKING
 
 ### THE MULTI-HOST PROBLEM
 
@@ -607,7 +607,7 @@ VXLAN PACKET STRUCTURE:
 |  |                       |                 |                     |    |
 |  +-----------------------+-----------------+---------------------+    |
 |                                                                         |
-|  The inner packet is completely preserved—MAC addresses, IPs, etc.    |
+|  The inner packet is completely preserved-MAC addresses, IPs, etc.    |
 |  This is what makes overlay a "Layer 2" overlay.                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -669,7 +669,7 @@ docker run -d --name api --network my-overlay my-api
 |                                                                         |
 |  KEY TAKEAWAYS:                                                        |
 |  * Always use user-defined bridge networks (DNS, isolation)           |
-|  * Default bridge is legacy—avoid for new projects                    |
+|  * Default bridge is legacy-avoid for new projects                    |
 |  * Overlay networks enable multi-host communication                   |
 |  * Understanding CNM helps troubleshoot networking issues             |
 |                                                                         |

@@ -308,7 +308,7 @@ handling race conditions during flash sales.
 |                                                                         |
 |  SYNC WITH DATABASE:                                                   |
 |  * After Redis success, create reservation in DB (can be async)     |
-|  * Background job syncs Redis ↔ DB                                  |
+|  * Background job syncs Redis - DB                                  |
 |  * On any discrepancy, DB is source of truth                        |
 |                                                                         |
 |  ==================================================================== |

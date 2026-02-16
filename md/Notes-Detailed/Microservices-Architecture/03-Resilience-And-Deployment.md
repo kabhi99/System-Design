@@ -497,7 +497,7 @@ SECTION 4: CONTAINER ORCHESTRATION (Kubernetes)
 *|  |                                                                 |  |*
 *|  |  CHALLENGES WITHOUT ORCHESTRATION:                              |  |*
 *|  |                                                                 |  |*
-*|  |  * 50 services × 3 instances = 150 containers to manage       |  |*
+*|  |  * 50 services x 3 instances = 150 containers to manage       |  |*
 *|  |  * How to deploy, scale, restart, monitor all of them?        |  |*
 *|  |  * How to handle container failures?                          |  |*
 *|  |  * How to do service discovery?                               |  |*

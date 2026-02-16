@@ -548,7 +548,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  PROBLEM: Dinner time (7-9 PM) = 5x normal traffic           |  |*
 *|  |                                                                 |  |*
 *|  |  SUPPLY-SIDE SOLUTIONS:                                        |  |*
-*|  |  * Partner incentives: "₹20 extra per order 7-9 PM"          |  |*
+*|  |  * Partner incentives: "R20 extra per order 7-9 PM"          |  |*
 *|  |  * Predict demand > pre-position partners in hot zones       |  |*
 *|  |  * Part-time partners for peak hours only                    |  |*
 *|  |                                                                 |  |*
@@ -611,7 +611,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  System Response:                                              |  |*
 *|  |  1. Weather API integration (forecast + real-time)           |  |*
 *|  |  2. Proactive surge pricing                                   |  |*
-*|  |  3. Rain bonus for partners (₹15-30 extra per delivery)     |  |*
+*|  |  3. Rain bonus for partners (R15-30 extra per delivery)     |  |*
 *|  |  4. Increased ETA estimates                                   |  |*
 *|  |  5. Push notifications to partners: "High demand due to rain"|  |*
 *|  |  6. Pre-fetch menu caches (traffic spike coming)            |  |*
@@ -667,7 +667,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |     * Track via app (can't accept orders during break)       |  |*
 *|  |                                                                 |  |*
 *|  |  2. EARNINGS CAP ALERTS                                       |  |*
-*|  |     * "You've earned ₹X today. Consider taking a break"     |  |*
+*|  |     * "You've earned RX today. Consider taking a break"     |  |*
 *|  |                                                                 |  |*
 *|  |  3. SPEED ALERTS                                              |  |*
 *|  |     * GPS tracks speed                                        |  |*
@@ -699,7 +699,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  * Chat logs between customer/partner                        |  |*
 *|  |                                                                 |  |*
 *|  |  Resolution Flow:                                              |  |*
-*|  |  1. Auto-resolve: Low-value disputes (<₹100) auto-refund    |  |*
+*|  |  1. Auto-resolve: Low-value disputes (<R100) auto-refund    |  |*
 *|  |  2. ML triage: Score dispute legitimacy                      |  |*
 *|  |  3. Human review: High-value or repeat complainers          |  |*
 *|  |  4. Decision: Full refund / partial refund / reject         |  |*

@@ -66,7 +66,7 @@ Data can be cached at multiple levels, each with different latency:
 |  Main Memory (RAM)       100 ns         GB-TB        Server RAM        |
 |  In-Process Cache        100 ns         MB-GB        App memory        |
 |  Distributed Cache       0.5-5 ms       GB-TB        Redis/Memcached   |
-|  SSD                     100-150 µs     TB           Local disk        |
+|  SSD                     100-150 us     TB           Local disk        |
 |  HDD                     10 ms          TB           Local disk        |
 |  Database                5-100 ms       TB-PB        Database server   |
 |  Cross-Region            100-300 ms     Unlimited    Remote DC         |
@@ -578,7 +578,7 @@ When cached data expires, all requests hit the database simultaneously.
 |  |     +--------------------+--------------------+                |   |
 |  |                          v                                     |   |
 |  |                     Database                                   |   |
-|  |                    💥 OVERLOAD 💥                               |   |
+|  |                     OVERLOAD                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
 |  SOLUTIONS:                                                            |
@@ -613,7 +613,7 @@ When cached data expires, all requests hit the database simultaneously.
 |                                                                         |
 |  import random                                                         |
 |  base_ttl = 3600                                                       |
-|  jitter = random.randint(-300, 300)  # ±5 minutes                    |
+|  jitter = random.randint(-300, 300)  # ~5 minutes                    |
 |  ttl = base_ttl + jitter                                              |
 |  cache.set(key, data, ttl=ttl)                                        |
 |                                                                         |

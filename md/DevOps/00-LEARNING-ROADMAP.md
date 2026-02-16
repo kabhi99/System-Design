@@ -2,7 +2,7 @@
 *A Complete Guide from Zero to Production*
 
 This roadmap provides a structured learning path for mastering containerization
-and orchestration. Follow the sequence for optimal understanding—each section
+and orchestration. Follow the sequence for optimal understanding-each section
 builds on previous knowledge.
 
 ESTIMATED TOTAL TIME: 8-12 weeks (2-3 hours/day)
@@ -95,19 +95,19 @@ ESTIMATED TOTAL TIME: 8-12 weeks (2-3 hours/day)
 
 Before starting, ensure you're comfortable with:
 
-□ Linux command line basics
+o Linux command line basics
 - Navigation (cd, ls, pwd)
 - File operations (cp, mv, rm, cat, less)
 - Process management (ps, top, kill)
 - Text editing (vim/nano)
 - Package management (apt/yum)
 
-□ Basic networking concepts
+o Basic networking concepts
 - IP addresses, ports, protocols
 - HTTP/HTTPS basics
 - DNS fundamentals
 
-□ YAML syntax
+o YAML syntax
 - Indentation, lists, dictionaries
 - Multi-line strings
 
@@ -353,14 +353,14 @@ Kubernetes solves: "How do I run 100+ containers across 50+ servers?"
 |  +---------+  "Which server has capacity?"                            |
 |  |  You    |  "Server 5 crashed, restart containers manually"        |
 |  |  (SRE)  |  "Traffic spike! Quick, add more containers!"           |
-|  |  😰     |  "Wait, which version is running where?"                |
+|  |       |  "Wait, which version is running where?"                |
 |  +---------+                                                           |
 |                                                                         |
 |  WITH KUBERNETES:                                                      |
 |  +---------+                      +-----------------------+           |
 |  |  You    |  "I want 5 replicas" |     KUBERNETES        |           |
 |  |  (SRE)  |  ----------------->  |                       |           |
-|  |  😌     |                      |  * Finds capacity     |           |
+|  |       |                      |  * Finds capacity     |           |
 |  +---------+                      |  * Schedules pods     |           |
 |                                   |  * Restarts failures  |           |
 |      Declarative                  |  * Scales as needed   |           |

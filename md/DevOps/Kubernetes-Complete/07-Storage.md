@@ -29,7 +29,7 @@ storage provisioning from consumption.
 |  |                                                                 |   |
 |  |   Pod crashes or gets rescheduled...                          |   |
 |  |                                                                 |   |
-|  |                        💥 POD DIES                             |   |
+|  |                         POD DIES                             |   |
 |  |                                                                 |   |
 |  |   ALL DATA LOST! Container filesystem is GONE.                |   |
 |  |   New pod starts with EMPTY database!                         |   |
@@ -69,7 +69,7 @@ storage provisioning from consumption.
 |  |                             |                                  |   |
 |  |   Pod crashes...            |                                  |   |
 |  |                             |                                  |   |
-|  |             💥              |                                  |   |
+|  |                           |                                  |   |
 |  |                             |                                  |   |
 |  |   New pod created...        |                                  |   |
 |  |                             |                                  |   |

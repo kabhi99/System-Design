@@ -258,7 +258,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |  |  |  25K w/s | |  25K w/s | |  25K w/s | |  25K w/s |         |  |
 |  |  +----------+ +----------+ +----------+ +----------+         |  |
 |  |                                                                 |  |
-|  |  Total: 4 × 25K = 100K writes/sec                              |  |
+|  |  Total: 4 x 25K = 100K writes/sec                              |  |
 |  |  Each shard is smaller and faster                              |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -320,22 +320,22 @@ Sharding splits data across multiple databases, each holding a subset.
 |  |                                                                 |  |
 |  |                        HASH RING                               |  |
 |  |                                                                 |  |
-|  |                          0°                                    |  |
-|  |                     +----●----+                                |  |
+|  |                          0o                                    |  |
+|  |                     +----o----+                                |  |
 |  |                    /   Node A  \                               |  |
 |  |                   /             \                              |  |
-|  |              270°●               ● 90°                         |  |
+|  |              270oo               o 90o                         |  |
 |  |              Node D             Node B                         |  |
 |  |                   \             /                              |  |
 |  |                    \   Node C  /                               |  |
-|  |                     +----●----+                                |  |
-|  |                         180°                                   |  |
+|  |                     +----o----+                                |  |
+|  |                         180o                                   |  |
 |  |                                                                 |  |
 |  |  Keys are hashed onto the ring.                               |  |
 |  |  Walk clockwise to find the node that owns the key.           |  |
 |  |                                                                 |  |
-|  |  Key at 45° > walk clockwise > Node B (at 90°)               |  |
-|  |  Key at 200° > walk clockwise > Node D (at 270°)             |  |
+|  |  Key at 45o > walk clockwise > Node B (at 90o)               |  |
+|  |  Key at 200o > walk clockwise > Node D (at 270o)             |  |
 |  |                                                                 |  |
 |  |  ADDING A NODE:                                                |  |
 |  |  Only keys between previous node and new node need to move    |  |
@@ -395,11 +395,11 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |                    0                                                   |
 |                    |                                                   |
-|              ●-----+-----●  Server A (pos: 500M)                      |
+|              o-----+-----o  Server A (pos: 500M)                      |
 |             /             \                                            |
-|   Server D ●               ● Server B (pos: 1.5B)                    |
+|   Server D o               o Server B (pos: 1.5B)                    |
 |   (pos: 3B) \             /                                           |
-|              ●-----+-----●                                            |
+|              o-----+-----o                                            |
 |                    |                                                   |
 |              Server C (pos: 2.5B)                                    |
 |                                                                         |
@@ -442,7 +442,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |               0                                                        |
 |          B3 --+-- A1                                                  |
 |             \ | /                                                      |
-|        C2 --(●)-- B1                                                  |
+|        C2 --(o)-- B1                                                  |
 |             / | \                                                      |
 |          A3 --+-- C1                                                  |
 |               |                                                        |

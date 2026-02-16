@@ -171,7 +171,7 @@ A Pod is:
 |  * Like processes on same machine                                    |
 |  * Super fast - no network overhead                                  |
 |                                                                         |
-|  ⚠️  PORT CONFLICT: Two containers can't use same port!             |
+|    PORT CONFLICT: Two containers can't use same port!             |
 |      Container1 on :8080 + Container2 on :8080 = ERROR              |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1182,7 +1182,7 @@ spec:
 |  * Must complete successfully                                         |
 |                                                                         |
 |  IMPORTANT: Pods are ephemeral!                                       |
-|  Don't create pods directly—use Deployments!                         |
+|  Don't create pods directly-use Deployments!                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

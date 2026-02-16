@@ -1,4 +1,4 @@
-# BOOKMYSHOW SYSTEM DESIGN — DEEP DIVE
+# BOOKMYSHOW SYSTEM DESIGN - DEEP DIVE
 *Movie & Event Ticket Booking Platform*
 
 ### Table of Contents
@@ -68,7 +68,7 @@ QUESTIONS:
 - What if User A selects the seat but never pays?
 - How do we show real-time seat availability to everyone?
 
-This is the BookMyShow problem — a classic example of:
+This is the BookMyShow problem - a classic example of:
 - High-read, low-write with extreme contention
 - Inventory management with finite resources
 - Distributed locking in a real-time system
@@ -140,13 +140,13 @@ USERS (Customers):
 |  BOOKINGS:                                                             |
 |  * 5M bookings/day                                                     |
 |  * Peak hours (6 PM - 10 PM): 60% of bookings = 3M in 4 hours         |
-|  * Peak TPS: 3M / (4 × 3600) ≈ 210 bookings/second                    |
+|  * Peak TPS: 3M / (4 x 3600) ~ 210 bookings/second                    |
 |  * Spike during releases: 10x = 2,100 bookings/second                 |
 |                                                                         |
 |  READS (Seat Map Views):                                               |
 |  * Each booking requires ~5 seat map views (browsing)                 |
-|  * 5M × 5 = 25M seat map views/day                                    |
-|  * Peak: 25M × 0.6 / (4 × 3600) ≈ 1,000 views/second                  |
+|  * 5M x 5 = 25M seat map views/day                                    |
+|  * Peak: 25M x 0.6 / (4 x 3600) ~ 1,000 views/second                  |
 |  * Spike: 10,000 views/second                                         |
 |                                                                         |
 |  READ:WRITE RATIO:                                                     |
@@ -165,22 +165,22 @@ USERS (Customers):
 |  * Total: 500 MB                                                       |
 |                                                                         |
 |  THEATERS & SCREENS:                                                   |
-|  * 10,000 theaters × 5 screens = 50,000 screens                       |
+|  * 10,000 theaters x 5 screens = 50,000 screens                       |
 |  * ~5 KB per screen (layout, seat config)                             |
 |  * Total: 250 MB                                                       |
 |                                                                         |
 |  SHOWS:                                                                |
-|  * 100,000 shows/day × 30 days = 3M active shows                      |
+|  * 100,000 shows/day x 30 days = 3M active shows                      |
 |  * ~2 KB per show                                                      |
 |  * Total: 6 GB                                                         |
 |                                                                         |
 |  SEAT INVENTORY (Hot Data):                                            |
-|  * 3M shows × 300 seats average = 900M seat records                   |
+|  * 3M shows x 300 seats average = 900M seat records                   |
 |  * ~100 bytes per seat (status, lock, price)                          |
-|  * Total: 90 GB (must be fast — Redis candidate)                      |
+|  * Total: 90 GB (must be fast - Redis candidate)                      |
 |                                                                         |
 |  BOOKINGS:                                                             |
-|  * 5M bookings/day × 365 days × 3 years = 5.5B bookings              |
+|  * 5M bookings/day x 365 days x 3 years = 5.5B bookings              |
 |  * ~1 KB per booking                                                   |
 |  * Total: 5.5 TB                                                       |
 |                                                                         |
@@ -208,7 +208,7 @@ USERS (Customers):
 |  T7: Book seat F-12 Y                                                 |
 |                                      T8: Book seat F-12 Y < PROBLEM!  |
 |                                                                         |
-|  Both users paid, both got confirmation — but only ONE seat exists!   |
+|  Both users paid, both got confirmation - but only ONE seat exists!   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -231,7 +231,7 @@ USERS (Customers):
 |  User A selects seat F-12                                             |
 |  System locks seat for 10 minutes                                     |
 |  User A gets distracted, never pays                                   |
-|  Seat is blocked for 10 minutes — lost revenue!                       |
+|  Seat is blocked for 10 minutes - lost revenue!                       |
 |                                                                         |
 |  Meanwhile, User B wanted that seat but couldn't book it.             |
 |                                                                         |
@@ -1097,8 +1097,8 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  WHY KAFKA OVER RABBITMQ?                                              |
 |  -------------------------                                             |
-|  * Durability — messages persisted to disk                            |
-|  * Replay — can reprocess failed events                               |
+|  * Durability - messages persisted to disk                            |
+|  * Replay - can reprocess failed events                               |
 |  * Higher throughput for event streaming                              |
 |  * Better for analytics pipeline                                      |
 |                                                                         |
@@ -1157,10 +1157,10 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  WHY JWT?                                                              |
 |  ---------                                                             |
-|  * Stateless — No session storage needed on server                   |
-|  * Scalable — Any server can validate token                          |
-|  * Contains claims — User info embedded in token                     |
-|  * Standard — Wide library support                                   |
+|  * Stateless - No session storage needed on server                   |
+|  * Scalable - Any server can validate token                          |
+|  * Contains claims - User info embedded in token                     |
+|  * Standard - Wide library support                                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1698,7 +1698,7 @@ SEAT_INVENTORY (Per Show):
 |   E | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |10 |11 |12 |13 |14 |         |
 |     +---+---+---+---+---+---+---+---+---+---+---+---+---+---+         |
 |                                                                         |
-|     Legend:  [ ] Available   [█] Booked   [░] Locked   [X] Blocked    |
+|     Legend:  [ ] Available   [#] Booked   [.] Locked   [X] Blocked    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1764,7 +1764,7 @@ SEAT_INVENTORY (Per Show):
 |  When show is created, we DON'T pre-create 300 seat_inventory rows.  |
 |                                                                         |
 |  WHY?                                                                  |
-|  * 100,000 shows/day × 300 seats = 30 million rows/day               |
+|  * 100,000 shows/day x 300 seats = 30 million rows/day               |
 |  * Most seats never get viewed or booked                              |
 |  * Wasteful storage                                                   |
 |                                                                         |
@@ -1808,7 +1808,7 @@ SEAT_INVENTORY (Per Show):
 
 ## PART 4: SEAT SELECTION & BOOKING (THE HARD PROBLEM)
 
-This is the CORE technical challenge of BookMyShow — handling concurrent seat
+This is the CORE technical challenge of BookMyShow - handling concurrent seat
 bookings without double-booking while maintaining good user experience.
 
 ### 4.1 THE BOOKING FLOW (USER JOURNEY)
@@ -1882,7 +1882,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 - Seats become AVAILABLE again
 - Other users can now book
 
-### 4.2 WHY IS THIS HARD? — THE CONCURRENCY PROBLEM
+### 4.2 WHY IS THIS HARD? - THE CONCURRENCY PROBLEM
 
 ```
 +-------------------------------------------------------------------------+
@@ -1952,7 +1952,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  Y Database handles locking — simple to implement                     |
+|  Y Database handles locking - simple to implement                     |
 |  Y ACID guarantees                                                    |
 |  Y No external dependencies (no Redis needed)                         |
 |                                                                         |
@@ -1996,7 +1996,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  Y No blocking — high concurrency                                     |
+|  Y No blocking - high concurrency                                     |
 |  Y Simple implementation                                              |
 |  Y No deadlock risk                                                   |
 |                                                                         |
@@ -2046,12 +2046,12 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  THE PROBLEM: User selects 3 seats. What if 2 succeed and 1 fails?   |
 |                                                                         |
 |  BAD: Lock A-1 Y, Lock A-2 Y, Lock A-3 X                              |
-|       User has partial lock — confusing!                              |
+|       User has partial lock - confusing!                              |
 |                                                                         |
 |  SOLUTION: Use Redis Lua script for atomic multi-key operation        |
 |                                                                         |
 |  PRINCIPLE:                                                            |
-|  Lua scripts in Redis execute atomically — no interleaving.          |
+|  Lua scripts in Redis execute atomically - no interleaving.          |
 |  Either ALL seats get locked, or NONE do.                             |
 |                                                                         |
 |  ALGORITHM:                                                            |
@@ -2066,7 +2066,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  Y Sub-millisecond latency                                            |
 |  Y Handles massive concurrency                                        |
 |  Y Atomic multi-seat locking via Lua                                  |
-|  Y Automatic expiry (TTL) — no cleanup needed                         |
+|  Y Automatic expiry (TTL) - no cleanup needed                         |
 |  Y Horizontally scalable (Redis Cluster)                              |
 |                                                                         |
 |  CONS:                                                                 |
@@ -2265,7 +2265,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  PRINCIPLE:                                                            |
 |  1. Check if key value = our token                                    |
 |  2. If yes, delete                                                    |
-|  3. If no, someone else has the lock now — don't touch!              |
+|  3. If no, someone else has the lock now - don't touch!              |
 |                                                                         |
 |  This must be ATOMIC (Lua script) to avoid race.                      |
 |                                                                         |
@@ -2709,7 +2709,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 +-------------------------------------------------------------------------+
 ```
 
-### 6.2 IDEMPOTENCY — PREVENTING DOUBLE CHARGES
+### 6.2 IDEMPOTENCY - PREVENTING DOUBLE CHARGES
 
 ```
 +-------------------------------------------------------------------------+
@@ -2721,7 +2721,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  3. Server initiates payment with gateway                             |
 |  4. Gateway processes payment                                         |
 |  5. Gateway sends response                                            |
-|  6. Network timeout — response never reaches our server               |
+|  6. Network timeout - response never reaches our server               |
 |  7. User's app shows "Something went wrong. Try again?"               |
 |  8. User clicks "Pay Now" again                                       |
 |  9. SECOND payment initiated!                                         |
@@ -2981,7 +2981,7 @@ WHAT IS IDEMPOTENCY?
 |  * Hard to track booking state across services                        |
 |  * Compensation logic scattered everywhere                            |
 |  * Debugging distributed failures is nightmare                        |
-|  * "Where is my booking stuck?" — hard to answer                     |
+|  * "Where is my booking stuck?" - hard to answer                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3112,7 +3112,7 @@ WHAT IS IDEMPOTENCY?
 |  Write to both DB and ES in same request.                             |
 |  Problem: Inconsistency if one fails.                                 |
 |                                                                         |
-|  APPROACH 2: CDC (Change Data Capture) — Recommended                   |
+|  APPROACH 2: CDC (Change Data Capture) - Recommended                   |
 |  ----------------------------------------------------                  |
 |  Use Debezium to stream changes from PostgreSQL WAL.                  |
 |  Changes flow through Kafka to Elasticsearch.                         |
@@ -3368,7 +3368,7 @@ WHY DOES THIS HAPPEN?
 |      IF value != null:                                                |
 |          RETURN value                                                 |
 |                                                                         |
-|      // Cache miss — try to acquire rebuild lock                      |
+|      // Cache miss - try to acquire rebuild lock                      |
 |      lockKey = "rebuild_lock:" + key                                  |
 |      lockAcquired = redis.SET(lockKey, "1", NX, EX, 30)              |
 |                                                                         |
@@ -3386,7 +3386,7 @@ WHY DOES THIS HAPPEN?
 |              IF value != null:                                        |
 |                  RETURN value                                         |
 |                                                                         |
-|          // Timeout — fall back to database                           |
+|          // Timeout - fall back to database                           |
 |          RETURN database.query(key)                                   |
 |                                                                         |
 |  RESULT: Only 1 database query instead of 10,000!                     |
@@ -3632,14 +3632,14 @@ WHY DOES THIS HAPPEN?
 |                    SHARDING BOOKMYSHOW                                 |
 |                                                                         |
 |  WHAT TO SHARD:                                                        |
-|  * Bookings (5M/day × 365 × 3 years = 5.5 billion rows)              |
+|  * Bookings (5M/day x 365 x 3 years = 5.5 billion rows)              |
 |  * Payments                                                           |
 |  * Seat Inventory (per show)                                         |
 |                                                                         |
 |  WHAT NOT TO SHARD:                                                    |
-|  * Movies (50K rows — fits in single instance)                       |
+|  * Movies (50K rows - fits in single instance)                       |
 |  * Theaters (10K rows)                                               |
-|  * Users (50M rows — shard if needed later)                          |
+|  * Users (50M rows - shard if needed later)                          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3651,7 +3651,7 @@ WHY DOES THIS HAPPEN?
 |  Each city's data on separate shard.                                  |
 |                                                                         |
 |  Pros:                                                                 |
-|  * Locality — most queries are within a city                         |
+|  * Locality - most queries are within a city                         |
 |  * Can scale hot cities independently                                |
 |                                                                         |
 |  Cons:                                                                 |
@@ -3729,7 +3729,7 @@ WHY DOES THIS HAPPEN?
 
 ```
 +-------------------------------------------------------------------------+
-|                    REDIS DOWN — WHAT HAPPENS?                          |
+|                    REDIS DOWN - WHAT HAPPENS?                          |
 |                                                                         |
 |  IMPACT:                                                               |
 |  * Can't acquire seat locks                                           |
@@ -3781,7 +3781,7 @@ WHY DOES THIS HAPPEN?
 |  REPLICA FAILURE:                                                      |
 |  ----------------                                                      |
 |  * Read load redistributed to other replicas                         |
-|  * Less impact — system continues                                    |
+|  * Less impact - system continues                                    |
 |  * Failed replica rebuilt from primary                               |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -4523,7 +4523,7 @@ WHY DOES THIS HAPPEN?
 |     If someone cancels, notify waitlist users.                        |
 |                                                                         |
 |  2. Design dynamic pricing                                             |
-|     Like airline tickets — price changes based on demand.            |
+|     Like airline tickets - price changes based on demand.            |
 |     Higher price for popular shows/times.                             |
 |                                                                         |
 |  3. Design the refund system                                           |

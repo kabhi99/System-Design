@@ -1,4 +1,4 @@
-# DOCKER NETWORKING — FROM ZERO TO HERO
+# DOCKER NETWORKING - FROM ZERO TO HERO
 *Complete Guide: Basics to Advanced*
 
 ### Table of Contents
@@ -186,7 +186,7 @@ sudo ip netns exec red ping 192.168.1.2
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROBLEM: How do we connect 5 containers?                              |
-|  5 containers = 5 namespaces = need 5×4/2 = 10 veth pairs?            |
+|  5 containers = 5 namespaces = need 5x4/2 = 10 veth pairs?            |
 |  That doesn't scale!                                                   |
 |                                                                         |
 |  SOLUTION: Use a bridge (virtual switch)                               |

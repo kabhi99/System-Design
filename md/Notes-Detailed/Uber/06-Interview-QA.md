@@ -158,7 +158,7 @@ and architect-level interviews.
 |      |                               |                                |
 |      | Send offer to D1 -------------| Send offer to D1              |
 |      v                               v                                |
-|           D1 receives TWO offers! 💥                                  |
+|           D1 receives TWO offers!                                   |
 |                                                                         |
 |  SOLUTION: ATOMIC RESERVATION                                         |
 |  ===============================                                        |
@@ -210,11 +210,11 @@ and architect-level interviews.
 |  ----------------------------------------                               |
 |                                                                         |
 |  1. SCORING FUNCTION                                                   |
-|     score = w1 × eta_score                                           |
-|           + w2 × driver_rating                                       |
-|           + w3 × acceptance_rate                                     |
-|           + w4 × wait_time_fairness                                  |
-|           + w5 × vehicle_match                                       |
+|     score = w1 x eta_score                                           |
+|           + w2 x driver_rating                                       |
+|           + w3 x acceptance_rate                                     |
+|           + w4 x wait_time_fairness                                  |
+|           + w5 x vehicle_match                                       |
 |                                                                         |
 |     eta_score: Lower ETA = higher score                              |
 |     fairness: Driver waiting long = higher score                     |
@@ -380,7 +380,7 @@ and architect-level interviews.
 |                                                                         |
 |  1. DIVIDE CITY INTO ZONES                                             |
 |     * Hexagonal grid (H3 library)                                    |
-|     * ~5km² per zone                                                |
+|     * ~5km2 per zone                                                |
 |                                                                         |
 |  2. MEASURE DEMAND/SUPPLY PER ZONE                                     |
 |     * Demand: active ride requests                                   |
@@ -400,7 +400,7 @@ and architect-level interviews.
 |     * Hysteresis: goes up fast, down slow                           |
 |                                                                         |
 |  5. APPLY TO FARE                                                      |
-|     fare = (base + distance + time) × surge                         |
+|     fare = (base + distance + time) x surge                         |
 |          + booking_fee  (not surged)                                 |
 |                                                                         |
 |  UPDATE FREQUENCY                                                      |
@@ -542,31 +542,31 @@ A: Log and analyze, retrain ML models, update traffic data.
 |  45-MINUTE UBER DESIGN INTERVIEW                                      |
 |                                                                         |
 |  1. REQUIREMENTS (5 min)                                               |
-|     □ Functional: Rider requests ride, driver accepts, trip, payment |
-|     □ Non-functional: Low latency (<500ms matching), high available |
-|     □ Scale: 100M users, 1M drivers, 250K location updates/sec      |
+|     o Functional: Rider requests ride, driver accepts, trip, payment |
+|     o Non-functional: Low latency (<500ms matching), high available |
+|     o Scale: 100M users, 1M drivers, 250K location updates/sec      |
 |                                                                         |
 |  2. HIGH-LEVEL DESIGN (10 min)                                         |
-|     □ Draw major components                                           |
-|     □ Show data flow                                                  |
-|     □ Identify databases                                              |
+|     o Draw major components                                           |
+|     o Show data flow                                                  |
+|     o Identify databases                                              |
 |                                                                         |
 |  3. DEEP DIVE (20 min) - Pick 2-3 areas                               |
-|     □ Location indexing (S2/Geohash)                                 |
-|     □ Matching algorithm                                              |
-|     □ ETA calculation                                                 |
-|     □ Surge pricing                                                   |
-|     □ Real-time communication                                         |
+|     o Location indexing (S2/Geohash)                                 |
+|     o Matching algorithm                                              |
+|     o ETA calculation                                                 |
+|     o Surge pricing                                                   |
+|     o Real-time communication                                         |
 |                                                                         |
 |  4. SCALABILITY (5 min)                                                |
-|     □ How to handle 10x growth?                                      |
-|     □ Database sharding strategy                                     |
-|     □ Caching layers                                                  |
+|     o How to handle 10x growth?                                      |
+|     o Database sharding strategy                                     |
+|     o Caching layers                                                  |
 |                                                                         |
 |  5. WRAP UP (5 min)                                                    |
-|     □ Trade-offs discussed                                            |
-|     □ What would you do differently with more time?                 |
-|     □ Questions for interviewer                                       |
+|     o Trade-offs discussed                                            |
+|     o What would you do differently with more time?                 |
+|     o Questions for interviewer                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

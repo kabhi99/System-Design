@@ -186,7 +186,7 @@ with nearby drivers, and provide accurate ETAs.
 |                                                                         |
 |  LOCATION UPDATES:                                                     |
 |  * Drivers send location every 4 seconds                             |
-|  * 1 million drivers × (1 update / 4 seconds) = 250,000 updates/sec |
+|  * 1 million drivers x (1 update / 4 seconds) = 250,000 updates/sec |
 |                                                                         |
 |  GEOSPATIAL QUERIES:                                                   |
 |  * "Show nearby drivers" on app open                                 |
@@ -208,7 +208,7 @@ with nearby drivers, and provide accurate ETAs.
 |  Updates per second: 1,000,000 / 4 = 250,000 writes/sec              |
 |                                                                         |
 |  Each update: ~100 bytes (lat, lng, timestamp, driver_id, status)    |
-|  Write bandwidth: 250,000 × 100 = 25 MB/sec                          |
+|  Write bandwidth: 250,000 x 100 = 25 MB/sec                          |
 |                                                                         |
 |  GEOSPATIAL QUERIES                                                    |
 |                                                                         |
@@ -236,9 +236,9 @@ with nearby drivers, and provide accurate ETAs.
 |                                                                         |
 |  LOCATION HISTORY                                                      |
 |                                                                         |
-|  Updates per day: 250,000/sec × 86,400 = 21.6 billion                |
+|  Updates per day: 250,000/sec x 86,400 = 21.6 billion                |
 |  Data per update: 100 bytes                                           |
-|  Daily storage: 21.6B × 100 = 2.16 TB/day                            |
+|  Daily storage: 21.6B x 100 = 2.16 TB/day                            |
 |                                                                         |
 |  Retention: 30 days > 65 TB                                           |
 |  (Can use time-series DB with auto-expiry)                           |
@@ -247,13 +247,13 @@ with nearby drivers, and provide accurate ETAs.
 |                                                                         |
 |  Rides per day: 20 million                                            |
 |  Data per ride: 2 KB (route, fare, details)                          |
-|  Daily: 20M × 2KB = 40 GB/day                                        |
-|  Yearly: 40 × 365 = 14.6 TB/year                                     |
+|  Daily: 20M x 2KB = 40 GB/day                                        |
+|  Yearly: 40 x 365 = 14.6 TB/year                                     |
 |                                                                         |
 |  USER DATA                                                             |
 |                                                                         |
-|  100M riders × 1KB = 100 GB                                           |
-|  5M drivers × 2KB = 10 GB                                             |
+|  100M riders x 1KB = 100 GB                                           |
+|  5M drivers x 2KB = 10 GB                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

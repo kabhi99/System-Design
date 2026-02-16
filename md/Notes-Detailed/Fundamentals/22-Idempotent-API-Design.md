@@ -68,9 +68,9 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |                                                                 |  |
 |  |  Client ---- POST /payments ----> Server                       |  |
 |  |                                       |                         |  |
-|  |                                       | (charges AGAIN! 💸)    |  |
+|  |                                       | (charges AGAIN! )    |  |
 |  |                                                                 |  |
-|  |  RESULT: Customer charged twice! 😱                           |  |
+|  |  RESULT: Customer charged twice!                            |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |

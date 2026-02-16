@@ -244,7 +244,7 @@ Kubernetes requires a "flat" network where all pods can reach all pods:
 
 ### WHY A FLAT NETWORK?
 
-Consider the alternative—NAT-based networking like Docker default:
+Consider the alternative-NAT-based networking like Docker default:
 
 ```sql
 WITH NAT (Docker default style):
@@ -264,7 +264,7 @@ WITH FLAT NETWORK (Kubernetes):
 Pod A (10.0.1.2) wants to reach Pod C (10.0.2.2)
 
 BENEFITS:
-* Every pod has unique IP—no conflicts
+* Every pod has unique IP-no conflicts
 * No port mapping needed
 * Pod C sees traffic from 10.0.1.2 (Pod A's real IP)
 * Applications work as if on traditional network
@@ -574,7 +574,7 @@ nsenter -t 12345 -n ip route
 
 ### WHY DNS MATTERS
 
-Pods are ephemeral—they get new IPs when they restart. You can't hardcode IPs.
+Pods are ephemeral-they get new IPs when they restart. You can't hardcode IPs.
 DNS provides stable names that resolve to current pod IPs.
 
 ### COREDNS: KUBERNETES' DNS SERVER
@@ -730,7 +730,7 @@ dig mysql.default.svc.cluster.local
 
 ### WHAT'S NEXT?
 
-Chapter 2 will deep-dive into CNI plugins—how they implement the flat network
+Chapter 2 will deep-dive into CNI plugins-how they implement the flat network
 and the trade-offs between different approaches (overlay vs routing vs cloud).
 
 ## END OF CHAPTER 1

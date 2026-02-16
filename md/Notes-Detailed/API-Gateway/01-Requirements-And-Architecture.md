@@ -119,7 +119,7 @@
 |     ===================================                                 |
 |     * Header manipulation (add/remove/modify)                        |
 |     * Payload transformation                                          |
-|     * Protocol translation (REST ↔ gRPC)                            |
+|     * Protocol translation (REST - gRPC)                            |
 |                                                                         |
 |  6. CACHING                                                            |
 |     ===========                                                         |
@@ -223,7 +223,7 @@
 |  STORAGE:                                                               |
 |  * Configuration: < 100 MB (in-memory)                               |
 |  * Rate limit counters: Redis cluster                                |
-|  * Logs: 1 KB per request × 1.7B = 1.7 TB/day                       |
+|  * Logs: 1 KB per request x 1.7B = 1.7 TB/day                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

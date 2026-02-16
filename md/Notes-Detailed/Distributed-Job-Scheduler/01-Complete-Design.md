@@ -215,8 +215,8 @@ SECTION 4: SCALE ESTIMATION
 *|  * Total: ~1.3 KB per job                                            |*
 *|                                                                         |*
 *|  Storage needed:                                                        |*
-*|  * 100M jobs × 1.3 KB = 130 GB (active jobs)                         |*
-*|  * Execution history: 10× more = 1.3 TB                              |*
+*|  * 100M jobs x 1.3 KB = 130 GB (active jobs)                         |*
+*|  * Execution history: 10x more = 1.3 TB                              |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -339,7 +339,7 @@ SECTION 6: DATABASE DESIGN
 *|  |  | payload         | JSON/BLOB     | Job parameters         | |  |*
 *|  |  | schedule_type   | ENUM          | ONE_TIME, RECURRING    | |  |*
 *|  |  | cron_expression | VARCHAR(100)  | For recurring jobs     | |  |*
-*|  |  | next_run_time   | TIMESTAMP     | When to run next ⭐    | |  |*
+*|  |  | next_run_time   | TIMESTAMP     | When to run next     | |  |*
 *|  |  | status          | ENUM          | ACTIVE, PAUSED, DONE   | |  |*
 *|  |  | priority        | INT           | 1-10 (higher = first)  | |  |*
 *|  |  | max_retries     | INT           | Retry limit            | |  |*
@@ -585,7 +585,7 @@ SECTION 8: EXACTLY-ONCE EXECUTION
 *|  |    AND next_run_time <= NOW()                                 |  |*
 *|  |  ORDER BY priority DESC                                       |  |*
 *|  |  LIMIT 100                                                     |  |*
-*|  |  FOR UPDATE SKIP LOCKED;  -- ⭐ Key feature!                  |  |*
+*|  |  FOR UPDATE SKIP LOCKED;  --  Key feature!                  |  |*
 *|  |                                                                 |  |*
 *|  |  -- Process jobs...                                            |  |*
 *|  |  UPDATE jobs SET next_run_time = ... WHERE job_id IN (...);  |  |*
@@ -881,12 +881,12 @@ SECTION 10: WORKER DESIGN
 *|  |                                                                 |  |*
 *|  |  Tuning:                                                       |  |*
 *|  |  * CPU-bound jobs: concurrency = num_cores                    |  |*
-*|  |  * I/O-bound jobs: concurrency = num_cores × 2-4              |  |*
-*|  |  * Mixed workload: concurrency = num_cores × 2                |  |*
+*|  |  * I/O-bound jobs: concurrency = num_cores x 2-4              |  |*
+*|  |  * Mixed workload: concurrency = num_cores x 2                |  |*
 *|  |                                                                 |  |*
 *|  |  Example:                                                       |  |*
 *|  |  * 8-core machine with I/O-bound jobs                        |  |*
-*|  |  * concurrency = 8 × 4 = 32 concurrent jobs                  |  |*
+*|  |  * concurrency = 8 x 4 = 32 concurrent jobs                  |  |*
 *|  |  * 10 worker nodes = 320 concurrent jobs cluster-wide        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*

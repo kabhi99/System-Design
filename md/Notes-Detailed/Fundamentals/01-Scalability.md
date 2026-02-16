@@ -109,7 +109,7 @@ increases.
 |  X Single point of failure                                            |
 |  X Expensive at high end (exponential cost)                           |
 |  X Downtime for upgrades                                              |
-|  X Diminishing returns (2x CPU ≠ 2x throughput)                      |
+|  X Diminishing returns (2x CPU ! 2x throughput)                      |
 |                                                                         |
 |  REAL-WORLD LIMITS:                                                    |
 |  * AWS largest instance: u-24tb1.metal (448 vCPU, 24TB RAM)          |
@@ -260,7 +260,7 @@ Clone the entire application behind a load balancer.
 |                                                                         |
 |  FORMULA:                                                              |
 |  If 1 server handles 1000 RPS                                         |
-|  N servers handle ~N × 1000 RPS (assuming no bottleneck)              |
+|  N servers handle ~N x 1000 RPS (assuming no bottleneck)              |
 |                                                                         |
 |  REAL-WORLD: Netflix runs 100,000+ cloned instances                   |
 |                                                                         |
@@ -575,11 +575,11 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |                                                                         |
 |  LITTLE'S LAW                                                          |
 |                                                                         |
-|                    L = λ × W                                           |
+|                    L = L x W                                           |
 |                                                                         |
 |  Where:                                                                |
 |  L = Average number of items in system (concurrent requests)          |
-|  λ = Average arrival rate (requests per second)                       |
+|  L = Average arrival rate (requests per second)                       |
 |  W = Average time in system (latency)                                 |
 |                                                                         |
 |  ==================================================================== |
@@ -589,11 +589,11 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |                                                                         |
 |  Given:                                                                |
 |  * Your service handles requests with 100ms latency (W = 0.1s)        |
-|  * You need to handle 10,000 requests/second (λ = 10,000)            |
+|  * You need to handle 10,000 requests/second (L = 10,000)            |
 |                                                                         |
 |  Question: How many concurrent connections do you need?               |
 |                                                                         |
-|  L = λ × W = 10,000 × 0.1 = 1,000 concurrent connections             |
+|  L = L x W = 10,000 x 0.1 = 1,000 concurrent connections             |
 |                                                                         |
 |  If each server handles 100 concurrent connections:                   |
 |  You need: 1,000 / 100 = 10 servers                                  |
@@ -605,7 +605,7 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |                                                                         |
 |  If latency increases to 500ms (due to slow database):               |
 |                                                                         |
-|  L = 10,000 × 0.5 = 5,000 concurrent connections                      |
+|  L = 10,000 x 0.5 = 5,000 concurrent connections                      |
 |                                                                         |
 |  You now need 50 servers!                                             |
 |  > 5x more servers just because latency increased 5x                 |
@@ -621,7 +621,7 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |  You need to handle 500 RPS                                           |
 |                                                                         |
 |  Minimum threads needed:                                              |
-|  L = 500 × 0.2 = 100 threads                                         |
+|  L = 500 x 0.2 = 100 threads                                         |
 |                                                                         |
 |  Add buffer for safety: 150-200 threads                              |
 |                                                                         |
@@ -639,12 +639,12 @@ Why systems don't scale linearly.
 |                                                                         |
 |                           N                                            |
 |  Throughput(N) = -----------------------------                        |
-|                   1 + σ(N-1) + κN(N-1)                                 |
+|                   1 + s(N-1) + kN(N-1)                                 |
 |                                                                         |
 |  Where:                                                                |
 |  N = Number of processors/servers                                      |
-|  σ = Contention coefficient (serialization/locking)                   |
-|  κ = Coherence coefficient (communication overhead)                   |
+|  s = Contention coefficient (serialization/locking)                   |
+|  k = Coherence coefficient (communication overhead)                   |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -654,9 +654,9 @@ Why systems don't scale linearly.
 |       |                    . . .                                      |
 |       |                  .       .  < Peak (retrograde begins)        |
 |       |               .            .                                  |
-|       |            .                 . < κ > 0 (coherence overhead)   |
+|       |            .                 . < k > 0 (coherence overhead)   |
 |       |         .                      .                              |
-|       |       .    _____________________ < σ > 0 (contention)         |
+|       |       .    _____________________ < s > 0 (contention)         |
 |       |     .   _/                                                    |
 |       |   .  _/                                                       |
 |       |  . /                                                          |
@@ -664,12 +664,12 @@ Why systems don't scale linearly.
 |       |/                                                               |
 |       +------------------------------------------------> Nodes        |
 |                                                                         |
-|  WHAT CAUSES CONTENTION (σ):                                          |
+|  WHAT CAUSES CONTENTION (s):                                          |
 |  * Locks (database locks, mutex)                                      |
 |  * Shared resources (single database)                                 |
 |  * Sequential processing                                              |
 |                                                                         |
-|  WHAT CAUSES COHERENCE OVERHEAD (κ):                                  |
+|  WHAT CAUSES COHERENCE OVERHEAD (k):                                  |
 |  * Cache invalidation across nodes                                    |
 |  * Consensus protocols (Paxos, Raft)                                 |
 |  * Distributed locking                                                |
@@ -728,7 +728,7 @@ The theoretical speedup limit of parallelization.
 |  N = 4:    Speedup = 1 / (0.1 + 0.9/4)   = 3.08x                     |
 |  N = 10:   Speedup = 1 / (0.1 + 0.9/10)  = 5.26x                     |
 |  N = 100:  Speedup = 1 / (0.1 + 0.9/100) = 9.17x                     |
-|  N = ∞:    Speedup = 1 / 0.1             = 10x (MAXIMUM!)            |
+|  N = ~:    Speedup = 1 / 0.1             = 10x (MAXIMUM!)            |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -772,7 +772,7 @@ Defining and measuring reliability and performance.
 |  AVAILABILITY SLI                                                      |
 |  ------------------                                                     |
 |            Successful requests                                         |
-|  SLI = ------------------------- × 100                                |
+|  SLI = ------------------------- x 100                                |
 |            Total requests                                              |
 |                                                                         |
 |  LATENCY SLI                                                           |
@@ -798,7 +798,7 @@ Defining and measuring reliability and performance.
 |  ERROR RATE SLI                                                        |
 |  ---------------                                                        |
 |            Failed requests                                             |
-|  SLI = ------------------- × 100                                      |
+|  SLI = ------------------- x 100                                      |
 |         Total requests                                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1141,7 +1141,7 @@ Defining and measuring reliability and performance.
 |                                                                         |
 |  LAWS & FORMULAS                                                       |
 |  ----------------                                                      |
-|  * Little's Law: L = λ × W (capacity planning)                       |
+|  * Little's Law: L = L x W (capacity planning)                       |
 |  * Amdahl's Law: Sequential parts limit speedup                      |
 |  * USL: Contention + coherence limit scaling                         |
 |                                                                         |
@@ -1166,7 +1166,7 @@ Defining and measuring reliability and performance.
 |     "We can scale this by..., but the trade-off is..."              |
 |                                                                         |
 |  2. Know your numbers:                                                |
-|     * 1 server ≈ 1000-10000 RPS (depends on workload)               |
+|     * 1 server ~ 1000-10000 RPS (depends on workload)               |
 |     * Redis: 100K+ ops/sec per instance                              |
 |     * PostgreSQL: 10-50K TPS (depends on query)                     |
 |                                                                         |

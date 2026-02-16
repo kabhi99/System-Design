@@ -106,7 +106,7 @@ Automatically tracks pod additions/removals
 
 Kubernetes supports FOUR service types:
 
-### CLUSTERIP — INTERNAL ACCESS ONLY (DEFAULT)
+### CLUSTERIP - INTERNAL ACCESS ONLY (DEFAULT)
 
 The most common service type. Creates a virtual IP accessible only within
 the cluster.
@@ -161,7 +161,7 @@ WHAT HAPPENS:
 +-------------------------------------------------------------------------+
 ```
 
-### NODEPORT — EXTERNAL ACCESS VIA NODE PORTS
+### NODEPORT - EXTERNAL ACCESS VIA NODE PORTS
 
 Exposes the service on a port on EVERY node:
 
@@ -226,7 +226,7 @@ spec:
 +-------------------------------------------------------------------------+
 ```
 
-### LOADBALANCER — CLOUD LOAD BALANCER INTEGRATION
+### LOADBALANCER - CLOUD LOAD BALANCER INTEGRATION
 
 Provisions an external load balancer (in cloud environments):
 
@@ -286,7 +286,7 @@ spec:
 +-------------------------------------------------------------------------+
 ```
 
-### EXTERNALNAME — DNS ALIAS
+### EXTERNALNAME - DNS ALIAS
 
 Maps a service to an external DNS name (no proxying):
 
@@ -303,7 +303,7 @@ WHAT HAPPENS:
 * DNS query for my-database.default.svc.cluster.local
 * Returns CNAME: db.example.com
 * No ClusterIP assigned
-* No proxying—just DNS aliasing
+* No proxying-just DNS aliasing
 
 USE CASES:
 * Pointing to external databases
@@ -311,7 +311,7 @@ USE CASES:
 * Different environments (staging > external, prod > internal)
 ```
 
-## SECTION 3.3: HOW SERVICES WORK — ENDPOINTS AND SELECTORS
+## SECTION 3.3: HOW SERVICES WORK - ENDPOINTS AND SELECTORS
 
 ### THE SELECTOR > ENDPOINT FLOW
 
@@ -423,7 +423,7 @@ The kube-controller-manager runs an Endpoint Controller that:
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3.4: KUBE-PROXY — THE SERVICE IMPLEMENTATION
+## SECTION 3.4: KUBE-PROXY - THE SERVICE IMPLEMENTATION
 
 ### WHAT IS KUBE-PROXY?
 
@@ -441,7 +441,7 @@ kube-proxy supports THREE modes:
 2. IPVS mode (high performance)
 3. userspace mode (legacy, don't use)
 
-### IPTABLES MODE — HOW IT WORKS
+### IPTABLES MODE - HOW IT WORKS
 
 When using iptables mode, kube-proxy creates chains of rules:
 
@@ -516,7 +516,7 @@ LIMITATION 3: LIMITED LOAD BALANCING
 - Only random (statistical) balancing
 - No least-connections, weighted, etc.
 
-### IPVS MODE — HIGH PERFORMANCE
+### IPVS MODE - HIGH PERFORMANCE
 
 IPVS (IP Virtual Server) is a transport-layer load balancer built into Linux:
 

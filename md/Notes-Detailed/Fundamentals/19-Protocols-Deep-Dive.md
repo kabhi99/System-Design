@@ -165,7 +165,7 @@ essential for system design interviews.
 |  |    |                                     |                      |  |
 |  |    |        CONNECTION CLOSED            |                      |  |
 |  |                                                                 |  |
-|  |  TIME_WAIT: Client waits 2×MSL (Max Segment Lifetime)         |  |
+|  |  TIME_WAIT: Client waits 2xMSL (Max Segment Lifetime)         |  |
 |  |  to ensure all packets are gone from network                  |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |

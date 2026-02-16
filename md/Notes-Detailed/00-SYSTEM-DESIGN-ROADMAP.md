@@ -184,7 +184,7 @@ Every system design discussion should follow this framework:
 |  L1 cache reference                           0.5 ns                   |
 |  L2 cache reference                           7   ns                   |
 |  Main memory reference                       100   ns                   |
-|  SSD random read                         150,000   ns = 150 µs         |
+|  SSD random read                         150,000   ns = 150 us         |
 |  HDD disk seek                        10,000,000   ns = 10 ms          |
 |  Network round trip (same datacenter)    500,000   ns = 0.5 ms         |
 |  Network round trip (cross-continent) 150,000,000   ns = 150 ms        |
@@ -206,9 +206,9 @@ Every system design discussion should follow this framework:
 |                                                                         |
 |  QUICK CALCULATIONS                                                    |
 |  -----------------                                                     |
-|  Seconds per day                         86,400 ≈ ~100K                |
-|  Seconds per month                       2.6M ≈ ~2.5M                  |
-|  Seconds per year                        31M ≈ ~30M                    |
+|  Seconds per day                         86,400 ~ ~100K                |
+|  Seconds per month                       2.6M ~ ~2.5M                  |
+|  Seconds per year                        31M ~ ~30M                    |
 |                                                                         |
 |  1 Million requests/day = ~12 QPS                                     |
 |  1 Billion requests/day = ~12,000 QPS                                 |

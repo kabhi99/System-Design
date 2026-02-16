@@ -575,7 +575,7 @@ SECTION 4.5: TAIL-BASED SAMPLING
 *|  |  Buffering traces requires significant memory:                |  |*
 *|  |  * 50,000 traces/second                                       |  |*
 *|  |  * 30 second buffer window                                    |  |*
-*|  |  * 20 spans/trace × 500 bytes                                |  |*
+*|  |  * 20 spans/trace x 500 bytes                                |  |*
 *|  |  = 15 GB memory just for buffering!                          |  |*
 *|  |                                                                 |  |*
 *|  |  SOLUTIONS:                                                    |  |*

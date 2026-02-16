@@ -111,21 +111,21 @@ indexing techniques and location service design.
 |  |  +-----------------+      +--------+--------+                  |  |
 |  |  |                 |      |   NW   |   NE   |                  |  |
 |  |  |                 |      | (empty)| (dense)|                  |  |
-|  |  |    ● ● ●        |  >   +--------+--------+                  |  |
-|  |  |  ● ● ● ●        |      |   SW   |   SE   |                  |  |
-|  |  |    ● ●          |      |(sparse)|(sparse)|                  |  |
+|  |  |    o o o        |  >   +--------+--------+                  |  |
+|  |  |  o o o o        |      |   SW   |   SE   |                  |  |
+|  |  |    o o          |      |(sparse)|(sparse)|                  |  |
 |  |  +-----------------+      +--------+--------+                  |  |
 |  |                                                                 |  |
 |  |  NE quadrant is dense > subdivide further:                     |  |
 |  |                                                                 |  |
 |  |  +--------+--------+                                           |  |
 |  |  |        |        |                                           |  |
-|  |  |   NW   |●  NE   |  (recursively until threshold)           |  |
+|  |  |   NW   |o  NE   |  (recursively until threshold)           |  |
 |  |  |        |        |                                           |  |
 |  |  +--------+--------+                                           |  |
-|  |  |        |● ●     |                                           |  |
+|  |  |        |o o     |                                           |  |
 |  |  |   SW   |   SE   |                                           |  |
-|  |  |        |● ● ●   |                                           |  |
+|  |  |        |o o o   |                                           |  |
 |  |  +--------+--------+                                           |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -162,7 +162,7 @@ indexing techniques and location service design.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |        Earth                    Cube Projection                |  |
-|  |          🌍             >       +----------+                    |  |
+|  |                       >       +----------+                    |  |
 |  |                                |    +---+  |                    |  |
 |  |                                |    |   |  |                    |  |
 |  |                                |    +---+  |                    |  |
@@ -176,16 +176,16 @@ indexing techniques and location service design.
 |  -------------                                                          |
 |  * 64-bit integer uniquely identifies each cell                      |
 |  * Hierarchical: parent/child relationship encoded                   |
-|  * 30 levels (level 30 = ~1 cm² cells)                              |
+|  * 30 levels (level 30 = ~1 cm2 cells)                              |
 |                                                                         |
 |  Level    | Avg Area     | Use Case                                   |
 |  --------------------------------------------------                    |
-|  0        | 85M km²      | Face of cube (1/6 of Earth)               |
-|  4        | 300K km²     | Large country                              |
-|  12       | 3 km²        | City district                              |
-|  16       | 10,000 m²    | City block                                 |
-|  23       | 1 m²         | Room                                       |
-|  30       | 1 cm²        | Maximum precision                          |
+|  0        | 85M km2      | Face of cube (1/6 of Earth)               |
+|  4        | 300K km2     | Large country                              |
+|  12       | 3 km2        | City district                              |
+|  16       | 10,000 m2    | City block                                 |
+|  23       | 1 m2         | Room                                       |
+|  30       | 1 cm2        | Maximum precision                          |
 |                                                                         |
 |  COVERING:                                                             |
 |  -----------                                                            |

@@ -30,7 +30,7 @@ maintaining performance and consistency.
 |                                                                         |
 |  1. HORIZONTAL SCALING                                                 |
 |     * Add more nodes for more capacity                               |
-|     * 10 nodes × 64GB = 640GB total cache                           |
+|     * 10 nodes x 64GB = 640GB total cache                           |
 |                                                                         |
 |  2. HIGH AVAILABILITY                                                  |
 |     * Replicas survive node failures                                 |
@@ -88,7 +88,7 @@ maintaining performance and consistency.
 |  hash("user:3") % 5 = 4  > Node 4 (was Node 1!)                      |
 |                                                                         |
 |  Almost ALL keys move to different nodes!                            |
-|  Massive cache invalidation. 💥                                       |
+|  Massive cache invalidation.                                        |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -103,15 +103,15 @@ maintaining performance and consistency.
 |                        |                                               |
 |              +---------+---------+                                     |
 |              |                   |                                     |
-|       Node A ●        ● Key 1   |                                     |
+|       Node A o        o Key 1   |                                     |
 |              |                   |                                     |
 |    ----------+-------------------+----------                          |
 |              |                   |                                     |
-|       Key 3 ●         Node B ●  |                                     |
+|       Key 3 o         Node B o  |                                     |
 |              |                   |                                     |
 |              +---------+---------+                                     |
 |                        |                                               |
-|                ● Key 2 | ● Node C                                     |
+|                o Key 2 | o Node C                                     |
 |                        |                                               |
 |                                                                         |
 |  Key 1 > Node B (first node clockwise)                               |

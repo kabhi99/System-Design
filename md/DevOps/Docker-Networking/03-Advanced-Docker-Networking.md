@@ -9,7 +9,7 @@ This chapter covers advanced Docker networking topics including:
 - Troubleshooting common issues
 - Production networking patterns
 
-## SECTION 3.1: MACVLAN — CONTAINERS WITH REAL IPs
+## SECTION 3.1: MACVLAN - CONTAINERS WITH REAL IPs
 
 ### THE PROBLEM WITH NAT
 
@@ -183,7 +183,7 @@ ip route add 192.168.1.200/28 dev mac0
 - You need many containers (each needs unique MAC)
 - Simple port forwarding is sufficient
 
-## SECTION 3.2: IPVLAN — SINGLE MAC, MULTIPLE IPs
+## SECTION 3.2: IPVLAN - SINGLE MAC, MULTIPLE IPs
 
 ### THE MAC ADDRESS LIMITATION
 

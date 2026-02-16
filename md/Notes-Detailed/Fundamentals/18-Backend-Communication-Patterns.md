@@ -374,7 +374,7 @@ distributed systems and microservices architectures.
 |  |  connections = (core_count * 2) + effective_spindle_count     |  |
 |  |                                                                 |  |
 |  |  For SSD (no spindles):                                        |  |
-|  |  connections ≈ core_count * 2 + 1                             |  |
+|  |  connections ~ core_count * 2 + 1                             |  |
 |  |                                                                 |  |
 |  |  Example: 8 cores = ~17 connections                           |  |
 |  |                                                                 |  |

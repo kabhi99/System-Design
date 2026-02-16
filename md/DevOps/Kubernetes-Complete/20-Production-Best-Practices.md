@@ -128,33 +128,33 @@ secure, and maintainable Kubernetes clusters in production.
 |                                                                         |
 |  SECURITY CHECKLIST                                                    |
 |                                                                         |
-|  □ Run as non-root                                                    |
+|  o Run as non-root                                                    |
 |    securityContext:                                                    |
 |      runAsNonRoot: true                                               |
 |      runAsUser: 1000                                                  |
 |                                                                         |
-|  □ Read-only filesystem                                               |
+|  o Read-only filesystem                                               |
 |    securityContext:                                                    |
 |      readOnlyRootFilesystem: true                                    |
 |                                                                         |
-|  □ Drop capabilities                                                  |
+|  o Drop capabilities                                                  |
 |    securityContext:                                                    |
 |      capabilities:                                                      |
 |        drop: ["ALL"]                                                   |
 |                                                                         |
-|  □ No privilege escalation                                            |
+|  o No privilege escalation                                            |
 |    securityContext:                                                    |
 |      allowPrivilegeEscalation: false                                 |
 |                                                                         |
-|  □ Use NetworkPolicies                                                |
+|  o Use NetworkPolicies                                                |
 |                                                                         |
-|  □ Use RBAC with least privilege                                     |
+|  o Use RBAC with least privilege                                     |
 |                                                                         |
-|  □ Scan images for vulnerabilities                                   |
+|  o Scan images for vulnerabilities                                   |
 |                                                                         |
-|  □ Use specific image tags (not :latest)                             |
+|  o Use specific image tags (not :latest)                             |
 |                                                                         |
-|  □ Store secrets in external secret manager                          |
+|  o Store secrets in external secret manager                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -214,34 +214,34 @@ secure, and maintainable Kubernetes clusters in production.
 |  PRE-PRODUCTION CHECKLIST                                             |
 |                                                                         |
 |  RESOURCES                                                             |
-|  □ Resource requests and limits set                                  |
-|  □ HPA configured for scaling                                        |
-|  □ ResourceQuotas per namespace                                      |
+|  o Resource requests and limits set                                  |
+|  o HPA configured for scaling                                        |
+|  o ResourceQuotas per namespace                                      |
 |                                                                         |
 |  RELIABILITY                                                           |
-|  □ Multiple replicas                                                  |
-|  □ Pod anti-affinity configured                                      |
-|  □ PodDisruptionBudget defined                                       |
-|  □ All three probes configured                                       |
+|  o Multiple replicas                                                  |
+|  o Pod anti-affinity configured                                      |
+|  o PodDisruptionBudget defined                                       |
+|  o All three probes configured                                       |
 |                                                                         |
 |  SECURITY                                                              |
-|  □ Non-root containers                                               |
-|  □ Read-only filesystem                                              |
-|  □ NetworkPolicies in place                                          |
-|  □ RBAC configured                                                    |
-|  □ Secrets encrypted at rest                                         |
+|  o Non-root containers                                               |
+|  o Read-only filesystem                                              |
+|  o NetworkPolicies in place                                          |
+|  o RBAC configured                                                    |
+|  o Secrets encrypted at rest                                         |
 |                                                                         |
 |  OBSERVABILITY                                                         |
-|  □ Logging configured                                                 |
-|  □ Metrics exposed                                                    |
-|  □ Dashboards created                                                 |
-|  □ Alerts defined                                                     |
+|  o Logging configured                                                 |
+|  o Metrics exposed                                                    |
+|  o Dashboards created                                                 |
+|  o Alerts defined                                                     |
 |                                                                         |
 |  OPERATIONS                                                            |
-|  □ Standard labels applied                                           |
-|  □ Graceful shutdown configured                                      |
-|  □ Backup strategy defined                                           |
-|  □ Runbooks documented                                               |
+|  o Standard labels applied                                           |
+|  o Graceful shutdown configured                                      |
+|  o Backup strategy defined                                           |
+|  o Runbooks documented                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

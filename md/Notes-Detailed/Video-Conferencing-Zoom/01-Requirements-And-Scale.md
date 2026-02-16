@@ -143,31 +143,31 @@ SECTION 1.3: SCALE ESTIMATION
 *|                                                                         |*
 *|  Per User (720p video):                                                |*
 *|  * Upload: 1.5 Mbps                                                   |*
-*|  * Download: 1.5 Mbps × N participants (gallery view)                |*
-*|    Or: 1.5 Mbps × 1 (speaker view with SFU)                         |*
+*|  * Download: 1.5 Mbps x N participants (gallery view)                |*
+*|    Or: 1.5 Mbps x 1 (speaker view with SFU)                         |*
 *|                                                                         |*
 *|  Meeting with 10 participants (720p, SFU):                            |*
 *|  * Each user uploads: 1.5 Mbps                                       |*
-*|  * Each user downloads: ~10 × 1.5 = 15 Mbps                          |*
-*|  * SFU server handles: 10 × 1.5 = 15 Mbps in, 10 × 15 = 150 Mbps out |*
+*|  * Each user downloads: ~10 x 1.5 = 15 Mbps                          |*
+*|  * SFU server handles: 10 x 1.5 = 15 Mbps in, 10 x 15 = 150 Mbps out |*
 *|                                                                         |*
-*|  100K concurrent meetings × 10 participants avg × 15 Mbps             |*
+*|  100K concurrent meetings x 10 participants avg x 15 Mbps             |*
 *|  = 15 Tbps total bandwidth!                                           |*
 *|                                                                         |*
 *|  --------------------------------------------------------------------  |*
 *|                                                                         |*
 *|  STORAGE (Cloud Recording)                                             |*
 *|                                                                         |*
-*|  1 hour 1080p recording ≈ 1-2 GB                                      |*
+*|  1 hour 1080p recording ~ 1-2 GB                                      |*
 *|  If 1% of meetings recorded:                                          |*
-*|  100K meetings × 1% × 1 hour × 1.5 GB = 1.5 TB/hour                   |*
-*|  Daily: 1.5 TB × 24 = 36 TB/day                                       |*
+*|  100K meetings x 1% x 1 hour x 1.5 GB = 1.5 TB/hour                   |*
+*|  Daily: 1.5 TB x 24 = 36 TB/day                                       |*
 *|                                                                         |*
 *|  --------------------------------------------------------------------  |*
 *|                                                                         |*
 *|  SIGNALING                                                             |*
 *|                                                                         |*
-*|  Join/leave events: 300M participants × 2 events = 600M events/day   |*
+*|  Join/leave events: 300M participants x 2 events = 600M events/day   |*
 *|  = ~7000 events/second average                                        |*
 *|  Peak: 20-50K events/second                                           |*
 *|                                                                         |*
@@ -198,8 +198,8 @@ SECTION 1.4: MEDIA TRANSMISSION APPROACHES
 *|  |         |                                                      |  |*
 *|  |  Each participant sends to ALL other participants             |  |*
 *|  |                                                                 |  |*
-*|  |  Bandwidth per user: (N-1) × bitrate (upload AND download)   |  |*
-*|  |  4 participants: 3 × 1.5 = 4.5 Mbps up + 4.5 Mbps down       |  |*
+*|  |  Bandwidth per user: (N-1) x bitrate (upload AND download)   |  |*
+*|  |  4 participants: 3 x 1.5 = 4.5 Mbps up + 4.5 Mbps down       |  |*
 *|  |                                                                 |  |*
 *|  |  PROS: No server, lowest latency, simple                      |  |*
 *|  |  CONS: Doesn't scale (bandwidth explodes), no server features|  |*
@@ -226,7 +226,7 @@ SECTION 1.4: MEDIA TRANSMISSION APPROACHES
 *|  |  Each participant sends ONE stream to server                  |  |*
 *|  |  Server forwards to all other participants                    |  |*
 *|  |                                                                 |  |*
-*|  |  Bandwidth per user: 1 × bitrate (up) + (N-1) × bitrate (down)|  |*
+*|  |  Bandwidth per user: 1 x bitrate (up) + (N-1) x bitrate (down)|  |*
 *|  |  But download can be optimized with simulcast!                |  |*
 *|  |                                                                 |  |*
 *|  |  PROS: Scalable, server can do smart routing                 |  |*
@@ -253,7 +253,7 @@ SECTION 1.4: MEDIA TRANSMISSION APPROACHES
 *|  |                                                                 |  |*
 *|  |  Server DECODES all streams, MIXES into ONE, sends to all    |  |*
 *|  |                                                                 |  |*
-*|  |  Bandwidth per user: 1 × bitrate (up) + 1 × bitrate (down)   |  |*
+*|  |  Bandwidth per user: 1 x bitrate (up) + 1 x bitrate (down)   |  |*
 *|  |  Lowest client bandwidth!                                      |  |*
 *|  |                                                                 |  |*
 *|  |  PROS: Lowest client bandwidth, works on weak devices        |  |*

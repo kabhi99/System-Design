@@ -167,14 +167,14 @@ SECTION 3: SCALE ESTIMATION
 *|  * In-app: 10 notifications                                          |*
 *|                                                                         |*
 *|  Daily totals:                                                         |*
-*|  * Push: 100M × 5 = 500 million/day                                  |*
-*|  * Email: 100M × 1 = 100 million/day                                 |*
-*|  * SMS: 100M × 0.1 = 10 million/day                                  |*
-*|  * In-app: 100M × 10 = 1 billion/day                                 |*
+*|  * Push: 100M x 5 = 500 million/day                                  |*
+*|  * Email: 100M x 1 = 100 million/day                                 |*
+*|  * SMS: 100M x 0.1 = 10 million/day                                  |*
+*|  * In-app: 100M x 10 = 1 billion/day                                 |*
 *|  * TOTAL: ~1.6 billion/day                                           |*
 *|                                                                         |*
 *|  Per second (average):                                                 |*
-*|  * 1.6B / 86400 ≈ 18,500 notifications/second                       |*
+*|  * 1.6B / 86400 ~ 18,500 notifications/second                       |*
 *|                                                                         |*
 *|  Per second (peak 10x):                                                |*
 *|  * 185,000 notifications/second                                       |*
@@ -192,10 +192,10 @@ SECTION 3: SCALE ESTIMATION
 *|  * Total: ~750 bytes                                                  |*
 *|                                                                         |*
 *|  Daily storage:                                                        |*
-*|  * 1.6B × 750 bytes = 1.2 TB/day                                     |*
+*|  * 1.6B x 750 bytes = 1.2 TB/day                                     |*
 *|                                                                         |*
 *|  Keep 30 days:                                                         |*
-*|  * 1.2 TB × 30 = 36 TB                                               |*
+*|  * 1.2 TB x 30 = 36 TB                                               |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 

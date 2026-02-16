@@ -33,13 +33,13 @@ A typical web application needs:
 |    -e DATABASE_URL=postgres://... myapi                              |
 |  docker run -d --name web --network myapp -p 80:80 nginx             |
 |                                                                         |
-|  😩 Complex, error-prone, hard to remember                            |
+|   Complex, error-prone, hard to remember                            |
 |                                                                         |
 |  WITH COMPOSE:                                                        |
 |                                                                         |
 |  docker-compose up -d                                                 |
 |                                                                         |
-|  😊 One command, all services start correctly                         |
+|   One command, all services start correctly                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -309,7 +309,7 @@ networks:
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5.5: COMPLETE EXAMPLE — FULL STACK APPLICATION
+## SECTION 5.5: COMPLETE EXAMPLE - FULL STACK APPLICATION
 
 ### PROJECT STRUCTURE
 

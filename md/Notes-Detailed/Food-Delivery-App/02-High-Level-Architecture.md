@@ -355,7 +355,7 @@ SECTION 3: DATABASE DESIGN
 *|  |  | item_id         | BIGINT (FK)   | Menu item              | |  |*
 *|  |  | quantity        | INT           | Number ordered         | |  |*
 *|  |  | unit_price      | DECIMAL(10,2) | Price at order time    | |  |*
-*|  |  | total_price     | DECIMAL(10,2) | quantity × unit_price  | |  |*
+*|  |  | total_price     | DECIMAL(10,2) | quantity x unit_price  | |  |*
 *|  |  | variant_id      | BIGINT (FK)   | Size selection         | |  |*
 *|  |  | addons          | JSON          | Selected add-ons       | |  |*
 *|  |  | special_instr   | VARCHAR(500)  | Item-level notes       | |  |*

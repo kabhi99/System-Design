@@ -207,7 +207,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |            [Shared Kernel]                                ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Example: Shared Money type, shared ID types             ||  |*
-*|  |  |  ⚠️ Creates coupling - minimize usage                    ||  |*
+*|  |  |   Creates coupling - minimize usage                    ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*

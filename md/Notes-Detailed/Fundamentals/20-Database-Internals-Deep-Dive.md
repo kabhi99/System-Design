@@ -216,7 +216,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |              Read full row    Read full row  Read full row     |  |
 |  |                                                                 |  |
 |  |  > Reads ALL columns even though we only need age & city      |  |
-|  |  > If row is 1KB, reads 1KB × N rows                         |  |
+|  |  > If row is 1KB, reads 1KB x N rows                         |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -435,7 +435,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  * WHY? Row locations change (page splits, VACUUM)           |  |
 |  |         PK value doesn't change                               |  |
 |  |                                                                 |  |
-|  |  COST: Secondary index lookup = 2× B+Tree traversals         |  |
+|  |  COST: Secondary index lookup = 2x B+Tree traversals         |  |
 |  |  BENEFIT: No index maintenance when rows move                |  |
 |  |                                                                 |  |
 |  |  Random UUID PK = DISASTER                                    |  |
@@ -730,7 +730,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  WHY NOT ALWAYS USE INDEX?                                             |
 |                                                                         |
 |  If query returns 50% of table:                                       |
-|  * Index scan: 50% × N random page reads (slow!)                     |
+|  * Index scan: 50% x N random page reads (slow!)                     |
 |  * Seq scan: N sequential page reads (faster!)                       |
 |                                                                         |
 |  Random I/O: ~10ms per page (HDD), ~0.1ms (SSD)                      |
@@ -979,13 +979,13 @@ DEADLOCKS
 |  |  connections = (core_count * 2) + effective_spindle_count     |  |
 |  |                                                                 |  |
 |  |  For SSD (effective spindle = 0):                             |  |
-|  |  connections ≈ core_count * 2                                  |  |
+|  |  connections ~ core_count * 2                                  |  |
 |  |                                                                 |  |
 |  |  Example: 4 core server > ~8-10 connections optimal           |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
-|  COUNTERINTUITIVE: More connections ≠ more throughput                 |
+|  COUNTERINTUITIVE: More connections ! more throughput                 |
 |                                                                         |
 |  WHY?                                                                   |
 |  * CPU context switching overhead                                     |

@@ -239,8 +239,8 @@ informed decisions and explain your choices in interviews.
 |  |                                                                 |  |
 |  |  Time ----------------------------------------------------->   |  |
 |  |                                                                 |  |
-|  |  Task A: ████░░░░████░░░░████░░░░                              |  |
-|  |  Task B: ░░░░████░░░░████░░░░████                              |  |
+|  |  Task A: ####....####....####....                              |  |
+|  |  Task B: ....####....####....####                              |  |
 |  |                                                                 |  |
 |  |  Only ONE task runs at any moment, but both PROGRESS           |  |
 |  |                                                                 |  |
@@ -269,10 +269,10 @@ informed decisions and explain your choices in interviews.
 |  |                                                                 |  |
 |  |  Time ----------------------------------------------------->   |  |
 |  |                                                                 |  |
-|  |  CPU 1 - Task A: ████████████████████                          |  |
-|  |  CPU 2 - Task B: ████████████████████                          |  |
-|  |  CPU 3 - Task C: ████████████████████                          |  |
-|  |  CPU 4 - Task D: ████████████████████                          |  |
+|  |  CPU 1 - Task A: ####################                          |  |
+|  |  CPU 2 - Task B: ####################                          |  |
+|  |  CPU 3 - Task C: ####################                          |  |
+|  |  CPU 4 - Task D: ####################                          |  |
 |  |                                                                 |  |
 |  |  ALL tasks run at the SAME TIME on different cores            |  |
 |  |                                                                 |  |
@@ -489,11 +489,11 @@ informed decisions and explain your choices in interviews.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  LITTLE'S LAW:                                                          |
-|  L = λ × W                                                             |
-|  (Concurrent requests = Arrival rate × Average time in system)        |
+|  L = L x W                                                             |
+|  (Concurrent requests = Arrival rate x Average time in system)        |
 |                                                                         |
 |  To handle 1000 req/sec with 100ms latency:                           |
-|  Concurrent = 1000 × 0.1 = 100 concurrent connections needed          |
+|  Concurrent = 1000 x 0.1 = 100 concurrent connections needed          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -99,7 +99,7 @@ SECTION 2.2: WHERE TO PLACE RATE LIMITER
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  OPTION 2: SERVER-SIDE (Application Layer) ⭐ COMMON                  |*
+*|  OPTION 2: SERVER-SIDE (Application Layer)  COMMON                  |*
 *|  -------------------------------------------------                     |*
 *|                                                                         |*
 *|  +------------------------------------------------------------------+ |*
@@ -122,7 +122,7 @@ SECTION 2.2: WHERE TO PLACE RATE LIMITER
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  OPTION 3: API GATEWAY / REVERSE PROXY ⭐ RECOMMENDED                 |*
+*|  OPTION 3: API GATEWAY / REVERSE PROXY  RECOMMENDED                 |*
 *|  ---------------------------------------------------                   |*
 *|                                                                         |*
 *|  +------------------------------------------------------------------+ |*
@@ -196,7 +196,7 @@ SECTION 2.2: WHERE TO PLACE RATE LIMITER
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  HYBRID APPROACH (Real-world) ⭐ BEST PRACTICE                        |*
+*|  HYBRID APPROACH (Real-world)  BEST PRACTICE                        |*
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
@@ -243,7 +243,7 @@ SECTION 2.3: DISTRIBUTED RATE LIMITING CHALLENGES
 *|  |              +-----------++-----------++-----------+          |  |*
 *|  |                                                                 |  |*
 *|  |  Total actual requests: 40 + 35 + 45 = 120                    |  |*
-*|  |  Each server thinks: "User is under limit" ❌                 |  |*
+*|  |  Each server thinks: "User is under limit"                  |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -294,7 +294,7 @@ SECTION 2.3: DISTRIBUTED RATE LIMITING CHALLENGES
 *|  |     |  3. SET count = 100       |  3. SET count = 100          |  |*
 *|  |     |                           |                               |  |*
 *|  |                                                                 |  |*
-*|  |  Both requests allowed, but limit exceeded! ❌                |  |*
+*|  |  Both requests allowed, but limit exceeded!                 |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -360,7 +360,7 @@ SECTION 2.3: DISTRIBUTED RATE LIMITING CHALLENGES
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
-*|  STRATEGY 3: Local Cache Fallback ⭐ RECOMMENDED                      |*
+*|  STRATEGY 3: Local Cache Fallback  RECOMMENDED                      |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  local_cache = {}  # In-memory fallback                       |  |*
@@ -426,8 +426,8 @@ SECTION 2.4: STORAGE OPTIONS
 *|  +------------------+----------+-----------+----------+-------------+ |*
 *|  | Storage          | Latency  | Scalable  | Durable  | Use Case    | |*
 *|  +------------------+----------+-----------+----------+-------------+ |*
-*|  | Local memory     | ~μs      | No        | No       | Single node | |*
-*|  | Redis            | < 1ms    | Yes       | Optional | ⭐ Best     | |*
+*|  | Local memory     | ~us      | No        | No       | Single node | |*
+*|  | Redis            | < 1ms    | Yes       | Optional |  Best     | |*
 *|  | Memcached        | < 1ms    | Yes       | No       | Simple      | |*
 *|  | Database         | ~10ms    | Yes       | Yes      | Not recom.  | |*
 *|  +------------------+----------+-----------+----------+-------------+ |*

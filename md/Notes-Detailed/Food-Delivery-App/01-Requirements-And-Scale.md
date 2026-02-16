@@ -240,15 +240,15 @@ SECTION 4: SCALE ESTIMATION
 *|  * Peak hour: 500,000 orders/hour                                    |*
 *|                                                                         |*
 *|  Orders per second:                                                    |*
-*|  * Average: 3M / 86400 ≈ 35 orders/second                           |*
-*|  * Peak: 500K / 3600 ≈ 140 orders/second                            |*
+*|  * Average: 3M / 86400 ~ 35 orders/second                           |*
+*|  * Peak: 500K / 3600 ~ 140 orders/second                            |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
 *|  SEARCH & BROWSE                                                       |*
 *|                                                                         |*
-*|  * 15M DAU × 10 searches/day = 150M searches/day                    |*
-*|  * 150M / 86400 ≈ 1,750 searches/second                             |*
+*|  * 15M DAU x 10 searches/day = 150M searches/day                    |*
+*|  * 150M / 86400 ~ 1,750 searches/second                             |*
 *|  * Peak (3x): 5,000 searches/second                                 |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -271,20 +271,20 @@ SECTION 4: SCALE ESTIMATION
 *|  STORAGE ESTIMATION                                                    |*
 *|                                                                         |*
 *|  Orders:                                                               |*
-*|  * 3M orders/day × 5 KB per order = 15 GB/day                       |*
-*|  * Per year: 15 GB × 365 = 5.5 TB/year                              |*
+*|  * 3M orders/day x 5 KB per order = 15 GB/day                       |*
+*|  * Per year: 15 GB x 365 = 5.5 TB/year                              |*
 *|                                                                         |*
 *|  Location data (if stored):                                           |*
-*|  * 75K updates/second × 100 bytes = 7.5 MB/second                   |*
-*|  * Per day: 7.5 MB × 86400 = 650 GB/day                             |*
+*|  * 75K updates/second x 100 bytes = 7.5 MB/second                   |*
+*|  * Per day: 7.5 MB x 86400 = 650 GB/day                             |*
 *|  * Usually stored only for active deliveries, purged after          |*
 *|                                                                         |*
 *|  Restaurant/Menu data:                                                 |*
-*|  * 500K restaurants × 100 menu items × 1 KB = 50 GB                 |*
+*|  * 500K restaurants x 100 menu items x 1 KB = 50 GB                 |*
 *|  * Relatively static, easily cacheable                               |*
 *|                                                                         |*
 *|  Images:                                                               |*
-*|  * 500K restaurants × 100 items × 500 KB avg = 25 TB               |*
+*|  * 500K restaurants x 100 items x 500 KB avg = 25 TB               |*
 *|  * Stored on CDN/Object storage                                      |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*

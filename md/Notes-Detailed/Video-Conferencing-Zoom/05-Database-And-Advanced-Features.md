@@ -345,11 +345,11 @@ SECTION 5.5: PHONE DIAL-IN (PSTN GATEWAY)
 *|  |                                                                 |  |*
 *|  |  Phone User                        Zoom Infrastructure         |  |*
 *|  |                                                                 |  |*
-*|  |  📞 --- PSTN --> Carrier --> SIP Trunk --> PSTN Gateway --> SFU|  |*
+*|  |   --- PSTN --> Carrier --> SIP Trunk --> PSTN Gateway --> SFU|  |*
 *|  |                                                |                |  |*
 *|  |                                          Transcodes:            |  |*
-*|  |                                          G.711 ↔ Opus          |  |*
-*|  |                                          RTP ↔ WebRTC          |  |*
+*|  |                                          G.711 - Opus          |  |*
+*|  |                                          RTP - WebRTC          |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -469,8 +469,8 @@ SECTION 5.6: INTERVIEW QUESTIONS & ANSWERS
 *|  * 720p video: 1.5 Mbps per stream                                   |*
 *|                                                                         |*
 *|  Per meeting bandwidth:                                               |*
-*|  * Upload: 5 × 1.5 = 7.5 Mbps to SFU                                |*
-*|  * Download: 5 × (5-1) × 1.5 = 30 Mbps from SFU (worst case)        |*
+*|  * Upload: 5 x 1.5 = 7.5 Mbps to SFU                                |*
+*|  * Download: 5 x (5-1) x 1.5 = 30 Mbps from SFU (worst case)        |*
 *|  * With simulcast: ~15 Mbps from SFU                                 |*
 *|                                                                         |*
 *|  SFU capacity: ~200 participants per server                          |*

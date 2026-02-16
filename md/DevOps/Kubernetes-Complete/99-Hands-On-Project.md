@@ -132,8 +132,8 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    |   |  ConfigMap   |          |    Secret    |                |    |
 |    |   |  app-config  |          |db-credentials|                |    |
 |    |   |              |          |              |                |    |
-|    |   | APP_NAME     |          | DB_USER ●●●● |                |    |
-|    |   | LOG_LEVEL    |          | DB_PASS ●●●● |                |    |
+|    |   | APP_NAME     |          | DB_USER oooo |                |    |
+|    |   | LOG_LEVEL    |          | DB_PASS oooo |                |    |
 |    |   | nginx.conf   |          |              |                |    |
 |    |   +--------------+          +--------------+                |    |
 |    |                                                              |    |
@@ -418,7 +418,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    |     |  backend-sa  |    | backend-role |    |  binding   |  |    |
 |    |     |              |    |              |    |            |  |    |
 |    |     |  Used by:    |    | Permissions: |    | Connects:  |  |    |
-|    |     |  backend     |<---+ * get pods   |<---+ SA ↔ Role  |  |    |
+|    |     |  backend     |<---+ * get pods   |<---+ SA - Role  |  |    |
 |    |     |  pods        |    | * get secrets|    |            |  |    |
 |    |     |              |    | * get configs|    |            |  |    |
 |    |     +--------------+    +--------------+    +------------+  |    |
@@ -433,7 +433,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    |                          +----------------+----------------+ |    |
 |    |                          |                                 | |    |
 |    |                          v                                 v |    |
-|    |                    ✅ ALLOWED                        ❌ DENIED|    |
+|    |                     ALLOWED                         DENIED|    |
 |    |                 (has permission)               (no permission)    |
 |    |                                                               |    |
 |    +--------------------------------------------------------------+    |
@@ -468,7 +468,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 
 ```
 +-------------------------------------------------------------------------+
-|  🎯 LEARNING OBJECTIVE                                                  |
+|   LEARNING OBJECTIVE                                                  |
 |  ====================                                                    |
 |  * Understand what Minikube is and why we need it                      |
 |  * Learn about cluster addons                                          |
@@ -476,7 +476,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  📚 CONCEPT: What is Minikube?                                         |
+|   CONCEPT: What is Minikube?                                         |
 |  ==============================                                         |
 |                                                                         |
 |  Minikube = Local Kubernetes cluster running in a VM/container        |
@@ -539,7 +539,7 @@ kubectl get nodes
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED OUTPUT                                                     |
+|   EXPECTED OUTPUT                                                     |
 |  ==================                                                      |
 |                                                                         |
 |  $ minikube status                                                      |
@@ -567,7 +567,7 @@ cd ~/k8s-project
 
 ```
 +-------------------------------------------------------------------------+
-|  🔧 TROUBLESHOOTING                                                     |
+|   TROUBLESHOOTING                                                     |
 |  ===================                                                     |
 |                                                                         |
 |  NODE NOT READY?                                                        |
@@ -589,7 +589,7 @@ cd ~/k8s-project
 
 ```
 +-------------------------------------------------------------------------+
-|  🎯 LEARNING OBJECTIVE                                                  |
+|   LEARNING OBJECTIVE                                                  |
 |  ====================                                                    |
 |  * Understand why namespaces exist                                     |
 |  * Create your first Kubernetes object                                 |
@@ -597,7 +597,7 @@ cd ~/k8s-project
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  📚 CONCEPT: What is a Namespace?                                      |
+|   CONCEPT: What is a Namespace?                                      |
 |  ================================                                       |
 |                                                                         |
 |  Namespace = Virtual cluster inside your cluster                       |
@@ -640,7 +640,7 @@ metadata:
 
 ```
 +-------------------------------------------------------------------------+
-|  🔍 UNDERSTAND THE YAML                                                 |
+|   UNDERSTAND THE YAML                                                 |
 |  ======================                                                  |
 |                                                                         |
 |  apiVersion: v1        < API version (v1 = core/stable)               |
@@ -714,7 +714,7 @@ kubectl config view --minify | grep namespace
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED OUTPUT                                                     |
+|   EXPECTED OUTPUT                                                     |
 |  ==================                                                      |
 |                                                                         |
 |  $ kubectl get namespaces                                               |
@@ -731,7 +731,7 @@ kubectl config view --minify | grep namespace
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  💡 CONCEPT CHECK: Test Your Understanding                             |
+|   CONCEPT CHECK: Test Your Understanding                             |
 |  =========================================                              |
 |                                                                         |
 |  Q1: What happens to all resources if you delete the namespace?       |
@@ -753,7 +753,7 @@ kubectl config view --minify | grep namespace
 
 ```
 +-------------------------------------------------------------------------+
-|  🎯 LEARNING OBJECTIVE                                                  |
+|   LEARNING OBJECTIVE                                                  |
 |  ====================                                                    |
 |  * Understand why configuration should be external to code             |
 |  * Create ConfigMaps with key-value pairs AND files                    |
@@ -761,7 +761,7 @@ kubectl config view --minify | grep namespace
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  📚 CONCEPT: Why ConfigMaps?                                           |
+|   CONCEPT: Why ConfigMaps?                                           |
 |  ============================                                           |
 |                                                                         |
 |  WITHOUT ConfigMap (BAD):                                              |
@@ -829,7 +829,7 @@ data:
 
 ```
 +-------------------------------------------------------------------------+
-|  🔍 UNDERSTAND THE YAML                                                 |
+|   UNDERSTAND THE YAML                                                 |
 |  ======================                                                  |
 |                                                                         |
 |  data:                                                                   |
@@ -901,7 +901,7 @@ kubectl describe configmap app-config
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED OUTPUT                                                     |
+|   EXPECTED OUTPUT                                                     |
 |  ==================                                                      |
 |                                                                         |
 |  $ kubectl get configmap                                                |
@@ -922,7 +922,7 @@ kubectl describe configmap app-config
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  💡 HOW PODS WILL USE THIS (Preview of Step 7)                         |
+|   HOW PODS WILL USE THIS (Preview of Step 7)                         |
 |  =============================================                          |
 |                                                                         |
 |  # As environment variables:                                           |
@@ -946,7 +946,7 @@ kubectl describe configmap app-config
 
 ```
 +-------------------------------------------------------------------------+
-|  🎯 LEARNING OBJECTIVE                                                  |
+|   LEARNING OBJECTIVE                                                  |
 |  ====================                                                    |
 |  * Understand difference between ConfigMap and Secret                  |
 |  * Learn about base64 encoding (NOT encryption!)                       |
@@ -954,7 +954,7 @@ kubectl describe configmap app-config
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  📚 CONCEPT: ConfigMap vs Secret                                       |
+|   CONCEPT: ConfigMap vs Secret                                       |
 |  ================================                                       |
 |                                                                         |
 |  +-------------------+-------------------+---------------------------+ |
@@ -971,7 +971,7 @@ kubectl describe configmap app-config
 |  |                   | nginx.conf        | TLS certificates         | |
 |  +-------------------+-------------------+---------------------------+ |
 |                                                                         |
-|  ⚠️  WARNING: Base64 is NOT encryption!                               |
+|    WARNING: Base64 is NOT encryption!                               |
 |  Anyone can decode: echo "c2VjcmV0" | base64 -d                       |
 |  For real security, use tools like Vault or Sealed Secrets           |
 |                                                                         |
@@ -1009,7 +1009,7 @@ stringData:
 
 ```
 +-------------------------------------------------------------------------+
-|  🔍 UNDERSTAND THE YAML                                                 |
+|   UNDERSTAND THE YAML                                                 |
 |  ======================                                                  |
 |                                                                         |
 |  type: Opaque          < Generic secret (most common)                  |
@@ -1085,7 +1085,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 
 ```
 +-------------------------------------------------------------------------+
-|  ✅ EXPECTED OUTPUT                                                     |
+|   EXPECTED OUTPUT                                                     |
 |  ==================                                                      |
 |                                                                         |
 |  $ kubectl get secrets                                                  |
@@ -1105,7 +1105,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  💡 CONCEPT CHECK: Test Your Understanding                             |
+|   CONCEPT CHECK: Test Your Understanding                             |
 |  =========================================                              |
 |                                                                         |
 |  Q1: Is base64 encoding secure?                                        |
@@ -1129,7 +1129,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 
 ```
 +-------------------------------------------------------------------------+
-|  🎯 LEARNING OBJECTIVE                                                  |
+|   LEARNING OBJECTIVE                                                  |
 |  ====================                                                    |
 |  * Understand why pods need persistent storage                         |
 |  * Learn PVC (developer) vs PV (admin) separation                      |
@@ -1137,7 +1137,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|  📚 CONCEPT: Why Persistent Storage?                                   |
+|   CONCEPT: Why Persistent Storage?                                   |
 |  ====================================                                   |
 |                                                                         |
 |  WITHOUT persistent storage:                                           |
@@ -1145,7 +1145,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 |  +---------------+                                                     |
 |  |  PostgreSQL   |  Pod crashes...                                    |
 |  |  Pod          |                                                     |
-|  |               |         💥                                          |
+|  |               |                                                   |
 |  |  /var/lib/    |  ----------->  ALL DATA LOST!                      |
 |  |  postgresql/  |                                                     |
 |  |  (container   |  New pod starts with EMPTY database               |
@@ -1163,7 +1163,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 |  +---------------+        |  here!        |                           |
 |        |                  +---------------+                           |
 |        | Pod crashes...         |                                     |
-|        💥                        |                                     |
+|                                |                                     |
 |        |                        |                                     |
 |  +---------------+              |                                     |
 |  |  New Pod      |--------------+                                     |
@@ -2043,19 +2043,19 @@ kubectl apply -f 12-rbac.yaml
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ☐ Namespaces           - Isolating resources                         |
-|  ☐ ConfigMaps           - Non-sensitive configuration                 |
-|  ☐ Secrets              - Sensitive data (passwords)                  |
-|  ☐ PV/PVC               - Persistent storage                          |
-|  ☐ StatefulSet          - Stateful apps (database)                    |
-|  ☐ Deployment           - Stateless apps (backend, frontend)          |
-|  ☐ Services             - ClusterIP, NodePort, Headless               |
-|  ☐ Ingress              - HTTP routing                                |
-|  ☐ Health Checks        - Liveness & Readiness probes                 |
-|  ☐ Resource Limits      - CPU/Memory requests & limits                |
-|  ☐ HPA                  - Horizontal Pod Autoscaler                   |
-|  ☐ CronJob              - Scheduled tasks                             |
-|  ☐ RBAC                 - ServiceAccount, Role, RoleBinding           |
+|  o Namespaces           - Isolating resources                         |
+|  o ConfigMaps           - Non-sensitive configuration                 |
+|  o Secrets              - Sensitive data (passwords)                  |
+|  o PV/PVC               - Persistent storage                          |
+|  o StatefulSet          - Stateful apps (database)                    |
+|  o Deployment           - Stateless apps (backend, frontend)          |
+|  o Services             - ClusterIP, NodePort, Headless               |
+|  o Ingress              - HTTP routing                                |
+|  o Health Checks        - Liveness & Readiness probes                 |
+|  o Resource Limits      - CPU/Memory requests & limits                |
+|  o HPA                  - Horizontal Pod Autoscaler                   |
+|  o CronJob              - Scheduled tasks                             |
+|  o RBAC                 - ServiceAccount, Role, RoleBinding           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

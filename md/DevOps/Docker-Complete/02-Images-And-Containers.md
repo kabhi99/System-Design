@@ -4,7 +4,7 @@
 Understanding the difference between images and containers is fundamental to
 mastering Docker. This chapter provides a deep dive into both concepts.
 
-## SECTION 2.1: IMAGES vs CONTAINERS — THE FUNDAMENTAL DIFFERENCE
+## SECTION 2.1: IMAGES vs CONTAINERS - THE FUNDAMENTAL DIFFERENCE
 
 ### THE BLUEPRINT ANALOGY
 
@@ -375,7 +375,7 @@ When a container runs, it gets a read-write layer on top of the image:
 |  |  * Files modified (copy-on-write)                               | |
 |  |  * Files deleted (marked as deleted)                            | |
 |  |                                                                   | |
-|  |  ⚠️  EPHEMERAL - Lost when container is removed!                | |
+|  |    EPHEMERAL - Lost when container is removed!                | |
 |  |                                                                   | |
 |  +-------------------------------------------------------------------+ |
 |  |                     Image Layers (R/O)                            | |

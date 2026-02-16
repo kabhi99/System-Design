@@ -236,7 +236,7 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
-|  3. BOOKING SERVICE ⭐ (Most Critical)                                |
+|  3. BOOKING SERVICE  (Most Critical)                                |
 |  =======================================                                |
 |  Handles seat selection and booking flow.                             |
 |                                                                         |

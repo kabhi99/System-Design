@@ -257,21 +257,21 @@ Let's estimate the scale for a large e-commerce platform.
 |  PRODUCTS:                                                             |
 |  * 500 million products                                               |
 |  * ~5 KB per product (metadata)                                      |
-|  * Total: 500M × 5KB = 2.5 TB                                        |
+|  * Total: 500M x 5KB = 2.5 TB                                        |
 |                                                                         |
 |  PRODUCT IMAGES:                                                       |
-|  * 500 million products × 5 images × 500KB = 1.25 PB                 |
+|  * 500 million products x 5 images x 500KB = 1.25 PB                 |
 |  * (Served via CDN, stored in object storage)                        |
 |                                                                         |
 |  USERS:                                                                |
-|  * 500 million users × 1 KB = 500 GB                                 |
+|  * 500 million users x 1 KB = 500 GB                                 |
 |                                                                         |
 |  ORDERS:                                                               |
-|  * 5 million orders/day × 365 × 5 years = 9 billion orders          |
-|  * 9 billion × 2 KB = 18 TB                                          |
+|  * 5 million orders/day x 365 x 5 years = 9 billion orders          |
+|  * 9 billion x 2 KB = 18 TB                                          |
 |                                                                         |
 |  REVIEWS:                                                              |
-|  * 1 billion reviews × 1 KB = 1 TB                                   |
+|  * 1 billion reviews x 1 KB = 1 TB                                   |
 |                                                                         |
 |  TOTAL STRUCTURED DATA: ~25 TB                                        |
 |  TOTAL MEDIA: ~1-2 PB                                                 |

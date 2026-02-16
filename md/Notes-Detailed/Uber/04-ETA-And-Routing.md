@@ -22,7 +22,7 @@ routing algorithms, and traffic prediction.
 |     Better ETA > higher matching priority                           |
 |                                                                         |
 |  3. PRICING                                                            |
-|     Fare = Base + (Rate × Time) + (Rate × Distance)                 |
+|     Fare = Base + (Rate x Time) + (Rate x Distance)                 |
 |     ETA directly affects pricing display                             |
 |                                                                         |
 |  4. SURGE CALCULATION                                                  |
@@ -182,11 +182,11 @@ routing algorithms, and traffic prediction.
 |  A* explores toward the goal (like a focused beam).                  |
 |                                                                         |
 |  Dijkstra:                    A*:                                      |
-|      ○ ○ ○ ○ ○                    ○                                   |
-|    ○ ○ ○ ○ ○ ○ ○              ○ ○ ○ ○                                 |
-|  ○ ○ ○ S ○ ○ ○ ○ ○        ○ ○ S ○ ○ ○ ○                               |
-|    ○ ○ ○ ○ ○ ○ ○ G            ○ ○ ○ ○ G                               |
-|      ○ ○ ○ ○ ○                    ○                                   |
+|      o o o o o                    o                                   |
+|    o o o o o o o              o o o o                                 |
+|  o o o S o o o o o        o o S o o o o                               |
+|    o o o o o o o G            o o o o G                               |
+|      o o o o o                    o                                   |
 |                                                                         |
 |  Still not fast enough for production at scale!                      |
 |                                                                         |
@@ -260,7 +260,7 @@ routing algorithms, and traffic prediction.
 |  1. HISTORICAL PATTERNS                                               |
 |     * "This road is slow at 8 AM on Mondays"                        |
 |     * Aggregated from millions of past trips                        |
-|     * Stored by: road_segment × day_of_week × time_of_day          |
+|     * Stored by: road_segment x day_of_week x time_of_day          |
 |                                                                         |
 |  2. REAL-TIME GPS PROBES                                              |
 |     * Current driver locations and speeds                            |

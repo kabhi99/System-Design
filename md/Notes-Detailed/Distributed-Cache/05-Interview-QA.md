@@ -112,7 +112,7 @@ about distributed caching and Redis.
 |  Popular cache key expires.                                          |
 |  Many requests see cache miss.                                        |
 |  All query database simultaneously.                                   |
-|  Database overloaded. 💥                                              |
+|  Database overloaded.                                               |
 |                                                                         |
 |  SOLUTIONS                                                             |
 |  ---------                                                             |
@@ -455,32 +455,32 @@ A: Use Sentinel-aware client, handle connection errors, implement retry logic.
 |  45-MINUTE CACHE DESIGN INTERVIEW                                     |
 |                                                                         |
 |  1. REQUIREMENTS (5 min)                                               |
-|     □ Data size (fits on one node or needs sharding?)               |
-|     □ Read/write ratio                                               |
-|     □ Consistency needs (eventual OK or strict?)                    |
-|     □ Durability (can regenerate data or need persistence?)        |
-|     □ Latency requirements                                           |
+|     o Data size (fits on one node or needs sharding?)               |
+|     o Read/write ratio                                               |
+|     o Consistency needs (eventual OK or strict?)                    |
+|     o Durability (can regenerate data or need persistence?)        |
+|     o Latency requirements                                           |
 |                                                                         |
 |  2. HIGH-LEVEL DESIGN (10 min)                                         |
-|     □ Cache-aside pattern (most common)                              |
-|     □ Consistent hashing for distribution                           |
-|     □ Leader-follower replication for HA                            |
+|     o Cache-aside pattern (most common)                              |
+|     o Consistent hashing for distribution                           |
+|     o Leader-follower replication for HA                            |
 |                                                                         |
 |  3. DEEP DIVE (20 min)                                                 |
-|     □ Eviction policy (LRU, LFU, TTL)                               |
-|     □ Cache invalidation strategy                                    |
-|     □ Handling stampede/hot keys                                     |
-|     □ Persistence (RDB/AOF trade-offs)                              |
+|     o Eviction policy (LRU, LFU, TTL)                               |
+|     o Cache invalidation strategy                                    |
+|     o Handling stampede/hot keys                                     |
+|     o Persistence (RDB/AOF trade-offs)                              |
 |                                                                         |
 |  4. SCALING (5 min)                                                    |
-|     □ How to add more nodes?                                         |
-|     □ How to handle hot keys?                                        |
-|     □ Redis Cluster vs Sentinel                                      |
+|     o How to add more nodes?                                         |
+|     o How to handle hot keys?                                        |
+|     o Redis Cluster vs Sentinel                                      |
 |                                                                         |
 |  5. WRAP UP (5 min)                                                    |
-|     □ Trade-offs discussed                                            |
-|     □ Monitoring and operations                                       |
-|     □ Questions for interviewer                                       |
+|     o Trade-offs discussed                                            |
+|     o Monitoring and operations                                       |
+|     o Questions for interviewer                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

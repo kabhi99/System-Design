@@ -299,7 +299,7 @@ CAP only describes behavior during partitions. PACELC extends this:
 |  ------------                                                           |
 |  * If no new updates, all replicas converge to same value eventually |
 |  * During replication window: reads from different nodes may differ   |
-|  * Lag: usually ms–seconds, can be minutes under load                |
+|  * Lag: usually ms-seconds, can be minutes under load                |
 |  * Use: Likes/views, reviews, analytics, DNS, email                  |
 |  * DBs: Cassandra, DynamoDB, S3, DNS                                 |
 |                                                                         |

@@ -1,4 +1,4 @@
-# CHAPTER 2: CNI PLUGINS — DEEP DIVE
+# CHAPTER 2: CNI PLUGINS - DEEP DIVE
 *How the Flat Network is Actually Implemented*
 
 The Container Network Interface (CNI) is the specification that defines how
@@ -146,10 +146,10 @@ CNI configuration lives in /etc/cni/net.d/:
 ```
 
 **PLUGIN CHAINING:**
-Notice the "plugins" array—CNI supports chaining multiple plugins!
+Notice the "plugins" array-CNI supports chaining multiple plugins!
 Each plugin does one thing well, and they're composed together.
 
-## SECTION 2.2: NETWORK TOPOLOGIES — HOW PLUGINS CONNECT PODS
+## SECTION 2.2: NETWORK TOPOLOGIES - HOW PLUGINS CONNECT PODS
 
 CNI plugins implement the flat network requirement using different strategies:
 
@@ -309,7 +309,7 @@ Routing-based CNIs advertise pod routes directly:
 
 ## SECTION 2.3: MAJOR CNI PLUGINS COMPARISON
 
-### FLANNEL — SIMPLE AND RELIABLE
+### FLANNEL - SIMPLE AND RELIABLE
 
 Flannel is the simplest CNI plugin, created by CoreOS:
 
@@ -340,8 +340,8 @@ ARCHITECTURE:
 +-------------------------------------------------------------------------+
 
 PROS:
-Y Simple—easy to deploy and understand
-Y Reliable—mature and battle-tested
+Y Simple-easy to deploy and understand
+Y Reliable-mature and battle-tested
 Y Low resource usage
 
 CONS:
@@ -355,7 +355,7 @@ BEST FOR:
 * When you just need "it to work"
 ```
 
-### CALICO — FULL-FEATURED NETWORKING
+### CALICO - FULL-FEATURED NETWORKING
 
 Calico is the most popular CNI for production:
 
@@ -413,7 +413,7 @@ spec:
 PROS:
 Y Excellent performance (especially BGP mode)
 Y Full network policy support
-Y Flexible—works in any environment
+Y Flexible-works in any environment
 Y Strong security features
 
 CONS:
@@ -427,7 +427,7 @@ BEST FOR:
 * When you need network policies
 ```
 
-### CILIUM — EBPF-POWERED NETWORKING
+### CILIUM - EBPF-POWERED NETWORKING
 
 Cilium uses eBPF for high-performance networking:
 
@@ -512,7 +512,7 @@ BEST FOR:
 * When you need observability built-in
 ```
 
-### AWS VPC CNI — NATIVE AWS NETWORKING
+### AWS VPC CNI - NATIVE AWS NETWORKING
 
 The AWS VPC CNI gives pods real VPC IP addresses:
 
@@ -568,9 +568,9 @@ X AWS-specific
 IP ADDRESS PLANNING:
 Instance type limits how many pods can run:
 
-t3.medium:  3 ENIs × 6 IPs each = 17 pods max
-m5.large:   3 ENIs × 10 IPs each = 29 pods max
-m5.xlarge:  4 ENIs × 15 IPs each = 58 pods max
+t3.medium:  3 ENIs x 6 IPs each = 17 pods max
+m5.large:   3 ENIs x 10 IPs each = 29 pods max
+m5.xlarge:  4 ENIs x 15 IPs each = 58 pods max
 
 You need to plan VPC CIDR carefully to have enough IPs!
 
