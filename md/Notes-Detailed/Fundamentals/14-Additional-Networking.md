@@ -14,70 +14,70 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |  The OSI model is a conceptual framework that describes how data        |
 |  moves from one computer to another over a network.                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Layer 7: APPLICATION                                          |     |
-|  |  ---------------------                                          |    |
-|  |  What user interacts with                                      |     |
-|  |  Protocols: HTTP, HTTPS, FTP, SMTP, DNS, SSH, WebSocket       |      |
-|  |  Data Unit: Data                                               |     |
-|  |  Example: Web browser, email client                           |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 6: PRESENTATION                                         |     |
-|  |  -----------------------                                        |    |
-|  |  Data formatting, encryption, compression                      |     |
-|  |  Protocols: SSL/TLS, JPEG, GIF, MPEG, ASCII, JSON             |      |
-|  |  Data Unit: Data                                               |     |
-|  |  Example: SSL encryption, data serialization                  |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 5: SESSION                                              |     |
-|  |  -----------------                                              |    |
-|  |  Manages sessions/connections between applications             |     |
-|  |  Protocols: NetBIOS, RPC, PPTP                                |      |
-|  |  Data Unit: Data                                               |     |
-|  |  Example: Login session, API session tokens                   |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 4: TRANSPORT                                            |     |
-|  |  -------------------                                            |    |
-|  |  Reliable data transfer, error recovery, flow control         |      |
-|  |  Protocols: TCP, UDP                                          |      |
-|  |  Data Unit: Segment (TCP) / Datagram (UDP)                    |      |
-|  |  Example: Port numbers (80, 443), connection management       |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 3: NETWORK                                              |     |
-|  |  -----------------                                              |    |
-|  |  Routing, logical addressing, path determination              |      |
-|  |  Protocols: IP, ICMP, OSPF, BGP                               |      |
-|  |  Data Unit: Packet                                            |      |
-|  |  Example: IP addresses, routers                               |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 2: DATA LINK                                            |     |
-|  |  -------------------                                            |    |
-|  |  Physical addressing, frame synchronization, error detection  |      |
-|  |  Protocols: Ethernet, Wi-Fi (802.11), PPP, ARP                |      |
-|  |  Data Unit: Frame                                             |      |
-|  |  Example: MAC addresses, switches, NICs                       |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                 |    |
-|  |  Layer 1: PHYSICAL                                             |     |
-|  |  ------------------                                             |    |
-|  |  Physical transmission of raw bits                            |      |
-|  |  Media: Cables, fiber optics, radio waves                     |      |
-|  |  Data Unit: Bits                                              |      |
-|  |  Example: Ethernet cables, hubs, repeaters                    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Layer 7: APPLICATION                                             |  |
+|  |  ---------------------                                            |  |
+|  |  What user interacts with                                         |  |
+|  |  Protocols: HTTP, HTTPS, FTP, SMTP, DNS, SSH, WebSocket           |  |
+|  |  Data Unit: Data                                                  |  |
+|  |  Example: Web browser, email client                               |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 6: PRESENTATION                                            |  |
+|  |  -----------------------                                          |  |
+|  |  Data formatting, encryption, compression                         |  |
+|  |  Protocols: SSL/TLS, JPEG, GIF, MPEG, ASCII, JSON                 |  |
+|  |  Data Unit: Data                                                  |  |
+|  |  Example: SSL encryption, data serialization                      |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 5: SESSION                                                 |  |
+|  |  -----------------                                                |  |
+|  |  Manages sessions/connections between applications                |  |
+|  |  Protocols: NetBIOS, RPC, PPTP                                    |  |
+|  |  Data Unit: Data                                                  |  |
+|  |  Example: Login session, API session tokens                       |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 4: TRANSPORT                                               |  |
+|  |  -------------------                                              |  |
+|  |  Reliable data transfer, error recovery, flow control             |  |
+|  |  Protocols: TCP, UDP                                              |  |
+|  |  Data Unit: Segment (TCP) / Datagram (UDP)                        |  |
+|  |  Example: Port numbers (80, 443), connection management           |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 3: NETWORK                                                 |  |
+|  |  -----------------                                                |  |
+|  |  Routing, logical addressing, path determination                  |  |
+|  |  Protocols: IP, ICMP, OSPF, BGP                                   |  |
+|  |  Data Unit: Packet                                                |  |
+|  |  Example: IP addresses, routers                                   |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 2: DATA LINK                                               |  |
+|  |  -------------------                                              |  |
+|  |  Physical addressing, frame synchronization, error detection      |  |
+|  |  Protocols: Ethernet, Wi-Fi (802.11), PPP, ARP                    |  |
+|  |  Data Unit: Frame                                                 |  |
+|  |  Example: MAC addresses, switches, NICs                           |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  Layer 1: PHYSICAL                                                |  |
+|  |  ------------------                                               |  |
+|  |  Physical transmission of raw bits                                |  |
+|  |  Media: Cables, fiber optics, radio waves                         |  |
+|  |  Data Unit: Bits                                                  |  |
+|  |  Example: Ethernet cables, hubs, repeaters                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -163,30 +163,30 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  WHICH LAYERS MATTER IN SYSTEM DESIGN?                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  LAYER 7 (Application) - VERY IMPORTANT                        |     |
-|  |  * API design (REST, GraphQL, gRPC)                           |      |
-|  |  * HTTP methods, status codes                                 |      |
-|  |  * WebSockets                                                 |      |
-|  |  * L7 Load Balancers (can route by URL, headers)             |       |
-|  |                                                                 |    |
-|  |  LAYER 4 (Transport) - IMPORTANT                               |     |
-|  |  * TCP vs UDP choice                                          |      |
-|  |  * Connection management                                      |      |
-|  |  * Port numbers                                               |      |
-|  |  * L4 Load Balancers (route by IP/port)                      |       |
-|  |                                                                 |    |
-|  |  LAYER 3 (Network) - MODERATELY IMPORTANT                      |     |
-|  |  * IP addressing                                              |      |
-|  |  * Routing between data centers                               |      |
-|  |  * VPC, subnets in cloud                                     |       |
-|  |                                                                 |    |
-|  |  LAYERS 1-2 - Usually abstracted by cloud providers           |      |
-|  |  * You rarely think about physical cables                    |       |
-|  |  * MAC addresses handled by infrastructure                   |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  LAYER 7 (Application) - VERY IMPORTANT                           |  |
+|  |  * API design (REST, GraphQL, gRPC)                               |  |
+|  |  * HTTP methods, status codes                                     |  |
+|  |  * WebSockets                                                     |  |
+|  |  * L7 Load Balancers (can route by URL, headers)                  |  |
+|  |                                                                   |  |
+|  |  LAYER 4 (Transport) - IMPORTANT                                  |  |
+|  |  * TCP vs UDP choice                                              |  |
+|  |  * Connection management                                          |  |
+|  |  * Port numbers                                                   |  |
+|  |  * L4 Load Balancers (route by IP/port)                           |  |
+|  |                                                                   |  |
+|  |  LAYER 3 (Network) - MODERATELY IMPORTANT                         |  |
+|  |  * IP addressing                                                  |  |
+|  |  * Routing between data centers                                   |  |
+|  |  * VPC, subnets in cloud                                          |  |
+|  |                                                                   |  |
+|  |  LAYERS 1-2 - Usually abstracted by cloud providers               |  |
+|  |  * You rarely think about physical cables                         |  |
+|  |  * MAC addresses handled by infrastructure                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  COMMON INTERVIEW QUESTIONS:                                            |
 |                                                                         |
@@ -225,29 +225,29 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  Example: 192.168.1.100                                                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |     192    .    168    .     1     .    100                    |     |
-|  |   +------+   +------+   +------+   +------+                    |     |
-|  |   |8 bits|   |8 bits|   |8 bits|   |8 bits|                    |     |
-|  |   +------+   +------+   +------+   +------+                    |     |
-|  |                                                                 |    |
-|  |   Each octet: 0-255 (2^8 = 256 values)                        |      |
-|  |   Total addresses: 2^32 = ~4.3 billion                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |     192    .    168    .     1     .    100                       |  |
+|  |   +------+   +------+   +------+   +------+                       |  |
+|  |   |8 bits|   |8 bits|   |8 bits|   |8 bits|                       |  |
+|  |   +------+   +------+   +------+   +------+                       |  |
+|  |                                                                   |  |
+|  |   Each octet: 0-255 (2^8 = 256 values)                            |  |
+|  |   Total addresses: 2^32 = ~4.3 billion                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  IPv4 ADDRESS CLASSES (Historical)                                      |
 |                                                                         |
-|  +--------+-----------------+---------------------------------------+   |
-|  | Class  | First Octet    | Purpose                               |    |
-|  +--------+-----------------+---------------------------------------+   |
-|  | A      | 1-126          | Large networks (16M hosts)            |    |
-|  | B      | 128-191        | Medium networks (65K hosts)           |    |
-|  | C      | 192-223        | Small networks (254 hosts)            |    |
-|  | D      | 224-239        | Multicast                             |    |
-|  | E      | 240-255        | Reserved/Experimental                 |    |
-|  +--------+-----------------+---------------------------------------+   |
+|  +--------+-----------------+-----------------------------------------+ |
+|  | Class  | First Octet    | Purpose                                  | |
+|  +--------+-----------------+-----------------------------------------+ |
+|  | A      | 1-126          | Large networks (16M hosts)               | |
+|  | B      | 128-191        | Medium networks (65K hosts)              | |
+|  | C      | 192-223        | Small networks (254 hosts)               | |
+|  | D      | 224-239        | Multicast                                | |
+|  | E      | 240-255        | Reserved/Experimental                    | |
+|  +--------+-----------------+-----------------------------------------+ |
 |                                                                         |
 |  PRIVATE IP RANGES (Not routable on internet)                           |
 |                                                                         |
@@ -305,20 +305,20 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  Example: 192.168.1.0/24                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  192.168.1.0/24                                                |     |
-|  |                                                                 |    |
-|  |  11000000.10101000.00000001.00000000                          |      |
-|  |  +--------------------------++------+                          |     |
-|  |       Network (24 bits)       Host                             |     |
-|  |                               (8 bits)                         |     |
-|  |                                                                 |    |
-|  |  Network: 192.168.1.x                                         |      |
-|  |  Hosts: 192.168.1.1 to 192.168.1.254 (254 usable)            |       |
-|  |  Broadcast: 192.168.1.255                                     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  192.168.1.0/24                                                   |  |
+|  |                                                                   |  |
+|  |  11000000.10101000.00000001.00000000                              |  |
+|  |  +--------------------------++------+                             |  |
+|  |       Network (24 bits)       Host                                |  |
+|  |                               (8 bits)                            |  |
+|  |                                                                   |  |
+|  |  Network: 192.168.1.x                                             |  |
+|  |  Hosts: 192.168.1.1 to 192.168.1.254 (254 usable)                 |  |
+|  |  Broadcast: 192.168.1.255                                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  COMMON CIDR BLOCKS:                                                    |
 |                                                                         |
@@ -344,20 +344,20 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  NAT translates private IPs to public IPs                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  PRIVATE NETWORK                       INTERNET                |     |
-|  |                                                                 |    |
-|  |  Device A: 192.168.1.10 --+                                    |     |
-|  |                           |                                     |    |
-|  |  Device B: 192.168.1.11 --+--> NAT --> 203.0.113.50 --> Web  |       |
-|  |                           |   Router   (Public IP)              |    |
-|  |  Device C: 192.168.1.12 --+                                    |     |
-|  |                                                                 |    |
-|  |  All devices share ONE public IP!                             |      |
-|  |  Router tracks which device made which request                |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PRIVATE NETWORK                       INTERNET                   |  |
+|  |                                                                   |  |
+|  |  Device A: 192.168.1.10 --+                                       |  |
+|  |                           |                                       |  |
+|  |  Device B: 192.168.1.11 --+--> NAT --> 203.0.113.50 --> Web       |  |
+|  |                           |   Router   (Public IP)                |  |
+|  |  Device C: 192.168.1.12 --+                                       |  |
+|  |                                                                   |  |
+|  |  All devices share ONE public IP!                                 |  |
+|  |  Router tracks which device made which request                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  NAT TYPES:                                                             |
 |                                                                         |
@@ -450,44 +450,44 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  PROTOCOL CHECKSUMS                                                     |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Protocol      Checksum Type    Scope                          |     |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Ethernet      CRC-32           Frame (Layer 2)                |     |
-|  |                                                                |     |
-|  |  IP            16-bit checksum  Header only                    |     |
-|  |                (1's complement)                                |     |
-|  |                                                                |     |
-|  |  TCP           16-bit checksum  Header + Data + Pseudo-header |      |
-|  |                                                                |     |
-|  |  UDP           16-bit checksum  Header + Data (optional IPv4) |      |
-|  |                                                                |     |
-|  |  HTTP          None built-in    Relies on TCP                 |      |
-|  |                (use Content-MD5)                              |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Protocol      Checksum Type    Scope                            |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Ethernet      CRC-32           Frame (Layer 2)                  |   |
+|  |                                                                  |   |
+|  |  IP            16-bit checksum  Header only                      |   |
+|  |                (1's complement)                                  |   |
+|  |                                                                  |   |
+|  |  TCP           16-bit checksum  Header + Data + Pseudo-header    |   |
+|  |                                                                  |   |
+|  |  UDP           16-bit checksum  Header + Data (optional IPv4)    |   |
+|  |                                                                  |   |
+|  |  HTTP          None built-in    Relies on TCP                    |   |
+|  |                (use Content-MD5)                                 |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  TCP CHECKSUM CALCULATION:                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Pseudo-Header (for checksum calculation only):                |     |
-|  |  +--------------------------------------------------------+   |      |
-|  |  | Source IP | Dest IP | Zero | Protocol | TCP Length    |   |       |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  |  +                                                             |     |
-|  |                                                                 |    |
-|  |  TCP Header + Data                                             |     |
-|  |  +--------------------------------------------------------+   |      |
-|  |  | Src Port | Dst Port | Seq | Ack | Flags | Data...     |   |       |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  |  = 16-bit 1's complement sum                                  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Pseudo-Header (for checksum calculation only):                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  | Source IP | Dest IP | Zero | Protocol | TCP Length         |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  +                                                                |  |
+|  |                                                                   |  |
+|  |  TCP Header + Data                                                |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  | Src Port | Dst Port | Seq | Ack | Flags | Data...          |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  = 16-bit 1's complement sum                                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -544,23 +544,23 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  Maps IP addresses (Layer 3) to MAC addresses (Layer 2)                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Computer A wants to send data to 192.168.1.20                 |     |
-|  |  But Ethernet needs MAC address, not IP!                       |     |
-|  |                                                                 |    |
-|  |  1. Computer A: "Who has 192.168.1.20? Tell 192.168.1.10"     |      |
-|  |     (ARP Request - broadcast to all devices)                   |     |
-|  |                                                                 |    |
-|  |  2. Computer B (192.168.1.20): "I have it, my MAC is AA:BB:CC"|      |
-|  |     (ARP Reply - unicast back to A)                            |     |
-|  |                                                                 |    |
-|  |  3. Computer A caches this mapping                             |     |
-|  |     (ARP Cache: 192.168.1.20 > AA:BB:CC:DD:EE:FF)             |      |
-|  |                                                                 |    |
-|  |  4. Now A can send Ethernet frames to B                       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Computer A wants to send data to 192.168.1.20                    |  |
+|  |  But Ethernet needs MAC address, not IP!                          |  |
+|  |                                                                   |  |
+|  |  1. Computer A: "Who has 192.168.1.20? Tell 192.168.1.10"         |  |
+|  |     (ARP Request - broadcast to all devices)                      |  |
+|  |                                                                   |  |
+|  |  2. Computer B (192.168.1.20): "I have it, my MAC is AA:BB:CC"    |  |
+|  |     (ARP Reply - unicast back to A)                               |  |
+|  |                                                                   |  |
+|  |  3. Computer A caches this mapping                                |  |
+|  |     (ARP Cache: 192.168.1.20 > AA:BB:CC:DD:EE:FF)                 |  |
+|  |                                                                   |  |
+|  |  4. Now A can send Ethernet frames to B                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY IT MATTERS:                                                        |
 |  * ARP cache poisoning is a security attack                             |

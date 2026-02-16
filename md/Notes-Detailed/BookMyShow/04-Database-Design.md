@@ -158,14 +158,14 @@ This chapter covers table design, indexing strategies, and scaling approaches.
 |  CREATE INDEX idx_seat_template_screen ON seat_templates(screen_id);      |
 |                                                                           |
 |  EXAMPLE DATA:                                                            |
-|  +----------------------------------------------------------------+       |
-|  | screen_id | seat_number | row | col | category   | type      |         |
-|  |---------------------------------------------------------------|        |
-|  | 1         | A1          | A   | 1   | SILVER     | REGULAR   |         |
-|  | 1         | A2          | A   | 2   | SILVER     | REGULAR   |         |
-|  | 1         | G1          | G   | 1   | GOLD       | RECLINER  |         |
-|  | 1         | P1          | P   | 1   | PLATINUM   | RECLINER  |         |
-|  +----------------------------------------------------------------+       |
+|  +--------------------------------------------------------------------+   |
+|  | screen_id | seat_number | row | col | category   | type            |   |
+|  |--------------------------------------------------------------------|   |
+|  | 1         | A1          | A   | 1   | SILVER     | REGULAR         |   |
+|  | 1         | A2          | A   | 2   | SILVER     | REGULAR         |   |
+|  | 1         | G1          | G   | 1   | GOLD       | RECLINER        |   |
+|  | 1         | P1          | P   | 1   | PLATINUM   | RECLINER        |   |
+|  +--------------------------------------------------------------------+   |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
@@ -254,13 +254,13 @@ This chapter covers table design, indexing strategies, and scaling approaches.
 |      ON show_seats(locked_until) WHERE status = 'LOCKED';               |
 |                                                                         |
 |  EXAMPLE DATA:                                                          |
-|  +------------------------------------------------------------------+   |
-|  |show_id|seat |category|price |status   |locked_until|booking_id |     |
-|  |----------------------------------------------------------------- |   |
-|  | 1001  | A1  |SILVER  |150.00|AVAILABLE| NULL       | NULL      |     |
-|  | 1001  | A2  |SILVER  |150.00|LOCKED   | 10:15:00   | NULL      |     |
-|  | 1001  | G1  |GOLD    |300.00|BOOKED   | NULL       | 5001      |     |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |show_id|seat |category|price |status   |locked_until|booking_id     | |
+|  |-----------------------------------------------------------------   | |
+|  | 1001  | A1  |SILVER  |150.00|AVAILABLE| NULL       | NULL          | |
+|  | 1001  | A2  |SILVER  |150.00|LOCKED   | 10:15:00   | NULL          | |
+|  | 1001  | G1  |GOLD    |300.00|BOOKED   | NULL       | 5001          | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -474,17 +474,17 @@ PAYMENTS
 |  Most queries are reads (browse movies, check availability).            |
 |  Use read replicas for these:                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Writes ---> Primary DB (Leader)                               |     |
-|  |                   |                                             |    |
-|  |                   | Replication                                 |    |
-|  |                   v                                             |    |
-|  |  Reads ---> Read Replica 1                                     |     |
-|  |        ---> Read Replica 2                                     |     |
-|  |        ---> Read Replica 3                                     |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Writes ---> Primary DB (Leader)                                  |  |
+|  |                   |                                               |  |
+|  |                   | Replication                                   |  |
+|  |                   v                                               |  |
+|  |  Reads ---> Read Replica 1                                        |  |
+|  |        ---> Read Replica 2                                        |  |
+|  |        ---> Read Replica 3                                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ROUTE TO PRIMARY:                                                      |
 |  - Booking flow (SELECT FOR UPDATE, INSERT, UPDATE)                     |
@@ -504,18 +504,18 @@ PAYMENTS
 |                                                                         |
 |  When single DB can't handle load, shard by city.                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +----------+  +----------+  +----------+  +----------+      |       |
-|  |  | Shard 1  |  | Shard 2  |  | Shard 3  |  | Shard 4  |      |       |
-|  |  | Mumbai   |  | Delhi    |  | Bengaluru|  | Others   |      |       |
-|  |  |          |  | NCR      |  |          |  |          |      |       |
-|  |  +----------+  +----------+  +----------+  +----------+      |       |
-|  |                                                                 |    |
-|  |  Each shard contains: venues, screens, shows, bookings        |      |
-|  |  for that city                                                  |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  +----------+  +----------+  +----------+  +----------+           |  |
+|  |  | Shard 1  |  | Shard 2  |  | Shard 3  |  | Shard 4  |           |  |
+|  |  | Mumbai   |  | Delhi    |  | Bengaluru|  | Others   |           |  |
+|  |  |          |  | NCR      |  |          |  |          |           |  |
+|  |  +----------+  +----------+  +----------+  +----------+           |  |
+|  |                                                                   |  |
+|  |  Each shard contains: venues, screens, shows, bookings            |  |
+|  |  for that city                                                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY CITY?                                                              |
 |  - Users typically book in one city                                     |

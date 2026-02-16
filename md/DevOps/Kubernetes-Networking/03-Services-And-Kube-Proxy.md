@@ -134,24 +134,24 @@ WHAT HAPPENS:
 |  CLUSTERIP SERVICE                                                      |
 |                                                                         |
 |                                                                         |
-|   +------------------------------------------------------------------+  |
-|   |                                                                  |  |
-|   |   VIRTUAL IP: 10.96.1.123                                       |   |
-|   |   (doesn't exist on any interface - implemented in iptables)    |   |
-|   |                                                                  |  |
-|   |                      |                                          |   |
-|   |                      | iptables DNAT                            |   |
-|   |                      |                                          |   |
-|   |            +---------+---------+                                |   |
-|   |            |         |         |                                |   |
-|   |            v         v         v                                |   |
-|   |      +---------+ +---------+ +---------+                       |    |
-|   |      |  Pod 1  | |  Pod 2  | |  Pod 3  |                       |    |
-|   |      |10.244   | |10.244   | |10.244   |                       |    |
-|   |      |.0.10    | |.1.20    | |.2.30    |                       |    |
-|   |      +---------+ +---------+ +---------+                       |    |
-|   |                                                                  |  |
-|   +------------------------------------------------------------------+  |
+|   +-------------------------------------------------------------------+ |
+|   |                                                                   | |
+|   |   VIRTUAL IP: 10.96.1.123                                         | |
+|   |   (doesn't exist on any interface - implemented in iptables)      | |
+|   |                                                                   | |
+|   |                      |                                            | |
+|   |                      | iptables DNAT                              | |
+|   |                      |                                            | |
+|   |            +---------+---------+                                  | |
+|   |            |         |         |                                  | |
+|   |            v         v         v                                  | |
+|   |      +---------+ +---------+ +---------+                          | |
+|   |      |  Pod 1  | |  Pod 2  | |  Pod 3  |                          | |
+|   |      |10.244   | |10.244   | |10.244   |                          | |
+|   |      |.0.10    | |.1.20    | |.2.30    |                          | |
+|   |      +---------+ +---------+ +---------+                          | |
+|   |                                                                   | |
+|   +-------------------------------------------------------------------+ |
 |                                                                         |
 |   ACCESSIBILITY:                                                        |
 |   Y From any pod in the cluster                                         |
@@ -250,36 +250,36 @@ spec:
 |   INTERNET                                                              |
 |       |                                                                 |
 |       v                                                                 |
-|   +---------------------------------------------------------------+     |
-|   |              AWS Elastic Load Balancer                        |     |
-|   |              DNS: abc123.us-west-2.elb.amazonaws.com         |      |
-|   |              External IP: 54.123.45.67                        |     |
-|   |                                                               |     |
-|   |  * Provisioned automatically by cloud-controller-manager     |      |
-|   |  * Sends traffic to NodePort on healthy nodes                |      |
-|   |  * Health checks nodes automatically                         |      |
-|   |                                                               |     |
-|   +---------------------------+-----------------------------------+     |
+|   +-----------------------------------------------------------------+   |
+|   |              AWS Elastic Load Balancer                          |   |
+|   |              DNS: abc123.us-west-2.elb.amazonaws.com            |   |
+|   |              External IP: 54.123.45.67                          |   |
+|   |                                                                 |   |
+|   |  * Provisioned automatically by cloud-controller-manager        |   |
+|   |  * Sends traffic to NodePort on healthy nodes                   |   |
+|   |  * Health checks nodes automatically                            |   |
+|   |                                                                 |   |
+|   +---------------------------+-------------------------------------+   |
 |                               |                                         |
 |                               v                                         |
-|   +---------------------------------------------------------------+     |
-|   |                        NodePort                               |     |
-|   |                                                               |     |
-|   |    Node 1:30123           Node 2:30123          Node 3:30123 |      |
-|   |         |                      |                      |       |     |
-|   +---------+----------------------+----------------------+-------+     |
+|   +-----------------------------------------------------------------+   |
+|   |                        NodePort                                 |   |
+|   |                                                                 |   |
+|   |    Node 1:30123           Node 2:30123          Node 3:30123    |   |
+|   |         |                      |                      |         |   |
+|   +---------+----------------------+----------------------+---------+   |
 |             |                      |                      |             |
 |             +----------------------+----------------------+             |
 |                                    |                                    |
 |                                    v                                    |
-|   +---------------------------------------------------------------+     |
-|   |                        ClusterIP                              |     |
-|   |                                                               |     |
-|   |                 +-----------------------+                     |     |
-|   |                 |    Pod 1  |  Pod 2    |                     |     |
-|   |                 +-----------------------+                     |     |
-|   |                                                               |     |
-|   +---------------------------------------------------------------+     |
+|   +-----------------------------------------------------------------+   |
+|   |                        ClusterIP                                |   |
+|   |                                                                 |   |
+|   |                 +-----------------------+                       |   |
+|   |                 |    Pod 1  |  Pod 2    |                       |   |
+|   |                 +-----------------------+                       |   |
+|   |                                                                 |   |
+|   +-----------------------------------------------------------------+   |
 |                                                                         |
 |   LoadBalancer = ClusterIP + NodePort + Cloud Load Balancer             |
 |                                                                         |
@@ -726,35 +726,35 @@ Get list of all backend IPs for custom routing logic
 |                                                                         |
 |  SERVICES AND KUBE-PROXY - KEY TAKEAWAYS                                |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  SERVICE TYPES                                                   |   |
-|  |  * ClusterIP: Internal only (default)                           |    |
-|  |  * NodePort: Expose on node ports (30000-32767)                 |    |
-|  |  * LoadBalancer: Cloud load balancer                            |    |
-|  |  * ExternalName: DNS alias                                      |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  SERVICE DISCOVERY                                               |   |
-|  |  * Selectors match pod labels                                   |    |
-|  |  * Endpoint controller creates Endpoints objects                |    |
-|  |  * Only Ready pods are included                                 |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  KUBE-PROXY MODES                                                |   |
-|  |  * iptables: Default, O(n) rules, simple                       |     |
-|  |  * IPVS: High-performance, O(1) lookup, more algorithms        |     |
-|  |  * Use IPVS for >1000 services                                  |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  TRAFFIC POLICIES                                                |   |
-|  |  * externalTrafficPolicy: Cluster (NAT) vs Local (preserve IP) |     |
-|  |  * internalTrafficPolicy: Control internal routing              |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  SERVICE TYPES                                                     | |
+|  |  * ClusterIP: Internal only (default)                              | |
+|  |  * NodePort: Expose on node ports (30000-32767)                    | |
+|  |  * LoadBalancer: Cloud load balancer                               | |
+|  |  * ExternalName: DNS alias                                         | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  SERVICE DISCOVERY                                                 | |
+|  |  * Selectors match pod labels                                      | |
+|  |  * Endpoint controller creates Endpoints objects                   | |
+|  |  * Only Ready pods are included                                    | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  KUBE-PROXY MODES                                                  | |
+|  |  * iptables: Default, O(n) rules, simple                           | |
+|  |  * IPVS: High-performance, O(1) lookup, more algorithms            | |
+|  |  * Use IPVS for >1000 services                                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  TRAFFIC POLICIES                                                  | |
+|  |  * externalTrafficPolicy: Cluster (NAT) vs Local (preserve IP)     | |
+|  |  * internalTrafficPolicy: Control internal routing                 | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

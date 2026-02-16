@@ -14,27 +14,27 @@ storage provisioning from consumption.
 |                                                                         |
 |  Without persistent storage:                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   MySQL Pod                                                    |     |
-|  |   +---------------------------------------------------------+  |     |
-|  |   |                                                         |  |     |
-|  |   |  Container filesystem                                  |  |      |
-|  |   |  /var/lib/mysql (data stored here)                    |  |       |
-|  |   |                                                         |  |     |
-|  |   |  users table: 10,000 records                          |  |       |
-|  |   |  orders table: 50,000 records                         |  |       |
-|  |   |                                                         |  |     |
-|  |   +---------------------------------------------------------+  |     |
-|  |                                                                 |    |
-|  |   Pod crashes or gets rescheduled...                          |      |
-|  |                                                                 |    |
-|  |                         POD DIES                             |       |
-|  |                                                                 |    |
-|  |   ALL DATA LOST! Container filesystem is GONE.                |      |
-|  |   New pod starts with EMPTY database!                         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   MySQL Pod                                                      |   |
+|  |   +-----------------------------------------------------------+  |   |
+|  |   |                                                           |  |   |
+|  |   |  Container filesystem                                     |  |   |
+|  |   |  /var/lib/mysql (data stored here)                        |  |   |
+|  |   |                                                           |  |   |
+|  |   |  users table: 10,000 records                              |  |   |
+|  |   |  orders table: 50,000 records                             |  |   |
+|  |   |                                                           |  |   |
+|  |   +-----------------------------------------------------------+  |   |
+|  |                                                                  |   |
+|  |   Pod crashes or gets rescheduled...                             |   |
+|  |                                                                  |   |
+|  |                         POD DIES                                 |   |
+|  |                                                                  |   |
+|  |   ALL DATA LOST! Container filesystem is GONE.                   |   |
+|  |   New pod starts with EMPTY database!                            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PROBLEMS:                                                              |
 |                                                                         |
@@ -57,38 +57,38 @@ storage provisioning from consumption.
 |  THE SOLUTION: PERSISTENT VOLUMES                                       |
 |  =================================                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   MySQL Pod                                                    |     |
-|  |   +---------------------------------------------------------+  |     |
-|  |   |                                                         |  |     |
-|  |   |  Container mounts external volume:                     |  |      |
-|  |   |  /var/lib/mysql > PersistentVolume                    |  |       |
-|  |   |                         |                              |  |      |
-|  |   +-------------------------+-------------------------------+  |     |
-|  |                             |                                  |     |
-|  |   Pod crashes...            |                                  |     |
-|  |                             |                                  |     |
-|  |                           |                                  |       |
-|  |                             |                                  |     |
-|  |   New pod created...        |                                  |     |
-|  |                             |                                  |     |
-|  |   +-------------------------+-------------------------------+  |     |
-|  |   |  Container remounts:    |                              |  |      |
-|  |   |  /var/lib/mysql > PersistentVolume                    |  |       |
-|  |   +-------------------------+-------------------------------+  |     |
-|  |                             |                                  |     |
-|  |                             v                                  |     |
-|  |   +---------------------------------------------------------+  |     |
-|  |   |           PERSISTENT VOLUME (AWS EBS)                  |  |      |
-|  |   |                                                         |  |     |
-|  |   |   Data SURVIVES pod restarts!                         |  |       |
-|  |   |   users: 10,000 records Y                            |  |        |
-|  |   |   orders: 50,000 records Y                           |  |        |
-|  |   |                                                         |  |     |
-|  |   +---------------------------------------------------------+  |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   MySQL Pod                                                      |   |
+|  |   +-----------------------------------------------------------+  |   |
+|  |   |                                                           |  |   |
+|  |   |  Container mounts external volume:                        |  |   |
+|  |   |  /var/lib/mysql > PersistentVolume                        |  |   |
+|  |   |                         |                                 |  |   |
+|  |   +-------------------------+---------------------------------+  |   |
+|  |                             |                                    |   |
+|  |   Pod crashes...            |                                    |   |
+|  |                             |                                    |   |
+|  |                           |                                      |   |
+|  |                             |                                    |   |
+|  |   New pod created...        |                                    |   |
+|  |                             |                                    |   |
+|  |   +-------------------------+---------------------------------+  |   |
+|  |   |  Container remounts:    |                                 |  |   |
+|  |   |  /var/lib/mysql > PersistentVolume                        |  |   |
+|  |   +-------------------------+---------------------------------+  |   |
+|  |                             |                                    |   |
+|  |                             v                                    |   |
+|  |   +-----------------------------------------------------------+  |   |
+|  |   |           PERSISTENT VOLUME (AWS EBS)                     |  |   |
+|  |   |                                                           |  |   |
+|  |   |   Data SURVIVES pod restarts!                             |  |   |
+|  |   |   users: 10,000 records Y                                 |  |   |
+|  |   |   orders: 50,000 records Y                                |  |   |
+|  |   |                                                           |  |   |
+|  |   +-----------------------------------------------------------+  |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -99,17 +99,17 @@ storage provisioning from consumption.
 |                                                                         |
 |  PROBLEM: Different roles, different concerns                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   DEVELOPER (app team):              ADMIN (ops team):         |     |
-|  |   "I need 10Gi storage"              "I'll create AWS EBS      |     |
-|  |   "I don't care HOW"                  with encryption,         |     |
-|  |                                       IOPS, backup policy"     |     |
-|  |                                                                 |    |
-|  |   Creates: PVC                       Creates: PV               |     |
-|  |   (what I need)                      (how to provide it)       |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   DEVELOPER (app team):              ADMIN (ops team):           |   |
+|  |   "I need 10Gi storage"              "I'll create AWS EBS        |   |
+|  |   "I don't care HOW"                  with encryption,           |   |
+|  |                                       IOPS, backup policy"       |   |
+|  |                                                                  |   |
+|  |   Creates: PVC                       Creates: PV                 |   |
+|  |   (what I need)                      (how to provide it)         |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  BENEFITS:                                                              |
 |                                                                         |
@@ -162,23 +162,23 @@ storage provisioning from consumption.
 |                                                                         |
 |  THE STORAGE ABSTRACTION                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Pod                                                          |     |
-|  |    |                                                            |    |
-|  |    | "I need 10Gi of storage"                                  |     |
-|  |    v                                                            |    |
-|  |   PersistentVolumeClaim (PVC)  < Developer creates            |      |
-|  |    |                                                            |    |
-|  |    | Binds to                                                  |     |
-|  |    v                                                            |    |
-|  |   PersistentVolume (PV)        < Admin creates (or dynamic)   |      |
-|  |    |                                                            |    |
-|  |    | Backed by                                                 |     |
-|  |    v                                                            |    |
-|  |   Actual Storage (AWS EBS, GCE PD, NFS, etc.)                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   Pod                                                             |  |
+|  |    |                                                              |  |
+|  |    | "I need 10Gi of storage"                                     |  |
+|  |    v                                                              |  |
+|  |   PersistentVolumeClaim (PVC)  < Developer creates                |  |
+|  |    |                                                              |  |
+|  |    | Binds to                                                     |  |
+|  |    v                                                              |  |
+|  |   PersistentVolume (PV)        < Admin creates (or dynamic)       |  |
+|  |    |                                                              |  |
+|  |    | Backed by                                                    |  |
+|  |    v                                                              |  |
+|  |   Actual Storage (AWS EBS, GCE PD, NFS, etc.)                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PV: The actual storage resource (created by admin)                     |
 |  PVC: A request for storage (created by developer)                      |

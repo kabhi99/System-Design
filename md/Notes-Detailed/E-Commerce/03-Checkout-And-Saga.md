@@ -52,16 +52,16 @@ and handling failures gracefully.
 |  A SAGA is a sequence of local transactions where each step has         |
 |  a compensating action to undo it if a later step fails.                |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  FORWARD TRANSACTIONS          COMPENSATING TRANSACTIONS      |      |
-|  |  --------------------          -------------------------      |      |
-|  |  T1: Reserve inventory    <>   C1: Release inventory          |      |
-|  |  T2: Charge payment       <>   C2: Refund payment             |      |
-|  |  T3: Create order         <>   C3: Cancel order               |      |
-|  |  T4: Schedule shipping    <>   C4: Cancel shipping            |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  FORWARD TRANSACTIONS          COMPENSATING TRANSACTIONS         |   |
+|  |  --------------------          -------------------------         |   |
+|  |  T1: Reserve inventory    <>   C1: Release inventory             |   |
+|  |  T2: Charge payment       <>   C2: Refund payment                |   |
+|  |  T3: Create order         <>   C3: Cancel order                  |   |
+|  |  T4: Schedule shipping    <>   C4: Cancel shipping               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  IF ANY STEP FAILS:                                                     |
 |  Execute compensating transactions in REVERSE order                     |
@@ -90,24 +90,24 @@ and handling failures gracefully.
 |  Each service listens to events and decides what to do next.            |
 |  No central coordinator.                                                |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Order          Inventory        Payment          Notification |     |
-|  |  Service        Service          Service          Service      |     |
-|  |     |               |                |                |        |     |
-|  |     | OrderCreated  |                |                |        |     |
-|  |     |-------------->|                |                |        |     |
-|  |     |               |                |                |        |     |
-|  |     |               | InventoryReserved               |        |     |
-|  |     |               |--------------->|                |        |     |
-|  |     |               |                |                |        |     |
-|  |     |               |                | PaymentCompleted        |     |
-|  |     |               |                |--------------->|        |     |
-|  |     |               |                |                |        |     |
-|  |     |<--------------------------------------------------       |     |
-|  |     |               OrderConfirmed                    |        |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Order          Inventory        Payment          Notification   |   |
+|  |  Service        Service          Service          Service        |   |
+|  |     |               |                |                |          |   |
+|  |     | OrderCreated  |                |                |          |   |
+|  |     |-------------->|                |                |          |   |
+|  |     |               |                |                |          |   |
+|  |     |               | InventoryReserved               |          |   |
+|  |     |               |--------------->|                |          |   |
+|  |     |               |                |                |          |   |
+|  |     |               |                | PaymentCompleted          |   |
+|  |     |               |                |--------------->|          |   |
+|  |     |               |                |                |          |   |
+|  |     |<--------------------------------------------------         |   |
+|  |     |               OrderConfirmed                    |          |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  FAILURE HANDLING:                                                      |
 |  If PaymentFailed event is published:                                   |
@@ -131,25 +131,25 @@ and handling failures gracefully.
 |                                                                         |
 |  A central SAGA Orchestrator manages the flow.                          |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |                    SAGA ORCHESTRATOR                          |      |
-|  |                          |                                     |     |
-|  |         +----------------+----------------+                   |      |
-|  |         |                |                |                   |      |
-|  |         v                v                v                   |      |
-|  |    +---------+     +---------+     +---------+               |       |
-|  |    |Inventory|     | Payment |     |  Order  |               |       |
-|  |    | Service |     | Service |     | Service |               |       |
-|  |    +---------+     +---------+     +---------+               |       |
-|  |                                                                |     |
-|  |  Orchestrator:                                                 |     |
-|  |  1. Call Inventory.reserve()                                  |      |
-|  |  2. If success > Call Payment.charge()                       |       |
-|  |  3. If success > Call Order.create()                         |       |
-|  |  4. If any fails > Call compensations in reverse             |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |                    SAGA ORCHESTRATOR                             |   |
+|  |                          |                                       |   |
+|  |         +----------------+----------------+                      |   |
+|  |         |                |                |                      |   |
+|  |         v                v                v                      |   |
+|  |    +---------+     +---------+     +---------+                   |   |
+|  |    |Inventory|     | Payment |     |  Order  |                   |   |
+|  |    | Service |     | Service |     | Service |                   |   |
+|  |    +---------+     +---------+     +---------+                   |   |
+|  |                                                                  |   |
+|  |  Orchestrator:                                                   |   |
+|  |  1. Call Inventory.reserve()                                     |   |
+|  |  2. If success > Call Payment.charge()                           |   |
+|  |  3. If success > Call Order.create()                             |   |
+|  |  4. If any fails > Call compensations in reverse                 |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Easy to understand the flow                                          |
@@ -287,50 +287,50 @@ and handling failures gracefully.
 |                                                                         |
 |  IMPLEMENTATION:                                                        |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  public PaymentResult charge(                                 |      |
-|  |      PaymentMethod method,                                     |     |
-|  |      BigDecimal amount,                                        |     |
-|  |      String idempotencyKey  // e.g., sagaId                  |       |
-|  |  ) {                                                           |     |
-|  |      // Check if already processed                            |      |
-|  |      Payment existing = paymentRepo.findByIdempotencyKey(     |      |
-|  |          idempotencyKey                                        |     |
-|  |      );                                                        |     |
-|  |                                                                |     |
-|  |      if (existing != null) {                                  |      |
-|  |          return existing.toResult();  // Return cached result |      |
-|  |      }                                                         |     |
-|  |                                                                |     |
-|  |      // Lock to prevent concurrent processing                 |      |
-|  |      boolean locked = redisLock.tryLock(                      |      |
-|  |          "payment:" + idempotencyKey,                         |      |
-|  |          Duration.ofMinutes(5)                                 |     |
-|  |      );                                                        |     |
-|  |                                                                |     |
-|  |      if (!locked) {                                           |      |
-|  |          throw new ConcurrentProcessingException();           |      |
-|  |      }                                                         |     |
-|  |                                                                |     |
-|  |      try {                                                     |     |
-|  |          // Double-check after acquiring lock                 |      |
-|  |          existing = paymentRepo.findByIdempotencyKey(...);   |       |
-|  |          if (existing != null) return existing.toResult();   |       |
-|  |                                                                |     |
-|  |          // Process payment                                   |      |
-|  |          Payment payment = processPayment(method, amount);   |       |
-|  |          payment.setIdempotencyKey(idempotencyKey);          |       |
-|  |          paymentRepo.save(payment);                           |      |
-|  |                                                                |     |
-|  |          return payment.toResult();                           |      |
-|  |                                                                |     |
-|  |      } finally {                                               |     |
-|  |          redisLock.unlock("payment:" + idempotencyKey);      |       |
-|  |      }                                                         |     |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  public PaymentResult charge(                                    |   |
+|  |      PaymentMethod method,                                       |   |
+|  |      BigDecimal amount,                                          |   |
+|  |      String idempotencyKey  // e.g., sagaId                      |   |
+|  |  ) {                                                             |   |
+|  |      // Check if already processed                               |   |
+|  |      Payment existing = paymentRepo.findByIdempotencyKey(        |   |
+|  |          idempotencyKey                                          |   |
+|  |      );                                                          |   |
+|  |                                                                  |   |
+|  |      if (existing != null) {                                     |   |
+|  |          return existing.toResult();  // Return cached result    |   |
+|  |      }                                                           |   |
+|  |                                                                  |   |
+|  |      // Lock to prevent concurrent processing                    |   |
+|  |      boolean locked = redisLock.tryLock(                         |   |
+|  |          "payment:" + idempotencyKey,                            |   |
+|  |          Duration.ofMinutes(5)                                   |   |
+|  |      );                                                          |   |
+|  |                                                                  |   |
+|  |      if (!locked) {                                              |   |
+|  |          throw new ConcurrentProcessingException();              |   |
+|  |      }                                                           |   |
+|  |                                                                  |   |
+|  |      try {                                                       |   |
+|  |          // Double-check after acquiring lock                    |   |
+|  |          existing = paymentRepo.findByIdempotencyKey(...);       |   |
+|  |          if (existing != null) return existing.toResult();       |   |
+|  |                                                                  |   |
+|  |          // Process payment                                      |   |
+|  |          Payment payment = processPayment(method, amount);       |   |
+|  |          payment.setIdempotencyKey(idempotencyKey);              |   |
+|  |          paymentRepo.save(payment);                              |   |
+|  |                                                                  |   |
+|  |          return payment.toResult();                              |   |
+|  |                                                                  |   |
+|  |      } finally {                                                 |   |
+|  |          redisLock.unlock("payment:" + idempotencyKey);          |   |
+|  |      }                                                           |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -366,22 +366,22 @@ and handling failures gracefully.
 |  3. Resume from last completed step                                     |
 |                                                                         |
 |  Recovery Job:                                                          |
-|  +----------------------------------------------------------------+     |
-|  |  @Scheduled(fixedRate = 60000)  // Every minute               |      |
-|  |  public void recoverStuckSagas() {                            |      |
-|  |      List<SagaState> stuck = sagaRepo.findStuck(             |       |
-|  |          Duration.ofMinutes(5)  // Stuck for > 5 minutes     |       |
-|  |      );                                                        |     |
-|  |                                                                |     |
-|  |      for (SagaState saga : stuck) {                          |       |
-|  |          try {                                                 |     |
-|  |              resumeOrCompensate(saga);                        |      |
-|  |          } catch (Exception e) {                              |      |
-|  |              alertOps(saga, e);                               |      |
-|  |          }                                                     |     |
-|  |      }                                                         |     |
-|  |  }                                                             |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |  @Scheduled(fixedRate = 60000)  // Every minute                  |   |
+|  |  public void recoverStuckSagas() {                               |   |
+|  |      List<SagaState> stuck = sagaRepo.findStuck(                 |   |
+|  |          Duration.ofMinutes(5)  // Stuck for > 5 minutes         |   |
+|  |      );                                                          |   |
+|  |                                                                  |   |
+|  |      for (SagaState saga : stuck) {                              |   |
+|  |          try {                                                   |   |
+|  |              resumeOrCompensate(saga);                           |   |
+|  |          } catch (Exception e) {                                 |   |
+|  |              alertOps(saga, e);                                  |   |
+|  |          }                                                       |   |
+|  |      }                                                           |   |
+|  |  }                                                               |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |

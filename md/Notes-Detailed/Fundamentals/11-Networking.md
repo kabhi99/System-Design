@@ -17,39 +17,39 @@ to WebSocket connections, every system depends on the network.
 |                                                                         |
 |  DNS RESOLUTION FLOW:                                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Browser: "What's the IP for www.example.com?"                 |     |
-|  |      |                                                          |    |
-|  |      v                                                          |    |
-|  |  1. Local Cache (browser, OS)                                  |     |
-|  |      | miss                                                     |    |
-|  |      v                                                          |    |
-|  |  2. Recursive Resolver (ISP or 8.8.8.8)                        |     |
-|  |      |                                                          |    |
-|  |      +--> 3. Root Server: "Ask .com servers"                  |      |
-|  |      |                                                          |    |
-|  |      +--> 4. TLD Server (.com): "Ask example.com servers"     |      |
-|  |      |                                                          |    |
-|  |      +--> 5. Authoritative Server: "IP is 93.184.216.34"      |      |
-|  |      |                                                          |    |
-|  |      v                                                          |    |
-|  |  Browser receives IP, caches it, connects                      |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Browser: "What's the IP for www.example.com?"                    |  |
+|  |      |                                                            |  |
+|  |      v                                                            |  |
+|  |  1. Local Cache (browser, OS)                                     |  |
+|  |      | miss                                                       |  |
+|  |      v                                                            |  |
+|  |  2. Recursive Resolver (ISP or 8.8.8.8)                           |  |
+|  |      |                                                            |  |
+|  |      +--> 3. Root Server: "Ask .com servers"                      |  |
+|  |      |                                                            |  |
+|  |      +--> 4. TLD Server (.com): "Ask example.com servers"         |  |
+|  |      |                                                            |  |
+|  |      +--> 5. Authoritative Server: "IP is 93.184.216.34"          |  |
+|  |      |                                                            |  |
+|  |      v                                                            |  |
+|  |  Browser receives IP, caches it, connects                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  DNS RECORD TYPES:                                                      |
-|  +----------+----------------------------------------------------+      |
-|  | Type     | Purpose                                            |      |
-|  +----------+----------------------------------------------------+      |
-|  | A        | Maps domain to IPv4 address                        |      |
-|  | AAAA     | Maps domain to IPv6 address                        |      |
-|  | CNAME    | Alias to another domain                           |       |
-|  | MX       | Mail server for domain                            |       |
-|  | TXT      | Text records (SPF, verification)                  |       |
-|  | NS       | Nameservers for domain                            |       |
-|  | SRV      | Service location (port, weight)                   |       |
-|  +----------+----------------------------------------------------+      |
+|  +----------+-------------------------------------------------------+   |
+|  | Type     | Purpose                                               |   |
+|  +----------+-------------------------------------------------------+   |
+|  | A        | Maps domain to IPv4 address                           |   |
+|  | AAAA     | Maps domain to IPv6 address                           |   |
+|  | CNAME    | Alias to another domain                               |   |
+|  | MX       | Mail server for domain                                |   |
+|  | TXT      | Text records (SPF, verification)                      |   |
+|  | NS       | Nameservers for domain                                |   |
+|  | SRV      | Service location (port, weight)                       |   |
+|  +----------+-------------------------------------------------------+   |
 |                                                                         |
 |  TTL (Time To Live):                                                    |
 |  How long resolvers cache the record                                    |
@@ -193,12 +193,12 @@ to WebSocket connections, every system depends on the network.
 |  * Multiple connections needed for parallelism (6 per domain)           |
 |  * Redundant headers sent with every request                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Connection 1: GET /style.css --> response --> GET /app.js     |     |
-|  |  Connection 2: GET /image1.png --> response                     |    |
-|  |  Connection 3: GET /image2.png --> response                     |    |
-|  |  (Multiple connections to parallelize)                          |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Connection 1: GET /style.css --> response --> GET /app.js        |  |
+|  |  Connection 2: GET /image1.png --> response                       |  |
+|  |  Connection 3: GET /image2.png --> response                       |  |
+|  |  (Multiple connections to parallelize)                            |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
@@ -212,14 +212,14 @@ to WebSocket connections, every system depends on the network.
 |     Multiple requests/responses on single connection                    |
 |     No head-of-line blocking at HTTP level                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Single Connection:                                             |    |
-|  |  ------------------------------------------>                   |     |
-|  |  Stream 1: [request] -------------> [response]                 |     |
-|  |  Stream 2: [request] ------> [response]                        |     |
-|  |  Stream 3: [request] -----------------> [response]             |     |
-|  |  (All interleaved on same connection)                          |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Single Connection:                                               |  |
+|  |  ------------------------------------------>                      |  |
+|  |  Stream 1: [request] -------------> [response]                    |  |
+|  |  Stream 2: [request] ------> [response]                           |  |
+|  |  Stream 3: [request] -----------------> [response]                |  |
+|  |  (All interleaved on same connection)                             |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  2. HEADER COMPRESSION (HPACK)                                          |
 |     Headers compressed, duplicates eliminated                           |
@@ -254,11 +254,11 @@ to WebSocket connections, every system depends on the network.
 |     Encryption mandatory and integrated                                 |
 |                                                                         |
 |  CONNECTION SETUP COMPARISON:                                           |
-|  +------------------------------------------------------------------+   |
-|  | HTTP/1.1 + TLS: TCP handshake (1 RTT) + TLS (2 RTT) = 3 RTT    |     |
-|  | HTTP/2 + TLS:   Same as HTTP/1.1 = 3 RTT                        |    |
-|  | HTTP/3 (QUIC):  Combined handshake = 1 RTT (0 RTT if resumed)  |     |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | HTTP/1.1 + TLS: TCP handshake (1 RTT) + TLS (2 RTT) = 3 RTT        | |
+|  | HTTP/2 + TLS:   Same as HTTP/1.1 = 3 RTT                           | |
+|  | HTTP/3 (QUIC):  Combined handshake = 1 RTT (0 RTT if resumed)      | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  ADOPTION: Growing, supported by major browsers and CDNs                |
 |                                                                         |
@@ -346,19 +346,19 @@ to WebSocket connections, every system depends on the network.
 |                                                                         |
 |  ARCHITECTURE:                                                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Clients --> Load Balancer (sticky sessions) --> WS Servers   |      |
-|  |                                                   v            |     |
-|  |                                              Pub/Sub (Redis)   |     |
-|  |                                                                 |    |
-|  |  User A connected to Server 1                                  |     |
-|  |  User B connected to Server 2                                  |     |
-|  |  User A sends message to B:                                    |     |
-|  |                                                                 |    |
-|  |  A > Server 1 > Redis Pub/Sub > Server 2 > B                  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Clients --> Load Balancer (sticky sessions) --> WS Servers       |  |
+|  |                                                   v               |  |
+|  |                                              Pub/Sub (Redis)      |  |
+|  |                                                                   |  |
+|  |  User A connected to Server 1                                     |  |
+|  |  User B connected to Server 2                                     |  |
+|  |  User A sends message to B:                                       |  |
+|  |                                                                   |  |
+|  |  A > Server 1 > Redis Pub/Sub > Server 2 > B                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  STICKY SESSIONS:                                                       |
 |  Same client always routes to same server                               |
@@ -392,24 +392,24 @@ to WebSocket connections, every system depends on the network.
 |                                                                         |
 |  CDN ARCHITECTURE:                                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |              +-----------------------------+                   |     |
-|  |              |      Origin Server          |                   |     |
-|  |              |      (Your servers)         |                   |     |
-|  |              +-----------------------------+                   |     |
-|  |                          |                                      |    |
-|  |         +----------------+----------------+                    |     |
-|  |         v                v                v                    |     |
-|  |  +-----------+    +-----------+    +-----------+              |      |
-|  |  | Edge POP  |    | Edge POP  |    | Edge POP  |              |      |
-|  |  |  (NYC)    |    | (London)  |    | (Tokyo)   |              |      |
-|  |  +-----+-----+    +-----+-----+    +-----+-----+              |      |
-|  |        |                |                |                     |     |
-|  |        v                v                v                     |     |
-|  |    US Users         EU Users         Asia Users                |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |              +-----------------------------+                      |  |
+|  |              |      Origin Server          |                      |  |
+|  |              |      (Your servers)         |                      |  |
+|  |              +-----------------------------+                      |  |
+|  |                          |                                        |  |
+|  |         +----------------+----------------+                       |  |
+|  |         v                v                v                       |  |
+|  |  +-----------+    +-----------+    +-----------+                  |  |
+|  |  | Edge POP  |    | Edge POP  |    | Edge POP  |                  |  |
+|  |  |  (NYC)    |    | (London)  |    | (Tokyo)   |                  |  |
+|  |  +-----+-----+    +-----+-----+    +-----+-----+                  |  |
+|  |        |                |                |                        |  |
+|  |        v                v                v                        |  |
+|  |    US Users         EU Users         Asia Users                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHAT CDNS CACHE:                                                       |
 |  * Static assets (JS, CSS, images, fonts)                               |

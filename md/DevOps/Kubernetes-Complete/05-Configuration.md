@@ -48,30 +48,30 @@ different environments.
 |  THE SOLUTION: EXTERNALIZE CONFIGURATION                                |
 |  ========================================                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |         SAME IMAGE           DIFFERENT CONFIG                  |     |
-|  |         ==========           ================                   |    |
-|  |                                                                 |    |
-|  |    +--------------+         +------------------+               |     |
-|  |    |   myapp:v1   |-------->|  DEV ConfigMap   |               |     |
-|  |    |              |         |  DB_HOST=dev-db  |               |     |
-|  |    |  (no config  |         +------------------+               |     |
-|  |    |   inside!)   |                                            |     |
-|  |    |              |         +------------------+               |     |
-|  |    |              |-------->| STAGING ConfigMap|               |     |
-|  |    |              |         |  DB_HOST=stg-db  |               |     |
-|  |    |              |         +------------------+               |     |
-|  |    |              |                                            |     |
-|  |    |              |         +------------------+               |     |
-|  |    |              |-------->|  PROD ConfigMap  |               |     |
-|  |    +--------------+         |  DB_HOST=prod-db |               |     |
-|  |                             +------------------+               |     |
-|  |                                                                 |    |
-|  |  ONE image > THREE environments!                               |     |
-|  |  Config injected at RUNTIME, not BUILDTIME                    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |         SAME IMAGE           DIFFERENT CONFIG                    |   |
+|  |         ==========           ================                    |   |
+|  |                                                                  |   |
+|  |    +--------------+         +------------------+                 |   |
+|  |    |   myapp:v1   |-------->|  DEV ConfigMap   |                 |   |
+|  |    |              |         |  DB_HOST=dev-db  |                 |   |
+|  |    |  (no config  |         +------------------+                 |   |
+|  |    |   inside!)   |                                              |   |
+|  |    |              |         +------------------+                 |   |
+|  |    |              |-------->| STAGING ConfigMap|                 |   |
+|  |    |              |         |  DB_HOST=stg-db  |                 |   |
+|  |    |              |         +------------------+                 |   |
+|  |    |              |                                              |   |
+|  |    |              |         +------------------+                 |   |
+|  |    |              |-------->|  PROD ConfigMap  |                 |   |
+|  |    +--------------+         |  DB_HOST=prod-db |                 |   |
+|  |                             +------------------+                 |   |
+|  |                                                                  |   |
+|  |  ONE image > THREE environments!                                 |   |
+|  |  Config injected at RUNTIME, not BUILDTIME                       |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -80,18 +80,18 @@ different environments.
 |  CONFIGMAP vs SECRET: WHEN TO USE WHICH?                                |
 |  ========================================                               |
 |                                                                         |
-|  +--------------------+---------------------+------------------------+  |
-|  | Data Type          | Use                 | Example                |  |
-|  +--------------------+---------------------+------------------------+  |
-|  | Database host      | ConfigMap           | DB_HOST=mysql          |  |
-|  | Database password  | Secret              | DB_PASSWORD=xxx        |  |
-|  | Log level          | ConfigMap           | LOG_LEVEL=debug        |  |
-|  | API key            | Secret              | API_KEY=abc123         |  |
-|  | Config file        | ConfigMap           | nginx.conf             |  |
-|  | TLS certificate    | Secret (tls type)   | tls.crt, tls.key       |  |
-|  | Feature flags      | ConfigMap           | FEATURE_X=true         |  |
-|  | OAuth token        | Secret              | OAUTH_TOKEN=xxx        |  |
-|  +--------------------+---------------------+------------------------+  |
+|  +--------------------+---------------------+-------------------------+ |
+|  | Data Type          | Use                 | Example                 | |
+|  +--------------------+---------------------+-------------------------+ |
+|  | Database host      | ConfigMap           | DB_HOST=mysql           | |
+|  | Database password  | Secret              | DB_PASSWORD=xxx         | |
+|  | Log level          | ConfigMap           | LOG_LEVEL=debug         | |
+|  | API key            | Secret              | API_KEY=abc123          | |
+|  | Config file        | ConfigMap           | nginx.conf              | |
+|  | TLS certificate    | Secret (tls type)   | tls.crt, tls.key        | |
+|  | Feature flags      | ConfigMap           | FEATURE_X=true          | |
+|  | OAuth token        | Secret              | OAUTH_TOKEN=xxx         | |
+|  +--------------------+---------------------+-------------------------+ |
 |                                                                         |
 |  RULE OF THUMB:                                                         |
 |  * Would you commit this to Git? > ConfigMap                            |
@@ -286,15 +286,15 @@ different environments.
 |                                                                         |
 |  BUILT-IN SECRET TYPES                                                  |
 |                                                                         |
-|  +----------------------------+-----------------------------------+     |
-|  | Type                       | Use Case                          |     |
-|  +----------------------------+-----------------------------------+     |
-|  | Opaque                     | Generic (default)                 |     |
-|  | kubernetes.io/tls          | TLS certificates                  |     |
-|  | kubernetes.io/dockercfg    | Docker registry auth              |     |
-|  | kubernetes.io/basic-auth   | Basic authentication              |     |
-|  | kubernetes.io/ssh-auth     | SSH credentials                   |     |
-|  +----------------------------+-----------------------------------+     |
+|  +----------------------------+-------------------------------------+   |
+|  | Type                       | Use Case                            |   |
+|  +----------------------------+-------------------------------------+   |
+|  | Opaque                     | Generic (default)                   |   |
+|  | kubernetes.io/tls          | TLS certificates                    |   |
+|  | kubernetes.io/dockercfg    | Docker registry auth                |   |
+|  | kubernetes.io/basic-auth   | Basic authentication                |   |
+|  | kubernetes.io/ssh-auth     | SSH credentials                     |   |
+|  +----------------------------+-------------------------------------+   |
 |                                                                         |
 |  TLS SECRET EXAMPLE                                                     |
 |  ===================                                                    |

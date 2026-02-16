@@ -8,30 +8,30 @@
 |                                                                         |
 |  PAYMENT GATEWAY - HIGH LEVEL ARCHITECTURE                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                         CLIENTS                                 |    |
-|  |  +---------+  +---------+  +---------+  +---------+           |      |
-|  |  | Mobile  |  |   Web   |  |   POS   |  | Server  |           |      |
-|  |  |   App   |  |   App   |  |Terminal |  |  (API)  |           |      |
-|  |  +----+----+  +----+----+  +----+----+  +----+----+           |      |
-|  +-------+------------+------------+------------+-----------------+     |
+|  +-------------------------------------------------------------------+  |
+|  |                         CLIENTS                                   |  |
+|  |  +---------+  +---------+  +---------+  +---------+               |  |
+|  |  | Mobile  |  |   Web   |  |   POS   |  | Server  |               |  |
+|  |  |   App   |  |   App   |  |Terminal |  |  (API)  |               |  |
+|  |  +----+----+  +----+----+  +----+----+  +----+----+               |  |
+|  +-------+------------+------------+------------+--------------------+  |
 |          |            |            |            |                       |
 |          +------------+-----+------+------------+                       |
 |                             |                                           |
 |                             v                                           |
-|  +-----------------------------------------------------------------+    |
-|  |                      CDN / WAF / DDoS                           |    |
-|  |                    (Cloudflare, Akamai)                         |    |
-|  +--------------------------+--------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      CDN / WAF / DDoS                             |  |
+|  |                    (Cloudflare, Akamai)                           |  |
+|  +--------------------------+----------------------------------------+  |
 |                             |                                           |
 |                             v                                           |
-|  +-----------------------------------------------------------------+    |
-|  |                     API GATEWAY                                 |    |
-|  |  * Authentication (API keys, OAuth)                            |     |
-|  |  * Rate limiting                                               |     |
-|  |  * Request validation                                          |     |
-|  |  * TLS termination                                             |     |
-|  +--------------------------+--------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                     API GATEWAY                                   |  |
+|  |  * Authentication (API keys, OAuth)                               |  |
+|  |  * Rate limiting                                                  |  |
+|  |  * Request validation                                             |  |
+|  |  * TLS termination                                                |  |
+|  +--------------------------+----------------------------------------+  |
 |                             |                                           |
 |          +------------------+------------------+                        |
 |          |                  |                  |                        |
@@ -125,16 +125,16 @@
 |  THE BRAIN - manages payment lifecycle                                  |
 |                                                                         |
 |  STATE MACHINE:                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   CREATED --> PROCESSING --> AUTHORIZED --> CAPTURED           |     |
-|  |      |            |              |              |               |    |
-|  |      |            |              |              |               |    |
-|  |      v            v              v              v               |    |
-|  |   FAILED       FAILED         VOIDED       REFUNDED            |     |
-|  |                               (cancel)     (partial/full)      |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   CREATED --> PROCESSING --> AUTHORIZED --> CAPTURED              |  |
+|  |      |            |              |              |                 |  |
+|  |      |            |              |              |                 |  |
+|  |      v            v              v              v                 |  |
+|  |   FAILED       FAILED         VOIDED       REFUNDED               |  |
+|  |                               (cancel)     (partial/full)         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  RESPONSIBILITIES:                                                      |
 |  * Manage payment state transitions                                     |
@@ -215,45 +215,45 @@
 |  * Rich querying for reports                                             |
 |                                                                          |
 |  TABLES:                                                                 |
-|  +----------------------------------------------------------------+      |
-|  |                                                                |      |
-|  |  payments                                                      |      |
-|  |  +-- id (UUID, PK)                                            |       |
-|  |  +-- idempotency_key (unique)                                 |       |
-|  |  +-- merchant_id                                              |       |
-|  |  +-- amount, currency                                         |       |
-|  |  +-- status (created/processing/authorized/captured/failed)   |       |
-|  |  +-- payment_method_type                                      |       |
-|  |  +-- card_token                                               |       |
-|  |  +-- processor_response                                       |       |
-|  |  +-- created_at, updated_at                                   |       |
-|  |  +-- version (optimistic locking)                             |       |
-|  |                                                                |      |
-|  |  payment_events (immutable audit log)                         |       |
-|  |  +-- id, payment_id                                           |       |
-|  |  +-- event_type                                               |       |
-|  |  +-- old_status, new_status                                   |       |
-|  |  +-- metadata (JSON)                                          |       |
-|  |  +-- created_at                                               |       |
-|  |                                                                |      |
-|  |  refunds                                                       |      |
-|  |  +-- id, payment_id                                           |       |
-|  |  +-- amount, status                                           |       |
-|  |  +-- reason, created_at                                       |       |
-|  |                                                                |      |
-|  |  merchants                                                     |      |
-|  |  +-- id, name, email                                          |       |
-|  |  +-- api_key_hash                                             |       |
-|  |  +-- webhook_url                                              |       |
-|  |  +-- settlement_config                                        |       |
-|  |                                                                |      |
-|  |  card_tokens                                                   |      |
-|  |  +-- token (PK)                                               |       |
-|  |  +-- customer_id                                              |       |
-|  |  +-- last_four, brand, expiry                                 |       |
-|  |  +-- vault_reference (HSM reference)                          |       |
-|  |                                                                |      |
-|  +----------------------------------------------------------------+      |
+|  +-------------------------------------------------------------------+   |
+|  |                                                                   |   |
+|  |  payments                                                         |   |
+|  |  +-- id (UUID, PK)                                                |   |
+|  |  +-- idempotency_key (unique)                                     |   |
+|  |  +-- merchant_id                                                  |   |
+|  |  +-- amount, currency                                             |   |
+|  |  +-- status (created/processing/authorized/captured/failed)       |   |
+|  |  +-- payment_method_type                                          |   |
+|  |  +-- card_token                                                   |   |
+|  |  +-- processor_response                                           |   |
+|  |  +-- created_at, updated_at                                       |   |
+|  |  +-- version (optimistic locking)                                 |   |
+|  |                                                                   |   |
+|  |  payment_events (immutable audit log)                             |   |
+|  |  +-- id, payment_id                                               |   |
+|  |  +-- event_type                                                   |   |
+|  |  +-- old_status, new_status                                       |   |
+|  |  +-- metadata (JSON)                                              |   |
+|  |  +-- created_at                                                   |   |
+|  |                                                                   |   |
+|  |  refunds                                                          |   |
+|  |  +-- id, payment_id                                               |   |
+|  |  +-- amount, status                                               |   |
+|  |  +-- reason, created_at                                           |   |
+|  |                                                                   |   |
+|  |  merchants                                                        |   |
+|  |  +-- id, name, email                                              |   |
+|  |  +-- api_key_hash                                                 |   |
+|  |  +-- webhook_url                                                  |   |
+|  |  +-- settlement_config                                            |   |
+|  |                                                                   |   |
+|  |  card_tokens                                                      |   |
+|  |  +-- token (PK)                                                   |   |
+|  |  +-- customer_id                                                  |   |
+|  |  +-- last_four, brand, expiry                                     |   |
+|  |  +-- vault_reference (HSM reference)                              |   |
+|  |                                                                   |   |
+|  +-------------------------------------------------------------------+   |
 |                                                                          |
 |  REDIS                                                                   |
 |  =======                                                                 |
@@ -289,54 +289,54 @@
 |                                                                         |
 |  PCI-DSS COMPLIANCE ZONES                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |                     PUBLIC ZONE                         |  |      |
-|  |  |                                                         |  |      |
-|  |  |  * CDN, WAF                                            |  |       |
-|  |  |  * API Gateway                                         |  |       |
-|  |  |  * No card data stored                                |  |        |
-|  |  |                                                         |  |      |
-|  |  +-------------------------+-------------------------------+  |      |
-|  |                            |                                   |     |
-|  |                            v                                   |     |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |                  APPLICATION ZONE                       |  |      |
-|  |  |                                                         |  |      |
-|  |  |  * Payment Service                                     |  |       |
-|  |  |  * Merchant Service                                    |  |       |
-|  |  |  * Orchestrator                                        |  |       |
-|  |  |  * Only card TOKENS (not raw PAN)                     |  |        |
-|  |  |                                                         |  |      |
-|  |  +-------------------------+-------------------------------+  |      |
-|  |                            |                                   |     |
-|  |                            v                                   |     |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |               CARDHOLDER DATA ZONE (CDE)               |  |       |
-|  |  |                                                         |  |      |
-|  |  |  +---------------------------------------------------+ |  |       |
-|  |  |  |               TOKENIZATION VAULT                  | |  |       |
-|  |  |  |                                                   | |  |       |
-|  |  |  |  * HSM (Hardware Security Module)                | |  |        |
-|  |  |  |  * Encrypted card storage                        | |  |        |
-|  |  |  |  * PCI-DSS Level 1 certified                    | |  |         |
-|  |  |  |  * Air-gapped from internet                     | |  |         |
-|  |  |  |                                                   | |  |       |
-|  |  |  +---------------------------------------------------+ |  |       |
-|  |  |                                                         |  |      |
-|  |  |  +---------------------------------------------------+ |  |       |
-|  |  |  |           PSP CONNECTORS                          | |  |       |
-|  |  |  |                                                   | |  |       |
-|  |  |  |  * Direct connection to card networks            | |  |        |
-|  |  |  |  * Mutual TLS authentication                     | |  |        |
-|  |  |  |  * Network-level encryption                      | |  |        |
-|  |  |  |                                                   | |  |       |
-|  |  |  +---------------------------------------------------+ |  |       |
-|  |  |                                                         |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |                     PUBLIC ZONE                             |  |  |
+|  |  |                                                             |  |  |
+|  |  |  * CDN, WAF                                                 |  |  |
+|  |  |  * API Gateway                                              |  |  |
+|  |  |  * No card data stored                                      |  |  |
+|  |  |                                                             |  |  |
+|  |  +-------------------------+-----------------------------------+  |  |
+|  |                            |                                      |  |
+|  |                            v                                      |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |                  APPLICATION ZONE                           |  |  |
+|  |  |                                                             |  |  |
+|  |  |  * Payment Service                                          |  |  |
+|  |  |  * Merchant Service                                         |  |  |
+|  |  |  * Orchestrator                                             |  |  |
+|  |  |  * Only card TOKENS (not raw PAN)                           |  |  |
+|  |  |                                                             |  |  |
+|  |  +-------------------------+-----------------------------------+  |  |
+|  |                            |                                      |  |
+|  |                            v                                      |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |               CARDHOLDER DATA ZONE (CDE)                    |  |  |
+|  |  |                                                             |  |  |
+|  |  |  +--------------------------------------------------------+ |  |  |
+|  |  |  |               TOKENIZATION VAULT                       | |  |  |
+|  |  |  |                                                        | |  |  |
+|  |  |  |  * HSM (Hardware Security Module)                      | |  |  |
+|  |  |  |  * Encrypted card storage                              | |  |  |
+|  |  |  |  * PCI-DSS Level 1 certified                           | |  |  |
+|  |  |  |  * Air-gapped from internet                            | |  |  |
+|  |  |  |                                                        | |  |  |
+|  |  |  +--------------------------------------------------------+ |  |  |
+|  |  |                                                             |  |  |
+|  |  |  +--------------------------------------------------------+ |  |  |
+|  |  |  |           PSP CONNECTORS                               | |  |  |
+|  |  |  |                                                        | |  |  |
+|  |  |  |  * Direct connection to card networks                  | |  |  |
+|  |  |  |  * Mutual TLS authentication                           | |  |  |
+|  |  |  |  * Network-level encryption                            | |  |  |
+|  |  |  |                                                        | |  |  |
+|  |  |  +--------------------------------------------------------+ |  |  |
+|  |  |                                                             |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -350,27 +350,27 @@
 |                                                                         |
 |  Raw card number NEVER stored in application databases                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. Customer enters card: 4111-1111-1111-1111                  |     |
-|  |                                                                 |    |
-|  |  2. Client-side (Stripe.js/Razorpay.js):                      |      |
-|  |     * Card data sent DIRECTLY to tokenization vault           |      |
-|  |     * Merchant server never sees raw card number              |      |
-|  |                                                                 |    |
-|  |  3. Vault returns token: tok_abc123xyz                        |      |
-|  |                                                                 |    |
-|  |  4. Merchant server receives only:                            |      |
-|  |     {                                                          |     |
-|  |       token: "tok_abc123xyz",                                 |      |
-|  |       last_four: "1111",                                      |      |
-|  |       brand: "visa",                                          |      |
-|  |       expiry: "12/25"                                         |      |
-|  |     }                                                          |     |
-|  |                                                                 |    |
-|  |  5. For payment: merchant sends token, vault decrypts         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. Customer enters card: 4111-1111-1111-1111                     |  |
+|  |                                                                   |  |
+|  |  2. Client-side (Stripe.js/Razorpay.js):                          |  |
+|  |     * Card data sent DIRECTLY to tokenization vault               |  |
+|  |     * Merchant server never sees raw card number                  |  |
+|  |                                                                   |  |
+|  |  3. Vault returns token: tok_abc123xyz                            |  |
+|  |                                                                   |  |
+|  |  4. Merchant server receives only:                                |  |
+|  |     {                                                             |  |
+|  |       token: "tok_abc123xyz",                                     |  |
+|  |       last_four: "1111",                                          |  |
+|  |       brand: "visa",                                              |  |
+|  |       expiry: "12/25"                                             |  |
+|  |     }                                                             |  |
+|  |                                                                   |  |
+|  |  5. For payment: merchant sends token, vault decrypts             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFIT: Merchant app never handles raw card data                      |
 |  > Reduced PCI scope (SAQ A vs SAQ D)                                   |

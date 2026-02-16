@@ -16,33 +16,33 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  Mathematically: f(f(x)) = f(x)                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  NATURALLY IDEMPOTENT:                                         |     |
-|  |                                                                 |    |
-|  |  GET /users/123           > Always returns same user          |      |
-|  |  PUT /users/123 {name}    > Sets name to same value           |      |
-|  |  DELETE /users/123        > User gone (already gone = same)   |      |
-|  |                                                                 |    |
-|  |  NOT NATURALLY IDEMPOTENT:                                     |     |
-|  |                                                                 |    |
-|  |  POST /orders             > Creates NEW order each time!      |      |
-|  |  POST /payments           > Charges card each time!           |      |
-|  |  POST /emails/send        > Sends duplicate emails!           |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  NATURALLY IDEMPOTENT:                                            |  |
+|  |                                                                   |  |
+|  |  GET /users/123           > Always returns same user              |  |
+|  |  PUT /users/123 {name}    > Sets name to same value               |  |
+|  |  DELETE /users/123        > User gone (already gone = same)       |  |
+|  |                                                                   |  |
+|  |  NOT NATURALLY IDEMPOTENT:                                        |  |
+|  |                                                                   |  |
+|  |  POST /orders             > Creates NEW order each time!          |  |
+|  |  POST /payments           > Charges card each time!               |  |
+|  |  POST /emails/send        > Sends duplicate emails!               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HTTP METHOD IDEMPOTENCY:                                               |
-|  +---------------------------------------------------------------+      |
-|  | Method | Idempotent | Safe | Notes                           |       |
-|  +--------+------------+------+---------------------------------+       |
-|  | GET    | Yes        | Yes  | Read-only                       |       |
-|  | HEAD   | Yes        | Yes  | Read-only                       |       |
-|  | PUT    | Yes        | No   | Full replacement                |       |
-|  | DELETE | Yes        | No   | Delete (already deleted = ok)   |       |
-|  | POST   | NO         | No   | Creates new resource            |       |
-|  | PATCH  | NO         | No   | Depends on operation            |       |
-|  +---------------------------------------------------------------+      |
+|  +-----------------------------------------------------------------+    |
+|  | Method | Idempotent | Safe | Notes                              |    |
+|  +--------+------------+------+------------------------------------+    |
+|  | GET    | Yes        | Yes  | Read-only                          |    |
+|  | HEAD   | Yes        | Yes  | Read-only                          |    |
+|  | PUT    | Yes        | No   | Full replacement                   |    |
+|  | DELETE | Yes        | No   | Delete (already deleted = ok)      |    |
+|  | POST   | NO         | No   | Creates new resource               |    |
+|  | PATCH  | NO         | No   | Depends on operation               |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -54,25 +54,25 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  THE NETWORK IS UNRELIABLE                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  SCENARIO: Payment request                                     |     |
-|  |                                                                 |    |
-|  |  Client ---- POST /payments ----> Server                       |     |
-|  |     |                               |                           |    |
-|  |     |                               | (processes payment Y)    |     |
-|  |     |                               |                           |    |
-|  |     | <---- TIMEOUT --------------- | (response lost!)        |      |
-|  |     |                                                           |    |
-|  |  Client thinks: "Failed, let me retry"                         |     |
-|  |                                                                 |    |
-|  |  Client ---- POST /payments ----> Server                       |     |
-|  |                                       |                         |    |
-|  |                                       | (charges AGAIN! )    |       |
-|  |                                                                 |    |
-|  |  RESULT: Customer charged twice!                            |        |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  SCENARIO: Payment request                                        |  |
+|  |                                                                   |  |
+|  |  Client ---- POST /payments ----> Server                          |  |
+|  |     |                               |                             |  |
+|  |     |                               | (processes payment Y)       |  |
+|  |     |                               |                             |  |
+|  |     | <---- TIMEOUT --------------- | (response lost!)            |  |
+|  |     |                                                             |  |
+|  |  Client thinks: "Failed, let me retry"                            |  |
+|  |                                                                   |  |
+|  |  Client ---- POST /payments ----> Server                          |  |
+|  |                                       |                           |  |
+|  |                                       | (charges AGAIN! )         |  |
+|  |                                                                   |  |
+|  |  RESULT: Customer charged twice!                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  FAILURE MODES THAT CAUSE RETRIES:                                      |
 |  * Network timeout                                                      |
@@ -94,25 +94,25 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  Client sends a unique key with each logical operation.                 |
 |  Server uses this key to detect and deduplicate retries.                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  REQUEST 1:                                                     |    |
-|  |  POST /payments                                                 |    |
-|  |  Idempotency-Key: ord_123_pay_1                                |     |
-|  |  { "amount": 100, "card": "..." }                              |     |
-|  |                                                                 |    |
-|  |  Server: Key not seen > Process payment > Return 200           |     |
-|  |                                                                 |    |
-|  |  ----------------------------------------------------------    |     |
-|  |                                                                 |    |
-|  |  REQUEST 2 (retry, same key):                                  |     |
-|  |  POST /payments                                                 |    |
-|  |  Idempotency-Key: ord_123_pay_1  < SAME KEY                    |     |
-|  |  { "amount": 100, "card": "..." }                              |     |
-|  |                                                                 |    |
-|  |  Server: Key exists > Return cached 200 (no reprocessing!)    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  REQUEST 1:                                                       |  |
+|  |  POST /payments                                                   |  |
+|  |  Idempotency-Key: ord_123_pay_1                                   |  |
+|  |  { "amount": 100, "card": "..." }                                 |  |
+|  |                                                                   |  |
+|  |  Server: Key not seen > Process payment > Return 200              |  |
+|  |                                                                   |  |
+|  |  ----------------------------------------------------------       |  |
+|  |                                                                   |  |
+|  |  REQUEST 2 (retry, same key):                                     |  |
+|  |  POST /payments                                                   |  |
+|  |  Idempotency-Key: ord_123_pay_1  < SAME KEY                       |  |
+|  |  { "amount": 100, "card": "..." }                                 |  |
+|  |                                                                   |  |
+|  |  Server: Key exists > Return cached 200 (no reprocessing!)        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -124,49 +124,49 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  IDEMPOTENCY KEY HANDLING FLOW                                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request arrives with Idempotency-Key header                   |     |
-|  |         |                                                       |    |
-|  |         v                                                       |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  | Step 1: Check cache (Redis)                             |  |      |
-|  |  |         GET idem:{key}                                  |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |         |                                                       |    |
-|  |    +----+----+                                                 |     |
-|  |    |         |                                                 |     |
-|  |  Found    Not Found                                            |     |
-|  |    |         |                                                 |     |
-|  |    v         v                                                 |     |
-|  |  +-------+ +---------------------------------------------+    |      |
-|  |  |Status?| | Step 2: Mark as "processing" (atomic)       |    |      |
-|  |  +---+---+ |         SET idem:{key} "processing" NX EX   |    |      |
-|  |      |     +---------------------------------------------+    |      |
-|  |   +--+--+         |                                           |      |
-|  |   |     |    +----+----+                                      |      |
-|  | processing complete   |         |                              |     |
-|  |   |     |          Success   Failed (race)                    |      |
-|  |   v     v             |         |                              |     |
-|  | Return Return      Process   Return 409                       |      |
-|  |  409   cached      request   "In progress"                    |      |
-|  |        response       |                                        |     |
-|  |                       v                                        |     |
-|  |              +---------------------------------------------+  |      |
-|  |              | Step 3: Execute business logic              |  |      |
-|  |              +---------------------------------------------+  |      |
-|  |                       |                                        |     |
-|  |              +--------+--------+                              |      |
-|  |           Success           Failure                           |      |
-|  |              |                 |                               |     |
-|  |              v                 v                               |     |
-|  |         Cache result     Delete key                           |      |
-|  |         (24hr TTL)       (allow retry)                        |      |
-|  |              |                 |                               |     |
-|  |              v                 v                               |     |
-|  |         Return 200       Return error                         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request arrives with Idempotency-Key header                      |  |
+|  |         |                                                         |  |
+|  |         v                                                         |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  | Step 1: Check cache (Redis)                                 |  |  |
+|  |  |         GET idem:{key}                                      |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |         |                                                         |  |
+|  |    +----+----+                                                    |  |
+|  |    |         |                                                    |  |
+|  |  Found    Not Found                                               |  |
+|  |    |         |                                                    |  |
+|  |    v         v                                                    |  |
+|  |  +-------+ +-------------------------------------------------+    |  |
+|  |  |Status?| | Step 2: Mark as "processing" (atomic)           |    |  |
+|  |  +---+---+ |         SET idem:{key} "processing" NX EX       |    |  |
+|  |      |     +-------------------------------------------------+    |  |
+|  |   +--+--+         |                                               |  |
+|  |   |     |    +----+----+                                          |  |
+|  | processing complete   |         |                                 |  |
+|  |   |     |          Success   Failed (race)                        |  |
+|  |   v     v             |         |                                 |  |
+|  | Return Return      Process   Return 409                           |  |
+|  |  409   cached      request   "In progress"                        |  |
+|  |        response       |                                           |  |
+|  |                       v                                           |  |
+|  |              +-------------------------------------------------+  |  |
+|  |              | Step 3: Execute business logic                  |  |  |
+|  |              +-------------------------------------------------+  |  |
+|  |                       |                                           |  |
+|  |              +--------+--------+                                  |  |
+|  |           Success           Failure                               |  |
+|  |              |                 |                                  |  |
+|  |              v                 v                                  |  |
+|  |         Cache result     Delete key                               |  |
+|  |         (24hr TTL)       (allow retry)                            |  |
+|  |              |                 |                                  |  |
+|  |              v                 v                                  |  |
+|  |         Return 200       Return error                             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -258,26 +258,26 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  WHAT MAKES A GOOD IDEMPOTENCY KEY?                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  GOOD KEYS (Tied to business intent):                          |     |
-|  |                                                                 |    |
-|  |  order_123_payment_1       > Order + attempt number           |      |
-|  |  cart_abc_checkout         > Cart session                      |     |
-|  |  invoice_456               > Invoice ID                        |     |
-|  |  user_789_order_20240115   > User + date (daily limit)        |      |
-|  |  txn_uuid-v4               > Client-generated UUID            |      |
-|  |                                                                 |    |
-|  |  ----------------------------------------------------------    |     |
-|  |                                                                 |    |
-|  |  BAD KEYS:                                                      |    |
-|  |                                                                 |    |
-|  |  uuid-v4 (new each request) > Defeats the purpose!            |      |
-|  |  1705312345 (timestamp)     > Not unique enough               |      |
-|  |  user_123 (user ID only)    > User has multiple orders        |      |
-|  |  random_string              > Can't correlate retries         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  GOOD KEYS (Tied to business intent):                             |  |
+|  |                                                                   |  |
+|  |  order_123_payment_1       > Order + attempt number               |  |
+|  |  cart_abc_checkout         > Cart session                         |  |
+|  |  invoice_456               > Invoice ID                           |  |
+|  |  user_789_order_20240115   > User + date (daily limit)            |  |
+|  |  txn_uuid-v4               > Client-generated UUID                |  |
+|  |                                                                   |  |
+|  |  ----------------------------------------------------------       |  |
+|  |                                                                   |  |
+|  |  BAD KEYS:                                                        |  |
+|  |                                                                   |  |
+|  |  uuid-v4 (new each request) > Defeats the purpose!                |  |
+|  |  1705312345 (timestamp)     > Not unique enough                   |  |
+|  |  user_123 (user ID only)    > User has multiple orders            |  |
+|  |  random_string              > Can't correlate retries             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  KEY PRINCIPLE:                                                         |
 |  The same business intent should generate the same idempotency key      |
@@ -308,16 +308,16 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |     Keys expire after TTL (24 hours typical)                            |
 |     After expiry, same key = new operation                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  FULL CACHE KEY FORMAT:                                        |     |
-|  |                                                                 |    |
-|  |  idem:{merchant_id}:{endpoint_hash}:{idempotency_key}         |      |
-|  |                                                                 |    |
-|  |  Example:                                                       |    |
-|  |  idem:merch_abc:payments_create:ord_123_pay_1                  |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FULL CACHE KEY FORMAT:                                           |  |
+|  |                                                                   |  |
+|  |  idem:{merchant_id}:{endpoint_hash}:{idempotency_key}             |  |
+|  |                                                                   |  |
+|  |  Example:                                                         |  |
+|  |  idem:merch_abc:payments_create:ord_123_pay_1                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -329,25 +329,25 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  RESPONSE CACHING RULES                                                 |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  First Request Result    |  Retry Behavior                    |      |
-|  |  -----------------------------------------------------------  |      |
-|  |                                                                |     |
-|  |  200 Success            |  Return cached 200 Y               |       |
-|  |  201 Created            |  Return cached 201 Y               |       |
-|  |                                                                |     |
-|  |  400 Bad Request        |  Process again (fix and retry)     |       |
-|  |  401 Unauthorized       |  Process again                     |       |
-|  |  422 Validation Error   |  Process again (fix input)         |       |
-|  |                                                                |     |
-|  |  500 Server Error       |  Process again (transient)         |       |
-|  |  502 Bad Gateway        |  Process again (transient)         |       |
-|  |  503 Service Unavail.   |  Process again (transient)         |       |
-|  |                                                                |     |
-|  |  In Progress (409)      |  Wait and retry                    |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  First Request Result    |  Retry Behavior                       |   |
+|  |  -----------------------------------------------------------     |   |
+|  |                                                                  |   |
+|  |  200 Success            |  Return cached 200 Y                   |   |
+|  |  201 Created            |  Return cached 201 Y                   |   |
+|  |                                                                  |   |
+|  |  400 Bad Request        |  Process again (fix and retry)         |   |
+|  |  401 Unauthorized       |  Process again                         |   |
+|  |  422 Validation Error   |  Process again (fix input)             |   |
+|  |                                                                  |   |
+|  |  500 Server Error       |  Process again (transient)             |   |
+|  |  502 Bad Gateway        |  Process again (transient)             |   |
+|  |  503 Service Unavail.   |  Process again (transient)             |   |
+|  |                                                                  |   |
+|  |  In Progress (409)      |  Wait and retry                        |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  RULE: Only cache SUCCESSFUL terminal states                            |
 |  * Success (2xx) > Cache                                                |
@@ -406,31 +406,31 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  Redis alone may lose data on restart. For critical operations,         |
 |  back up with database UNIQUE constraint.                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  IDEMPOTENCY TABLE:                                            |     |
-|  |                                                                 |    |
-|  |  CREATE TABLE idempotency_keys (                               |     |
-|  |      idempotency_key VARCHAR(255) PRIMARY KEY,                |      |
-|  |      merchant_id VARCHAR(100) NOT NULL,                       |      |
-|  |      endpoint VARCHAR(100) NOT NULL,                          |      |
-|  |      status VARCHAR(20) NOT NULL,  -- processing/complete     |      |
-|  |      request_hash VARCHAR(64),                                 |     |
-|  |      response_code INT,                                        |     |
-|  |      response_body JSONB,                                      |     |
-|  |      created_at TIMESTAMP DEFAULT NOW(),                      |      |
-|  |      expires_at TIMESTAMP NOT NULL,                           |      |
-|  |                                                                 |    |
-|  |      UNIQUE(merchant_id, endpoint, idempotency_key)           |      |
-|  |  );                                                             |    |
-|  |                                                                 |    |
-|  |  -- Index for cleanup job                                      |     |
-|  |  CREATE INDEX idx_expires ON idempotency_keys(expires_at);    |      |
-|  |                                                                 |    |
-|  |  -- Cleanup expired keys                                       |     |
-|  |  DELETE FROM idempotency_keys WHERE expires_at < NOW();       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  IDEMPOTENCY TABLE:                                               |  |
+|  |                                                                   |  |
+|  |  CREATE TABLE idempotency_keys (                                  |  |
+|  |      idempotency_key VARCHAR(255) PRIMARY KEY,                    |  |
+|  |      merchant_id VARCHAR(100) NOT NULL,                           |  |
+|  |      endpoint VARCHAR(100) NOT NULL,                              |  |
+|  |      status VARCHAR(20) NOT NULL,  -- processing/complete         |  |
+|  |      request_hash VARCHAR(64),                                    |  |
+|  |      response_code INT,                                           |  |
+|  |      response_body JSONB,                                         |  |
+|  |      created_at TIMESTAMP DEFAULT NOW(),                          |  |
+|  |      expires_at TIMESTAMP NOT NULL,                               |  |
+|  |                                                                   |  |
+|  |      UNIQUE(merchant_id, endpoint, idempotency_key)               |  |
+|  |  );                                                               |  |
+|  |                                                                   |  |
+|  |  -- Index for cleanup job                                         |  |
+|  |  CREATE INDEX idx_expires ON idempotency_keys(expires_at);        |  |
+|  |                                                                   |  |
+|  |  -- Cleanup expired keys                                          |  |
+|  |  DELETE FROM idempotency_keys WHERE expires_at < NOW();           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  TWO-LAYER APPROACH:                                                    |
 |                                                                         |
@@ -449,20 +449,20 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  RACE CONDITION: Two requests with same key arrive simultaneously       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request A                      Request B                      |     |
-|  |     |                              |                            |    |
-|  |     | Check Redis                  | Check Redis                |    |
-|  |     | (not found)                  | (not found)                |    |
-|  |     |                              |                            |    |
-|  |     | SET NX (success)             | SET NX (FAILS!)           |     |
-|  |     |                              |                            |    |
-|  |     | Process...                   | Return 409 Conflict       |     |
-|  |     |                              |                            |    |
-|  |     | Done!                                                     |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request A                      Request B                         |  |
+|  |     |                              |                              |  |
+|  |     | Check Redis                  | Check Redis                  |  |
+|  |     | (not found)                  | (not found)                  |  |
+|  |     |                              |                              |  |
+|  |     | SET NX (success)             | SET NX (FAILS!)              |  |
+|  |     |                              |                              |  |
+|  |     | Process...                   | Return 409 Conflict          |  |
+|  |     |                              |                              |  |
+|  |     | Done!                                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  The NX (Not eXists) flag ensures only ONE request proceeds.            |
 |                                                                         |
@@ -488,24 +488,24 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  Your system is idempotent, but what about external APIs?               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Your API ------> Payment Gateway (Stripe)                     |     |
-|  |                                                                 |    |
-|  |  If YOU retry to Stripe, Stripe might charge twice!           |      |
-|  |                                                                 |    |
-|  |  SOLUTION: Forward your idempotency key to Stripe             |      |
-|  |                                                                 |    |
-|  |  stripe.PaymentIntent.create(                                  |     |
-|  |      amount=10000,                                              |    |
-|  |      currency='usd',                                            |    |
-|  |      idempotency_key='ord_123_pay_1'  < Same key!             |      |
-|  |  )                                                               |   |
-|  |                                                                 |    |
-|  |  Now if your retry hits Stripe again, Stripe returns           |     |
-|  |  the cached result instead of charging again.                  |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Your API ------> Payment Gateway (Stripe)                        |  |
+|  |                                                                   |  |
+|  |  If YOU retry to Stripe, Stripe might charge twice!               |  |
+|  |                                                                   |  |
+|  |  SOLUTION: Forward your idempotency key to Stripe                 |  |
+|  |                                                                   |  |
+|  |  stripe.PaymentIntent.create(                                     |  |
+|  |      amount=10000,                                                |  |
+|  |      currency='usd',                                              |  |
+|  |      idempotency_key='ord_123_pay_1'  < Same key!                 |  |
+|  |  )                                                                |  |
+|  |                                                                   |  |
+|  |  Now if your retry hits Stripe again, Stripe returns              |  |
+|  |  the cached result instead of charging again.                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  SERVICES THAT SUPPORT IDEMPOTENCY KEYS:                                |
 |  * Stripe (Idempotency-Key header)                                      |

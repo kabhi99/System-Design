@@ -320,39 +320,39 @@ Let's estimate the scale for a BookMyShow-like platform.
 |                                                                         |
 |  SCALE SUMMARY FOR SYSTEM DESIGN                                        |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  USERS                                                        |      |
-|  |  -----                                                        |      |
-|  |  MAU: 15 million                                              |      |
-|  |  DAU: 5 million                                               |      |
-|  |  Peak concurrent: 500K                                        |      |
-|  |                                                                |     |
-|  |  TRAFFIC                                                      |      |
-|  |  -------                                                      |      |
-|  |  Normal: ~600 RPS                                            |       |
-|  |  Peak: ~2,000 RPS                                            |       |
-|  |  Flash sale: ~10,000 RPS (spike)                             |       |
-|  |                                                                |     |
-|  |  BOOKINGS                                                     |      |
-|  |  --------                                                     |      |
-|  |  Daily: 2 million                                             |      |
-|  |  Peak: ~70 bookings/second                                   |       |
-|  |                                                                |     |
-|  |  STORAGE                                                      |      |
-|  |  -------                                                      |      |
-|  |  Structured data: ~10 TB                                     |       |
-|  |  Media: ~500 GB (CDN)                                        |       |
-|  |  Growth: ~5 TB/year                                          |       |
-|  |                                                                |     |
-|  |  KEY CHALLENGES                                               |      |
-|  |  --------------                                               |      |
-|  |  1. Prevent double-booking (consistency)                     |       |
-|  |  2. Handle flash sales (scalability)                         |       |
-|  |  3. Real-time seat availability (low latency)                |       |
-|  |  4. Payment processing (reliability)                         |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  USERS                                                           |   |
+|  |  -----                                                           |   |
+|  |  MAU: 15 million                                                 |   |
+|  |  DAU: 5 million                                                  |   |
+|  |  Peak concurrent: 500K                                           |   |
+|  |                                                                  |   |
+|  |  TRAFFIC                                                         |   |
+|  |  -------                                                         |   |
+|  |  Normal: ~600 RPS                                                |   |
+|  |  Peak: ~2,000 RPS                                                |   |
+|  |  Flash sale: ~10,000 RPS (spike)                                 |   |
+|  |                                                                  |   |
+|  |  BOOKINGS                                                        |   |
+|  |  --------                                                        |   |
+|  |  Daily: 2 million                                                |   |
+|  |  Peak: ~70 bookings/second                                       |   |
+|  |                                                                  |   |
+|  |  STORAGE                                                         |   |
+|  |  -------                                                         |   |
+|  |  Structured data: ~10 TB                                         |   |
+|  |  Media: ~500 GB (CDN)                                            |   |
+|  |  Growth: ~5 TB/year                                              |   |
+|  |                                                                  |   |
+|  |  KEY CHALLENGES                                                  |   |
+|  |  --------------                                                  |   |
+|  |  1. Prevent double-booking (consistency)                         |   |
+|  |  2. Handle flash sales (scalability)                             |   |
+|  |  3. Real-time seat availability (low latency)                    |   |
+|  |  4. Payment processing (reliability)                             |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

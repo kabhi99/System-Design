@@ -13,18 +13,18 @@ management using custom controllers.
 |                                                                         |
 |  Operator = CRD + Custom Controller                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   User creates:      Operator watches and acts:               |      |
-|  |                                                                 |    |
-|  |   PostgresCluster    > Create StatefulSet                     |      |
-|  |   replicas: 3        > Create Services                         |     |
-|  |   version: 14        > Configure replication                   |     |
-|  |                      > Handle backups                          |     |
-|  |                      > Manage upgrades                         |     |
-|  |                      > Self-healing                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   User creates:      Operator watches and acts:                   |  |
+|  |                                                                   |  |
+|  |   PostgresCluster    > Create StatefulSet                         |  |
+|  |   replicas: 3        > Create Services                            |  |
+|  |   version: 14        > Configure replication                      |  |
+|  |                      > Handle backups                             |  |
+|  |                      > Manage upgrades                            |  |
+|  |                      > Self-healing                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  RECONCILIATION LOOP                                                    |
 |  ====================                                                   |

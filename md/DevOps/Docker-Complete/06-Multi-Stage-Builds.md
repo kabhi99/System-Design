@@ -22,15 +22,15 @@ separating build-time dependencies from runtime requirements.
 |  TYPICAL GO APPLICATION                                                 |
 |                                                                         |
 |  BEFORE (Single-stage):                                                 |
-|  +----------------------------------------------------------------+     |
-|  | FROM golang:1.21                                               |     |
-|  |                                                                |     |
-|  | WORKDIR /app                                                   |     |
-|  | COPY . .                                                       |     |
-|  | RUN go build -o myapp                                          |     |
-|  |                                                                |     |
-|  | CMD ["./myapp"]                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  | FROM golang:1.21                                                 |   |
+|  |                                                                  |   |
+|  | WORKDIR /app                                                     |   |
+|  | COPY . .                                                         |   |
+|  | RUN go build -o myapp                                            |   |
+|  |                                                                  |   |
+|  | CMD ["./myapp"]                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Image size: ~1.1 GB!                                                   |
 |                                                                         |
@@ -51,22 +51,22 @@ separating build-time dependencies from runtime requirements.
 |                                                                         |
 |  MULTI-STAGE DOCKERFILE                                                 |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  | # Stage 1: Build                                               |     |
-|  | FROM golang:1.21 AS builder                                    |     |
-|  |                                                                |     |
-|  | WORKDIR /app                                                   |     |
-|  | COPY go.mod go.sum ./                                          |     |
-|  | RUN go mod download                                            |     |
-|  | COPY . .                                                       |     |
-|  | RUN CGO_ENABLED=0 go build -o myapp                            |     |
-|  |                                                                |     |
-|  | # Stage 2: Production                                          |     |
-|  | FROM alpine:3.18                                               |     |
-|  |                                                                |     |
-|  | COPY --from=builder /app/myapp /myapp                          |     |
-|  | CMD ["/myapp"]                                                 |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  | # Stage 1: Build                                                 |   |
+|  | FROM golang:1.21 AS builder                                      |   |
+|  |                                                                  |   |
+|  | WORKDIR /app                                                     |   |
+|  | COPY go.mod go.sum ./                                            |   |
+|  | RUN go mod download                                              |   |
+|  | COPY . .                                                         |   |
+|  | RUN CGO_ENABLED=0 go build -o myapp                              |   |
+|  |                                                                  |   |
+|  | # Stage 2: Production                                            |   |
+|  | FROM alpine:3.18                                                 |   |
+|  |                                                                  |   |
+|  | COPY --from=builder /app/myapp /myapp                            |   |
+|  | CMD ["/myapp"]                                                   |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Image size: ~15 MB!                                                    |
 |                                                                         |

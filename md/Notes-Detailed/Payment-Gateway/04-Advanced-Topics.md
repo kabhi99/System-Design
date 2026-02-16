@@ -8,51 +8,51 @@
 |                                                                         |
 |  FRAUD DETECTION PIPELINE                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Payment Request                                                |    |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |              FRAUD DETECTION ENGINE                     |  |      |
-|  |  |                                                         |  |      |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |  | RULE-BASED CHECKS                               |   |  |       |
-|  |  |  |                                                 |   |  |       |
-|  |  |  | * Velocity limits (5 txns in 10 min)           |   |  |        |
-|  |  |  | * Amount thresholds (>$10K needs review)       |   |  |        |
-|  |  |  | * Geographic anomalies (USA > Nigeria)         |   |  |        |
-|  |  |  | * Known fraud patterns                         |   |  |        |
-|  |  |  | * BIN (card issuer) blacklists                |   |  |         |
-|  |  |  | * IP reputation                                |   |  |        |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |                        |                                |  |      |
-|  |  |                        v                                |  |      |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |  | ML-BASED SCORING                                |   |  |       |
-|  |  |  |                                                 |   |  |       |
-|  |  |  | Features:                                       |   |  |       |
-|  |  |  | * Device fingerprint                           |   |  |        |
-|  |  |  | * Behavioral patterns                          |   |  |        |
-|  |  |  | * Historical transaction graph                 |   |  |        |
-|  |  |  | * Time of day patterns                         |   |  |        |
-|  |  |  |                                                 |   |  |       |
-|  |  |  | Output: Risk Score (0-100)                     |   |  |        |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |                        |                                |  |      |
-|  |  |                        v                                |  |      |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |  | DECISION ENGINE                                 |   |  |       |
-|  |  |  |                                                 |   |  |       |
-|  |  |  | Risk < 30  > APPROVE                          |   |  |         |
-|  |  |  | Risk 30-70 > CHALLENGE (3DS, OTP)             |   |  |         |
-|  |  |  | Risk > 70  > DECLINE                          |   |  |         |
-|  |  |  |                                                 |   |  |       |
-|  |  |  +-------------------------------------------------+   |  |       |
-|  |  |                                                         |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Payment Request                                                  |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |              FRAUD DETECTION ENGINE                         |  |  |
+|  |  |                                                             |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |  | RULE-BASED CHECKS                                    |   |  |  |
+|  |  |  |                                                      |   |  |  |
+|  |  |  | * Velocity limits (5 txns in 10 min)                 |   |  |  |
+|  |  |  | * Amount thresholds (>$10K needs review)             |   |  |  |
+|  |  |  | * Geographic anomalies (USA > Nigeria)               |   |  |  |
+|  |  |  | * Known fraud patterns                               |   |  |  |
+|  |  |  | * BIN (card issuer) blacklists                       |   |  |  |
+|  |  |  | * IP reputation                                      |   |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |                        |                                    |  |  |
+|  |  |                        v                                    |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |  | ML-BASED SCORING                                     |   |  |  |
+|  |  |  |                                                      |   |  |  |
+|  |  |  | Features:                                            |   |  |  |
+|  |  |  | * Device fingerprint                                 |   |  |  |
+|  |  |  | * Behavioral patterns                                |   |  |  |
+|  |  |  | * Historical transaction graph                       |   |  |  |
+|  |  |  | * Time of day patterns                               |   |  |  |
+|  |  |  |                                                      |   |  |  |
+|  |  |  | Output: Risk Score (0-100)                           |   |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |                        |                                    |  |  |
+|  |  |                        v                                    |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |  | DECISION ENGINE                                      |   |  |  |
+|  |  |  |                                                      |   |  |  |
+|  |  |  | Risk < 30  > APPROVE                                 |   |  |  |
+|  |  |  | Risk 30-70 > CHALLENGE (3DS, OTP)                    |   |  |  |
+|  |  |  | Risk > 70  > DECLINE                                 |   |  |  |
+|  |  |  |                                                      |   |  |  |
+|  |  |  +------------------------------------------------------+   |  |  |
+|  |  |                                                             |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  LATENCY REQUIREMENT: < 100ms (inline with payment processing)          |
 |                                                                         |
@@ -68,31 +68,31 @@
 |                                                                         |
 |  Additional authentication layer for online payments                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  FLOW:                                                          |    |
-|  |                                                                 |    |
-|  |  1. Payment initiated                                          |     |
-|  |  2. Gateway sends transaction to 3DS server                    |     |
-|  |  3. 3DS server communicates with issuer (ACS)                 |      |
-|  |  4. Issuer decides: Frictionless or Challenge                 |      |
-|  |                                                                 |    |
-|  |  FRICTIONLESS (Low risk):                                      |     |
-|  |  * Issuer approves silently based on risk data               |       |
-|  |  * No customer interaction                                    |      |
-|  |  * ~90% of transactions                                       |      |
-|  |                                                                 |    |
-|  |  CHALLENGE (Higher risk):                                      |     |
-|  |  * Customer redirected to bank's page                        |       |
-|  |  * OTP, biometric, or app approval                           |       |
-|  |  * ~10% of transactions                                       |      |
-|  |                                                                 |    |
-|  |  BENEFITS:                                                      |    |
-|  |  * Liability shift to issuer for fraud                       |       |
-|  |  * Lower fraud rates                                          |      |
-|  |  * Required by regulations (PSD2 in EU, RBI in India)        |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FLOW:                                                            |  |
+|  |                                                                   |  |
+|  |  1. Payment initiated                                             |  |
+|  |  2. Gateway sends transaction to 3DS server                       |  |
+|  |  3. 3DS server communicates with issuer (ACS)                     |  |
+|  |  4. Issuer decides: Frictionless or Challenge                     |  |
+|  |                                                                   |  |
+|  |  FRICTIONLESS (Low risk):                                         |  |
+|  |  * Issuer approves silently based on risk data                    |  |
+|  |  * No customer interaction                                        |  |
+|  |  * ~90% of transactions                                           |  |
+|  |                                                                   |  |
+|  |  CHALLENGE (Higher risk):                                         |  |
+|  |  * Customer redirected to bank's page                             |  |
+|  |  * OTP, biometric, or app approval                                |  |
+|  |  * ~10% of transactions                                           |  |
+|  |                                                                   |  |
+|  |  BENEFITS:                                                        |  |
+|  |  * Liability shift to issuer for fraud                            |  |
+|  |  * Lower fraud rates                                              |  |
+|  |  * Required by regulations (PSD2 in EU, RBI in India)             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -104,24 +104,24 @@
 |                                                                         |
 |  RELIABLE WEBHOOK DELIVERY                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Payment                Webhook              Merchant           |    |
-|  |  Service                Service              Server             |    |
-|  |     |                      |                    |               |    |
-|  |     |--1. Event----------->|                    |               |    |
-|  |     |   (payment.captured) |                    |               |    |
-|  |     |                      |                    |               |    |
-|  |     |                      |--2. POST webhook-->|               |    |
-|  |     |                      |                    |               |    |
-|  |     |                      |<-3. 200 OK --------|               |    |
-|  |     |                      |                    |               |    |
-|  |     |                      |   IF FAILS:        |               |    |
-|  |     |                      |   Retry with backoff               |    |
-|  |     |                      |   5s, 30s, 2m, 10m, 1h, 4h, 24h   |     |
-|  |     |                      |                    |               |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Payment                Webhook              Merchant             |  |
+|  |  Service                Service              Server               |  |
+|  |     |                      |                    |                 |  |
+|  |     |--1. Event----------->|                    |                 |  |
+|  |     |   (payment.captured) |                    |                 |  |
+|  |     |                      |                    |                 |  |
+|  |     |                      |--2. POST webhook-->|                 |  |
+|  |     |                      |                    |                 |  |
+|  |     |                      |<-3. 200 OK --------|                 |  |
+|  |     |                      |                    |                 |  |
+|  |     |                      |   IF FAILS:        |                 |  |
+|  |     |                      |   Retry with backoff                 |  |
+|  |     |                      |   5s, 30s, 2m, 10m, 1h, 4h, 24h      |  |
+|  |     |                      |                    |                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WEBHOOK PAYLOAD:                                                       |
 |  {                                                                      |
@@ -191,34 +191,34 @@
 |                                                                         |
 |  MULTI-REGION ARCHITECTURE                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                      GLOBAL LOAD BALANCER                      |     |
-|  |                     (Route by latency/geo)                     |     |
-|  |                             |                                   |    |
-|  |          +------------------+------------------+               |     |
-|  |          |                  |                  |                |    |
-|  |          v                  v                  v                |    |
-|  |   +-----------+      +-----------+      +-----------+         |      |
-|  |   |  US-EAST  |      |  EU-WEST  |      | AP-SOUTH  |         |      |
-|  |   |           |      |           |      |           |         |      |
-|  |   | +-------+ |      | +-------+ |      | +-------+ |         |      |
-|  |   | | API   | |      | | API   | |      | | API   | |         |      |
-|  |   | |Gateway| |      | |Gateway| |      | |Gateway| |         |      |
-|  |   | +---+---+ |      | +---+---+ |      | +---+---+ |         |      |
-|  |   |     |     |      |     |     |      |     |     |         |      |
-|  |   | +---v---+ |      | +---v---+ |      | +---v---+ |         |      |
-|  |   | |Payment| |      | |Payment| |      | |Payment| |         |      |
-|  |   | |Service| |      | |Service| |      | |Service| |         |      |
-|  |   | +---+---+ |      | +---+---+ |      | +---+---+ |         |      |
-|  |   |     |     |      |     |     |      |     |     |         |      |
-|  |   | +---v---+ |      | +---v---+ |      | +---v---+ |         |      |
-|  |   | |Postgres| |      | |Postgres| |      | |Postgres| |         |   |
-|  |   | |Primary | |<---->| |Replica | |<---->| |Replica | |         |   |
-|  |   | +-------+ |      | +-------+ |      | +-------+ |         |      |
-|  |   +-----------+      +-----------+      +-----------+         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                      GLOBAL LOAD BALANCER                         |  |
+|  |                     (Route by latency/geo)                        |  |
+|  |                             |                                     |  |
+|  |          +------------------+------------------+                  |  |
+|  |          |                  |                  |                  |  |
+|  |          v                  v                  v                  |  |
+|  |   +-----------+      +-----------+      +-----------+             |  |
+|  |   |  US-EAST  |      |  EU-WEST  |      | AP-SOUTH  |             |  |
+|  |   |           |      |           |      |           |             |  |
+|  |   | +-------+ |      | +-------+ |      | +-------+ |             |  |
+|  |   | | API   | |      | | API   | |      | | API   | |             |  |
+|  |   | |Gateway| |      | |Gateway| |      | |Gateway| |             |  |
+|  |   | +---+---+ |      | +---+---+ |      | +---+---+ |             |  |
+|  |   |     |     |      |     |     |      |     |     |             |  |
+|  |   | +---v---+ |      | +---v---+ |      | +---v---+ |             |  |
+|  |   | |Payment| |      | |Payment| |      | |Payment| |             |  |
+|  |   | |Service| |      | |Service| |      | |Service| |             |  |
+|  |   | +---+---+ |      | +---+---+ |      | +---+---+ |             |  |
+|  |   |     |     |      |     |     |      |     |     |             |  |
+|  |   | +---v---+ |      | +---v---+ |      | +---v---+ |             |  |
+|  |   | |Postgres| |      | |Postgres| |      | |Postgres| |          |  |
+|  |   | |Primary | |<---->| |Replica | |<---->| |Replica | |          |  |
+|  |   | +-------+ |      | +-------+ |      | +-------+ |             |  |
+|  |   +-----------+      +-----------+      +-----------+             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WRITE PATH: All writes go to primary (US-East)                         |
 |  READ PATH: Read from nearest replica                                   |
@@ -277,30 +277,30 @@
 |  DEBIT + CREDIT = 0                                                     |
 |                                                                         |
 |  EXAMPLE: $100 payment captured                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Entry 1 (Debit):                                              |     |
-|  |    Account: customer_liability                                 |     |
-|  |    Amount: +$100 (we owe customer money we collected)         |      |
-|  |                                                                 |    |
-|  |  Entry 2 (Credit):                                             |     |
-|  |    Account: payment_processor_receivable                      |      |
-|  |    Amount: -$100 (processor will send us this money)          |      |
-|  |                                                                 |    |
-|  |  Net: +$100 - $100 = $0 Y                                     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Entry 1 (Debit):                                                 |  |
+|  |    Account: customer_liability                                    |  |
+|  |    Amount: +$100 (we owe customer money we collected)             |  |
+|  |                                                                   |  |
+|  |  Entry 2 (Credit):                                                |  |
+|  |    Account: payment_processor_receivable                          |  |
+|  |    Amount: -$100 (processor will send us this money)              |  |
+|  |                                                                   |  |
+|  |  Net: +$100 - $100 = $0 Y                                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHEN SETTLED TO MERCHANT:                                              |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Entry 1: customer_liability -$100 (discharged)               |      |
-|  |  Entry 2: merchant_payable +$97 (net after fees)              |      |
-|  |  Entry 3: fee_revenue +$3 (our cut)                           |      |
-|  |                                                                 |    |
-|  |  Net: -$100 + $97 + $3 = $0 Y                                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Entry 1: customer_liability -$100 (discharged)                   |  |
+|  |  Entry 2: merchant_payable +$97 (net after fees)                  |  |
+|  |  Entry 3: fee_revenue +$3 (our cut)                               |  |
+|  |                                                                   |  |
+|  |  Net: -$100 + $97 + $3 = $0 Y                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY DOUBLE-ENTRY?                                                      |
 |  * Self-auditing (totals must balance)                                  |
@@ -435,41 +435,41 @@
 |                                                                         |
 |  PAYMENT GATEWAY - COMPLETE PICTURE                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +---------+                                                   |     |
-|  |  | Client  |--> CDN/WAF --> API Gateway --> Rate Limiter      |      |
-|  |  +---------+                                    |              |     |
-|  |                                                 v              |     |
-|  |  +----------------------------------------------------------+ |      |
-|  |  |                  PAYMENT SERVICE                         | |      |
-|  |  |                                                          | |      |
-|  |  |  Idempotency --> State Machine --> Router --> Connector | |       |
-|  |  |       |              |               |            |      | |      |
-|  |  |       v              v               |            v      | |      |
-|  |  |    Redis         PostgreSQL         |      Card Network | |       |
-|  |  |  (cache/lock)   (transactions)      |         /Processor| |       |
-|  |  |                      |              |                    | |      |
-|  |  |                      v              |                    | |      |
-|  |  |                   Kafka ------------+---> Webhook Service| |      |
-|  |  |                   (events)                       |       | |      |
-|  |  |                                                  v       | |      |
-|  |  |                                           Merchant Server| |      |
-|  |  +----------------------------------------------------------+ |      |
-|  |                                                                 |    |
-|  |  SECURITY ZONES:                                               |     |
-|  |  * Public: CDN, API Gateway                                   |      |
-|  |  * Application: Payment Service, Webhook Service              |      |
-|  |  * CDE: Token Vault (HSM), Processor Connectors              |       |
-|  |                                                                 |    |
-|  |  KEY GUARANTEES:                                               |     |
-|  |  * Exactly-once charging (idempotency)                        |      |
-|  |  * PCI-DSS compliance (tokenization)                          |      |
-|  |  * 99.99% availability (multi-region)                        |       |
-|  |  * < 2s authorization latency                                 |      |
-|  |  * Complete audit trail                                       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  +---------+                                                      |  |
+|  |  | Client  |--> CDN/WAF --> API Gateway --> Rate Limiter          |  |
+|  |  +---------+                                    |                 |  |
+|  |                                                 v                 |  |
+|  |  +--------------------------------------------------------------+ |  |
+|  |  |                  PAYMENT SERVICE                             | |  |
+|  |  |                                                              | |  |
+|  |  |  Idempotency --> State Machine --> Router --> Connector      | |  |
+|  |  |       |              |               |            |          | |  |
+|  |  |       v              v               |            v          | |  |
+|  |  |    Redis         PostgreSQL         |      Card Network      | |  |
+|  |  |  (cache/lock)   (transactions)      |         /Processor     | |  |
+|  |  |                      |              |                        | |  |
+|  |  |                      v              |                        | |  |
+|  |  |                   Kafka ------------+---> Webhook Service    | |  |
+|  |  |                   (events)                       |           | |  |
+|  |  |                                                  v           | |  |
+|  |  |                                           Merchant Server    | |  |
+|  |  +--------------------------------------------------------------+ |  |
+|  |                                                                   |  |
+|  |  SECURITY ZONES:                                                  |  |
+|  |  * Public: CDN, API Gateway                                       |  |
+|  |  * Application: Payment Service, Webhook Service                  |  |
+|  |  * CDE: Token Vault (HSM), Processor Connectors                   |  |
+|  |                                                                   |  |
+|  |  KEY GUARANTEES:                                                  |  |
+|  |  * Exactly-once charging (idempotency)                            |  |
+|  |  * PCI-DSS compliance (tokenization)                              |  |
+|  |  * 99.99% availability (multi-region)                             |  |
+|  |  * < 2s authorization latency                                     |  |
+|  |  * Complete audit trail                                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

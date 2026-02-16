@@ -15,21 +15,21 @@ distributed systems and microservices architectures.
 |  Client sends a request, server sends back a response.                  |
 |  Synchronous by nature - client waits for response.                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client                                Server                   |    |
-|  |    |                                     |                      |    |
-|  |    |-------- REQUEST ------------------>|                      |     |
-|  |    |         (HTTP GET /users/123)      |                      |     |
-|  |    |                                     |                      |    |
-|  |    |         (client WAITS)              | (processing)        |     |
-|  |    |                                     |                      |    |
-|  |    |<------- RESPONSE ------------------|                      |     |
-|  |    |         (HTTP 200 + JSON body)     |                      |     |
-|  |    |                                     |                      |    |
-|  |  CLIENT CONTINUES                                               |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client                                Server                     |  |
+|  |    |                                     |                        |  |
+|  |    |-------- REQUEST ------------------>|                         |  |
+|  |    |         (HTTP GET /users/123)      |                         |  |
+|  |    |                                     |                        |  |
+|  |    |         (client WAITS)              | (processing)           |  |
+|  |    |                                     |                        |  |
+|  |    |<------- RESPONSE ------------------|                         |  |
+|  |    |         (HTTP 200 + JSON body)     |                         |  |
+|  |    |                                     |                        |  |
+|  |  CLIENT CONTINUES                                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -44,14 +44,14 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  Client blocks until response received                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  // Client code - BLOCKS                                       |     |
-|  |  response = http.get("/api/users/123")  // waits here          |     |
-|  |  user = response.json()                                        |     |
-|  |  print(user.name)                                              |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  // Client code - BLOCKS                                          |  |
+|  |  response = http.get("/api/users/123")  // waits here             |  |
+|  |  user = response.json()                                           |  |
+|  |  print(user.name)                                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Simple programming model                                             |
@@ -70,19 +70,19 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  Client doesn't block, uses callback/promise/future                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  // Client code - NON-BLOCKING                                 |     |
-|  |  async def get_user():                                         |     |
-|  |      response = await http.get("/api/users/123")  # yields     |     |
-|  |      user = response.json()                                    |     |
-|  |      return user                                               |     |
-|  |                                                                 |    |
-|  |  // Or with callbacks                                          |     |
-|  |  http.get("/api/users/123", callback=handle_response)          |     |
-|  |  // code continues immediately                                 |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  // Client code - NON-BLOCKING                                    |  |
+|  |  async def get_user():                                            |  |
+|  |      response = await http.get("/api/users/123")  # yields        |  |
+|  |      user = response.json()                                       |  |
+|  |      return user                                                  |  |
+|  |                                                                   |  |
+|  |  // Or with callbacks                                             |  |
+|  |  http.get("/api/users/123", callback=handle_response)             |  |
+|  |  // code continues immediately                                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Better resource utilization                                          |
@@ -101,21 +101,21 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  Used in message-based request-response                                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client           Request Queue          Server        Reply Q |     |
-|  |    |                    |                    |              |   |    |
-|  |    |-- Request -------->|                    |              |   |    |
-|  |    |   correlation_id:  |                    |              |   |    |
-|  |    |   "abc123"         |                    |              |   |    |
-|  |    |   reply_to: "q1"   |                    |              |   |    |
-|  |    |                    |-- Deliver -------->|              |   |    |
-|  |    |                    |                    |-- Response -->   |    |
-|  |    |                    |                    |   corr: "abc123" |    |
-|  |    |<---------------------------------------------------------  |    |
-|  |    |  Match by correlation_id                                   |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client           Request Queue          Server        Reply Q    |  |
+|  |    |                    |                    |                |   |  |
+|  |    |-- Request -------->|                    |                |   |  |
+|  |    |   correlation_id:  |                    |                |   |  |
+|  |    |   "abc123"         |                    |                |   |  |
+|  |    |   reply_to: "q1"   |                    |                |   |  |
+|  |    |                    |-- Deliver -------->|                |   |  |
+|  |    |                    |                    |-- Response -->     |  |
+|  |    |                    |                    |   corr: "abc123"   |  |
+|  |    |<---------------------------------------------------------    |  |
+|  |    |  Match by correlation_id                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USED BY: RabbitMQ RPC, JMS request-reply                               |
 |                                                                         |
@@ -127,22 +127,22 @@ distributed systems and microservices architectures.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Protocol    Transport   Encoding    Latency    Use Case      |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  REST        HTTP/1.1    JSON        Medium     External APIs |      |
-|  |                                                                |     |
-|  |  gRPC        HTTP/2      Protobuf    Low        Internal svc  |      |
-|  |                                                                |     |
-|  |  GraphQL     HTTP        JSON        Medium     Flexible API  |      |
-|  |                                                                |     |
-|  |  SOAP        HTTP        XML         High       Legacy/Enter  |      |
-|  |                                                                |     |
-|  |  Raw TCP     TCP         Custom      Lowest     Ultra-low lat |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Protocol    Transport   Encoding    Latency    Use Case         |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  REST        HTTP/1.1    JSON        Medium     External APIs    |   |
+|  |                                                                  |   |
+|  |  gRPC        HTTP/2      Protobuf    Low        Internal svc     |   |
+|  |                                                                  |   |
+|  |  GraphQL     HTTP        JSON        Medium     Flexible API     |   |
+|  |                                                                  |   |
+|  |  SOAP        HTTP        XML         High       Legacy/Enter     |   |
+|  |                                                                  |   |
+|  |  Raw TCP     TCP         Custom      Lowest     Ultra-low lat    |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -160,17 +160,17 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  Separating combined signals back into individual streams               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  MULTIPLEXING:                                                 |     |
-|  |                                                                 |    |
-|  |  Stream A --+                                    +-> Stream A  |     |
-|  |  Stream B --+--> [MUX] == Single Channel == [DEMUX] --> Stream B|    |
-|  |  Stream C --+                                    +-> Stream C  |     |
-|  |                                                                 |    |
-|  |  Multiple logical connections over ONE physical connection     |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  MULTIPLEXING:                                                    |  |
+|  |                                                                   |  |
+|  |  Stream A --+                                    +-> Stream A     |  |
+|  |  Stream B --+--> [MUX] == Single Channel == [DEMUX] --> Stream B  |  |
+|  |  Stream C --+                                    +-> Stream C     |  |
+|  |                                                                   |  |
+|  |  Multiple logical connections over ONE physical connection        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -183,85 +183,85 @@ distributed systems and microservices architectures.
 |  HTTP/1.1 - NO TRUE MULTIPLEXING                                        |
 |  ================================                                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client                              Server                    |     |
-|  |                                                                 |    |
-|  |  == Connection 1 ============================================ |      |
-|  |  |                                                           | |     |
-|  |  |-- Request A --------------------------------------------->| |     |
-|  |  |<- Response A ---------------------------------------------| |     |
-|  |  |-- Request B --------------------------------------------->| |     |
-|  |  |<- Response B ---------------------------------------------| |     |
-|  |  |                                                           | |     |
-|  |  =========================================================== |       |
-|  |                                                                 |    |
-|  |  PROBLEM: Head-of-Line (HOL) Blocking                         |      |
-|  |  Request B must wait for Response A to complete               |      |
-|  |                                                                 |    |
-|  |  WORKAROUND: Open multiple connections (6 per domain typical) |      |
-|  |                                                                 |    |
-|  |  == Connection 1 ==  Request A --> <-- Response A            |       |
-|  |  == Connection 2 ==  Request B --> <-- Response B            |       |
-|  |  == Connection 3 ==  Request C --> <-- Response C            |       |
-|  |  == Connection 4 ==  Request D --> <-- Response D            |       |
-|  |  == Connection 5 ==  Request E --> <-- Response E            |       |
-|  |  == Connection 6 ==  Request F --> <-- Response F            |       |
-|  |                                                                 |    |
-|  |  Each connection = TCP handshake + TLS overhead               |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client                              Server                       |  |
+|  |                                                                   |  |
+|  |  == Connection 1 ============================================     |  |
+|  |  |                                                              | |  |
+|  |  |-- Request A --------------------------------------------->   | |  |
+|  |  |<- Response A ------------------------------------------------| |  |
+|  |  |-- Request B --------------------------------------------->   | |  |
+|  |  |<- Response B ------------------------------------------------| |  |
+|  |  |                                                              | |  |
+|  |  ===========================================================      |  |
+|  |                                                                   |  |
+|  |  PROBLEM: Head-of-Line (HOL) Blocking                             |  |
+|  |  Request B must wait for Response A to complete                   |  |
+|  |                                                                   |  |
+|  |  WORKAROUND: Open multiple connections (6 per domain typical)     |  |
+|  |                                                                   |  |
+|  |  == Connection 1 ==  Request A --> <-- Response A                 |  |
+|  |  == Connection 2 ==  Request B --> <-- Response B                 |  |
+|  |  == Connection 3 ==  Request C --> <-- Response C                 |  |
+|  |  == Connection 4 ==  Request D --> <-- Response D                 |  |
+|  |  == Connection 5 ==  Request E --> <-- Response E                 |  |
+|  |  == Connection 6 ==  Request F --> <-- Response F                 |  |
+|  |                                                                   |  |
+|  |  Each connection = TCP handshake + TLS overhead                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
 |  HTTP/2 - TRUE MULTIPLEXING                                             |
 |  ============================                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client                              Server                    |     |
-|  |                                                                 |    |
-|  |  == SINGLE Connection ======================================= |      |
-|  |  |                                                           | |     |
-|  |  |  +-- Stream 1 (Request A) ------------------------------+| |      |
-|  |  |  |  +-- Stream 2 (Request B) -----------------------+  || |       |
-|  |  |  |  |  +-- Stream 3 (Request C) ----------------+   |  || |       |
-|  |  |  |  |  |                                        |   |  || |       |
-|  |  |  |  |  |<- Response C (partial) ----------------|   |  || |       |
-|  |  |  |  |<--- Response B (partial) ---------------------|  || |       |
-|  |  |  |<----- Response A (partial) -------------------------|| |       |
-|  |  |  |  |<- Response C (complete) ------------------|   |  || |       |
-|  |  |  |<----- Response A (complete) ------------------------|| |       |
-|  |  |  |  |<--- Response B (complete) --------------------|  || |       |
-|  |  |  |  |                                                |  || |      |
-|  |  =========================================================== |       |
-|  |                                                                 |    |
-|  |  STREAMS are interleaved on same connection!                  |      |
-|  |  No HOL blocking at HTTP level                                |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client                              Server                       |  |
+|  |                                                                   |  |
+|  |  == SINGLE Connection =======================================     |  |
+|  |  |                                                              | |  |
+|  |  |  +-- Stream 1 (Request A) ------------------------------+    | |  |
+|  |  |  |  +-- Stream 2 (Request B) -----------------------+  |     | |  |
+|  |  |  |  |  +-- Stream 3 (Request C) ----------------+   |  |     | |  |
+|  |  |  |  |  |                                        |   |  |     | |  |
+|  |  |  |  |  |<- Response C (partial) ----------------|   |  |     | |  |
+|  |  |  |  |<--- Response B (partial) ---------------------|  |     | |  |
+|  |  |  |<----- Response A (partial) -------------------------|     | |  |
+|  |  |  |  |<- Response C (complete) ------------------|   |  |     | |  |
+|  |  |  |<----- Response A (complete) ------------------------|     | |  |
+|  |  |  |  |<--- Response B (complete) --------------------|  |     | |  |
+|  |  |  |  |                                                |  |    | |  |
+|  |  ===========================================================      |  |
+|  |                                                                   |  |
+|  |  STREAMS are interleaved on same connection!                      |  |
+|  |  No HOL blocking at HTTP level                                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HTTP/2 STREAM STRUCTURE:                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Frame:                                                        |     |
-|  |  +----------------------------------------------------------+ |      |
-|  |  | Length (24) | Type (8) | Flags (8) | Stream ID (32)     | |       |
-|  |  +----------------------------------------------------------+ |      |
-|  |  |                     Payload                              | |      |
-|  |  +----------------------------------------------------------+ |      |
-|  |                                                                 |    |
-|  |  Frame Types:                                                  |     |
-|  |  * DATA - Request/response body                               |      |
-|  |  * HEADERS - HTTP headers                                     |      |
-|  |  * PRIORITY - Stream priority                                 |      |
-|  |  * RST_STREAM - Cancel stream                                 |      |
-|  |  * SETTINGS - Configuration                                   |      |
-|  |  * PING - Keep-alive                                          |      |
-|  |  * GOAWAY - Graceful shutdown                                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Frame:                                                           |  |
+|  |  +--------------------------------------------------------------+ |  |
+|  |  | Length (24) | Type (8) | Flags (8) | Stream ID (32)          | |  |
+|  |  +--------------------------------------------------------------+ |  |
+|  |  |                     Payload                                  | |  |
+|  |  +--------------------------------------------------------------+ |  |
+|  |                                                                   |  |
+|  |  Frame Types:                                                     |  |
+|  |  * DATA - Request/response body                                   |  |
+|  |  * HEADERS - HTTP headers                                         |  |
+|  |  * PRIORITY - Stream priority                                     |  |
+|  |  * RST_STREAM - Cancel stream                                     |  |
+|  |  * SETTINGS - Configuration                                       |  |
+|  |  * PING - Keep-alive                                              |  |
+|  |  * GOAWAY - Graceful shutdown                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -310,31 +310,31 @@ distributed systems and microservices architectures.
 |  Maintaining a pool of reusable connections instead of creating         |
 |  new connection for each request.                                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  WITHOUT POOLING:                                              |     |
-|  |                                                                 |    |
-|  |  Request 1: Connect --> Send --> Receive --> Close            |      |
-|  |  Request 2: Connect --> Send --> Receive --> Close            |      |
-|  |  Request 3: Connect --> Send --> Receive --> Close            |      |
-|  |                                                                 |    |
-|  |  TCP handshake (3-way): ~1 RTT                                 |     |
-|  |  TLS handshake: ~2 RTT                                         |     |
-|  |  Each request pays this overhead!                              |     |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  WITH POOLING:                                                 |     |
-|  |                                                                 |    |
-|  |  Pool: [Conn1, Conn2, Conn3, Conn4, Conn5]                    |      |
-|  |                                                                 |    |
-|  |  Request 1: Borrow Conn1 --> Send --> Receive --> Return      |      |
-|  |  Request 2: Borrow Conn2 --> Send --> Receive --> Return      |      |
-|  |  Request 3: Borrow Conn1 --> Send --> Receive --> Return      |      |
-|  |                                                                 |    |
-|  |  No handshake overhead for each request!                      |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  WITHOUT POOLING:                                                 |  |
+|  |                                                                   |  |
+|  |  Request 1: Connect --> Send --> Receive --> Close                |  |
+|  |  Request 2: Connect --> Send --> Receive --> Close                |  |
+|  |  Request 3: Connect --> Send --> Receive --> Close                |  |
+|  |                                                                   |  |
+|  |  TCP handshake (3-way): ~1 RTT                                    |  |
+|  |  TLS handshake: ~2 RTT                                            |  |
+|  |  Each request pays this overhead!                                 |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  WITH POOLING:                                                    |  |
+|  |                                                                   |  |
+|  |  Pool: [Conn1, Conn2, Conn3, Conn4, Conn5]                        |  |
+|  |                                                                   |  |
+|  |  Request 1: Borrow Conn1 --> Send --> Receive --> Return          |  |
+|  |  Request 2: Borrow Conn2 --> Send --> Receive --> Return          |  |
+|  |  Request 3: Borrow Conn1 --> Send --> Receive --> Return          |  |
+|  |                                                                   |  |
+|  |  No handshake overhead for each request!                          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -346,44 +346,44 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  POOL CONFIGURATION                                                     |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Parameter              Typical Value    Effect                |     |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  min_connections        5                Always keep ready     |     |
-|  |                                                                |     |
-|  |  max_connections        100              Upper limit           |     |
-|  |                                                                |     |
-|  |  connection_timeout     30s              Max time to get conn  |     |
-|  |                                                                |     |
-|  |  idle_timeout           300s             Close idle conns      |     |
-|  |                                                                |     |
-|  |  max_lifetime           3600s            Force reconnect       |     |
-|  |                                                                |     |
-|  |  validation_query       "SELECT 1"       Check conn is alive   |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Parameter              Typical Value    Effect                  |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  min_connections        5                Always keep ready       |   |
+|  |                                                                  |   |
+|  |  max_connections        100              Upper limit             |   |
+|  |                                                                  |   |
+|  |  connection_timeout     30s              Max time to get conn    |   |
+|  |                                                                  |   |
+|  |  idle_timeout           300s             Close idle conns        |   |
+|  |                                                                  |   |
+|  |  max_lifetime           3600s            Force reconnect         |   |
+|  |                                                                  |   |
+|  |  validation_query       "SELECT 1"       Check conn is alive     |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SIZING THE POOL:                                                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Formula (for database connections):                           |     |
-|  |                                                                 |    |
-|  |  connections = (core_count * 2) + effective_spindle_count     |      |
-|  |                                                                 |    |
-|  |  For SSD (no spindles):                                        |     |
-|  |  connections ~ core_count * 2 + 1                             |      |
-|  |                                                                 |    |
-|  |  Example: 8 cores = ~17 connections                           |      |
-|  |                                                                 |    |
-|  |  TOO FEW: Requests wait for connections                       |      |
-|  |  TOO MANY: Database overwhelmed, context switching            |      |
-|  |                                                                 |    |
-|  |  RULE OF THUMB: Start small, increase if you see waiting     |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Formula (for database connections):                              |  |
+|  |                                                                   |  |
+|  |  connections = (core_count * 2) + effective_spindle_count         |  |
+|  |                                                                   |  |
+|  |  For SSD (no spindles):                                           |  |
+|  |  connections ~ core_count * 2 + 1                                 |  |
+|  |                                                                   |  |
+|  |  Example: 8 cores = ~17 connections                               |  |
+|  |                                                                   |  |
+|  |  TOO FEW: Requests wait for connections                           |  |
+|  |  TOO MANY: Database overwhelmed, context switching                |  |
+|  |                                                                   |  |
+|  |  RULE OF THUMB: Start small, increase if you see waiting          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -396,60 +396,60 @@ distributed systems and microservices architectures.
 |  1. DATABASE CONNECTION POOLING                                         |
 |  ===============================                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Application                                                   |     |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |  Request Handler 1 --+                                    ||      |
-|  |  |  Request Handler 2 --+--> Connection Pool --> Database   ||       |
-|  |  |  Request Handler 3 --+    [====== 10 conns ======]       ||       |
-|  |  |  ...                 |                                    ||      |
-|  |  |  Request Handler N --+                                    ||      |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  |  Tools:                                                        |     |
-|  |  * HikariCP (Java) - fastest                                  |      |
-|  |  * PgBouncer (PostgreSQL) - external pooler                   |      |
-|  |  * ProxySQL (MySQL)                                           |      |
-|  |  * SQLAlchemy pool (Python)                                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Application                                                      |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |  Request Handler 1 --+                                    |    |  |
+|  |  |  Request Handler 2 --+--> Connection Pool --> Database   |     |  |
+|  |  |  Request Handler 3 --+    [====== 10 conns ======]       |     |  |
+|  |  |  ...                 |                                    |    |  |
+|  |  |  Request Handler N --+                                    |    |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  |  Tools:                                                           |  |
+|  |  * HikariCP (Java) - fastest                                      |  |
+|  |  * PgBouncer (PostgreSQL) - external pooler                       |  |
+|  |  * ProxySQL (MySQL)                                               |  |
+|  |  * SQLAlchemy pool (Python)                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  2. HTTP CONNECTION POOLING (Client-side)                               |
 |  =========================================                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Service A --> HTTP Connection Pool --> Service B              |     |
-|  |                                                                 |    |
-|  |  Keep-Alive connections reused for multiple requests           |     |
-|  |                                                                 |    |
-|  |  Tools:                                                        |     |
-|  |  * Apache HttpClient (Java)                                   |      |
-|  |  * requests.Session (Python)                                   |     |
-|  |  * aiohttp (Python async)                                     |      |
-|  |  * node-fetch with keepAlive agent (Node.js)                  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Service A --> HTTP Connection Pool --> Service B                 |  |
+|  |                                                                   |  |
+|  |  Keep-Alive connections reused for multiple requests              |  |
+|  |                                                                   |  |
+|  |  Tools:                                                           |  |
+|  |  * Apache HttpClient (Java)                                       |  |
+|  |  * requests.Session (Python)                                      |  |
+|  |  * aiohttp (Python async)                                         |  |
+|  |  * node-fetch with keepAlive agent (Node.js)                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  3. REDIS CONNECTION POOLING                                            |
 |  ============================                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  // Python redis-py                                           |      |
-|  |  pool = redis.ConnectionPool(                                 |      |
-|  |      host='localhost',                                        |      |
-|  |      port=6379,                                               |      |
-|  |      max_connections=10                                       |      |
-|  |  )                                                             |     |
-|  |  r = redis.Redis(connection_pool=pool)                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  // Python redis-py                                               |  |
+|  |  pool = redis.ConnectionPool(                                     |  |
+|  |      host='localhost',                                            |  |
+|  |      port=6379,                                                   |  |
+|  |      max_connections=10                                           |  |
+|  |  )                                                                |  |
+|  |  r = redis.Redis(connection_pool=pool)                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -474,21 +474,21 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  TRADITIONAL APPROACH (Still very common)                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client ==h2==> Proxy/LB ==h1==> Backend Pool                 |      |
-|  |                                                                 |    |
-|  |                           +--h1 conn--> Backend 1              |     |
-|  |  Client 1 -+              +--h1 conn--> Backend 1              |     |
-|  |  Client 2 -+--h2 single-->+--h1 conn--> Backend 2              |     |
-|  |  Client 3 -+   conn       +--h1 conn--> Backend 2              |     |
-|  |  Client 4 -+              +--h1 conn--> Backend 3              |     |
-|  |                           +--h1 conn--> Backend 3              |     |
-|  |                                                                 |    |
-|  |  Proxy maintains pool of HTTP/1.1 connections to backends     |      |
-|  |  Each request gets assigned to one connection                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client ==h2==> Proxy/LB ==h1==> Backend Pool                     |  |
+|  |                                                                   |  |
+|  |                           +--h1 conn--> Backend 1                 |  |
+|  |  Client 1 -+              +--h1 conn--> Backend 1                 |  |
+|  |  Client 2 -+--h2 single-->+--h1 conn--> Backend 2                 |  |
+|  |  Client 3 -+   conn       +--h1 conn--> Backend 2                 |  |
+|  |  Client 4 -+              +--h1 conn--> Backend 3                 |  |
+|  |                           +--h1 conn--> Backend 3                 |  |
+|  |                                                                   |  |
+|  |  Proxy maintains pool of HTTP/1.1 connections to backends         |  |
+|  |  Each request gets assigned to one connection                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Simple to implement                                                  |
@@ -512,20 +512,20 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  END-TO-END HTTP/2                                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client ==h2==> Proxy/LB ==h2==> Backends                     |      |
-|  |                                                                 |    |
-|  |                           +--h2 single conn--> Backend 1      |      |
-|  |  Client 1 -+              |   (many streams)                   |     |
-|  |  Client 2 -+--h2 single-->+--h2 single conn--> Backend 2      |      |
-|  |  Client 3 -+   conn       |   (many streams)                   |     |
-|  |  Client 4 -+              +--h2 single conn--> Backend 3      |      |
-|  |                               (many streams)                   |     |
-|  |                                                                 |    |
-|  |  Single connection per backend, all requests multiplexed      |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client ==h2==> Proxy/LB ==h2==> Backends                         |  |
+|  |                                                                   |  |
+|  |                           +--h2 single conn--> Backend 1          |  |
+|  |  Client 1 -+              |   (many streams)                      |  |
+|  |  Client 2 -+--h2 single-->+--h2 single conn--> Backend 2          |  |
+|  |  Client 3 -+   conn       |   (many streams)                      |  |
+|  |  Client 4 -+              +--h2 single conn--> Backend 3          |  |
+|  |                               (many streams)                      |  |
+|  |                                                                   |  |
+|  |  Single connection per backend, all requests multiplexed          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Fewer connections (1 per backend)                                    |
@@ -549,39 +549,39 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  HTTP/2 LOAD BALANCING CHALLENGE                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  PROBLEM:                                                      |     |
-|  |                                                                 |    |
-|  |  L4 load balancer sees ONE connection                         |      |
-|  |  ============================================================ |      |
-|  |                                                                 |    |
-|  |  Client ==h2 (100 streams)==> L4 LB ======> Backend 1 ONLY   |       |
-|  |                                                                 |    |
-|  |  All 100 requests go to same backend!                         |      |
-|  |  No load distribution.                                         |     |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  SOLUTIONS:                                                    |     |
-|  |                                                                 |    |
-|  |  1. L7 LOAD BALANCER (Application-aware)                      |      |
-|  |     LB terminates h2, can route individual streams            |      |
-|  |     to different backends                                     |      |
-|  |                                                                 |    |
-|  |  2. CLIENT-SIDE LOAD BALANCING                                |      |
-|  |     Client knows about multiple backends                      |      |
-|  |     Opens connection to each, distributes requests            |      |
-|  |     (gRPC with service discovery)                             |      |
-|  |                                                                 |    |
-|  |  3. LOOK-ASIDE LOAD BALANCING                                 |      |
-|  |     External service tells client which backend to use        |      |
-|  |                                                                 |    |
-|  |  4. MULTIPLE h2 CONNECTIONS                                   |      |
-|  |     Intentionally open multiple connections                   |      |
-|  |     Each gets routed to different backend                     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PROBLEM:                                                         |  |
+|  |                                                                   |  |
+|  |  L4 load balancer sees ONE connection                             |  |
+|  |  ============================================================     |  |
+|  |                                                                   |  |
+|  |  Client ==h2 (100 streams)==> L4 LB ======> Backend 1 ONLY        |  |
+|  |                                                                   |  |
+|  |  All 100 requests go to same backend!                             |  |
+|  |  No load distribution.                                            |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  SOLUTIONS:                                                       |  |
+|  |                                                                   |  |
+|  |  1. L7 LOAD BALANCER (Application-aware)                          |  |
+|  |     LB terminates h2, can route individual streams                |  |
+|  |     to different backends                                         |  |
+|  |                                                                   |  |
+|  |  2. CLIENT-SIDE LOAD BALANCING                                    |  |
+|  |     Client knows about multiple backends                          |  |
+|  |     Opens connection to each, distributes requests                |  |
+|  |     (gRPC with service discovery)                                 |  |
+|  |                                                                   |  |
+|  |  3. LOOK-ASIDE LOAD BALANCING                                     |  |
+|  |     External service tells client which backend to use            |  |
+|  |                                                                   |  |
+|  |  4. MULTIPLE h2 CONNECTIONS                                       |  |
+|  |     Intentionally open multiple connections                       |  |
+|  |     Each gets routed to different backend                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -593,33 +593,33 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  gRPC uses HTTP/2 - same challenges apply                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  gRPC LOAD BALANCING OPTIONS:                                  |     |
-|  |                                                                 |    |
-|  |  1. PROXY LB (L7)                                              |     |
-|  |     +--------+                                                 |     |
-|  |     | Client |==h2==> Envoy/Linkerd ==h2==> Backends          |      |
-|  |     +--------+        (terminates)                             |     |
-|  |                                                                 |    |
-|  |     Proxy inspects streams, routes independently              |      |
-|  |                                                                 |    |
-|  |  2. CLIENT-SIDE LB (Recommended for gRPC)                     |      |
-|  |     +--------+       +--> Backend 1                          |       |
-|  |     | Client |==h2==>+--> Backend 2                          |       |
-|  |     +--------+       +--> Backend 3                          |       |
-|  |                                                                 |    |
-|  |     Client maintains connection to ALL backends               |      |
-|  |     Round-robins requests across connections                  |      |
-|  |                                                                 |    |
-|  |     Service discovery: DNS, Consul, etcd                      |      |
-|  |     grpc.WithBalancerName("round_robin")                      |      |
-|  |                                                                 |    |
-|  |  3. SERVICE MESH                                               |     |
-|  |     Sidecar proxy handles all load balancing                  |      |
-|  |     Istio, Linkerd                                            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  gRPC LOAD BALANCING OPTIONS:                                     |  |
+|  |                                                                   |  |
+|  |  1. PROXY LB (L7)                                                 |  |
+|  |     +--------+                                                    |  |
+|  |     | Client |==h2==> Envoy/Linkerd ==h2==> Backends              |  |
+|  |     +--------+        (terminates)                                |  |
+|  |                                                                   |  |
+|  |     Proxy inspects streams, routes independently                  |  |
+|  |                                                                   |  |
+|  |  2. CLIENT-SIDE LB (Recommended for gRPC)                         |  |
+|  |     +--------+       +--> Backend 1                               |  |
+|  |     | Client |==h2==>+--> Backend 2                               |  |
+|  |     +--------+       +--> Backend 3                               |  |
+|  |                                                                   |  |
+|  |     Client maintains connection to ALL backends                   |  |
+|  |     Round-robins requests across connections                      |  |
+|  |                                                                   |  |
+|  |     Service discovery: DNS, Consul, etcd                          |  |
+|  |     grpc.WithBalancerName("round_robin")                          |  |
+|  |                                                                   |  |
+|  |  3. SERVICE MESH                                                  |  |
+|  |     Sidecar proxy handles all load balancing                      |  |
+|  |     Istio, Linkerd                                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -634,56 +634,56 @@ distributed systems and microservices architectures.
 |  Deploy helper components alongside main application                    |
 |  in a separate process but same host/pod.                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  WITHOUT SIDECAR:                                              |     |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |                    Application                          |  |      |
-|  |  |  +---------------------------------------------------+  |  |      |
-|  |  |  |                                                   |  |  |      |
-|  |  |  |  Business Logic                                   |  |  |      |
-|  |  |  |  + Logging                                        |  |  |      |
-|  |  |  |  + Metrics                                        |  |  |      |
-|  |  |  |  + Service Discovery                              |  |  |      |
-|  |  |  |  + Load Balancing                                 |  |  |      |
-|  |  |  |  + Circuit Breaker                                |  |  |      |
-|  |  |  |  + mTLS                                           |  |  |      |
-|  |  |  |  + Rate Limiting                                  |  |  |      |
-|  |  |  |  + Retries                                        |  |  |      |
-|  |  |  |                                                   |  |  |      |
-|  |  |  +---------------------------------------------------+  |  |      |
-|  |  |                                                          |  |     |
-|  |  |  All concerns in ONE codebase = complex!                |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  WITH SIDECAR:                                                 |     |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |              Kubernetes Pod / VM                        |  |      |
-|  |  |                                                          |  |     |
-|  |  |  +-----------------+   +-----------------------------+  |  |      |
-|  |  |  |  Application    |   |        Sidecar Proxy        |  |  |      |
-|  |  |  |                 |   |        (Envoy)              |  |  |      |
-|  |  |  |  Business Logic |   |                             |  |  |      |
-|  |  |  |  ONLY           |<->|  * Service Discovery        |  |  |      |
-|  |  |  |                 |   |  * Load Balancing           |  |  |      |
-|  |  |  |  Clean &        |   |  * Circuit Breaker          |  |  |      |
-|  |  |  |  Simple         |   |  * mTLS                     |  |  |      |
-|  |  |  |                 |   |  * Observability            |  |  |      |
-|  |  |  |                 |   |  * Retries                  |  |  |      |
-|  |  |  +-----------------+   +-----------------------------+  |  |      |
-|  |  |         ^                           |                   |  |      |
-|  |  |         |                           |                   |  |      |
-|  |  |         | localhost:8080            | External network  |  |      |
-|  |  |         |                           v                   |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  |  App talks to localhost, sidecar handles everything else!     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  WITHOUT SIDECAR:                                                 |  |
+|  |                                                                   |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |                    Application                              |  |  |
+|  |  |  +-------------------------------------------------------+  |  |  |
+|  |  |  |                                                       |  |  |  |
+|  |  |  |  Business Logic                                       |  |  |  |
+|  |  |  |  + Logging                                            |  |  |  |
+|  |  |  |  + Metrics                                            |  |  |  |
+|  |  |  |  + Service Discovery                                  |  |  |  |
+|  |  |  |  + Load Balancing                                     |  |  |  |
+|  |  |  |  + Circuit Breaker                                    |  |  |  |
+|  |  |  |  + mTLS                                               |  |  |  |
+|  |  |  |  + Rate Limiting                                      |  |  |  |
+|  |  |  |  + Retries                                            |  |  |  |
+|  |  |  |                                                       |  |  |  |
+|  |  |  +-------------------------------------------------------+  |  |  |
+|  |  |                                                             |  |  |
+|  |  |  All concerns in ONE codebase = complex!                    |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  WITH SIDECAR:                                                    |  |
+|  |                                                                   |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |              Kubernetes Pod / VM                            |  |  |
+|  |  |                                                             |  |  |
+|  |  |  +-----------------+   +---------------------------------+  |  |  |
+|  |  |  |  Application    |   |        Sidecar Proxy            |  |  |  |
+|  |  |  |                 |   |        (Envoy)                  |  |  |  |
+|  |  |  |  Business Logic |   |                                 |  |  |  |
+|  |  |  |  ONLY           |<->|  * Service Discovery            |  |  |  |
+|  |  |  |                 |   |  * Load Balancing               |  |  |  |
+|  |  |  |  Clean &        |   |  * Circuit Breaker              |  |  |  |
+|  |  |  |  Simple         |   |  * mTLS                         |  |  |  |
+|  |  |  |                 |   |  * Observability                |  |  |  |
+|  |  |  |                 |   |  * Retries                      |  |  |  |
+|  |  |  +-----------------+   +---------------------------------+  |  |  |
+|  |  |         ^                           |                       |  |  |
+|  |  |         |                           |                       |  |  |
+|  |  |         | localhost:8080            | External network      |  |  |
+|  |  |         |                           v                       |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  |  App talks to localhost, sidecar handles everything else!         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -729,37 +729,37 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  HOW SERVICE MESH SIDECAR WORKS                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Service A Pod                      Service B Pod              |     |
-|  |  +------------------------+        +------------------------+ |      |
-|  |  |                        |        |                        | |      |
-|  |  |  +------------------+  |        |  +------------------+  | |      |
-|  |  |  |    App A         |  |        |  |    App B         |  | |      |
-|  |  |  |                  |  |        |  |                  |  | |      |
-|  |  |  | HTTP to          |  |        |  |                  |  | |      |
-|  |  |  | localhost:9001   |  |        |  | Receives on      |  | |      |
-|  |  |  +--------+---------+  |        |  | localhost:8080   |  | |      |
-|  |  |           |            |        |  +--------^---------+  | |      |
-|  |  |           v            |        |           |            | |      |
-|  |  |  +------------------+  |        |  +--------+---------+  | |      |
-|  |  |  |  Envoy Sidecar   |  |        |  |  Envoy Sidecar   |  | |      |
-|  |  |  |                  |<-+-- mTLS -+->|                  |  | |     |
-|  |  |  |  Intercepts all  |  |        |  |  Intercepts all  |  | |      |
-|  |  |  |  outbound traffic|  |        |  |  inbound traffic |  | |      |
-|  |  |  +------------------+  |        |  +------------------+  | |      |
-|  |  |                        |        |                        | |      |
-|  |  +------------------------+        +------------------------+ |      |
-|  |                                                                 |    |
-|  |  TRAFFIC FLOW:                                                 |     |
-|  |  1. App A sends to localhost:9001                             |      |
-|  |  2. Sidecar intercepts (iptables redirect)                    |      |
-|  |  3. Sidecar resolves service-b, load balances                 |      |
-|  |  4. Sidecar establishes mTLS to service-b sidecar             |      |
-|  |  5. Service-b sidecar receives, forwards to localhost:8080    |      |
-|  |  6. App B processes request                                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Service A Pod                      Service B Pod                 |  |
+|  |  +------------------------+        +----------------------------+ |  |
+|  |  |                        |        |                            | |  |
+|  |  |  +------------------+  |        |  +----------------------+  | |  |
+|  |  |  |    App A         |  |        |  |    App B             |  | |  |
+|  |  |  |                  |  |        |  |                      |  | |  |
+|  |  |  | HTTP to          |  |        |  |                      |  | |  |
+|  |  |  | localhost:9001   |  |        |  | Receives on          |  | |  |
+|  |  |  +--------+---------+  |        |  | localhost:8080       |  | |  |
+|  |  |           |            |        |  +--------^-------------+  | |  |
+|  |  |           v            |        |           |                | |  |
+|  |  |  +------------------+  |        |  +--------+-------------+  | |  |
+|  |  |  |  Envoy Sidecar   |  |        |  |  Envoy Sidecar       |  | |  |
+|  |  |  |                  |<-+-- mTLS -+->|                     |  | |  |
+|  |  |  |  Intercepts all  |  |        |  |  Intercepts all      |  | |  |
+|  |  |  |  outbound traffic|  |        |  |  inbound traffic     |  | |  |
+|  |  |  +------------------+  |        |  +----------------------+  | |  |
+|  |  |                        |        |                            | |  |
+|  |  +------------------------+        +----------------------------+ |  |
+|  |                                                                   |  |
+|  |  TRAFFIC FLOW:                                                    |  |
+|  |  1. App A sends to localhost:9001                                 |  |
+|  |  2. Sidecar intercepts (iptables redirect)                        |  |
+|  |  3. Sidecar resolves service-b, load balances                     |  |
+|  |  4. Sidecar establishes mTLS to service-b sidecar                 |  |
+|  |  5. Service-b sidecar receives, forwards to localhost:8080        |  |
+|  |  6. App B processes request                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHAT SIDECAR PROVIDES:                                                 |
 |                                                                         |
@@ -831,69 +831,69 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  BACKEND COMMUNICATION PATTERNS SUMMARY                                 |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Pattern           Direction    Latency     Use Case          |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Request-Response  Bidir        Sync        APIs, queries     |      |
-|  |                                                                |     |
-|  |  Polling           Pull         High        Simple clients    |      |
-|  |                                                                |     |
-|  |  Long Polling      Pull         Medium      Fallback RT       |      |
-|  |                                                                |     |
-|  |  SSE               Push         Low         Server>Client     |      |
-|  |                    (1-way)                  notifications     |      |
-|  |                                                                |     |
-|  |  WebSocket         Bidir        Low         Real-time chat,   |      |
-|  |                                             gaming            |      |
-|  |                                                                |     |
-|  |  Pub/Sub           Push         Medium      Event-driven,     |      |
-|  |                                             decoupled         |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Pattern           Direction    Latency     Use Case             |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Request-Response  Bidir        Sync        APIs, queries        |   |
+|  |                                                                  |   |
+|  |  Polling           Pull         High        Simple clients       |   |
+|  |                                                                  |   |
+|  |  Long Polling      Pull         Medium      Fallback RT          |   |
+|  |                                                                  |   |
+|  |  SSE               Push         Low         Server>Client        |   |
+|  |                    (1-way)                  notifications        |   |
+|  |                                                                  |   |
+|  |  WebSocket         Bidir        Low         Real-time chat,      |   |
+|  |                                             gaming               |   |
+|  |                                                                  |   |
+|  |  Pub/Sub           Push         Medium      Event-driven,        |   |
+|  |                                             decoupled            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  HTTP VERSION COMPARISON                                                |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Feature           HTTP/1.1            HTTP/2                 |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Multiplexing      No (HOL blocking)   Yes (streams)          |      |
-|  |                                                                |     |
-|  |  Header Format     Text                Binary                 |      |
-|  |                                                                |     |
-|  |  Header Compress   No                  HPACK                  |      |
-|  |                                                                |     |
-|  |  Server Push       No                  Yes                    |      |
-|  |                                                                |     |
-|  |  Connections       Many (6/domain)     One (multiplexed)      |      |
-|  |                                                                |     |
-|  |  L4 LB Works       Yes                 Limited                |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Feature           HTTP/1.1            HTTP/2                    |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Multiplexing      No (HOL blocking)   Yes (streams)             |   |
+|  |                                                                  |   |
+|  |  Header Format     Text                Binary                    |   |
+|  |                                                                  |   |
+|  |  Header Compress   No                  HPACK                     |   |
+|  |                                                                  |   |
+|  |  Server Push       No                  Yes                       |   |
+|  |                                                                  |   |
+|  |  Connections       Many (6/domain)     One (multiplexed)         |   |
+|  |                                                                  |   |
+|  |  L4 LB Works       Yes                 Limited                   |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  CONNECTION POOL vs H2 MULTIPLEXING                                     |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Aspect            Conn Pool (H1)      H2 Multiplexing        |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Connections       Many                Few (one per dest)     |      |
-|  |                                                                |     |
-|  |  LB Granularity    Per-connection      Per-request (L7)       |      |
-|  |                                                                |     |
-|  |  HOL Blocking      Per-connection      TCP-level only         |      |
-|  |                                                                |     |
-|  |  Setup Overhead    High (per conn)     Low (once)             |      |
-|  |                                                                |     |
-|  |  Memory            Higher              Lower                  |      |
-|  |                                                                |     |
-|  |  Compatibility     Universal           Needs H2 support       |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Aspect            Conn Pool (H1)      H2 Multiplexing           |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Connections       Many                Few (one per dest)        |   |
+|  |                                                                  |   |
+|  |  LB Granularity    Per-connection      Per-request (L7)          |   |
+|  |                                                                  |   |
+|  |  HOL Blocking      Per-connection      TCP-level only            |   |
+|  |                                                                  |   |
+|  |  Setup Overhead    High (per conn)     Low (once)                |   |
+|  |                                                                  |   |
+|  |  Memory            Higher              Lower                     |   |
+|  |                                                                  |   |
+|  |  Compatibility     Universal           Needs H2 support          |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

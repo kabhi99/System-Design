@@ -75,27 +75,27 @@ Data can be cached at multiple levels, each with different latency:
 |                                                                         |
 |  CACHING LAYERS IN WEB ARCHITECTURE:                                    |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  User Browser                                                    |   |
-|  |      v (cache hit = no request)                                 |    |
-|  |  [1] Browser Cache (Cache-Control headers)                      |    |
-|  |      v                                                           |   |
-|  |  [2] CDN Cache (edge servers worldwide)                         |    |
-|  |      v                                                           |   |
-|  |  [3] Reverse Proxy Cache (Varnish, Nginx)                       |    |
-|  |      v                                                           |   |
-|  |  [4] Application Cache (in-process)                             |    |
-|  |      v                                                           |   |
-|  |  [5] Distributed Cache (Redis, Memcached)                       |    |
-|  |      v                                                           |   |
-|  |  [6] Database Query Cache                                       |    |
-|  |      v                                                           |   |
-|  |  [7] Database Buffer Pool                                       |    |
-|  |      v                                                           |   |
-|  |  [8] Disk                                                        |   |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  User Browser                                                      | |
+|  |      v (cache hit = no request)                                    | |
+|  |  [1] Browser Cache (Cache-Control headers)                         | |
+|  |      v                                                             | |
+|  |  [2] CDN Cache (edge servers worldwide)                            | |
+|  |      v                                                             | |
+|  |  [3] Reverse Proxy Cache (Varnish, Nginx)                          | |
+|  |      v                                                             | |
+|  |  [4] Application Cache (in-process)                                | |
+|  |      v                                                             | |
+|  |  [5] Distributed Cache (Redis, Memcached)                          | |
+|  |      v                                                             | |
+|  |  [6] Database Query Cache                                          | |
+|  |      v                                                             | |
+|  |  [7] Database Buffer Pool                                          | |
+|  |      v                                                             | |
+|  |  [8] Disk                                                          | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -156,25 +156,25 @@ The most common pattern. Application manages cache directly.
 |  2. If HIT: return cached data                                          |
 |  3. If MISS: query database, store in cache, return data                |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  Application                                                     |   |
-|  |      |                                                           |   |
-|  |      +---1---> Cache ---> HIT? ---> Return data                |     |
-|  |      |                      |                                    |   |
-|  |      |                     MISS                                  |   |
-|  |      |                      |                                    |   |
-|  |      |<------2--------------+                                    |   |
-|  |      |                                                           |   |
-|  |      +---3---> Database ---> Get data                          |     |
-|  |      |                          |                                |   |
-|  |      |<-------------------------+                                |   |
-|  |      |                                                           |   |
-|  |      +---4---> Cache ---> Store data                           |     |
-|  |      |                                                           |   |
-|  |      +---5---> Return data to user                             |     |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Application                                                       | |
+|  |      |                                                             | |
+|  |      +---1---> Cache ---> HIT? ---> Return data                    | |
+|  |      |                      |                                      | |
+|  |      |                     MISS                                    | |
+|  |      |                      |                                      | |
+|  |      |<------2--------------+                                      | |
+|  |      |                                                             | |
+|  |      +---3---> Database ---> Get data                              | |
+|  |      |                          |                                  | |
+|  |      |<-------------------------+                                  | |
+|  |      |                                                             | |
+|  |      +---4---> Cache ---> Store data                               | |
+|  |      |                                                             | |
+|  |      +---5---> Return data to user                                 | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  PSEUDOCODE:                                                            |
 |  -----------                                                            |
@@ -222,22 +222,22 @@ Cache is responsible for loading data from database.
 |                                                                         |
 |  READ-THROUGH PATTERN                                                   |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  Application                                                     |   |
-|  |      |                                                           |   |
-|  |      +---1---> Cache                                            |    |
-|  |      |            |                                              |   |
-|  |      |            +---> HIT? ---> Return data --------------+  |     |
-|  |      |            |                                          |  |    |
-|  |      |            +---> MISS? ---> Load from Database       |  |     |
-|  |      |                               |                       |  |    |
-|  |      |                               v                       |  |    |
-|  |      |                         Store in cache              |  |      |
-|  |      |                               |                       |  |    |
-|  |      |<------------------------------+-----------------------+  |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Application                                                       | |
+|  |      |                                                             | |
+|  |      +---1---> Cache                                               | |
+|  |      |            |                                                | |
+|  |      |            +---> HIT? ---> Return data ------------------+  | |
+|  |      |            |                                             |  | |
+|  |      |            +---> MISS? ---> Load from Database           |  | |
+|  |      |                               |                          |  | |
+|  |      |                               v                          |  | |
+|  |      |                         Store in cache                   |  | |
+|  |      |                               |                          |  | |
+|  |      |<------------------------------+--------------------------+  | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  DIFFERENCE FROM CACHE-ASIDE:                                           |
 |  * Application only talks to cache                                      |
@@ -274,20 +274,20 @@ Write to cache AND database synchronously.
 |                                                                         |
 |  WRITE-THROUGH PATTERN                                                  |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  Application                                                     |   |
-|  |      |                                                           |   |
-|  |      +---Write---> Cache                                        |    |
-|  |      |               |                                          |    |
-|  |      |               +---Write---> Database                    |     |
-|  |      |               |                 |                        |    |
-|  |      |               |<----------------+                        |    |
-|  |      |               |                                          |    |
-|  |      |<--------------+                                          |    |
-|  |      |        (wait for both to complete)                       |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Application                                                       | |
+|  |      |                                                             | |
+|  |      +---Write---> Cache                                           | |
+|  |      |               |                                             | |
+|  |      |               +---Write---> Database                        | |
+|  |      |               |                 |                           | |
+|  |      |               |<----------------+                           | |
+|  |      |               |                                             | |
+|  |      |<--------------+                                             | |
+|  |      |        (wait for both to complete)                          | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  PSEUDOCODE:                                                            |
 |  def update_user(user_id, data):                                        |
@@ -325,18 +325,18 @@ Write to cache immediately, database asynchronously.
 |                                                                         |
 |  WRITE-BEHIND PATTERN                                                   |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  Application                                                     |   |
-|  |      |                                                           |   |
-|  |      +---Write---> Cache ---> Return immediately (fast!)       |     |
-|  |      |               |                                           |   |
-|  |      |               +--> [Async Queue]                         |    |
-|  |      |                        |                                  |   |
-|  |      |                        v (batched, delayed)              |    |
-|  |      |                     Database                             |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Application                                                       | |
+|  |      |                                                             | |
+|  |      +---Write---> Cache ---> Return immediately (fast!)           | |
+|  |      |               |                                             | |
+|  |      |               +--> [Async Queue]                            | |
+|  |      |                        |                                    | |
+|  |      |                        v (batched, delayed)                 | |
+|  |      |                     Database                                | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |  1. Write to cache, return success                                      |
@@ -378,17 +378,17 @@ Write only to database, let cache expire naturally.
 |                                                                         |
 |  WRITE-AROUND PATTERN                                                   |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  Application                                                     |   |
-|  |      |                                                           |   |
-|  |      +---Write---> Database (only)                              |    |
-|  |      |                                                           |   |
-|  |      |   Cache NOT updated (still has old data)                |     |
-|  |      |   Will serve stale until TTL expires                    |     |
-|  |      |   OR we invalidate the cache                            |     |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Application                                                       | |
+|  |      |                                                             | |
+|  |      +---Write---> Database (only)                                 | |
+|  |      |                                                             | |
+|  |      |   Cache NOT updated (still has old data)                    | |
+|  |      |   Will serve stale until TTL expires                        | |
+|  |      |   OR we invalidate the cache                                | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  TWO VARIANTS:                                                          |
 |                                                                         |
@@ -468,18 +468,18 @@ and naming things." - Phil Karlton
 |  cache.set("user:123", user_data, ttl=3600)  # Expires in 1 hour        |
 |                                                                         |
 |  CHOOSING TTL:                                                          |
-|  +----------------------------+------------------------------------+    |
-|  | Data Type                  | Suggested TTL                      |    |
-|  +----------------------------+------------------------------------+    |
-|  | Session data               | 30 min - 24 hours                  |    |
-|  | User profile               | 1 - 24 hours                       |    |
-|  | Product details            | 5 min - 1 hour                     |    |
-|  | Stock prices               | 1 - 60 seconds                     |    |
-|  | Configuration              | 5 min - 1 hour                     |    |
-|  | Static content             | Days to weeks                      |    |
-|  | Search results             | 1 - 5 minutes                      |    |
-|  | Feed/timeline              | 30 seconds - 5 minutes             |    |
-|  +----------------------------+------------------------------------+    |
+|  +----------------------------+---------------------------------------+ |
+|  | Data Type                  | Suggested TTL                         | |
+|  +----------------------------+---------------------------------------+ |
+|  | Session data               | 30 min - 24 hours                     | |
+|  | User profile               | 1 - 24 hours                          | |
+|  | Product details            | 5 min - 1 hour                        | |
+|  | Stock prices               | 1 - 60 seconds                        | |
+|  | Configuration              | 5 min - 1 hour                        | |
+|  | Static content             | Days to weeks                         | |
+|  | Search results             | 1 - 5 minutes                         | |
+|  | Feed/timeline              | 30 seconds - 5 minutes                | |
+|  +----------------------------+---------------------------------------+ |
 |                                                                         |
 |  PROS: Simple, automatic cleanup                                        |
 |  CONS: Stale data during TTL window, fixed staleness                    |
@@ -529,18 +529,18 @@ and naming things." - Phil Karlton
 |  ---------------------------------                                      |
 |  Broadcast invalidation to all cache instances.                         |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |  Service A updates user                                        |     |
-|  |       |                                                         |    |
-|  |       +--> Update Database                                     |     |
-|  |       |                                                         |    |
-|  |       +--> Publish: "INVALIDATE user:123"                     |      |
-|  |                          |                                      |    |
-|  |              +-----------+-----------+                         |     |
-|  |              v           v           v                         |     |
-|  |           Cache 1    Cache 2    Cache 3                       |      |
-|  |           (delete)   (delete)   (delete)                      |      |
-|  +----------------------------------------------------------------+     |
+|  +-------------------------------------------------------------------+  |
+|  |  Service A updates user                                           |  |
+|  |       |                                                           |  |
+|  |       +--> Update Database                                        |  |
+|  |       |                                                           |  |
+|  |       +--> Publish: "INVALIDATE user:123"                         |  |
+|  |                          |                                        |  |
+|  |              +-----------+-----------+                            |  |
+|  |              v           v           v                            |  |
+|  |           Cache 1    Cache 2    Cache 3                           |  |
+|  |           (delete)   (delete)   (delete)                          |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Used in: Multi-server deployments, Redis Pub/Sub                       |
 |                                                                         |
@@ -559,7 +559,7 @@ When cached data expires, all requests hit the database simultaneously.
 |  THE STAMPEDE PROBLEM                                                   |
 |                                                                         |
 |  Timeline:                                                              |
-|  ---------------------------------------------------------------------  |
+|  -----------------------------------------------------------------------|
 |  Time 0:    Cache has "popular_item", serving 10,000 RPS                |
 |  Time 3600: TTL expires, cache entry removed                            |
 |  Time 3600.001: 1000 requests arrive in next 100ms                      |
@@ -567,19 +567,19 @@ When cached data expires, all requests hit the database simultaneously.
 |             > All 1000 query database simultaneously                    |
 |             > DATABASE OVERWHELMED!                                     |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                     Cache Miss!                                |     |
-|  |                          |                                     |     |
-|  |     +--------------------+--------------------+                |     |
-|  |     |                    |                    |                |     |
-|  |     v                    v                    v                |     |
-|  |  Request 1           Request 2          Request 1000          |      |
-|  |     |                    |                    |                |     |
-|  |     +--------------------+--------------------+                |     |
-|  |                          v                                     |     |
-|  |                     Database                                   |     |
-|  |                     OVERLOAD                                |        |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                     Cache Miss!                                  |   |
+|  |                          |                                       |   |
+|  |     +--------------------+--------------------+                  |   |
+|  |     |                    |                    |                  |   |
+|  |     v                    v                    v                  |   |
+|  |  Request 1           Request 2          Request 1000             |   |
+|  |     |                    |                    |                  |   |
+|  |     +--------------------+--------------------+                  |   |
+|  |                          v                                       |   |
+|  |                     Database                                     |   |
+|  |                     OVERLOAD                                     |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SOLUTIONS:                                                             |
 |                                                                         |
@@ -695,14 +695,14 @@ Queries for non-existent data bypass cache and hit database.
 |  ----------------------------                                           |
 |  Probabilistic structure: "definitely not exists" or "maybe exists"     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Bloom Filter: Very memory efficient (1GB = billions of items) |     |
-|  |                                                                 |    |
-|  |  Properties:                                                    |    |
-|  |  * NO false negatives: If it says "not exists", 100% sure     |      |
-|  |  * Possible false positives: May say "exists" when it doesn't |      |
-|  |  * Cannot delete items (use Cuckoo filter if needed)          |      |
-|  +-----------------------------------------------------------------+    |
+|  +--------------------------------------------------------------------+ |
+|  |  Bloom Filter: Very memory efficient (1GB = billions of items)     | |
+|  |                                                                    | |
+|  |  Properties:                                                       | |
+|  |  * NO false negatives: If it says "not exists", 100% sure          | |
+|  |  * Possible false positives: May say "exists" when it doesn't      | |
+|  |  * Cannot delete items (use Cuckoo filter if needed)               | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  def get_user(user_id):                                                 |
 |      if not bloom_filter.might_contain(user_id):                        |
@@ -796,15 +796,15 @@ One key is accessed much more than others.
 |  ---------------------------------------------                          |
 |  Cache hot data in application memory.                                  |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |  Request                                                       |     |
-|  |     |                                                          |     |
-|  |     +--> Local Cache (in-process, 100ns)                      |      |
-|  |     |       |                                                  |     |
-|  |     |       +--> MISS --> Distributed Cache (Redis, 1ms)     |       |
-|  |     |                          |                               |     |
-|  |     |                          +--> MISS --> Database         |      |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |  Request                                                         |   |
+|  |     |                                                            |   |
+|  |     +--> Local Cache (in-process, 100ns)                         |   |
+|  |     |       |                                                    |   |
+|  |     |       +--> MISS --> Distributed Cache (Redis, 1ms)         |   |
+|  |     |                          |                                 |   |
+|  |     |                          +--> MISS --> Database            |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Hot keys stay in local cache of every app server.                      |
 |  Reduces load on distributed cache.                                     |
@@ -1029,18 +1029,18 @@ Redis is the most popular distributed cache. Know it well.
 |  1. REDIS SENTINEL (HA without sharding)                                |
 |  -----------------------------------------                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Sentinel 1    Sentinel 2    Sentinel 3                        |     |
-|  |      |              |              |                           |     |
-|  |      +--------------+--------------+                           |     |
-|  |                     | (monitoring)                             |     |
-|  |                     v                                          |     |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |  Master <--- replication ---> Replica 1                |  |       |
-|  |  |                              ^                          |  |      |
-|  |  |                              +---- Replica 2           |  |       |
-|  |  +---------------------------------------------------------+  |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Sentinel 1    Sentinel 2    Sentinel 3                           |  |
+|  |      |              |              |                              |  |
+|  |      +--------------+--------------+                              |  |
+|  |                     | (monitoring)                                |  |
+|  |                     v                                             |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |  Master <--- replication ---> Replica 1                     |  |  |
+|  |  |                              ^                              |  |  |
+|  |  |                              +---- Replica 2                |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  * Sentinels monitor master health                                      |
 |  * On master failure, elect new master from replicas                    |
@@ -1051,21 +1051,21 @@ Redis is the most popular distributed cache. Know it well.
 |  2. REDIS CLUSTER (HA + sharding)                                       |
 |  ----------------------------------                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Shard 1         Shard 2         Shard 3                      |     |
-|  |  +--------+      +--------+      +--------+                   |      |
-|  |  |Master 1|      |Master 2|      |Master 3|                   |      |
-|  |  |slots   |      |slots   |      |slots   |                   |      |
-|  |  |0-5460  |      |5461-   |      |10923-  |                   |      |
-|  |  +--------+      |10922   |      |16383   |                   |      |
-|  |      |           +--------+      +--------+                   |      |
-|  |      v               |               |                         |     |
-|  |  +--------+      +--------+      +--------+                   |      |
-|  |  |Replica |      |Replica |      |Replica |                   |      |
-|  |  +--------+      +--------+      +--------+                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   Shard 1         Shard 2         Shard 3                         |  |
+|  |  +--------+      +--------+      +--------+                       |  |
+|  |  |Master 1|      |Master 2|      |Master 3|                       |  |
+|  |  |slots   |      |slots   |      |slots   |                       |  |
+|  |  |0-5460  |      |5461-   |      |10923-  |                       |  |
+|  |  +--------+      |10922   |      |16383   |                       |  |
+|  |      |           +--------+      +--------+                       |  |
+|  |      v               |               |                            |  |
+|  |  +--------+      +--------+      +--------+                       |  |
+|  |  |Replica |      |Replica |      |Replica |                       |  |
+|  |  +--------+      +--------+      +--------+                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  * Data sharded across masters using hash slots (16384 slots)           |
 |  * Key > slot: CRC16(key) % 16384                                       |
@@ -1098,17 +1098,17 @@ Redis is the most popular distributed cache. Know it well.
 |  CDN = Network of edge servers distributed globally                     |
 |  Purpose: Serve content from location closest to user                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Without CDN:                                                   |    |
-|  |  User in Australia > Request > US Origin Server                |     |
-|  |  Latency: 300ms+                                               |     |
-|  |                                                                 |    |
-|  |  With CDN:                                                      |    |
-|  |  User in Australia > Request > Sydney Edge Server              |     |
-|  |  Latency: 20ms                                                 |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Without CDN:                                                     |  |
+|  |  User in Australia > Request > US Origin Server                   |  |
+|  |  Latency: 300ms+                                                  |  |
+|  |                                                                   |  |
+|  |  With CDN:                                                        |  |
+|  |  User in Australia > Request > Sydney Edge Server                 |  |
+|  |  Latency: 20ms                                                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHAT TO PUT ON CDN:                                                    |
 |  Y Images, videos, audio                                                |
@@ -1121,25 +1121,25 @@ Redis is the most popular distributed cache. Know it well.
 |                                                                         |
 |  CDN ARCHITECTURE                                                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                     +-----------------+                        |     |
-|  |                     |  Origin Server  |                        |     |
-|  |                     |  (your server)  |                        |     |
-|  |                     +--------+--------+                        |     |
-|  |                              |                                  |    |
-|  |           +------------------+------------------+              |     |
-|  |           |                  |                  |              |     |
-|  |           v                  v                  v              |     |
-|  |     +----------+      +----------+      +----------+         |       |
-|  |     | Edge US  |      | Edge EU  |      |Edge APAC |         |       |
-|  |     | (cache)  |      | (cache)  |      | (cache)  |         |       |
-|  |     +----------+      +----------+      +----------+         |       |
-|  |           ^                  ^                  ^              |     |
-|  |           |                  |                  |              |     |
-|  |        US Users          EU Users          APAC Users         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                     +-----------------+                           |  |
+|  |                     |  Origin Server  |                           |  |
+|  |                     |  (your server)  |                           |  |
+|  |                     +--------+--------+                           |  |
+|  |                              |                                    |  |
+|  |           +------------------+------------------+                 |  |
+|  |           |                  |                  |                 |  |
+|  |           v                  v                  v                 |  |
+|  |     +----------+      +----------+      +----------+              |  |
+|  |     | Edge US  |      | Edge EU  |      |Edge APAC |              |  |
+|  |     | (cache)  |      | (cache)  |      | (cache)  |              |  |
+|  |     +----------+      +----------+      +----------+              |  |
+|  |           ^                  ^                  ^                 |  |
+|  |           |                  |                  |                 |  |
+|  |        US Users          EU Users          APAC Users             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  FLOW:                                                                  |
 |  1. User requests image.jpg                                             |
@@ -1303,14 +1303,14 @@ Redis is the most popular distributed cache. Know it well.
 |  Optimal bits (m): m = -n * ln(p) / (ln(2))^2                           |
 |  Optimal hashes (k): k = (m/n) * ln(2)                                  |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  | Elements (n)  |  FP Rate (p) | Bits (m)     | Hashes (k)        |    |
-|  +------------------------------------------------------------------+   |
-|  | 1 million     | 1%           | 9.6 MB       | 7                 |    |
-|  | 1 million     | 0.1%         | 14.4 MB      | 10                |    |
-|  | 10 million    | 1%           | 96 MB        | 7                 |    |
-|  | 100 million   | 1%           | 960 MB       | 7                 |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Elements (n)  |  FP Rate (p) | Bits (m)     | Hashes (k)           | |
+|  +--------------------------------------------------------------------+ |
+|  | 1 million     | 1%           | 9.6 MB       | 7                    | |
+|  | 1 million     | 0.1%         | 14.4 MB      | 10                   | |
+|  | 10 million    | 1%           | 96 MB        | 7                    | |
+|  | 100 million   | 1%           | 960 MB       | 7                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  SPACE COMPARISON:                                                      |
 |  * Storing 1M user IDs (8 bytes each): 8 MB                             |

@@ -464,25 +464,25 @@ The API server is the front door to Kubernetes:
 |  kubectl apply -f pod.yaml                                              |
 |         |                                                               |
 |         v                                                               |
-|  +-----------------------------------------------------------------+    |
-|  |                      API SERVER                                  |   |
-|  |                                                                  |   |
-|  |  1. AUTHENTICATION                                              |    |
-|  |     Who are you? (certificates, tokens, etc.)                  |     |
-|  |                          v                                      |    |
-|  |  2. AUTHORIZATION                                               |    |
-|  |     Can you do this? (RBAC)                                    |     |
-|  |                          v                                      |    |
-|  |  3. ADMISSION CONTROL                                           |    |
-|  |     Should we allow this? (mutating & validating webhooks)     |     |
-|  |                          v                                      |    |
-|  |  4. VALIDATION                                                  |    |
-|  |     Is the request valid?                                      |     |
-|  |                          v                                      |    |
-|  |  5. PERSIST TO ETCD                                             |    |
-|  |     Store the desired state                                    |     |
-|  |                                                                  |   |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      API SERVER                                   |  |
+|  |                                                                   |  |
+|  |  1. AUTHENTICATION                                                |  |
+|  |     Who are you? (certificates, tokens, etc.)                     |  |
+|  |                          v                                        |  |
+|  |  2. AUTHORIZATION                                                 |  |
+|  |     Can you do this? (RBAC)                                       |  |
+|  |                          v                                        |  |
+|  |  3. ADMISSION CONTROL                                             |  |
+|  |     Should we allow this? (mutating & validating webhooks)        |  |
+|  |                          v                                        |  |
+|  |  4. VALIDATION                                                    |  |
+|  |     Is the request valid?                                         |  |
+|  |                          v                                        |  |
+|  |  5. PERSIST TO ETCD                                               |  |
+|  |     Store the desired state                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  API SERVER IS STATELESS                                                |
 |  * Can run multiple instances for HA                                    |
@@ -646,32 +646,32 @@ The scheduler decides where pods run:
 |  New pod created (unscheduled)                                          |
 |         |                                                               |
 |         v                                                               |
-|  +-----------------------------------------------------------------+    |
-|  |                      SCHEDULER                                   |   |
-|  |                                                                  |   |
-|  |  1. FILTERING                                                   |    |
-|  |     Which nodes CAN run this pod?                              |     |
-|  |     * Has enough CPU/memory?                                   |     |
-|  |     * Matches nodeSelector?                                    |     |
-|  |     * Tolerates taints?                                        |     |
-|  |     * Has required ports available?                            |     |
-|  |                                                                  |   |
-|  |     Nodes: [A, B, C, D] > Filtered: [A, B, D]                 |      |
-|  |                                                                  |   |
-|  |  2. SCORING                                                     |    |
-|  |     Rank the filtered nodes                                    |     |
-|  |     * Balance resource usage                                   |     |
-|  |     * Image locality (already has image?)                     |      |
-|  |     * Inter-pod affinity/anti-affinity                        |      |
-|  |     * Custom priorities                                        |     |
-|  |                                                                  |   |
-|  |     Scores: A=85, B=70, D=90 > Best: D                        |      |
-|  |                                                                  |   |
-|  |  3. BINDING                                                     |    |
-|  |     Assign pod to node D                                       |     |
-|  |     Write binding to API server                                |     |
-|  |                                                                  |   |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      SCHEDULER                                    |  |
+|  |                                                                   |  |
+|  |  1. FILTERING                                                     |  |
+|  |     Which nodes CAN run this pod?                                 |  |
+|  |     * Has enough CPU/memory?                                      |  |
+|  |     * Matches nodeSelector?                                       |  |
+|  |     * Tolerates taints?                                           |  |
+|  |     * Has required ports available?                               |  |
+|  |                                                                   |  |
+|  |     Nodes: [A, B, C, D] > Filtered: [A, B, D]                     |  |
+|  |                                                                   |  |
+|  |  2. SCORING                                                       |  |
+|  |     Rank the filtered nodes                                       |  |
+|  |     * Balance resource usage                                      |  |
+|  |     * Image locality (already has image?)                         |  |
+|  |     * Inter-pod affinity/anti-affinity                            |  |
+|  |     * Custom priorities                                           |  |
+|  |                                                                   |  |
+|  |     Scores: A=85, B=70, D=90 > Best: D                            |  |
+|  |                                                                   |  |
+|  |  3. BINDING                                                       |  |
+|  |     Assign pod to node D                                          |  |
+|  |     Write binding to API server                                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |         |                                                               |
 |         v                                                               |
 |  kubelet on Node D receives pod spec and starts containers              |

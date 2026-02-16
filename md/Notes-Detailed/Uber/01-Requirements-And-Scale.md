@@ -265,36 +265,36 @@ with nearby drivers, and provide accurate ETAs.
 |                                                                         |
 |  UBER SCALE SUMMARY                                                     |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  USERS                                                        |      |
-|  |  -----                                                        |      |
-|  |  Active drivers: 1 million (peak concurrent)                 |       |
-|  |  Active riders: 100 million MAU                              |       |
-|  |                                                                |     |
-|  |  LOCATION UPDATES                                             |      |
-|  |  ----------------                                             |      |
-|  |  250,000 writes/second                                       |       |
-|  |  25 MB/sec write bandwidth                                   |       |
-|  |                                                                |     |
-|  |  GEOSPATIAL QUERIES                                           |      |
-|  |  ------------------                                           |      |
-|  |  100,000 reads/second                                        |       |
-|  |  Must complete in <100ms                                     |       |
-|  |                                                                |     |
-|  |  RIDES                                                        |      |
-|  |  -----                                                        |      |
-|  |  20 million/day                                               |      |
-|  |  1,000/second peak                                           |       |
-|  |                                                                |     |
-|  |  KEY CHALLENGES                                               |      |
-|  |  --------------                                               |      |
-|  |  1. High-throughput location ingestion                       |       |
-|  |  2. Fast geospatial queries                                  |       |
-|  |  3. Real-time matching                                       |       |
-|  |  4. Accurate ETA prediction                                  |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  USERS                                                           |   |
+|  |  -----                                                           |   |
+|  |  Active drivers: 1 million (peak concurrent)                     |   |
+|  |  Active riders: 100 million MAU                                  |   |
+|  |                                                                  |   |
+|  |  LOCATION UPDATES                                                |   |
+|  |  ----------------                                                |   |
+|  |  250,000 writes/second                                           |   |
+|  |  25 MB/sec write bandwidth                                       |   |
+|  |                                                                  |   |
+|  |  GEOSPATIAL QUERIES                                              |   |
+|  |  ------------------                                              |   |
+|  |  100,000 reads/second                                            |   |
+|  |  Must complete in <100ms                                         |   |
+|  |                                                                  |   |
+|  |  RIDES                                                           |   |
+|  |  -----                                                           |   |
+|  |  20 million/day                                                  |   |
+|  |  1,000/second peak                                               |   |
+|  |                                                                  |   |
+|  |  KEY CHALLENGES                                                  |   |
+|  |  --------------                                                  |   |
+|  |  1. High-throughput location ingestion                           |   |
+|  |  2. Fast geospatial queries                                      |   |
+|  |  3. Real-time matching                                           |   |
+|  |  4. Accurate ETA prediction                                      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

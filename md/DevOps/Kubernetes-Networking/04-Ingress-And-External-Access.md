@@ -404,25 +404,25 @@ spec:
 |                                                                         |
 |  NGINX INGRESS CONTROLLER                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   +-------------------+    +-------------------------------+  |      |
-|  |   |  Controller       |    |       NGINX                   |  |      |
-|  |   |  (Go binary)      |    |       (nginx worker)         |  |       |
-|  |   |                   |    |                               |  |      |
-|  |   |  * Watches K8s API|    |  * Actual request handling   |  |       |
-|  |   |  * Ingress        |--->|  * TLS termination           |  |       |
-|  |   |  * Services       |    |  * Load balancing            |  |       |
-|  |   |  * Endpoints      |    |  * Proxying                  |  |       |
-|  |   |  * Secrets (TLS)  |    |                               |  |      |
-|  |   |                   |    |  Config: /etc/nginx/nginx.conf|  |      |
-|  |   |  Generates        |    |                               |  |      |
-|  |   |  nginx.conf      |---->|                               |  |      |
-|  |   |                   |    |                               |  |      |
-|  |   +-------------------+    +-------------+-----------------+  |      |
-|  |                                          |                     |     |
-|  |                                          |                     |     |
-|  +------------------------------------------+---------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   +-------------------+    +----------------------------------+  |   |
+|  |   |  Controller       |    |       NGINX                      |  |   |
+|  |   |  (Go binary)      |    |       (nginx worker)             |  |   |
+|  |   |                   |    |                                  |  |   |
+|  |   |  * Watches K8s API|    |  * Actual request handling       |  |   |
+|  |   |  * Ingress        |--->|  * TLS termination               |  |   |
+|  |   |  * Services       |    |  * Load balancing                |  |   |
+|  |   |  * Endpoints      |    |  * Proxying                      |  |   |
+|  |   |  * Secrets (TLS)  |    |                                  |  |   |
+|  |   |                   |    |  Config: /etc/nginx/nginx.conf   |  |   |
+|  |   |  Generates        |    |                                  |  |   |
+|  |   |  nginx.conf      |---->|                                  |  |   |
+|  |   |                   |    |                                  |  |   |
+|  |   +-------------------+    +-------------+--------------------+  |   |
+|  |                                          |                       |   |
+|  |                                          |                       |   |
+|  +------------------------------------------+-----------------------+   |
 |                                             |                           |
 |                                             v                           |
 |                          +---------------------------------+            |
@@ -607,27 +607,27 @@ spec:
 |   Internet                                                              |
 |       |                                                                 |
 |       v                                                                 |
-|   +---------------------------------------------------------------+     |
-|   |              Cloud Load Balancer (L4)                         |     |
-|   |   * Simple TCP/UDP load balancing                            |      |
-|   |   * Health checks                                            |      |
-|   |   * DDoS protection                                          |      |
-|   +---------------------------+-----------------------------------+     |
+|   +-----------------------------------------------------------------+   |
+|   |              Cloud Load Balancer (L4)                           |   |
+|   |   * Simple TCP/UDP load balancing                               |   |
+|   |   * Health checks                                               |   |
+|   |   * DDoS protection                                             |   |
+|   +---------------------------+-------------------------------------+   |
 |                               |                                         |
 |                               v                                         |
-|   +---------------------------------------------------------------+     |
-|   |              Ingress Controller (L7)                          |     |
-|   |                                                               |     |
-|   |   * TLS termination                                          |      |
-|   |   * Host/path routing                                        |      |
-|   |   * Rate limiting                                            |      |
-|   |   * Authentication                                           |      |
-|   |   * Logging/metrics                                          |      |
-|   |                                                               |     |
-|   |   Run as Deployment with HPA                                 |      |
-|   |   Multiple replicas for HA                                   |      |
-|   |                                                               |     |
-|   +-----------------------------+---------------------------------+     |
+|   +-----------------------------------------------------------------+   |
+|   |              Ingress Controller (L7)                            |   |
+|   |                                                                 |   |
+|   |   * TLS termination                                             |   |
+|   |   * Host/path routing                                           |   |
+|   |   * Rate limiting                                               |   |
+|   |   * Authentication                                              |   |
+|   |   * Logging/metrics                                             |   |
+|   |                                                                 |   |
+|   |   Run as Deployment with HPA                                    |   |
+|   |   Multiple replicas for HA                                      |   |
+|   |                                                                 |   |
+|   +-----------------------------+-----------------------------------+   |
 |                                 |                                       |
 |                    +------------+------------+                          |
 |                    |            |            |                          |
@@ -743,39 +743,39 @@ spec:
 |                                                                         |
 |  INGRESS AND EXTERNAL ACCESS - KEY TAKEAWAYS                            |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  INGRESS BENEFITS                                                |   |
-|  |  * Single entry point for multiple services                     |    |
-|  |  * TLS termination                                              |    |
-|  |  * Host and path-based routing                                  |    |
-|  |  * Cost savings (1 LB vs many)                                  |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  INGRESS CONTROLLERS                                             |   |
-|  |  * NGINX: Most popular, mature                                  |    |
-|  |  * Traefik: Modern, auto-config                                 |    |
-|  |  * AWS ALB: Native AWS integration                              |    |
-|  |  * Must install separately-K8s doesn't include one             |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  GATEWAY API                                                     |   |
-|  |  * Future of Kubernetes ingress                                 |    |
-|  |  * Separates infrastructure from routing                        |    |
-|  |  * Supports TCP/UDP, gRPC, traffic splitting                   |     |
-|  |  * Role-based configuration                                     |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  PRODUCTION TIPS                                                 |   |
-|  |  * Multiple Ingress Controller replicas                        |     |
-|  |  * Use cert-manager for TLS automation                         |     |
-|  |  * Cloud LB in front for DDoS protection                       |     |
-|  |  * Monitor and set appropriate resource limits                 |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  INGRESS BENEFITS                                                  | |
+|  |  * Single entry point for multiple services                        | |
+|  |  * TLS termination                                                 | |
+|  |  * Host and path-based routing                                     | |
+|  |  * Cost savings (1 LB vs many)                                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  INGRESS CONTROLLERS                                               | |
+|  |  * NGINX: Most popular, mature                                     | |
+|  |  * Traefik: Modern, auto-config                                    | |
+|  |  * AWS ALB: Native AWS integration                                 | |
+|  |  * Must install separately-K8s doesn't include one                 | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  GATEWAY API                                                       | |
+|  |  * Future of Kubernetes ingress                                    | |
+|  |  * Separates infrastructure from routing                           | |
+|  |  * Supports TCP/UDP, gRPC, traffic splitting                       | |
+|  |  * Role-based configuration                                        | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  PRODUCTION TIPS                                                   | |
+|  |  * Multiple Ingress Controller replicas                            | |
+|  |  * Use cert-manager for TLS automation                             | |
+|  |  * Cloud LB in front for DDoS protection                           | |
+|  |  * Monitor and set appropriate resource limits                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

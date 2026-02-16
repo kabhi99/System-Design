@@ -12,51 +12,51 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  BOOKING FLOW OVERVIEW                                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  STEP 1: VIEW SEATS                                            |     |
-|  |  -------------------                                            |    |
-|  |  User sees available seats for a show                          |     |
-|  |  Real-time updates via WebSocket                               |     |
-|  |                                                                 |    |
-|  |                    v                                            |    |
-|  |                                                                 |    |
-|  |  STEP 2: SELECT SEATS                                          |     |
-|  |  ----------------------                                         |    |
-|  |  User selects 2 seats (A5, A6)                                 |     |
-|  |  Clicks "Proceed to Pay"                                       |     |
-|  |                                                                 |    |
-|  |                    v                                            |    |
-|  |                                                                 |    |
-|  |  STEP 3: LOCK SEATS (Reservation)                              |     |
-|  |  ---------------------------------                              |    |
-|  |  System locks seats for 10 minutes                             |     |
-|  |  Creates reservation record                                    |     |
-|  |  Other users see seats as "locked"                             |     |
-|  |                                                                 |    |
-|  |                    v                                            |    |
-|  |                                                                 |    |
-|  |  STEP 4: PAYMENT                                               |     |
-|  |  ----------------                                               |    |
-|  |  User completes payment                                        |     |
-|  |  Timer running (10 minutes)                                    |     |
-|  |                                                                 |    |
-|  |                    v                                            |    |
-|  |                                                                 |    |
-|  |  STEP 5: CONFIRM BOOKING                                       |     |
-|  |  -------------------------                                      |    |
-|  |  Payment successful > Confirm booking                          |     |
-|  |  Mark seats as "booked"                                        |     |
-|  |  Generate ticket                                               |     |
-|  |                                                                 |    |
-|  |                    v                                            |    |
-|  |                                                                 |    |
-|  |  STEP 6: NOTIFICATION                                          |     |
-|  |  --------------------                                           |    |
-|  |  Send confirmation email/SMS                                   |     |
-|  |  E-ticket with QR code                                         |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 1: VIEW SEATS                                               |  |
+|  |  -------------------                                              |  |
+|  |  User sees available seats for a show                             |  |
+|  |  Real-time updates via WebSocket                                  |  |
+|  |                                                                   |  |
+|  |                    v                                              |  |
+|  |                                                                   |  |
+|  |  STEP 2: SELECT SEATS                                             |  |
+|  |  ----------------------                                           |  |
+|  |  User selects 2 seats (A5, A6)                                    |  |
+|  |  Clicks "Proceed to Pay"                                          |  |
+|  |                                                                   |  |
+|  |                    v                                              |  |
+|  |                                                                   |  |
+|  |  STEP 3: LOCK SEATS (Reservation)                                 |  |
+|  |  ---------------------------------                                |  |
+|  |  System locks seats for 10 minutes                                |  |
+|  |  Creates reservation record                                       |  |
+|  |  Other users see seats as "locked"                                |  |
+|  |                                                                   |  |
+|  |                    v                                              |  |
+|  |                                                                   |  |
+|  |  STEP 4: PAYMENT                                                  |  |
+|  |  ----------------                                                 |  |
+|  |  User completes payment                                           |  |
+|  |  Timer running (10 minutes)                                       |  |
+|  |                                                                   |  |
+|  |                    v                                              |  |
+|  |                                                                   |  |
+|  |  STEP 5: CONFIRM BOOKING                                          |  |
+|  |  -------------------------                                        |  |
+|  |  Payment successful > Confirm booking                             |  |
+|  |  Mark seats as "booked"                                           |  |
+|  |  Generate ticket                                                  |  |
+|  |                                                                   |  |
+|  |                    v                                              |  |
+|  |                                                                   |  |
+|  |  STEP 6: NOTIFICATION                                             |  |
+|  |  --------------------                                             |  |
+|  |  Send confirmation email/SMS                                      |  |
+|  |  E-ticket with QR code                                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -168,42 +168,42 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  "Lock the rows BEFORE reading them"                                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  -- Transaction A                                              |     |
-|  |  BEGIN;                                                        |     |
-|  |  SELECT * FROM seats                                           |     |
-|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6')              |      |
-|  |  FOR UPDATE;  -- < Locks these rows!                          |      |
-|  |                                                                 |    |
-|  |  -- Rows are now locked                                        |     |
-|  |  -- Check if all seats are available                          |      |
-|  |  -- If yes, update status                                     |      |
-|  |                                                                 |    |
-|  |  UPDATE seats SET status = 'locked', locked_by = 'user_A'     |      |
-|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6');            |       |
-|  |                                                                 |    |
-|  |  COMMIT;  -- < Releases locks                                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  -- Transaction A                                                 |  |
+|  |  BEGIN;                                                           |  |
+|  |  SELECT * FROM seats                                              |  |
+|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6')                  |  |
+|  |  FOR UPDATE;  -- < Locks these rows!                              |  |
+|  |                                                                   |  |
+|  |  -- Rows are now locked                                           |  |
+|  |  -- Check if all seats are available                              |  |
+|  |  -- If yes, update status                                         |  |
+|  |                                                                   |  |
+|  |  UPDATE seats SET status = 'locked', locked_by = 'user_A'         |  |
+|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6');                 |  |
+|  |                                                                   |  |
+|  |  COMMIT;  -- < Releases locks                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  -- Transaction B (runs at same time)                          |     |
-|  |  BEGIN;                                                        |     |
-|  |  SELECT * FROM seats                                           |     |
-|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6')              |      |
-|  |  FOR UPDATE;                                                   |     |
-|  |                                                                 |    |
-|  |  -- BLOCKS! Waits for Transaction A to commit                 |      |
-|  |  -- ...                                                        |     |
-|  |  -- Transaction A commits                                      |     |
-|  |  -- Transaction B continues, sees status = 'locked'           |      |
-|  |  -- Transaction B aborts (seats not available)                |      |
-|  |                                                                 |    |
-|  |  ROLLBACK;                                                     |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  -- Transaction B (runs at same time)                             |  |
+|  |  BEGIN;                                                           |  |
+|  |  SELECT * FROM seats                                              |  |
+|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6')                  |  |
+|  |  FOR UPDATE;                                                      |  |
+|  |                                                                   |  |
+|  |  -- BLOCKS! Waits for Transaction A to commit                     |  |
+|  |  -- ...                                                           |  |
+|  |  -- Transaction A commits                                         |  |
+|  |  -- Transaction B continues, sees status = 'locked'               |  |
+|  |  -- Transaction B aborts (seats not available)                    |  |
+|  |                                                                   |  |
+|  |  ROLLBACK;                                                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |  1. SELECT FOR UPDATE acquires row-level lock                           |
@@ -233,13 +233,13 @@ flow, race conditions, and locking strategies.
 |  "Don't lock, but check before committing"                              |
 |                                                                         |
 |  TABLE SCHEMA:                                                          |
-|  +----------------------------------------------------------------+     |
-|  | seats                                                          |     |
-|  | -------------------------------------------------------------  |     |
-|  | id         | show_id | status    | version | updated_at       |      |
-|  | -------------------------------------------------------------  |     |
-|  | A5         | 123     | available | 1       | 2024-01-15 10:00 |      |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  | seats                                                            |   |
+|  | -------------------------------------------------------------    |   |
+|  | id         | show_id | status    | version | updated_at          |   |
+|  | -------------------------------------------------------------    |   |
+|  | A5         | 123     | available | 1       | 2024-01-15 10:00    |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  ALGORITHM:                                                             |
 |                                                                         |
@@ -294,36 +294,36 @@ flow, race conditions, and locking strategies.
 |  * Reduces database load                                                |
 |                                                                         |
 |  BASIC REDIS LOCK:                                                      |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  // Acquire lock                                               |     |
-|  |  SET seat:123:A5 user_a_reservation_id NX EX 600              |      |
-|  |      |              |                    |  |                  |     |
-|  |      |              |                    |  +- Expire in 600s  |     |
-|  |      |              |                    +---- Only if Not eXists|   |
-|  |      |              +------------------------- Value (owner)   |     |
-|  |      +---------------------------------------- Key            |      |
-|  |                                                                |     |
-|  |  Returns:                                                      |     |
-|  |  * "OK" > Lock acquired                                       |      |
-|  |  * nil  > Lock already held by someone else                   |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  // Acquire lock                                                 |   |
+|  |  SET seat:123:A5 user_a_reservation_id NX EX 600                 |   |
+|  |      |              |                    |  |                    |   |
+|  |      |              |                    |  +- Expire in 600s    |   |
+|  |      |              |                    +---- Only if Not eXists |  |
+|  |      |              +------------------------- Value (owner)     |   |
+|  |      +---------------------------------------- Key               |   |
+|  |                                                                  |   |
+|  |  Returns:                                                        |   |
+|  |  * "OK" > Lock acquired                                          |   |
+|  |  * nil  > Lock already held by someone else                      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SAFE LOCK RELEASE (Lua Script):                                        |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  -- Only release if we own the lock                           |      |
-|  |  if redis.call('GET', KEYS[1]) == ARGV[1] then                |      |
-|  |      return redis.call('DEL', KEYS[1])                        |      |
-|  |  else                                                          |     |
-|  |      return 0                                                  |     |
-|  |  end                                                           |     |
-|  |                                                                |     |
-|  |  -- KEYS[1] = seat:123:A5                                     |      |
-|  |  -- ARGV[1] = user_a_reservation_id                           |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  -- Only release if we own the lock                              |   |
+|  |  if redis.call('GET', KEYS[1]) == ARGV[1] then                   |   |
+|  |      return redis.call('DEL', KEYS[1])                           |   |
+|  |  else                                                            |   |
+|  |      return 0                                                    |   |
+|  |  end                                                             |   |
+|  |                                                                  |   |
+|  |  -- KEYS[1] = seat:123:A5                                        |   |
+|  |  -- ARGV[1] = user_a_reservation_id                              |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHY LUA SCRIPT?                                                        |
 |  Without it:                                                            |
@@ -350,53 +350,53 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  SOLUTION: Lua Script for Atomic Multi-Key Operation                    |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  -- Atomic multi-seat reservation                             |      |
-|  |  -- KEYS = seat keys to lock                                  |      |
-|  |  -- ARGV[1] = reservation_id                                  |      |
-|  |  -- ARGV[2] = TTL in milliseconds                            |       |
-|  |                                                                |     |
-|  |  -- First, check if ALL seats are available                   |      |
-|  |  for i = 1, #KEYS do                                          |      |
-|  |      if redis.call('EXISTS', KEYS[i]) == 1 then              |       |
-|  |          return 0  -- At least one seat is taken             |       |
-|  |      end                                                       |     |
-|  |  end                                                           |     |
-|  |                                                                |     |
-|  |  -- All available, lock them all                              |      |
-|  |  for i = 1, #KEYS do                                          |      |
-|  |      redis.call('SET', KEYS[i], ARGV[1], 'PX', ARGV[2])      |       |
-|  |  end                                                           |     |
-|  |                                                                |     |
-|  |  return 1  -- Success                                         |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  -- Atomic multi-seat reservation                                |   |
+|  |  -- KEYS = seat keys to lock                                     |   |
+|  |  -- ARGV[1] = reservation_id                                     |   |
+|  |  -- ARGV[2] = TTL in milliseconds                                |   |
+|  |                                                                  |   |
+|  |  -- First, check if ALL seats are available                      |   |
+|  |  for i = 1, #KEYS do                                             |   |
+|  |      if redis.call('EXISTS', KEYS[i]) == 1 then                  |   |
+|  |          return 0  -- At least one seat is taken                 |   |
+|  |      end                                                         |   |
+|  |  end                                                             |   |
+|  |                                                                  |   |
+|  |  -- All available, lock them all                                 |   |
+|  |  for i = 1, #KEYS do                                             |   |
+|  |      redis.call('SET', KEYS[i], ARGV[1], 'PX', ARGV[2])          |   |
+|  |  end                                                             |   |
+|  |                                                                  |   |
+|  |  return 1  -- Success                                            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  JAVA CODE:                                                             |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  public boolean reserveSeats(                                 |      |
-|  |      Long showId,                                              |     |
-|  |      List<String> seatIds,                                    |      |
-|  |      String reservationId,                                    |      |
-|  |      Duration ttl                                              |     |
-|  |  ) {                                                           |     |
-|  |      List<String> keys = seatIds.stream()                     |      |
-|  |          .map(s -> "seat:" + showId + ":" + s)                |      |
-|  |          .toList();                                            |     |
-|  |                                                                |     |
-|  |      Long result = redisTemplate.execute(                     |      |
-|  |          MULTI_SEAT_LOCK_SCRIPT,                               |     |
-|  |          keys,                                                 |     |
-|  |          reservationId,                                        |     |
-|  |          String.valueOf(ttl.toMillis())                       |      |
-|  |      );                                                        |     |
-|  |                                                                |     |
-|  |      return result == 1L;                                     |      |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  public boolean reserveSeats(                                    |   |
+|  |      Long showId,                                                |   |
+|  |      List<String> seatIds,                                       |   |
+|  |      String reservationId,                                       |   |
+|  |      Duration ttl                                                |   |
+|  |  ) {                                                             |   |
+|  |      List<String> keys = seatIds.stream()                        |   |
+|  |          .map(s -> "seat:" + showId + ":" + s)                   |   |
+|  |          .toList();                                              |   |
+|  |                                                                  |   |
+|  |      Long result = redisTemplate.execute(                        |   |
+|  |          MULTI_SEAT_LOCK_SCRIPT,                                 |   |
+|  |          keys,                                                   |   |
+|  |          reservationId,                                          |   |
+|  |          String.valueOf(ttl.toMillis())                          |   |
+|  |      );                                                          |   |
+|  |                                                                  |   |
+|  |      return result == 1L;                                        |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -410,59 +410,59 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  User A: Reserve seats A5, A6 for show 123                              |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  +------+    +------------+    +------------+    +---------+ |       |
-|  |  |Client|    |API Gateway |    |Booking Svc |    |  Redis  | |       |
-|  |  +--+---+    +-----+------+    +-----+------+    +----+----+ |       |
-|  |     |              |                 |                 |      |      |
-|  |     | POST /reservations             |                 |      |      |
-|  |     | {showId:123,seats:[A5,A6]}    |                 |      |       |
-|  |     |------------->|                 |                 |      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              | Validate token  |                 |      |      |
-|  |     |              | Rate limit Y    |                 |      |      |
-|  |     |              |----------------->                 |      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 | 1. Generate     |      |      |
-|  |     |              |                 |    reservationId|      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 | 2. Try to lock  |      |      |
-|  |     |              |                 |    seats in Redis      |      |
-|  |     |              |                 |---------------->|      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 |   Lua: atomic   |      |      |
-|  |     |              |                 |   multi-lock    |      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 |<----------------|      |      |
-|  |     |              |                 |   Success (1)   |      |      |
-|  |     |              |                 |                 |      |      |
-|  |  +------+    +------------+    +------------+    +---------+ |       |
-|  |  |Client|    |API Gateway |    |Booking Svc |    |PostgreSQL| |      |
-|  |  +--+---+    +-----+------+    +-----+------+    +----+----+ |       |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 | 3. Create       |      |      |
-|  |     |              |                 |    reservation  |      |      |
-|  |     |              |                 |    record       |      |      |
-|  |     |              |                 |---------------->|      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 |  INSERT INTO    |      |      |
-|  |     |              |                 |  reservations   |      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              |                 |<----------------|      |      |
-|  |     |              |                 |                 |      |      |
-|  |     |              | 4. Return       |                 |      |      |
-|  |     |              |    reservation  |                 |      |      |
-|  |     |<-------------|<----------------|                 |      |      |
-|  |     |              |                 |                 |      |      |
-|  |     | {                              |                 |      |      |
-|  |     |   reservationId: "abc123",    |                 |      |       |
-|  |     |   expiresAt: "2024-01-15T10:10:00Z",           |      |        |
-|  |     |   seats: ["A5", "A6"],        |                 |      |       |
-|  |     |   totalAmount: 600            |                 |      |       |
-|  |     | }                              |                 |      |      |
-|  |     |                                |                 |      |      |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  +------+    +------------+    +------------+    +-------------+ |   |
+|  |  |Client|    |API Gateway |    |Booking Svc |    |  Redis      | |   |
+|  |  +--+---+    +-----+------+    +-----+------+    +----+--------+ |   |
+|  |     |              |                 |                 |         |   |
+|  |     | POST /reservations             |                 |         |   |
+|  |     | {showId:123,seats:[A5,A6]}    |                 |          |   |
+|  |     |------------->|                 |                 |         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              | Validate token  |                 |         |   |
+|  |     |              | Rate limit Y    |                 |         |   |
+|  |     |              |----------------->                 |         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 | 1. Generate     |         |   |
+|  |     |              |                 |    reservationId|         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 | 2. Try to lock  |         |   |
+|  |     |              |                 |    seats in Redis         |   |
+|  |     |              |                 |---------------->|         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 |   Lua: atomic   |         |   |
+|  |     |              |                 |   multi-lock    |         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 |<----------------|         |   |
+|  |     |              |                 |   Success (1)   |         |   |
+|  |     |              |                 |                 |         |   |
+|  |  +------+    +------------+    +------------+    +-------------+ |   |
+|  |  |Client|    |API Gateway |    |Booking Svc |    |PostgreSQL   | |   |
+|  |  +--+---+    +-----+------+    +-----+------+    +----+--------+ |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 | 3. Create       |         |   |
+|  |     |              |                 |    reservation  |         |   |
+|  |     |              |                 |    record       |         |   |
+|  |     |              |                 |---------------->|         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 |  INSERT INTO    |         |   |
+|  |     |              |                 |  reservations   |         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              |                 |<----------------|         |   |
+|  |     |              |                 |                 |         |   |
+|  |     |              | 4. Return       |                 |         |   |
+|  |     |              |    reservation  |                 |         |   |
+|  |     |<-------------|<----------------|                 |         |   |
+|  |     |              |                 |                 |         |   |
+|  |     | {                              |                 |         |   |
+|  |     |   reservationId: "abc123",    |                 |          |   |
+|  |     |   expiresAt: "2024-01-15T10:10:00Z",           |           |   |
+|  |     |   seats: ["A5", "A6"],        |                 |          |   |
+|  |     |   totalAmount: 600            |                 |          |   |
+|  |     | }                              |                 |         |   |
+|  |     |                                |                 |         |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -492,21 +492,21 @@ flow, race conditions, and locking strategies.
 |  Reservation records in PostgreSQL also need cleanup.                   |
 |                                                                         |
 |  OPTION 1: Scheduled Job                                                |
-|  +----------------------------------------------------------------+     |
-|  |  @Scheduled(fixedRate = 60000)  // Every minute                |     |
-|  |  public void cleanupExpiredReservations() {                   |      |
-|  |      reservationRepository.updateExpiredReservations(         |      |
-|  |          Status.EXPIRED,                                       |     |
-|  |          Instant.now()                                         |     |
-|  |      );                                                        |     |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  |  -- SQL                                                        |     |
-|  |  UPDATE reservations                                           |     |
-|  |  SET status = 'EXPIRED'                                       |      |
-|  |  WHERE status = 'PENDING'                                     |      |
-|  |    AND expires_at < NOW();                                    |      |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |  @Scheduled(fixedRate = 60000)  // Every minute                  |   |
+|  |  public void cleanupExpiredReservations() {                      |   |
+|  |      reservationRepository.updateExpiredReservations(            |   |
+|  |          Status.EXPIRED,                                         |   |
+|  |          Instant.now()                                           |   |
+|  |      );                                                          |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  |  -- SQL                                                          |   |
+|  |  UPDATE reservations                                             |   |
+|  |  SET status = 'EXPIRED'                                          |   |
+|  |  WHERE status = 'PENDING'                                        |   |
+|  |    AND expires_at < NOW();                                       |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  OPTION 2: Check on Access                                              |
 |  When user tries to confirm, check if expired.                          |
@@ -522,67 +522,67 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  PAYMENT > BOOKING CONFIRMATION FLOW                                    |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  User has reservationId: "abc123"                             |      |
-|  |  Timer: 8 minutes remaining                                   |      |
-|  |                                                                |     |
-|  |  1. Initiate Payment                                          |      |
-|  |  ---------------------                                         |     |
-|  |  POST /payments                                                |     |
-|  |  { reservationId: "abc123", amount: 600, method: "UPI" }      |      |
-|  |                                                                |     |
-|  |  2. Payment Gateway Processing                                |      |
-|  |  -----------------------------                                  |    |
-|  |  > Redirect to gateway / UPI intent                          |       |
-|  |  > User completes payment                                     |      |
-|  |  > Gateway calls webhook                                      |      |
-|  |                                                                |     |
-|  |  3. Payment Callback (Webhook)                                |      |
-|  |  ------------------------------                                |     |
-|  |  POST /payments/callback                                       |     |
-|  |  { paymentId: "pay_xyz", status: "SUCCESS", ... }             |      |
-|  |                                                                |     |
-|  |  4. Confirm Booking (CRITICAL TRANSACTION)                    |      |
-|  |  ------------------------------------------                     |    |
-|  |                                                                |     |
-|  |  BEGIN TRANSACTION;                                           |      |
-|  |                                                                |     |
-|  |  -- Verify reservation is still valid                         |      |
-|  |  SELECT * FROM reservations                                   |      |
-|  |  WHERE id = 'abc123'                                          |      |
-|  |    AND status = 'PENDING'                                     |      |
-|  |    AND expires_at > NOW()                                     |      |
-|  |  FOR UPDATE;                                                   |     |
-|  |                                                                |     |
-|  |  IF NOT FOUND > Payment refund, return error                  |      |
-|  |                                                                |     |
-|  |  -- Update reservation to confirmed                           |      |
-|  |  UPDATE reservations SET status = 'CONFIRMED'                 |      |
-|  |  WHERE id = 'abc123';                                         |      |
-|  |                                                                |     |
-|  |  -- Create booking record                                     |      |
-|  |  INSERT INTO bookings (reservation_id, user_id, ...)         |       |
-|  |  VALUES ('abc123', 'user_A', ...);                           |       |
-|  |                                                                |     |
-|  |  -- Update seat status to BOOKED (permanent)                  |      |
-|  |  UPDATE show_seats SET status = 'BOOKED', booking_id = ...   |       |
-|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6');            |       |
-|  |                                                                |     |
-|  |  -- Record payment                                            |      |
-|  |  INSERT INTO payments (booking_id, amount, ...)              |       |
-|  |  VALUES (...);                                                 |     |
-|  |                                                                |     |
-|  |  COMMIT;                                                       |     |
-|  |                                                                |     |
-|  |  5. Post-Booking Actions (Async)                              |      |
-|  |  ----------------------------------                             |    |
-|  |  > Publish BookingConfirmed event to Kafka                   |       |
-|  |  > Delete Redis locks (cleanup)                               |      |
-|  |  > Send confirmation email/SMS                                |      |
-|  |  > Generate e-ticket                                          |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  User has reservationId: "abc123"                                |   |
+|  |  Timer: 8 minutes remaining                                      |   |
+|  |                                                                  |   |
+|  |  1. Initiate Payment                                             |   |
+|  |  ---------------------                                           |   |
+|  |  POST /payments                                                  |   |
+|  |  { reservationId: "abc123", amount: 600, method: "UPI" }         |   |
+|  |                                                                  |   |
+|  |  2. Payment Gateway Processing                                   |   |
+|  |  -----------------------------                                   |   |
+|  |  > Redirect to gateway / UPI intent                              |   |
+|  |  > User completes payment                                        |   |
+|  |  > Gateway calls webhook                                         |   |
+|  |                                                                  |   |
+|  |  3. Payment Callback (Webhook)                                   |   |
+|  |  ------------------------------                                  |   |
+|  |  POST /payments/callback                                         |   |
+|  |  { paymentId: "pay_xyz", status: "SUCCESS", ... }                |   |
+|  |                                                                  |   |
+|  |  4. Confirm Booking (CRITICAL TRANSACTION)                       |   |
+|  |  ------------------------------------------                      |   |
+|  |                                                                  |   |
+|  |  BEGIN TRANSACTION;                                              |   |
+|  |                                                                  |   |
+|  |  -- Verify reservation is still valid                            |   |
+|  |  SELECT * FROM reservations                                      |   |
+|  |  WHERE id = 'abc123'                                             |   |
+|  |    AND status = 'PENDING'                                        |   |
+|  |    AND expires_at > NOW()                                        |   |
+|  |  FOR UPDATE;                                                     |   |
+|  |                                                                  |   |
+|  |  IF NOT FOUND > Payment refund, return error                     |   |
+|  |                                                                  |   |
+|  |  -- Update reservation to confirmed                              |   |
+|  |  UPDATE reservations SET status = 'CONFIRMED'                    |   |
+|  |  WHERE id = 'abc123';                                            |   |
+|  |                                                                  |   |
+|  |  -- Create booking record                                        |   |
+|  |  INSERT INTO bookings (reservation_id, user_id, ...)             |   |
+|  |  VALUES ('abc123', 'user_A', ...);                               |   |
+|  |                                                                  |   |
+|  |  -- Update seat status to BOOKED (permanent)                     |   |
+|  |  UPDATE show_seats SET status = 'BOOKED', booking_id = ...       |   |
+|  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6');                |   |
+|  |                                                                  |   |
+|  |  -- Record payment                                               |   |
+|  |  INSERT INTO payments (booking_id, amount, ...)                  |   |
+|  |  VALUES (...);                                                   |   |
+|  |                                                                  |   |
+|  |  COMMIT;                                                         |   |
+|  |                                                                  |   |
+|  |  5. Post-Booking Actions (Async)                                 |   |
+|  |  ----------------------------------                              |   |
+|  |  > Publish BookingConfirmed event to Kafka                       |   |
+|  |  > Delete Redis locks (cleanup)                                  |   |
+|  |  > Send confirmation email/SMS                                   |   |
+|  |  > Generate e-ticket                                             |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -647,21 +647,21 @@ flow, race conditions, and locking strategies.
 |  - Must not double-book or double-charge                                |
 |                                                                         |
 |  Solution: IDEMPOTENCY                                                  |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  // Check if already processed                                |      |
-|  |  if (paymentRepository.exists(paymentId)) {                   |      |
-|  |      return existingPaymentResult;  // Idempotent response    |      |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  |  // Or use idempotency key in Redis                           |      |
-|  |  String key = "payment:" + paymentId;                         |      |
-|  |  Boolean isNew = redis.setIfAbsent(key, "processing", 1 hour);|      |
-|  |  if (!isNew) {                                                 |     |
-|  |      return waitForAndReturnExistingResult(paymentId);        |      |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  // Check if already processed                                   |   |
+|  |  if (paymentRepository.exists(paymentId)) {                      |   |
+|  |      return existingPaymentResult;  // Idempotent response       |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  |  // Or use idempotency key in Redis                              |   |
+|  |  String key = "payment:" + paymentId;                            |   |
+|  |  Boolean isNew = redis.setIfAbsent(key, "processing", 1 hour);   |   |
+|  |  if (!isNew) {                                                   |   |
+|  |      return waitForAndReturnExistingResult(paymentId);           |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

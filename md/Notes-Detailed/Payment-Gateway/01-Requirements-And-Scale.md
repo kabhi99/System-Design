@@ -11,42 +11,42 @@
 |  A payment gateway is a service that authorizes and processes           |
 |  payments between customers, merchants, and financial institutions.     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Customer                                                       |    |
-|  |  (Credit Card)                                                 |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  +-------------+                                               |     |
-|  |  |  Merchant   |  (E-commerce website)                        |      |
-|  |  |  Website    |                                               |     |
-|  |  +------+------+                                               |     |
-|  |         |                                                       |    |
-|  |         v                                                       |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |            PAYMENT GATEWAY                              |  |      |
-|  |  |  (Stripe, PayPal, Razorpay, Adyen)                     |  |       |
-|  |  |                                                         |  |      |
-|  |  |  * Encrypt card data                                   |  |       |
-|  |  |  * Route to appropriate network                        |  |       |
-|  |  |  * Handle authorization                                |  |       |
-|  |  |  * Manage settlements                                  |  |       |
-|  |  +----------------------+----------------------------------+  |      |
-|  |                         |                                      |     |
-|  |         +---------------+---------------+                      |     |
-|  |         v               v               v                      |     |
-|  |  +-----------+   +-----------+   +-----------+                |      |
-|  |  |   Visa    |   |MasterCard |   |  Amex     |                |      |
-|  |  |  Network  |   |  Network  |   |  Network  |                |      |
-|  |  +-----+-----+   +-----+-----+   +-----+-----+                |      |
-|  |        |               |               |                       |     |
-|  |        v               v               v                       |     |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |         ISSUING BANK (Customer's Bank)                 |  |       |
-|  |  |         Approves/Declines transaction                  |  |       |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Customer                                                         |  |
+|  |  (Credit Card)                                                    |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  +-------------+                                                  |  |
+|  |  |  Merchant   |  (E-commerce website)                            |  |
+|  |  |  Website    |                                                  |  |
+|  |  +------+------+                                                  |  |
+|  |         |                                                         |  |
+|  |         v                                                         |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |            PAYMENT GATEWAY                                  |  |  |
+|  |  |  (Stripe, PayPal, Razorpay, Adyen)                          |  |  |
+|  |  |                                                             |  |  |
+|  |  |  * Encrypt card data                                        |  |  |
+|  |  |  * Route to appropriate network                             |  |  |
+|  |  |  * Handle authorization                                     |  |  |
+|  |  |  * Manage settlements                                       |  |  |
+|  |  +----------------------+--------------------------------------+  |  |
+|  |                         |                                         |  |
+|  |         +---------------+---------------+                         |  |
+|  |         v               v               v                         |  |
+|  |  +-----------+   +-----------+   +-----------+                    |  |
+|  |  |   Visa    |   |MasterCard |   |  Amex     |                    |  |
+|  |  |  Network  |   |  Network  |   |  Network  |                    |  |
+|  |  +-----+-----+   +-----+-----+   +-----+-----+                    |  |
+|  |        |               |               |                          |  |
+|  |        v               v               v                          |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |         ISSUING BANK (Customer's Bank)                      |  |  |
+|  |  |         Approves/Declines transaction                       |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -243,28 +243,28 @@
 |                                                                         |
 |  Used by: Hotels, car rentals, e-commerce with delayed shipping         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Step 1: AUTHORIZE (Reserve funds)                             |     |
-|  |  -----------------------------------                            |    |
-|  |  POST /payments                                                 |    |
-|  |  { amount: 100, capture: false }                               |     |
-|  |                                                                 |    |
-|  |  > Bank reserves $100 on card                                  |     |
-|  |  > No money moved yet                                          |     |
-|  |  > Auth valid for 7-30 days                                    |     |
-|  |                                                                 |    |
-|  |  Step 2: CAPTURE (Collect funds)                               |     |
-|  |  -------------------------------                                |    |
-|  |  POST /payments/{id}/capture                                   |     |
-|  |  { amount: 100 }  // Can capture less than authorized         |      |
-|  |                                                                 |    |
-|  |  > Money moves from cardholder to merchant                    |      |
-|  |                                                                 |    |
-|  |  Alternative: VOID (Cancel authorization)                     |      |
-|  |  POST /payments/{id}/cancel                                    |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Step 1: AUTHORIZE (Reserve funds)                                |  |
+|  |  -----------------------------------                              |  |
+|  |  POST /payments                                                   |  |
+|  |  { amount: 100, capture: false }                                  |  |
+|  |                                                                   |  |
+|  |  > Bank reserves $100 on card                                     |  |
+|  |  > No money moved yet                                             |  |
+|  |  > Auth valid for 7-30 days                                       |  |
+|  |                                                                   |  |
+|  |  Step 2: CAPTURE (Collect funds)                                  |  |
+|  |  -------------------------------                                  |  |
+|  |  POST /payments/{id}/capture                                      |  |
+|  |  { amount: 100 }  // Can capture less than authorized             |  |
+|  |                                                                   |  |
+|  |  > Money moves from cardholder to merchant                        |  |
+|  |                                                                   |  |
+|  |  Alternative: VOID (Cancel authorization)                         |  |
+|  |  POST /payments/{id}/cancel                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  2. DIRECT CAPTURE (One-Step)                                           |
 |  =============================                                          |

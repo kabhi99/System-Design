@@ -16,10 +16,10 @@ A typical web application needs:
 |                                                                         |
 |  TYPICAL APPLICATION STACK                                              |
 |                                                                         |
-|  +-------------+   +-------------+   +-------------+   +-----------+    |
-|  |   Web App   |-->|    API     |-->|  Database   |   |   Redis   |     |
-|  |   (nginx)   |   |   (node)    |-->|  (postgres) |   |  (cache)  |    |
-|  +-------------+   +-------------+   +-------------+   +-----------+    |
+|  +-------------+   +-------------+   +-------------+   +-------------+  |
+|  |   Web App   |-->|    API     |-->|  Database   |   |   Redis      |  |
+|  |   (nginx)   |   |   (node)    |-->|  (postgres) |   |  (cache)    |  |
+|  +-------------+   +-------------+   +-------------+   +-------------+  |
 |                                                                         |
 |  WITHOUT COMPOSE - Manual commands for each:                            |
 |                                                                         |
@@ -209,21 +209,21 @@ Compose automatically creates a network for your application:
 |                                                                         |
 |  Creates network: myproject_default                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |               myproject_default network                         |    |
-|  |                                                                 |    |
-|  |  +---------+    +---------+    +---------+                    |      |
-|  |  |   web   |    |   api   |    |   db    |                    |      |
-|  |  |         |--->|         |--->|         |                    |      |
-|  |  |         |    |         |    |         |                    |      |
-|  |  +---------+    +---------+    +---------+                    |      |
-|  |                                                                 |    |
-|  |  DNS RESOLUTION:                                               |     |
-|  |  * api can reach db at hostname "db"                          |      |
-|  |  * web can reach api at hostname "api"                        |      |
-|  |  * No need to know IP addresses!                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |               myproject_default network                           |  |
+|  |                                                                   |  |
+|  |  +---------+    +---------+    +---------+                        |  |
+|  |  |   web   |    |   api   |    |   db    |                        |  |
+|  |  |         |--->|         |--->|         |                        |  |
+|  |  |         |    |         |    |         |                        |  |
+|  |  +---------+    +---------+    +---------+                        |  |
+|  |                                                                   |  |
+|  |  DNS RESOLUTION:                                                  |  |
+|  |  * api can reach db at hostname "db"                              |  |
+|  |  * web can reach api at hostname "api"                            |  |
+|  |  * No need to know IP addresses!                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

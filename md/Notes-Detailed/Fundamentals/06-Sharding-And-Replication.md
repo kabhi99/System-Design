@@ -39,22 +39,22 @@ Replication means keeping copies of data on multiple machines.
 |  1. LEADER-FOLLOWER (Master-Slave)                                      |
 |  =================================                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Writes ----> LEADER (Primary/Master)                          |     |
-|  |                   |                                             |    |
-|  |                   | Replication Stream                          |    |
-|  |                   |                                             |    |
-|  |              +----+----+-----------+                           |     |
-|  |              v         v           v                           |     |
-|  |          Follower  Follower   Follower                        |      |
-|  |          (Replica) (Replica)  (Replica)                       |      |
-|  |              ^         ^           ^                           |     |
-|  |              +----+----+-----------+                           |     |
-|  |                   |                                             |    |
-|  |  Reads -----------+                                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Writes ----> LEADER (Primary/Master)                             |  |
+|  |                   |                                               |  |
+|  |                   | Replication Stream                            |  |
+|  |                   |                                               |  |
+|  |              +----+----+-----------+                              |  |
+|  |              v         v           v                              |  |
+|  |          Follower  Follower   Follower                            |  |
+|  |          (Replica) (Replica)  (Replica)                           |  |
+|  |              ^         ^           ^                              |  |
+|  |              +----+----+-----------+                              |  |
+|  |                   |                                               |  |
+|  |  Reads -----------+                                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |  * All writes go to leader                                              |
@@ -70,25 +70,25 @@ Replication means keeping copies of data on multiple machines.
 |  SYNCHRONOUS vs ASYNCHRONOUS REPLICATION                                |
 |                                                                         |
 |  SYNCHRONOUS:                                                           |
-|  +------------------------------------------------------------------+   |
-|  | Client > Write > Leader                                         |    |
-|  |                     |                                            |   |
-|  |                     +--> Follower 1 --> ACK --+                 |    |
-|  |                     +--> Follower 2 --> ACK --+                 |    |
-|  |                     +--> Follower 3 --> ACK --+                 |    |
-|  |                                               |                  |   |
-|  | Client <-- Success <-- Wait for all ACKs <---+                 |     |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Client > Write > Leader                                            | |
+|  |                     |                                              | |
+|  |                     +--> Follower 1 --> ACK --+                    | |
+|  |                     +--> Follower 2 --> ACK --+                    | |
+|  |                     +--> Follower 3 --> ACK --+                    | |
+|  |                                               |                    | |
+|  | Client <-- Success <-- Wait for all ACKs <---+                     | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  PROS: No data loss, strong consistency                                 |
 |  CONS: Higher latency, leader blocked if follower slow                  |
 |                                                                         |
 |  ASYNCHRONOUS:                                                          |
-|  +------------------------------------------------------------------+   |
-|  | Client > Write > Leader > Success immediately                   |    |
-|  |                     |                                            |   |
-|  |                     +--> Followers (eventually)                 |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Client > Write > Leader > Success immediately                      | |
+|  |                     |                                              | |
+|  |                     +--> Followers (eventually)                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  PROS: Lower latency, leader not blocked                                |
 |  CONS: Data loss possible, eventual consistency                         |
@@ -103,20 +103,20 @@ Replication means keeping copies of data on multiple machines.
 |  2. LEADER-LEADER (Multi-Master)                                        |
 |  ===============================                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |         +-------------+        +-------------+                 |     |
-|  |  Writes |   Leader 1  |<------>|   Leader 2  | Writes         |      |
-|  |   ----> | (US-East)   |        | (EU-West)   | <----          |      |
-|  |         +-------------+        +-------------+                 |     |
-|  |                |                      |                        |     |
-|  |                |  Bidirectional       |                        |     |
-|  |                |  Replication         |                        |     |
-|  |                |                      |                        |     |
-|  |                v                      v                        |     |
-|  |         [US Users]              [EU Users]                     |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |         +-------------+        +-------------+                    |  |
+|  |  Writes |   Leader 1  |<------>|   Leader 2  | Writes             |  |
+|  |   ----> | (US-East)   |        | (EU-West)   | <----              |  |
+|  |         +-------------+        +-------------+                    |  |
+|  |                |                      |                           |  |
+|  |                |  Bidirectional       |                           |  |
+|  |                |  Replication         |                           |  |
+|  |                |                      |                           |  |
+|  |                v                      v                           |  |
+|  |         [US Users]              [EU Users]                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USE CASE: Multi-region deployments where writes can happen anywhere    |
 |                                                                         |
@@ -142,22 +142,22 @@ Replication means keeping copies of data on multiple machines.
 |  3. LEADERLESS REPLICATION                                              |
 |  ============================                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client writes to multiple nodes simultaneously                |     |
-|  |                                                                 |    |
-|  |         +-------------------------------------------+          |     |
-|  |         |                                           |          |     |
-|  |         v              v              v             |          |     |
-|  |    +---------+   +---------+   +---------+         |          |      |
-|  |    | Node 1  |   | Node 2  |   | Node 3  |  <------+          |      |
-|  |    +---------+   +---------+   +---------+                     |     |
-|  |         |              |              |                        |     |
-|  |         +--------------+--------------+                        |     |
-|  |                        |                                       |     |
-|  |         Client reads from multiple nodes                       |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client writes to multiple nodes simultaneously                   |  |
+|  |                                                                   |  |
+|  |         +-------------------------------------------+             |  |
+|  |         |                                           |             |  |
+|  |         v              v              v             |             |  |
+|  |    +---------+   +---------+   +---------+         |              |  |
+|  |    | Node 1  |   | Node 2  |   | Node 3  |  <------+              |  |
+|  |    +---------+   +---------+   +---------+                        |  |
+|  |         |              |              |                           |  |
+|  |         +--------------+--------------+                           |  |
+|  |                        |                                          |  |
+|  |         Client reads from multiple nodes                          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  QUORUM READS AND WRITES:                                               |
 |                                                                         |
@@ -240,28 +240,28 @@ Sharding splits data across multiple databases, each holding a subset.
 |  * Writes are distributed across shards                                 |
 |  * Can scale both reads AND writes                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  BEFORE SHARDING:                                              |     |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+   |     |
-|  |  |              Single Database                            |   |     |
-|  |  |              10TB of data                               |   |     |
-|  |  |              100K writes/sec (bottleneck!)              |   |     |
-|  |  +---------------------------------------------------------+   |     |
-|  |                                                                 |    |
-|  |  AFTER SHARDING (4 shards):                                    |     |
-|  |                                                                 |    |
-|  |  +----------+ +----------+ +----------+ +----------+         |       |
-|  |  | Shard 1  | | Shard 2  | | Shard 3  | | Shard 4  |         |       |
-|  |  |   2.5TB  | |   2.5TB  | |   2.5TB  | |   2.5TB  |         |       |
-|  |  |  25K w/s | |  25K w/s | |  25K w/s | |  25K w/s |         |       |
-|  |  +----------+ +----------+ +----------+ +----------+         |       |
-|  |                                                                 |    |
-|  |  Total: 4 x 25K = 100K writes/sec                              |     |
-|  |  Each shard is smaller and faster                              |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  BEFORE SHARDING:                                                 |  |
+|  |                                                                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |              Single Database                               |   |  |
+|  |  |              10TB of data                                  |   |  |
+|  |  |              100K writes/sec (bottleneck!)                 |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  AFTER SHARDING (4 shards):                                       |  |
+|  |                                                                   |  |
+|  |  +----------+ +----------+ +----------+ +----------+              |  |
+|  |  | Shard 1  | | Shard 2  | | Shard 3  | | Shard 4  |              |  |
+|  |  |   2.5TB  | |   2.5TB  | |   2.5TB  | |   2.5TB  |              |  |
+|  |  |  25K w/s | |  25K w/s | |  25K w/s | |  25K w/s |              |  |
+|  |  +----------+ +----------+ +----------+ +----------+              |  |
+|  |                                                                   |  |
+|  |  Total: 4 x 25K = 100K writes/sec                                 |  |
+|  |  Each shard is smaller and faster                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -316,32 +316,32 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  Solves the resharding problem of simple hash-based sharding.           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                        HASH RING                               |     |
-|  |                                                                 |    |
-|  |                          0o                                    |     |
-|  |                     +----o----+                                |     |
-|  |                    /   Node A  \                               |     |
-|  |                   /             \                              |     |
-|  |              270oo               o 90o                         |     |
-|  |              Node D             Node B                         |     |
-|  |                   \             /                              |     |
-|  |                    \   Node C  /                               |     |
-|  |                     +----o----+                                |     |
-|  |                         180o                                   |     |
-|  |                                                                 |    |
-|  |  Keys are hashed onto the ring.                               |      |
-|  |  Walk clockwise to find the node that owns the key.           |      |
-|  |                                                                 |    |
-|  |  Key at 45o > walk clockwise > Node B (at 90o)               |       |
-|  |  Key at 200o > walk clockwise > Node D (at 270o)             |       |
-|  |                                                                 |    |
-|  |  ADDING A NODE:                                                |     |
-|  |  Only keys between previous node and new node need to move    |      |
-|  |  (not all keys like in hash-based sharding!)                  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                        HASH RING                                  |  |
+|  |                                                                   |  |
+|  |                          0o                                       |  |
+|  |                     +----o----+                                   |  |
+|  |                    /   Node A  \                                  |  |
+|  |                   /             \                                 |  |
+|  |              270oo               o 90o                            |  |
+|  |              Node D             Node B                            |  |
+|  |                   \             /                                 |  |
+|  |                    \   Node C  /                                  |  |
+|  |                     +----o----+                                   |  |
+|  |                         180o                                      |  |
+|  |                                                                   |  |
+|  |  Keys are hashed onto the ring.                                   |  |
+|  |  Walk clockwise to find the node that owns the key.               |  |
+|  |                                                                   |  |
+|  |  Key at 45o > walk clockwise > Node B (at 90o)                    |  |
+|  |  Key at 200o > walk clockwise > Node D (at 270o)                  |  |
+|  |                                                                   |  |
+|  |  ADDING A NODE:                                                   |  |
+|  |  Only keys between previous node and new node need to move        |  |
+|  |  (not all keys like in hash-based sharding!)                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USED BY: DynamoDB, Cassandra, Riak, Memcached                          |
 |                                                                         |
@@ -513,19 +513,19 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  A lookup service maintains key > shard mapping.                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client --> Directory Service --> Which shard?                 |     |
-|  |                     |                                           |    |
-|  |                     v                                           |    |
-|  |  +--------------------------------------------------------+    |     |
-|  |  |  user:1 > Shard A                                      |    |     |
-|  |  |  user:2 > Shard B                                      |    |     |
-|  |  |  user:3 > Shard A                                      |    |     |
-|  |  |  ...                                                   |    |     |
-|  |  +--------------------------------------------------------+    |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client --> Directory Service --> Which shard?                    |  |
+|  |                     |                                             |  |
+|  |                     v                                             |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |  user:1 > Shard A                                         |    |  |
+|  |  |  user:2 > Shard B                                         |    |  |
+|  |  |  user:3 > Shard A                                         |    |  |
+|  |  |  ...                                                      |    |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Maximum flexibility                                                  |
@@ -654,35 +654,35 @@ Sharding splits data across multiple databases, each holding a subset.
 |  * Sharding for write scalability and storage                           |
 |  * Replication for availability and read scalability                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                        PRODUCTION SETUP                        |     |
-|  |                                                                 |    |
-|  |  +--------------------------------------------------------+   |      |
-|  |  |                      SHARD 1                           |   |      |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  |  |   Leader    |  |  Follower   |  |  Follower   |   |   |        |
-|  |  |  | (writes)    |--| (reads)     |--| (reads)     |   |   |        |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  |  +--------------------------------------------------------+   |      |
-|  |  |                      SHARD 2                           |   |      |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  |  |   Leader    |  |  Follower   |  |  Follower   |   |   |        |
-|  |  |  | (writes)    |--| (reads)     |--| (reads)     |   |   |        |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  |  +--------------------------------------------------------+   |      |
-|  |  |                      SHARD 3                           |   |      |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  |  |   Leader    |  |  Follower   |  |  Follower   |   |   |        |
-|  |  |  | (writes)    |--| (reads)     |--| (reads)     |   |   |        |
-|  |  |  +-------------+  +-------------+  +-------------+   |   |        |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                        PRODUCTION SETUP                           |  |
+|  |                                                                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |                      SHARD 1                               |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  |  |   Leader    |  |  Follower   |  |  Follower         |   |   |  |
+|  |  |  | (writes)    |--| (reads)     |--| (reads)           |   |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |                      SHARD 2                               |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  |  |   Leader    |  |  Follower   |  |  Follower         |   |   |  |
+|  |  |  | (writes)    |--| (reads)     |--| (reads)           |   |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |                      SHARD 3                               |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  |  |   Leader    |  |  Follower   |  |  Follower         |   |   |  |
+|  |  |  | (writes)    |--| (reads)     |--| (reads)           |   |   |  |
+|  |  |  +-------------+  +-------------+  +-------------------+   |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Each shard has:                                                        |
 |  * 1 leader for writes                                                  |
@@ -708,16 +708,16 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  Capture database changes as a stream of events.                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Database --> WAL --> CDC Tool --> Stream --> Consumers        |     |
-|  |     |         |      (Debezium)      |                         |     |
-|  |  INSERT       |                      |                         |     |
-|  |  UPDATE       v                      v                         |     |
-|  |  DELETE    Write-Ahead             Kafka                       |     |
-|  |              Log                                                |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Database --> WAL --> CDC Tool --> Stream --> Consumers           |  |
+|  |     |         |      (Debezium)      |                            |  |
+|  |  INSERT       |                      |                            |  |
+|  |  UPDATE       v                      v                            |  |
+|  |  DELETE    Write-Ahead             Kafka                          |  |
+|  |              Log                                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HOW CDC WORKS:                                                         |
 |  1. Database writes to WAL (transaction log)                            |
@@ -748,23 +748,23 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  Durability technique: Log changes before applying to database.         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Transaction comes in                                          |     |
-|  |         |                                                       |    |
-|  |         v                                                       |    |
-|  |  1. Write to WAL (sequential, fast) --> Disk                  |      |
-|  |         |                                                       |    |
-|  |         v                                                       |    |
-|  |  2. ACK to client ("committed")                                |     |
-|  |         |                                                       |    |
-|  |         v                                                       |    |
-|  |  3. Eventually apply to data files (async)                    |      |
-|  |                                                                 |    |
-|  |  ON CRASH RECOVERY:                                            |     |
-|  |  Replay WAL to restore committed transactions                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Transaction comes in                                             |  |
+|  |         |                                                         |  |
+|  |         v                                                         |  |
+|  |  1. Write to WAL (sequential, fast) --> Disk                      |  |
+|  |         |                                                         |  |
+|  |         v                                                         |  |
+|  |  2. ACK to client ("committed")                                   |  |
+|  |         |                                                         |  |
+|  |         v                                                         |  |
+|  |  3. Eventually apply to data files (async)                        |  |
+|  |                                                                   |  |
+|  |  ON CRASH RECOVERY:                                               |  |
+|  |  Replay WAL to restore committed transactions                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY SEQUENTIAL WRITES:                                                 |
 |  * Sequential I/O is 100x faster than random I/O                        |
@@ -772,10 +772,10 @@ Sharding splits data across multiple databases, each holding a subset.
 |  * Data files have random access patterns                               |
 |                                                                         |
 |  WAL STRUCTURE:                                                         |
-|  +------------------------------------------------------------------+   |
-|  | LSN 1 | LSN 2 | LSN 3 | LSN 4 | LSN 5 | ...                    |     |
-|  | BEGIN |INSERT |UPDATE |DELETE |COMMIT |                        |     |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | LSN 1 | LSN 2 | LSN 3 | LSN 4 | LSN 5 | ...                        | |
+|  | BEGIN |INSERT |UPDATE |DELETE |COMMIT |                            | |
+|  +--------------------------------------------------------------------+ |
 |  LSN = Log Sequence Number (monotonically increasing)                   |
 |                                                                         |
 |  REPLICATION USES WAL:                                                  |
@@ -793,22 +793,22 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  Replicate data across regions/continents.                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |    US-East (Primary)      EU-West           Asia-Pacific       |     |
-|  |    +-------------+       +-------------+   +-------------+    |      |
-|  |    |   Leader    |------>|  Follower   |   |  Follower   |    |      |
-|  |    | (Writes)    |   |   |  (Reads)    |   |  (Reads)    |    |      |
-|  |    +-------------+   |   +-------------+   +-------------+    |      |
-|  |                      |                                         |     |
-|  |                      +-------------------------------------->  |     |
-|  |                               ~100ms latency                   |     |
-|  |                                                                 |    |
-|  |  US users write to US-East                                    |      |
-|  |  EU users read from EU-West (low latency)                    |       |
-|  |  EU users write to US-East (higher latency)                  |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |    US-East (Primary)      EU-West           Asia-Pacific          |  |
+|  |    +-------------+       +-------------+   +-----------------+    |  |
+|  |    |   Leader    |------>|  Follower   |   |  Follower       |    |  |
+|  |    | (Writes)    |   |   |  (Reads)    |   |  (Reads)        |    |  |
+|  |    +-------------+   |   +-------------+   +-----------------+    |  |
+|  |                      |                                            |  |
+|  |                      +-------------------------------------->     |  |
+|  |                               ~100ms latency                      |  |
+|  |                                                                   |  |
+|  |  US users write to US-East                                        |  |
+|  |  EU users read from EU-West (low latency)                         |  |
+|  |  EU users write to US-East (higher latency)                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CHALLENGES:                                                            |
 |  * Replication lag (100-500ms cross-region)                             |

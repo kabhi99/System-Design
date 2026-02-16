@@ -23,20 +23,20 @@ transactions across distributed systems.
 |                                                                         |
 |  DISTRIBUTED SYSTEM:                                                    |
 |  --------------------                                                   |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Order Service        Payment Service       Inventory Service   |    |
-|  |  (Database A)         (Database B)          (Database C)        |    |
-|  |       |                    |                      |             |    |
-|  |       v                    v                      v             |    |
-|  |  Create Order         Charge Card            Reserve Stock      |    |
-|  |       Y                    Y                      X             |    |
-|  |                                              (Out of stock!)    |    |
-|  |                                                                 |    |
-|  |  PROBLEM: Order created, card charged, but no stock!           |     |
-|  |  How do we undo the first two operations?                      |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Order Service        Payment Service       Inventory Service     |  |
+|  |  (Database A)         (Database B)          (Database C)          |  |
+|  |       |                    |                      |               |  |
+|  |       v                    v                      v               |  |
+|  |  Create Order         Charge Card            Reserve Stock        |  |
+|  |       Y                    Y                      X               |  |
+|  |                                              (Out of stock!)      |  |
+|  |                                                                   |  |
+|  |  PROBLEM: Order created, card charged, but no stock!              |  |
+|  |  How do we undo the first two operations?                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CHALLENGES:                                                            |
 |  * Network can fail between any two steps                               |
@@ -59,45 +59,45 @@ transactions across distributed systems.
 |  PHASE 1: PREPARE (Voting)                                              |
 |  ---------------------------                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |              +------------------+                              |     |
-|  |              |   Coordinator    |                              |     |
-|  |              +--------+---------+                              |     |
-|  |                       |                                         |    |
-|  |           "Can you commit?"                                    |     |
-|  |                       |                                         |    |
-|  |         +-------------+-------------+                          |     |
-|  |         v             v             v                          |     |
-|  |  +-----------+ +-----------+ +-----------+                    |      |
-|  |  |Service A  | |Service B  | |Service C  |                    |      |
-|  |  | "Yes"     | | "Yes"     | | "Yes"     |                    |      |
-|  |  +-----------+ +-----------+ +-----------+                    |      |
-|  |                                                                 |    |
-|  |  Each participant:                                             |     |
-|  |  1. Executes transaction locally (but doesn't commit)         |      |
-|  |  2. Writes to WAL (can recover after crash)                   |      |
-|  |  3. Acquires locks                                            |      |
-|  |  4. Votes YES (ready) or NO (abort)                           |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |              +------------------+                                 |  |
+|  |              |   Coordinator    |                                 |  |
+|  |              +--------+---------+                                 |  |
+|  |                       |                                           |  |
+|  |           "Can you commit?"                                       |  |
+|  |                       |                                           |  |
+|  |         +-------------+-------------+                             |  |
+|  |         v             v             v                             |  |
+|  |  +-----------+ +-----------+ +-----------+                        |  |
+|  |  |Service A  | |Service B  | |Service C  |                        |  |
+|  |  | "Yes"     | | "Yes"     | | "Yes"     |                        |  |
+|  |  +-----------+ +-----------+ +-----------+                        |  |
+|  |                                                                   |  |
+|  |  Each participant:                                                |  |
+|  |  1. Executes transaction locally (but doesn't commit)             |  |
+|  |  2. Writes to WAL (can recover after crash)                       |  |
+|  |  3. Acquires locks                                                |  |
+|  |  4. Votes YES (ready) or NO (abort)                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PHASE 2: COMMIT (Decision)                                             |
 |  ----------------------------                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  IF all vote YES:                 IF any votes NO:             |     |
-|  |                                                                 |    |
-|  |  Coordinator: "COMMIT"            Coordinator: "ABORT"         |     |
-|  |         |                                |                      |    |
-|  |    +----+----+                      +----+----+                |     |
-|  |    v    v    v                      v    v    v                |     |
-|  |   A    B    C                      A    B    C                 |     |
-|  |   Y    Y    Y                      <    <    <                |      |
-|  |                                  (rollback)                    |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  IF all vote YES:                 IF any votes NO:                |  |
+|  |                                                                   |  |
+|  |  Coordinator: "COMMIT"            Coordinator: "ABORT"            |  |
+|  |         |                                |                        |  |
+|  |    +----+----+                      +----+----+                   |  |
+|  |    v    v    v                      v    v    v                   |  |
+|  |   A    B    C                      A    B    C                    |  |
+|  |   Y    Y    Y                      <    <    <                    |  |
+|  |                                  (rollback)                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
@@ -144,46 +144,46 @@ transactions across distributed systems.
 |  Instead of one atomic transaction across services,                     |
 |  use multiple local transactions + compensations.                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  E-COMMERCE ORDER SAGA                                         |     |
-|  |                                                                 |    |
-|  |  FORWARD FLOW (Happy path):                                    |     |
-|  |                                                                 |    |
-|  |  T1: Create Order (PENDING)                                    |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  T2: Reserve Inventory                                         |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  T3: Charge Payment                                            |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  T4: Update Order (CONFIRMED)                                  |     |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  COMPENSATING FLOW (If T3 fails):                             |      |
-|  |                                                                 |    |
-|  |  T3 fails: Payment declined                                    |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  C2: Release Inventory (compensate T2)                        |      |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  C1: Cancel Order (compensate T1)                             |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  E-COMMERCE ORDER SAGA                                            |  |
+|  |                                                                   |  |
+|  |  FORWARD FLOW (Happy path):                                       |  |
+|  |                                                                   |  |
+|  |  T1: Create Order (PENDING)                                       |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  T2: Reserve Inventory                                            |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  T3: Charge Payment                                               |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  T4: Update Order (CONFIRMED)                                     |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  COMPENSATING FLOW (If T3 fails):                                 |  |
+|  |                                                                   |  |
+|  |  T3 fails: Payment declined                                       |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  C2: Release Inventory (compensate T2)                            |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  C1: Cancel Order (compensate T1)                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EACH STEP HAS A COMPENSATION:                                          |
-|  +---------------------+-----------------------------------------+      |
-|  | Transaction         | Compensating Transaction               |       |
-|  +---------------------+-----------------------------------------+      |
-|  | Create Order        | Cancel Order                            |      |
-|  | Reserve Inventory   | Release Inventory                       |      |
-|  | Charge Payment      | Refund Payment                          |      |
-|  | Ship Order          | Return/Refund (may not be possible!)   |       |
-|  +---------------------+-----------------------------------------+      |
+|  +---------------------+--------------------------------------------+   |
+|  | Transaction         | Compensating Transaction                   |   |
+|  +---------------------+--------------------------------------------+   |
+|  | Create Order        | Cancel Order                               |   |
+|  | Reserve Inventory   | Release Inventory                          |   |
+|  | Charge Payment      | Refund Payment                             |   |
+|  | Ship Order          | Return/Refund (may not be possible!)       |   |
+|  +---------------------+--------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -198,21 +198,21 @@ transactions across distributed systems.
 |                                                                         |
 |  Services communicate via events. No central coordinator.               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Order        Inventory       Payment        Shipping          |     |
-|  |  Service      Service         Service        Service           |     |
-|  |     |                                                           |    |
-|  |     | OrderCreated                                             |     |
-|  |     |----------------->|                                       |     |
-|  |                        | InventoryReserved                     |     |
-|  |                        |----------------->|                    |     |
-|  |                                           | PaymentProcessed   |     |
-|  |                                           |---------------->|  |     |
-|  |     |<--------------------------------------------------------|      |
-|  |     |              OrderCompleted                              |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Order        Inventory       Payment        Shipping             |  |
+|  |  Service      Service         Service        Service              |  |
+|  |     |                                                             |  |
+|  |     | OrderCreated                                                |  |
+|  |     |----------------->|                                          |  |
+|  |                        | InventoryReserved                        |  |
+|  |                        |----------------->|                       |  |
+|  |                                           | PaymentProcessed      |  |
+|  |                                           |---------------->   |  |  |
+|  |     |<------------------------------------------------------------|  |
+|  |     |              OrderCompleted                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Loosely coupled                                                      |
@@ -232,24 +232,24 @@ transactions across distributed systems.
 |                                                                         |
 |  A saga orchestrator tells each service what to do.                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |               +--------------------+                           |     |
-|  |               |  Saga Orchestrator |                           |     |
-|  |               |  (Order Saga)      |                           |     |
-|  |               +--------+-----------+                           |     |
-|  |                        |                                        |    |
-|  |         +--------------+--------------+                        |     |
-|  |         v              v              v                        |     |
-|  |   "Reserve"       "Charge"       "Ship"                        |     |
-|  |         |              |              |                        |     |
-|  |         v              v              v                        |     |
-|  |  +-----------+ +-----------+ +-----------+                    |      |
-|  |  | Inventory | | Payment   | | Shipping  |                    |      |
-|  |  | Service   | | Service   | | Service   |                    |      |
-|  |  +-----------+ +-----------+ +-----------+                    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |               +--------------------+                              |  |
+|  |               |  Saga Orchestrator |                              |  |
+|  |               |  (Order Saga)      |                              |  |
+|  |               +--------+-----------+                              |  |
+|  |                        |                                          |  |
+|  |         +--------------+--------------+                           |  |
+|  |         v              v              v                           |  |
+|  |   "Reserve"       "Charge"       "Ship"                           |  |
+|  |         |              |              |                           |  |
+|  |         v              v              v                           |  |
+|  |  +-----------+ +-----------+ +-----------+                        |  |
+|  |  | Inventory | | Payment   | | Shipping  |                        |  |
+|  |  | Service   | | Service   | | Service   |                        |  |
+|  |  +-----------+ +-----------+ +-----------+                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ORCHESTRATOR STATE MACHINE:                                            |
 |                                                                         |
@@ -337,24 +337,24 @@ transactions across distributed systems.
 |                                                                         |
 |  THE DUAL WRITE PROBLEM                                                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Order Service wants to:                                       |     |
-|  |  1. Save order to database                                     |     |
-|  |  2. Publish OrderCreated event to message queue               |      |
-|  |                                                                 |    |
-|  |  PROBLEM:                                                       |    |
-|  |                                                                 |    |
-|  |  def create_order(order):                                      |     |
-|  |      database.save(order)      # Step 1: Success              |      |
-|  |      message_queue.publish(    # Step 2: FAIL!                |      |
-|  |          OrderCreated(order)                                   |     |
-|  |      )                         # Crash here                    |     |
-|  |                                                                 |    |
-|  |  Result: Order in DB, but no event published!                 |      |
-|  |  Other services never know about the order.                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Order Service wants to:                                          |  |
+|  |  1. Save order to database                                        |  |
+|  |  2. Publish OrderCreated event to message queue                   |  |
+|  |                                                                   |  |
+|  |  PROBLEM:                                                         |  |
+|  |                                                                   |  |
+|  |  def create_order(order):                                         |  |
+|  |      database.save(order)      # Step 1: Success                  |  |
+|  |      message_queue.publish(    # Step 2: FAIL!                    |  |
+|  |          OrderCreated(order)                                      |  |
+|  |      )                         # Crash here                       |  |
+|  |                                                                   |  |
+|  |  Result: Order in DB, but no event published!                     |  |
+|  |  Other services never know about the order.                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CAN'T WE JUST SWAP THE ORDER?                                          |
 |                                                                         |
@@ -380,31 +380,31 @@ transactions across distributed systems.
 |  Write event to an OUTBOX table in same database transaction.           |
 |  A separate process reads outbox and publishes events.                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. SINGLE TRANSACTION                                         |     |
-|  |                                                                 |    |
-|  |  BEGIN TRANSACTION;                                            |     |
-|  |    INSERT INTO orders (...);                                   |     |
-|  |    INSERT INTO outbox (event_type, payload) VALUES            |      |
-|  |      ('OrderCreated', '{...}');                                |     |
-|  |  COMMIT;                                                        |    |
-|  |                                                                 |    |
-|  |  > Both writes succeed or both fail. ACID!                    |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  2. MESSAGE RELAY                                              |     |
-|  |                                                                 |    |
-|  |  +--------------+      +---------------+      +-------------+|       |
-|  |  |   Outbox     | -->  | Message Relay | --> |Message Queue||        |
-|  |  |   Table      |      | (polls/CDC)   |      |             ||       |
-|  |  +--------------+      +---------------+      +-------------+|       |
-|  |                                                                 |    |
-|  |  Message Relay reads outbox and publishes to queue.           |      |
-|  |  Marks events as published (or deletes them).                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. SINGLE TRANSACTION                                            |  |
+|  |                                                                   |  |
+|  |  BEGIN TRANSACTION;                                               |  |
+|  |    INSERT INTO orders (...);                                      |  |
+|  |    INSERT INTO outbox (event_type, payload) VALUES                |  |
+|  |      ('OrderCreated', '{...}');                                   |  |
+|  |  COMMIT;                                                          |  |
+|  |                                                                   |  |
+|  |  > Both writes succeed or both fail. ACID!                        |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  2. MESSAGE RELAY                                                 |  |
+|  |                                                                   |  |
+|  |  +--------------+      +---------------+      +-------------+     |  |
+|  |  |   Outbox     | -->  | Message Relay | --> |Message Queue|      |  |
+|  |  |   Table      |      | (polls/CDC)   |      |             |     |  |
+|  |  +--------------+      +---------------+      +-------------+     |  |
+|  |                                                                   |  |
+|  |  Message Relay reads outbox and publishes to queue.               |  |
+|  |  Marks events as published (or deletes them).                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  OUTBOX TABLE SCHEMA:                                                   |
 |                                                                         |
@@ -433,9 +433,9 @@ transactions across distributed systems.
 |     Stream database changes to message queue                            |
 |     Tools: Debezium, Maxwell, AWS DMS                                   |
 |                                                                         |
-|     +-------------------------------------------------------------+     |
-|     | Database --> WAL --> Debezium --> Kafka --> Consumers      |      |
-|     +-------------------------------------------------------------+     |
+|     +----------------------------------------------------------------+  |
+|     | Database --> WAL --> Debezium --> Kafka --> Consumers          |  |
+|     +----------------------------------------------------------------+  |
 |                                                                         |
 |     PROS: Real-time, no polling overhead                                |
 |     CONS: More infrastructure                                           |
@@ -477,32 +477,32 @@ transactions across distributed systems.
 |     - Undo tentative reservations                                       |
 |     - Must be idempotent                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  FLIGHT BOOKING EXAMPLE                                        |     |
-|  |                                                                 |    |
-|  |  TRY Phase:                                                    |     |
-|  |  +--------------+--------------+--------------+               |      |
-|  |  | Flight       | Hotel        | Car Rental   |               |      |
-|  |  | Reserve seat | Reserve room | Reserve car  |               |      |
-|  |  | (held 15min) | (held 15min) | (held 15min) |               |      |
-|  |  +--------------+--------------+--------------+               |      |
-|  |                                                                 |    |
-|  |  All TRY succeeded?                                            |     |
-|  |                                                                 |    |
-|  |  YES > CONFIRM Phase:                                          |     |
-|  |  +--------------+--------------+--------------+               |      |
-|  |  | Flight       | Hotel        | Car Rental   |               |      |
-|  |  | Book seat    | Book room    | Book car     |               |      |
-|  |  +--------------+--------------+--------------+               |      |
-|  |                                                                 |    |
-|  |  NO > CANCEL Phase:                                            |     |
-|  |  +--------------+--------------+--------------+               |      |
-|  |  | Flight       | Hotel        | Car Rental   |               |      |
-|  |  | Release seat | Release room | Release car  |               |      |
-|  |  +--------------+--------------+--------------+               |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FLIGHT BOOKING EXAMPLE                                           |  |
+|  |                                                                   |  |
+|  |  TRY Phase:                                                       |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |  | Flight       | Hotel        | Car Rental   |                   |  |
+|  |  | Reserve seat | Reserve room | Reserve car  |                   |  |
+|  |  | (held 15min) | (held 15min) | (held 15min) |                   |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |                                                                   |  |
+|  |  All TRY succeeded?                                               |  |
+|  |                                                                   |  |
+|  |  YES > CONFIRM Phase:                                             |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |  | Flight       | Hotel        | Car Rental   |                   |  |
+|  |  | Book seat    | Book room    | Book car     |                   |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |                                                                   |  |
+|  |  NO > CANCEL Phase:                                               |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |  | Flight       | Hotel        | Car Rental   |                   |  |
+|  |  | Release seat | Release room | Release car  |                   |  |
+|  |  +--------------+--------------+--------------+                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  TCC vs 2PC:                                                            |
 |  * Business-level reservations, not DB locks                            |

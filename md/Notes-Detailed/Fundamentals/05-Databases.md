@@ -22,30 +22,30 @@ for system design.
 |                                                                         |
 |  EXAMPLE: E-Commerce Database                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  USERS TABLE                                                    |    |
-|  |  +---------+-----------+-------------------------------------+ |     |
-|  |  | user_id |   name    |            email                    | |     |
-|  |  +---------+-----------+-------------------------------------+ |     |
-|  |  |    1    |   Alice   |       alice@example.com             | |     |
-|  |  |    2    |    Bob    |        bob@example.com              | |     |
-|  |  +---------+-----------+-------------------------------------+ |     |
-|  |       ^ Primary Key                                            |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  USERS TABLE                                                      |  |
+|  |  +---------+-----------+----------------------------------------+ |  |
+|  |  | user_id |   name    |            email                       | |  |
+|  |  +---------+-----------+----------------------------------------+ |  |
+|  |  |    1    |   Alice   |       alice@example.com                | |  |
+|  |  |    2    |    Bob    |        bob@example.com                 | |  |
+|  |  +---------+-----------+----------------------------------------+ |  |
+|  |       ^ Primary Key                                               |  |
+|  +-------------------------------------------------------------------+  |
 |                            |                                            |
 |                            | Relationship (Foreign Key)                 |
 |                            v                                            |
-|  +-----------------------------------------------------------------+    |
-|  |  ORDERS TABLE                                                   |    |
-|  |  +----------+---------+------------+---------------+           |     |
-|  |  | order_id | user_id |   total    |  created_at   |           |     |
-|  |  +----------+---------+------------+---------------+           |     |
-|  |  |   101    |    1    |   $99.99   |  2024-01-15   |           |     |
-|  |  |   102    |    1    |   $45.00   |  2024-01-16   |           |     |
-|  |  |   103    |    2    |  $199.99   |  2024-01-16   |           |     |
-|  |  +----------+---------+------------+---------------+           |     |
-|  |                 ^ Foreign Key                                   |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  ORDERS TABLE                                                     |  |
+|  |  +----------+---------+------------+---------------+              |  |
+|  |  | order_id | user_id |   total    |  created_at   |              |  |
+|  |  +----------+---------+------------+---------------+              |  |
+|  |  |   101    |    1    |   $99.99   |  2024-01-15   |              |  |
+|  |  |   102    |    1    |   $45.00   |  2024-01-16   |              |  |
+|  |  |   103    |    2    |  $199.99   |  2024-01-16   |              |  |
+|  |  +----------+---------+------------+---------------+              |  |
+|  |                 ^ Foreign Key                                     |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EXAMPLES: PostgreSQL, MySQL, Oracle, SQL Server, SQLite                |
 |                                                                         |
@@ -227,12 +227,12 @@ Relational databases guarantee ACID properties for transactions:
 |  -- Lock released                                                       |
 |                                                                         |
 |  LOCK TYPES:                                                            |
-|  +---------------------------------------------------------------+      |
-|  | Shared Lock (S)      | Multiple readers allowed              |       |
-|  | Exclusive Lock (X)   | Only one writer, no readers           |       |
-|  | Intent Shared (IS)   | Intend to get S lock on child        |        |
-|  | Intent Exclusive (IX)| Intend to get X lock on child        |        |
-|  +---------------------------------------------------------------+      |
+|  +------------------------------------------------------------------+   |
+|  | Shared Lock (S)      | Multiple readers allowed                  |   |
+|  | Exclusive Lock (X)   | Only one writer, no readers               |   |
+|  | Intent Shared (IS)   | Intend to get S lock on child             |   |
+|  | Intent Exclusive (IX)| Intend to get X lock on child             |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  LOCK GRANULARITY:                                                      |
 |  * Row-level: Highest concurrency, most overhead                        |
@@ -290,20 +290,20 @@ Relational databases guarantee ACID properties for transactions:
 |  Keep multiple versions of each row. Readers see consistent snapshot.   |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
-|  +---------------------------------------------------------------+      |
-|  | Each row has:                                                  |     |
-|  | * xmin: Transaction ID that created this version              |      |
-|  | * xmax: Transaction ID that deleted/updated (created new)     |      |
-|  |                                                                 |    |
-|  | Row versions:                                                   |    |
-|  | +---------------------------------------------------------+   |      |
-|  | | Version 1 | data="Alice" | xmin=100 | xmax=150        |   |        |
-|  | | Version 2 | data="Alicia" | xmin=150 | xmax=~         |   |        |
-|  | +---------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  | Transaction 120 sees Version 1 (120 > 100, 120 < 150)        |       |
-|  | Transaction 200 sees Version 2 (200 > 150)                    |      |
-|  +---------------------------------------------------------------+      |
+|  +------------------------------------------------------------------+   |
+|  | Each row has:                                                    |   |
+|  | * xmin: Transaction ID that created this version                 |   |
+|  | * xmax: Transaction ID that deleted/updated (created new)        |   |
+|  |                                                                  |   |
+|  | Row versions:                                                    |   |
+|  | +------------------------------------------------------------+   |   |
+|  | | Version 1 | data="Alice" | xmin=100 | xmax=150             |   |   |
+|  | | Version 2 | data="Alicia" | xmin=150 | xmax=~              |   |   |
+|  | +------------------------------------------------------------+   |   |
+|  |                                                                  |   |
+|  | Transaction 120 sees Version 1 (120 > 100, 120 < 150)            |   |
+|  | Transaction 200 sees Version 2 (200 > 150)                       |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  BENEFITS:                                                              |
 |  * Readers never block writers                                          |
@@ -328,153 +328,153 @@ NoSQL databases sacrifice some SQL features for scale and flexibility.
 |                                                                         |
 |  NOSQL DATABASE TYPES                                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. KEY-VALUE STORES                                           |     |
-|  |  ---------------------                                          |    |
-|  |  Simple key > value mapping. O(1) lookups.                     |     |
-|  |                                                                 |    |
-|  |  Examples: Redis, DynamoDB, Riak, Memcached                   |      |
-|  |                                                                 |    |
-|  |  "user:123" > { "name": "Alice", "email": "alice@ex.com" }    |      |
-|  |  "session:abc" > { "userId": 123, "expires": "..." }          |      |
-|  |                                                                 |    |
-|  |  OPERATIONS: GET, SET, DELETE, EXISTS                         |      |
-|  |  DATA MODEL: Opaque blobs (value not inspected)               |      |
-|  |                                                                 |    |
-|  |  USE FOR:                                                      |     |
-|  |  * Caching (sessions, page fragments)                         |      |
-|  |  * Simple lookups by ID                                       |      |
-|  |  * Rate limiting (counter per IP)                             |      |
-|  |  * Feature flags                                               |     |
-|  |                                                                 |    |
-|  |  NOT FOR:                                                      |     |
-|  |  * Complex queries                                             |     |
-|  |  * Relationships between entities                             |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. KEY-VALUE STORES                                              |  |
+|  |  ---------------------                                            |  |
+|  |  Simple key > value mapping. O(1) lookups.                        |  |
+|  |                                                                   |  |
+|  |  Examples: Redis, DynamoDB, Riak, Memcached                       |  |
+|  |                                                                   |  |
+|  |  "user:123" > { "name": "Alice", "email": "alice@ex.com" }        |  |
+|  |  "session:abc" > { "userId": 123, "expires": "..." }              |  |
+|  |                                                                   |  |
+|  |  OPERATIONS: GET, SET, DELETE, EXISTS                             |  |
+|  |  DATA MODEL: Opaque blobs (value not inspected)                   |  |
+|  |                                                                   |  |
+|  |  USE FOR:                                                         |  |
+|  |  * Caching (sessions, page fragments)                             |  |
+|  |  * Simple lookups by ID                                           |  |
+|  |  * Rate limiting (counter per IP)                                 |  |
+|  |  * Feature flags                                                  |  |
+|  |                                                                   |  |
+|  |  NOT FOR:                                                         |  |
+|  |  * Complex queries                                                |  |
+|  |  * Relationships between entities                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  2. DOCUMENT STORES                                            |     |
-|  |  ----------------------                                         |    |
-|  |  Store semi-structured documents (JSON/BSON)                   |     |
-|  |  Can query by any field, index nested fields                  |      |
-|  |                                                                 |    |
-|  |  Examples: MongoDB, CouchDB, Firestore, Elasticsearch         |      |
-|  |                                                                 |    |
-|  |  {                                                              |    |
-|  |    "_id": "order_123",                                         |     |
-|  |    "user": { "id": 1, "name": "Alice" },                      |      |
-|  |    "items": [                                                   |    |
-|  |      { "product": "Widget", "qty": 2, "price": 10.00 },       |      |
-|  |      { "product": "Gadget", "qty": 1, "price": 25.00 }        |      |
-|  |    ],                                                           |    |
-|  |    "total": 45.00,                                              |    |
-|  |    "shipping": {                                                |    |
-|  |      "address": "123 Main St",                                 |     |
-|  |      "city": "NYC"                                             |     |
-|  |    }                                                            |    |
-|  |  }                                                              |    |
-|  |                                                                 |    |
-|  |  QUERIES:                                                       |    |
-|  |  db.orders.find({ "user.id": 1 })                             |      |
-|  |  db.orders.find({ "items.product": "Widget" })                |      |
-|  |  db.orders.find({ "total": { "$gt": 100 } })                  |      |
-|  |                                                                 |    |
-|  |  USE FOR:                                                      |     |
-|  |  * Content management (blogs, articles)                       |      |
-|  |  * Product catalogs (varying attributes)                      |      |
-|  |  * User profiles                                               |     |
-|  |  * Event logging                                               |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  2. DOCUMENT STORES                                               |  |
+|  |  ----------------------                                           |  |
+|  |  Store semi-structured documents (JSON/BSON)                      |  |
+|  |  Can query by any field, index nested fields                      |  |
+|  |                                                                   |  |
+|  |  Examples: MongoDB, CouchDB, Firestore, Elasticsearch             |  |
+|  |                                                                   |  |
+|  |  {                                                                |  |
+|  |    "_id": "order_123",                                            |  |
+|  |    "user": { "id": 1, "name": "Alice" },                          |  |
+|  |    "items": [                                                     |  |
+|  |      { "product": "Widget", "qty": 2, "price": 10.00 },           |  |
+|  |      { "product": "Gadget", "qty": 1, "price": 25.00 }            |  |
+|  |    ],                                                             |  |
+|  |    "total": 45.00,                                                |  |
+|  |    "shipping": {                                                  |  |
+|  |      "address": "123 Main St",                                    |  |
+|  |      "city": "NYC"                                                |  |
+|  |    }                                                              |  |
+|  |  }                                                                |  |
+|  |                                                                   |  |
+|  |  QUERIES:                                                         |  |
+|  |  db.orders.find({ "user.id": 1 })                                 |  |
+|  |  db.orders.find({ "items.product": "Widget" })                    |  |
+|  |  db.orders.find({ "total": { "$gt": 100 } })                      |  |
+|  |                                                                   |  |
+|  |  USE FOR:                                                         |  |
+|  |  * Content management (blogs, articles)                           |  |
+|  |  * Product catalogs (varying attributes)                          |  |
+|  |  * User profiles                                                  |  |
+|  |  * Event logging                                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  3. WIDE-COLUMN STORES                                         |     |
-|  |  -------------------------                                      |    |
-|  |  Tables with dynamic columns, column families                 |      |
-|  |  Optimized for queries on large datasets                      |      |
-|  |                                                                 |    |
-|  |  Examples: Cassandra, HBase, BigTable, ScyllaDB               |      |
-|  |                                                                 |    |
-|  |  DATA MODEL:                                                    |    |
-|  |  Row Key    | Column Families                                  |     |
-|  |  ------------------------------------------                    |     |
-|  |  user:123   | profile:name="Alice" | profile:email="..."      |      |
-|  |             | orders:1="..." | orders:2="..."                 |      |
-|  |                                                                 |    |
-|  |  FEATURES:                                                      |    |
-|  |  * Each row can have different columns                        |      |
-|  |  * Columns sorted within row (fast range scans)               |      |
-|  |  * Write optimized (LSM trees)                                |      |
-|  |                                                                 |    |
-|  |  USE FOR:                                                      |     |
-|  |  * Time-series data (metrics, IoT sensors)                    |      |
-|  |  * Event logging at scale                                     |      |
-|  |  * Analytical workloads                                       |      |
-|  |  * Write-heavy applications                                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  3. WIDE-COLUMN STORES                                            |  |
+|  |  -------------------------                                        |  |
+|  |  Tables with dynamic columns, column families                     |  |
+|  |  Optimized for queries on large datasets                          |  |
+|  |                                                                   |  |
+|  |  Examples: Cassandra, HBase, BigTable, ScyllaDB                   |  |
+|  |                                                                   |  |
+|  |  DATA MODEL:                                                      |  |
+|  |  Row Key    | Column Families                                     |  |
+|  |  ------------------------------------------                       |  |
+|  |  user:123   | profile:name="Alice" | profile:email="..."          |  |
+|  |             | orders:1="..." | orders:2="..."                     |  |
+|  |                                                                   |  |
+|  |  FEATURES:                                                        |  |
+|  |  * Each row can have different columns                            |  |
+|  |  * Columns sorted within row (fast range scans)                   |  |
+|  |  * Write optimized (LSM trees)                                    |  |
+|  |                                                                   |  |
+|  |  USE FOR:                                                         |  |
+|  |  * Time-series data (metrics, IoT sensors)                        |  |
+|  |  * Event logging at scale                                         |  |
+|  |  * Analytical workloads                                           |  |
+|  |  * Write-heavy applications                                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  4. GRAPH DATABASES                                            |     |
-|  |  ----------------------                                         |    |
-|  |  Store nodes and relationships                                 |     |
-|  |  Optimized for traversing connections                         |      |
-|  |                                                                 |    |
-|  |  Examples: Neo4j, Amazon Neptune, JanusGraph, TigerGraph      |      |
-|  |                                                                 |    |
-|  |  DATA MODEL:                                                    |    |
-|  |       +-------+                                                |     |
-|  |       | Alice | --- FRIENDS_WITH --> +-------+                |      |
-|  |       +-------+                       |  Bob  |                |     |
-|  |           |                           +---+---+                |     |
-|  |      WORKS_AT                         WORKS_AT                 |     |
-|  |           |                               |                    |     |
-|  |           v                               v                    |     |
-|  |    +--------------+               +--------------+            |      |
-|  |    |   Google     |               |   Amazon     |            |      |
-|  |    +--------------+               +--------------+            |      |
-|  |                                                                 |    |
-|  |  QUERY (Cypher - Neo4j):                                       |     |
-|  |  MATCH (a:Person)-[:FRIENDS_WITH*1..3]-(b:Person)             |      |
-|  |  WHERE a.name = 'Alice'                                       |      |
-|  |  RETURN b.name                                                 |     |
-|  |  -- Find friends within 3 hops of Alice                       |      |
-|  |                                                                 |    |
-|  |  USE FOR:                                                      |     |
-|  |  * Social networks (friends, followers)                       |      |
-|  |  * Recommendation engines                                     |      |
-|  |  * Fraud detection (connection patterns)                      |      |
-|  |  * Knowledge graphs                                            |     |
-|  |  * Network/infrastructure management                          |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  4. GRAPH DATABASES                                               |  |
+|  |  ----------------------                                           |  |
+|  |  Store nodes and relationships                                    |  |
+|  |  Optimized for traversing connections                             |  |
+|  |                                                                   |  |
+|  |  Examples: Neo4j, Amazon Neptune, JanusGraph, TigerGraph          |  |
+|  |                                                                   |  |
+|  |  DATA MODEL:                                                      |  |
+|  |       +-------+                                                   |  |
+|  |       | Alice | --- FRIENDS_WITH --> +-------+                    |  |
+|  |       +-------+                       |  Bob  |                   |  |
+|  |           |                           +---+---+                   |  |
+|  |      WORKS_AT                         WORKS_AT                    |  |
+|  |           |                               |                       |  |
+|  |           v                               v                       |  |
+|  |    +--------------+               +--------------+                |  |
+|  |    |   Google     |               |   Amazon     |                |  |
+|  |    +--------------+               +--------------+                |  |
+|  |                                                                   |  |
+|  |  QUERY (Cypher - Neo4j):                                          |  |
+|  |  MATCH (a:Person)-[:FRIENDS_WITH*1..3]-(b:Person)                 |  |
+|  |  WHERE a.name = 'Alice'                                           |  |
+|  |  RETURN b.name                                                    |  |
+|  |  -- Find friends within 3 hops of Alice                           |  |
+|  |                                                                   |  |
+|  |  USE FOR:                                                         |  |
+|  |  * Social networks (friends, followers)                           |  |
+|  |  * Recommendation engines                                         |  |
+|  |  * Fraud detection (connection patterns)                          |  |
+|  |  * Knowledge graphs                                               |  |
+|  |  * Network/infrastructure management                              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  5. TIME-SERIES DATABASES                                      |     |
-|  |  -----------------------------                                  |    |
-|  |  Optimized for timestamped data                                |     |
-|  |                                                                 |    |
-|  |  Examples: InfluxDB, TimescaleDB, Prometheus, QuestDB         |      |
-|  |                                                                 |    |
-|  |  FEATURES:                                                      |    |
-|  |  * Automatic time-based partitioning                          |      |
-|  |  * Compression optimized for time-series                      |      |
-|  |  * Built-in downsampling and retention policies              |       |
-|  |  * Time-based aggregation functions                           |      |
-|  |                                                                 |    |
-|  |  USE FOR:                                                      |     |
-|  |  * Infrastructure monitoring (CPU, memory, disk)              |      |
-|  |  * Application metrics                                        |      |
-|  |  * IoT sensor data                                            |      |
-|  |  * Financial tick data                                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  5. TIME-SERIES DATABASES                                         |  |
+|  |  -----------------------------                                    |  |
+|  |  Optimized for timestamped data                                   |  |
+|  |                                                                   |  |
+|  |  Examples: InfluxDB, TimescaleDB, Prometheus, QuestDB             |  |
+|  |                                                                   |  |
+|  |  FEATURES:                                                        |  |
+|  |  * Automatic time-based partitioning                              |  |
+|  |  * Compression optimized for time-series                          |  |
+|  |  * Built-in downsampling and retention policies                   |  |
+|  |  * Time-based aggregation functions                               |  |
+|  |                                                                   |  |
+|  |  USE FOR:                                                         |  |
+|  |  * Infrastructure monitoring (CPU, memory, disk)                  |  |
+|  |  * Application metrics                                            |  |
+|  |  * IoT sensor data                                                |  |
+|  |  * Financial tick data                                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -500,38 +500,38 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  LSM TREE ARCHITECTURE                                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |     MEMORY                                                      |    |
-|  |  +---------------------------------------------------------+   |     |
-|  |  |              MEMTABLE (Sorted in memory)                |   |     |
-|  |  |                                                         |   |     |
-|  |  |   Writes go here first (Red-Black Tree or Skip List)   |   |      |
-|  |  |   +---+---+---+---+---+---+---+---+                   |   |       |
-|  |  |   | A | B | D | F | G | K | M | Z |  (sorted)        |   |        |
-|  |  |   +---+---+---+---+---+---+---+---+                   |   |       |
-|  |  |                                                         |   |     |
-|  |  |   When full (e.g., 64MB) > flush to disk as SSTable    |   |      |
-|  |  +---------------------------------------------------------+   |     |
-|  |                          |                                      |    |
-|  |                          | Flush (sequential write)            |     |
-|  |                          v                                      |    |
-|  |     DISK (SSTables - Sorted String Tables)                     |     |
-|  |  +---------------------------------------------------------+   |     |
-|  |  |  Level 0:  [SSTable1] [SSTable2] [SSTable3]            |   |      |
-|  |  |            (may overlap)                                |   |     |
-|  |  |                     |                                   |   |     |
-|  |  |                     | Compaction                        |   |     |
-|  |  |                     v                                   |   |     |
-|  |  |  Level 1:  [    SSTable - larger, sorted, no overlap  ]|   |      |
-|  |  |                     |                                   |   |     |
-|  |  |                     v                                   |   |     |
-|  |  |  Level 2:  [        Even larger SSTables              ]|   |      |
-|  |  |                                                         |   |     |
-|  |  |  Each level is 10x larger than previous                |   |      |
-|  |  +---------------------------------------------------------+   |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |     MEMORY                                                        |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |              MEMTABLE (Sorted in memory)                   |   |  |
+|  |  |                                                            |   |  |
+|  |  |   Writes go here first (Red-Black Tree or Skip List)       |   |  |
+|  |  |   +---+---+---+---+---+---+---+---+                        |   |  |
+|  |  |   | A | B | D | F | G | K | M | Z |  (sorted)              |   |  |
+|  |  |   +---+---+---+---+---+---+---+---+                        |   |  |
+|  |  |                                                            |   |  |
+|  |  |   When full (e.g., 64MB) > flush to disk as SSTable        |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                          |                                        |  |
+|  |                          | Flush (sequential write)               |  |
+|  |                          v                                        |  |
+|  |     DISK (SSTables - Sorted String Tables)                        |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |  Level 0:  [SSTable1] [SSTable2] [SSTable3]                |   |  |
+|  |  |            (may overlap)                                   |   |  |
+|  |  |                     |                                      |   |  |
+|  |  |                     | Compaction                           |   |  |
+|  |  |                     v                                      |   |  |
+|  |  |  Level 1:  [    SSTable - larger, sorted, no overlap  ]    |   |  |
+|  |  |                     |                                      |   |  |
+|  |  |                     v                                      |   |  |
+|  |  |  Level 2:  [        Even larger SSTables              ]    |   |  |
+|  |  |                                                            |   |  |
+|  |  |  Each level is 10x larger than previous                    |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
@@ -607,39 +607,39 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  Immutable file with sorted key-value pairs + index                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                         SSTable File                           |     |
-|  |                                                                 |    |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                    DATA BLOCKS                            ||      |
-|  |  |  +-----------------------------------------------------+ ||       |
-|  |  |  | Block 1: A=1, B=2, C=3, D=4, E=5                    | ||       |
-|  |  |  +-----------------------------------------------------+ ||       |
-|  |  |  | Block 2: F=6, G=7, H=8, I=9, J=10                   | ||       |
-|  |  |  +-----------------------------------------------------+ ||       |
-|  |  |  | Block 3: K=11, L=12, M=13, N=14, O=15               | ||       |
-|  |  |  +-----------------------------------------------------+ ||       |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                    INDEX BLOCK                            ||      |
-|  |  |  A > Block 1 offset                                      ||       |
-|  |  |  F > Block 2 offset                                      ||       |
-|  |  |  K > Block 3 offset                                      ||       |
-|  |  |  (Sparse index - first key of each block)                ||       |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                    BLOOM FILTER                           ||      |
-|  |  |  Quick "is key possibly here?" check                     ||       |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                    FOOTER                                 ||      |
-|  |  |  Index offset, Bloom filter offset, metadata             ||       |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                         SSTable File                              |  |
+|  |                                                                   |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                    DATA BLOCKS                            |    |  |
+|  |  |  +-----------------------------------------------------+ |     |  |
+|  |  |  | Block 1: A=1, B=2, C=3, D=4, E=5                    | |     |  |
+|  |  |  +-----------------------------------------------------+ |     |  |
+|  |  |  | Block 2: F=6, G=7, H=8, I=9, J=10                   | |     |  |
+|  |  |  +-----------------------------------------------------+ |     |  |
+|  |  |  | Block 3: K=11, L=12, M=13, N=14, O=15               | |     |  |
+|  |  |  +-----------------------------------------------------+ |     |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                    INDEX BLOCK                            |    |  |
+|  |  |  A > Block 1 offset                                      |     |  |
+|  |  |  F > Block 2 offset                                      |     |  |
+|  |  |  K > Block 3 offset                                      |     |  |
+|  |  |  (Sparse index - first key of each block)                |     |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                    BLOOM FILTER                           |    |  |
+|  |  |  Quick "is key possibly here?" check                     |     |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                    FOOTER                                 |    |  |
+|  |  |  Index offset, Bloom filter offset, metadata             |     |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  FINDING A KEY:                                                         |
 |  1. Check Bloom filter: "Is key G possibly here?"                       |
@@ -662,81 +662,81 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  KEY COMPONENTS:                                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                      REQUEST ROUTER                            |     |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |  * Routes requests to correct partition                   ||      |
-|  |  |  * Handles authentication/authorization                   ||      |
-|  |  |  * Request throttling                                     ||      |
-|  |  +-----------------------------------------------------------+|      |
-|  |                          |                                      |    |
-|  |                          v                                      |    |
-|  |              CONSISTENT HASHING RING                           |     |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                                                           ||      |
-|  |  |     Partition Key > Hash > Position on Ring              ||       |
-|  |  |                                                           ||      |
-|  |  |              o-------o-------o                            ||      |
-|  |  |            /                   \                          ||      |
-|  |  |          o       Hash Ring      o                        ||       |
-|  |  |            \                   /                          ||      |
-|  |  |              o-------o-------o                            ||      |
-|  |  |                                                           ||      |
-|  |  |  Each position owned by a storage node                   ||       |
-|  |  +-----------------------------------------------------------+|      |
-|  |                          |                                      |    |
-|  |                          v                                      |    |
-|  |                  STORAGE NODES                                 |     |
-|  |  +-----------------------------------------------------------+|      |
-|  |  |                                                           ||      |
-|  |  |  Each partition stored on 3 nodes (replication factor=3) ||       |
-|  |  |                                                           ||      |
-|  |  |  +-------------+ +-------------+ +-------------+        ||        |
-|  |  |  |   Node A    | |   Node B    | |   Node C    |        ||        |
-|  |  |  |  (Leader)   | |  (Replica)  | |  (Replica)  |        ||        |
-|  |  |  |             | |             | |             |        ||        |
-|  |  |  | +---------+ | | +---------+ | | +---------+ |        ||        |
-|  |  |  | |B+ Tree  | | | |B+ Tree  | | | |B+ Tree  | |        ||        |
-|  |  |  | |(Storage)| | | |(Storage)| | | |(Storage)| |        ||        |
-|  |  |  | +---------+ | | +---------+ | | +---------+ |        ||        |
-|  |  |  +-------------+ +-------------+ +-------------+        ||        |
-|  |  |                                                           ||      |
-|  |  +-----------------------------------------------------------+|      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                      REQUEST ROUTER                               |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |  * Routes requests to correct partition                   |    |  |
+|  |  |  * Handles authentication/authorization                   |    |  |
+|  |  |  * Request throttling                                     |    |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                          |                                        |  |
+|  |                          v                                        |  |
+|  |              CONSISTENT HASHING RING                              |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                                                           |    |  |
+|  |  |     Partition Key > Hash > Position on Ring              |     |  |
+|  |  |                                                           |    |  |
+|  |  |              o-------o-------o                            |    |  |
+|  |  |            /                   \                          |    |  |
+|  |  |          o       Hash Ring      o                        |     |  |
+|  |  |            \                   /                          |    |  |
+|  |  |              o-------o-------o                            |    |  |
+|  |  |                                                           |    |  |
+|  |  |  Each position owned by a storage node                   |     |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                          |                                        |  |
+|  |                          v                                        |  |
+|  |                  STORAGE NODES                                    |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |  |                                                           |    |  |
+|  |  |  Each partition stored on 3 nodes (replication factor=3) |     |  |
+|  |  |                                                           |    |  |
+|  |  |  +-------------+ +-------------+ +-------------+        |      |  |
+|  |  |  |   Node A    | |   Node B    | |   Node C    |        |      |  |
+|  |  |  |  (Leader)   | |  (Replica)  | |  (Replica)  |        |      |  |
+|  |  |  |             | |             | |             |        |      |  |
+|  |  |  | +---------+ | | +---------+ | | +---------+ |        |      |  |
+|  |  |  | |B+ Tree  | | | |B+ Tree  | | | |B+ Tree  | |        |      |  |
+|  |  |  | |(Storage)| | | |(Storage)| | | |(Storage)| |        |      |  |
+|  |  |  | +---------+ | | +---------+ | | +---------+ |        |      |  |
+|  |  |  +-------------+ +-------------+ +-------------+        |      |  |
+|  |  |                                                           |    |  |
+|  |  +-----------------------------------------------------------+    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
 |  DYNAMODB DATA MODEL                                                    |
 |                                                                         |
 |  TABLE STRUCTURE:                                                       |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  PARTITION KEY (Hash Key)                                      |     |
-|  |  * Determines which partition stores the item                 |      |
-|  |  * Example: user_id                                           |      |
-|  |                                                                 |    |
-|  |  SORT KEY (Range Key) - Optional                              |      |
-|  |  * Orders items within a partition                            |      |
-|  |  * Enables range queries                                      |      |
-|  |  * Example: timestamp, order_id                               |      |
-|  |                                                                 |    |
-|  |  EXAMPLE TABLE:                                                |     |
-|  |  +----------------+----------------+-----------------------+  |      |
-|  |  | user_id (PK)   | order_id (SK)  | attributes...         |  |      |
-|  |  +----------------+----------------+-----------------------+  |      |
-|  |  | user_123       | order_001      | { total: 99.99 }      |  |      |
-|  |  | user_123       | order_002      | { total: 45.00 }      |  |      |
-|  |  | user_123       | order_003      | { total: 150.00 }     |  |      |
-|  |  | user_456       | order_001      | { total: 25.00 }      |  |      |
-|  |  +----------------+----------------+-----------------------+  |      |
-|  |                                                                 |    |
-|  |  Query: Get all orders for user_123                           |      |
-|  |  > Hits single partition, scans by sort key                   |      |
-|  |  > Very efficient!                                            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PARTITION KEY (Hash Key)                                         |  |
+|  |  * Determines which partition stores the item                     |  |
+|  |  * Example: user_id                                               |  |
+|  |                                                                   |  |
+|  |  SORT KEY (Range Key) - Optional                                  |  |
+|  |  * Orders items within a partition                                |  |
+|  |  * Enables range queries                                          |  |
+|  |  * Example: timestamp, order_id                                   |  |
+|  |                                                                   |  |
+|  |  EXAMPLE TABLE:                                                   |  |
+|  |  +----------------+----------------+---------------------------+  |  |
+|  |  | user_id (PK)   | order_id (SK)  | attributes...             |  |  |
+|  |  +----------------+----------------+---------------------------+  |  |
+|  |  | user_123       | order_001      | { total: 99.99 }          |  |  |
+|  |  | user_123       | order_002      | { total: 45.00 }          |  |  |
+|  |  | user_123       | order_003      | { total: 150.00 }         |  |  |
+|  |  | user_456       | order_001      | { total: 25.00 }          |  |  |
+|  |  +----------------+----------------+---------------------------+  |  |
+|  |                                                                   |  |
+|  |  Query: Get all orders for user_123                               |  |
+|  |  > Hits single partition, scans by sort key                       |  |
+|  |  > Very efficient!                                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
@@ -799,23 +799,23 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  ARCHITECTURE:                                                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                    CASSANDRA RING                              |     |
-|  |                                                                 |    |
-|  |              Node A o---------o Node B                         |     |
-|  |                    /           \                                |    |
-|  |                   /             \                               |    |
-|  |           Node F o               o Node C                      |     |
-|  |                   \             /                               |    |
-|  |                    \           /                                |    |
-|  |              Node E o---------o Node D                         |     |
-|  |                                                                 |    |
-|  |  * Each node owns a token range                                |     |
-|  |  * Data replicated to N consecutive nodes                     |      |
-|  |  * Any node can handle any request (coordinator)              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                    CASSANDRA RING                                 |  |
+|  |                                                                   |  |
+|  |              Node A o---------o Node B                            |  |
+|  |                    /           \                                  |  |
+|  |                   /             \                                 |  |
+|  |           Node F o               o Node C                         |  |
+|  |                   \             /                                 |  |
+|  |                    \           /                                  |  |
+|  |              Node E o---------o Node D                            |  |
+|  |                                                                   |  |
+|  |  * Each node owns a token range                                   |  |
+|  |  * Data replicated to N consecutive nodes                         |  |
+|  |  * Any node can handle any request (coordinator)                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WRITE PATH (with Replication Factor = 3):                              |
 |                                                                         |
@@ -827,14 +827,14 @@ Understanding internal data structures helps you make better design decisions.
 |  6. Return success to client                                            |
 |                                                                         |
 |  CONSISTENCY LEVELS:                                                    |
-|  +--------------+------------------------------------------------+      |
-|  | Level        | Meaning                                         |     |
-|  +--------------+------------------------------------------------+      |
-|  | ONE          | Wait for 1 replica (fastest, least safe)       |      |
-|  | QUORUM       | Wait for majority (N/2 + 1)                    |      |
-|  | ALL          | Wait for all replicas (slowest, safest)        |      |
-|  | LOCAL_QUORUM | Quorum in local datacenter only                |      |
-|  +--------------+------------------------------------------------+      |
+|  +--------------+----------------------------------------------------+  |
+|  | Level        | Meaning                                            |  |
+|  +--------------+----------------------------------------------------+  |
+|  | ONE          | Wait for 1 replica (fastest, least safe)           |  |
+|  | QUORUM       | Wait for majority (N/2 + 1)                        |  |
+|  | ALL          | Wait for all replicas (slowest, safest)            |  |
+|  | LOCAL_QUORUM | Quorum in local datacenter only                    |  |
+|  +--------------+----------------------------------------------------+  |
 |                                                                         |
 |  STRONG CONSISTENCY:                                                    |
 |  W + R > N (write consistency + read consistency > replication)         |
@@ -850,33 +850,33 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  DATABASE DATA STRUCTURES                                               |
 |                                                                         |
-|  +----------------+------------------------------------------------+    |
-|  | Data Structure | Used By / Purpose                              |    |
-|  +----------------+------------------------------------------------+    |
-|  | B+ Tree        | PostgreSQL, MySQL, DynamoDB storage           |     |
-|  |                | Good for reads, range queries                 |     |
-|  +----------------+------------------------------------------------+    |
-|  | LSM Tree       | Cassandra, RocksDB, LevelDB, HBase           |      |
-|  |                | Good for writes, append-only workloads       |      |
-|  +----------------+------------------------------------------------+    |
-|  | SSTable        | LSM tree's disk format                        |     |
-|  |                | Immutable sorted files                        |     |
-|  +----------------+------------------------------------------------+    |
-|  | Memtable       | LSM tree's in-memory buffer                   |     |
-|  |                | Red-Black tree or Skip List                  |      |
-|  +----------------+------------------------------------------------+    |
-|  | Skip List      | Redis sorted sets, Memtable                   |     |
-|  |                | O(log n) insert/search, simpler than trees   |      |
-|  +----------------+------------------------------------------------+    |
-|  | Hash Table     | Redis hash, DynamoDB partition routing       |      |
-|  |                | O(1) lookup by key                           |      |
-|  +----------------+------------------------------------------------+    |
-|  | Bloom Filter   | SSTable lookup optimization                   |     |
-|  |                | "Is key possibly in this file?"              |      |
-|  +----------------+------------------------------------------------+    |
-|  | Consistent Hash| DynamoDB, Cassandra partition placement      |      |
-|  |                | Distribute data, minimize reshuffling        |      |
-|  +----------------+------------------------------------------------+    |
+|  +----------------+---------------------------------------------------+ |
+|  | Data Structure | Used By / Purpose                                 | |
+|  +----------------+---------------------------------------------------+ |
+|  | B+ Tree        | PostgreSQL, MySQL, DynamoDB storage               | |
+|  |                | Good for reads, range queries                     | |
+|  +----------------+---------------------------------------------------+ |
+|  | LSM Tree       | Cassandra, RocksDB, LevelDB, HBase                | |
+|  |                | Good for writes, append-only workloads            | |
+|  +----------------+---------------------------------------------------+ |
+|  | SSTable        | LSM tree's disk format                            | |
+|  |                | Immutable sorted files                            | |
+|  +----------------+---------------------------------------------------+ |
+|  | Memtable       | LSM tree's in-memory buffer                       | |
+|  |                | Red-Black tree or Skip List                       | |
+|  +----------------+---------------------------------------------------+ |
+|  | Skip List      | Redis sorted sets, Memtable                       | |
+|  |                | O(log n) insert/search, simpler than trees        | |
+|  +----------------+---------------------------------------------------+ |
+|  | Hash Table     | Redis hash, DynamoDB partition routing            | |
+|  |                | O(1) lookup by key                                | |
+|  +----------------+---------------------------------------------------+ |
+|  | Bloom Filter   | SSTable lookup optimization                       | |
+|  |                | "Is key possibly in this file?"                   | |
+|  +----------------+---------------------------------------------------+ |
+|  | Consistent Hash| DynamoDB, Cassandra partition placement           | |
+|  |                | Distribute data, minimize reshuffling             | |
+|  +----------------+---------------------------------------------------+ |
 |                                                                         |
 |  INTERVIEW TIP:                                                         |
 |  When asked "How does DynamoDB work?", mention:                         |
@@ -947,17 +947,17 @@ Understanding internal data structures helps you make better design decisions.
 |  ---------------------                                                  |
 |  Use different databases for different purposes!                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                     E-Commerce System                          |     |
-|  |                                                                 |    |
-|  |  Orders, Users --> PostgreSQL (ACID transactions)             |      |
-|  |  Product Catalog --> MongoDB (flexible schema)                 |     |
-|  |  Sessions, Cache --> Redis (fast key-value)                   |      |
-|  |  Search --> Elasticsearch (full-text search)                  |      |
-|  |  Recommendations --> Neo4j (graph relationships)              |      |
-|  |  Analytics --> ClickHouse (OLAP)                              |      |
-|  |  Metrics --> InfluxDB (time-series)                           |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                     E-Commerce System                             |  |
+|  |                                                                   |  |
+|  |  Orders, Users --> PostgreSQL (ACID transactions)                 |  |
+|  |  Product Catalog --> MongoDB (flexible schema)                    |  |
+|  |  Sessions, Cache --> Redis (fast key-value)                       |  |
+|  |  Search --> Elasticsearch (full-text search)                      |  |
+|  |  Recommendations --> Neo4j (graph relationships)                  |  |
+|  |  Analytics --> ClickHouse (OLAP)                                  |  |
+|  |  Metrics --> InfluxDB (time-series)                               |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -984,30 +984,30 @@ Indexes make queries fast. Understanding them is crucial.
 |  Time complexity: O(log n) - binary search                              |
 |  1 million rows = ~20 comparisons!                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  B-TREE INDEX STRUCTURE                                        |     |
-|  |                                                                 |    |
-|  |                    +-----------------+                         |     |
-|  |                    |  D   |   M      |  Root node              |     |
-|  |                    +--+--------+-----+                         |     |
-|  |               +------+        +-------+                        |     |
-|  |               v                       v                        |     |
-|  |        +----------+            +----------+                   |      |
-|  |        | A  |  C  |            | F | H | K |                  |      |
-|  |        +-+----+---+            +-+---+---+-+                   |     |
-|  |          |    |                  |   |   |                     |     |
-|  |          v    v                  v   v   v                     |     |
-|  |        [A,B] [C]              [D,E][F,G][H-K]  Leaf nodes      |     |
-|  |                                      (pointers to rows)       |      |
-|  |                                                                 |    |
-|  |  Looking for "G":                                              |     |
-|  |  1. Root: G > D, G < M > go right                             |      |
-|  |  2. Internal: F < G < H > middle branch                       |      |
-|  |  3. Leaf: Find G, get row pointer                             |      |
-|  |  > 3 node accesses instead of scanning all rows!              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  B-TREE INDEX STRUCTURE                                           |  |
+|  |                                                                   |  |
+|  |                    +-----------------+                            |  |
+|  |                    |  D   |   M      |  Root node                 |  |
+|  |                    +--+--------+-----+                            |  |
+|  |               +------+        +-------+                           |  |
+|  |               v                       v                           |  |
+|  |        +----------+            +----------+                       |  |
+|  |        | A  |  C  |            | F | H | K |                      |  |
+|  |        +-+----+---+            +-+---+---+-+                      |  |
+|  |          |    |                  |   |   |                        |  |
+|  |          v    v                  v   v   v                        |  |
+|  |        [A,B] [C]              [D,E][F,G][H-K]  Leaf nodes         |  |
+|  |                                      (pointers to rows)           |  |
+|  |                                                                   |  |
+|  |  Looking for "G":                                                 |  |
+|  |  1. Root: G > D, G < M > go right                                 |  |
+|  |  2. Internal: F < G < H > middle branch                           |  |
+|  |  3. Leaf: Find G, get row pointer                                 |  |
+|  |  > 3 node accesses instead of scanning all rows!                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  B+ TREE vs B-TREE:                                                     |
 |  * B+ Tree: Data only in leaf nodes, leaves linked                      |
@@ -1135,12 +1135,12 @@ Indexes make queries fast. Understanding them is crucial.
 |  EXPLAIN ANALYZE SELECT * FROM users WHERE email = 'alice@ex.com';      |
 |                                                                         |
 |  OUTPUT:                                                                |
-|  +------------------------------------------------------------------+   |
-|  | Index Scan using idx_email on users  (cost=0.29..8.31 rows=1)   |    |
-|  |   Index Cond: (email = 'alice@ex.com')                          |    |
-|  |   Actual time: 0.021..0.022 ms                                  |    |
-|  |   Rows: 1                                                        |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Index Scan using idx_email on users  (cost=0.29..8.31 rows=1)      | |
+|  |   Index Cond: (email = 'alice@ex.com')                             | |
+|  |   Actual time: 0.021..0.022 ms                                     | |
+|  |   Rows: 1                                                          | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  WHAT TO LOOK FOR:                                                      |
 |  * Seq Scan (Sequential Scan) - BAD for large tables                    |
@@ -1287,20 +1287,20 @@ Indexes make queries fast. Understanding them is crucial.
 |  Single database for both OLTP and OLAP workloads.                      |
 |                                                                         |
 |  TRADITIONAL APPROACH:                                                  |
-|  +------------------------------------------------------------------+   |
-|  | OLTP Database --> ETL --> Data Warehouse --> Analytics         |     |
-|  | (transactions)           (hours delay)       (reports)          |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | OLTP Database --> ETL --> Data Warehouse --> Analytics             | |
+|  | (transactions)           (hours delay)       (reports)             | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  HTAP APPROACH:                                                         |
-|  +------------------------------------------------------------------+   |
-|  | HTAP Database                                                    |   |
-|  | +-----------------+    +-----------------+                     |     |
-|  | | Row Store       |<-->| Column Store    |                     |     |
-|  | | (transactions)  |    | (analytics)     |                     |     |
-|  | +-----------------+    +-----------------+                     |     |
-|  |        Real-time sync                                           |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | HTAP Database                                                      | |
+|  | +-----------------+    +-----------------+                         | |
+|  | | Row Store       |<-->| Column Store    |                         | |
+|  | | (transactions)  |    | (analytics)     |                         | |
+|  | +-----------------+    +-----------------+                         | |
+|  |        Real-time sync                                              | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  Examples: TiDB, SingleStore, SAP HANA, AlloyDB                         |
 |                                                                         |
@@ -1335,20 +1335,20 @@ Indexes make queries fast. Understanding them is crucial.
 |  =================                                                      |
 |  One primary for writes, multiple replicas for reads                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |    Writes --> Primary DB                                       |     |
-|  |                   |                                             |    |
-|  |                   | Replication                                 |    |
-|  |              +----+----+------------+                          |     |
-|  |              v         v            v                          |     |
-|  |          Replica 1  Replica 2  Replica 3                       |     |
-|  |              ^         ^            ^                          |     |
-|  |              +----+----+------------+                          |     |
-|  |                   |                                             |    |
-|  |    Reads ---------+                                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |    Writes --> Primary DB                                          |  |
+|  |                   |                                               |  |
+|  |                   | Replication                                   |  |
+|  |              +----+----+------------+                             |  |
+|  |              v         v            v                             |  |
+|  |          Replica 1  Replica 2  Replica 3                          |  |
+|  |              ^         ^            ^                             |  |
+|  |              +----+----+------------+                             |  |
+|  |                   |                                               |  |
+|  |    Reads ---------+                                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CONSIDERATIONS:                                                        |
 |  * Replication lag: Replicas may be behind                              |
@@ -1361,18 +1361,18 @@ Indexes make queries fast. Understanding them is crucial.
 |  =======================================                                |
 |  Split data across multiple databases                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  All Users                                                      |    |
-|  |     |                                                           |    |
-|  |     |  Shard by user_id % 4                                    |     |
-|  |     |                                                           |    |
-|  |     +----> Shard 0: user_id % 4 = 0                           |      |
-|  |     +----> Shard 1: user_id % 4 = 1                           |      |
-|  |     +----> Shard 2: user_id % 4 = 2                           |      |
-|  |     +----> Shard 3: user_id % 4 = 3                           |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  All Users                                                        |  |
+|  |     |                                                             |  |
+|  |     |  Shard by user_id % 4                                       |  |
+|  |     |                                                             |  |
+|  |     +----> Shard 0: user_id % 4 = 0                               |  |
+|  |     +----> Shard 1: user_id % 4 = 1                               |  |
+|  |     +----> Shard 2: user_id % 4 = 2                               |  |
+|  |     +----> Shard 3: user_id % 4 = 3                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  See Chapter 6 for detailed sharding strategies                         |
 |                                                                         |
@@ -1385,13 +1385,13 @@ Indexes make queries fast. Understanding them is crucial.
 |  Without pooling: Open connection > Query > Close (expensive!)          |
 |  With pooling: Get from pool > Query > Return to pool                   |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  | Application                                                      |   |
-|  |    v^                                                            |   |
-|  | Connection Pool (e.g., PgBouncer)                               |    |
-|  |    v^                                                            |   |
-|  | Database                                                         |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Application                                                        | |
+|  |    v^                                                              | |
+|  | Connection Pool (e.g., PgBouncer)                                  | |
+|  |    v^                                                              | |
+|  | Database                                                           | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  POOLING MODES (PgBouncer):                                             |
 |  * Session: Connection per session (safest)                             |
@@ -1406,12 +1406,12 @@ Indexes make queries fast. Understanding them is crucial.
 |  ===================                                                    |
 |  Reduce database load with cache                                        |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  | Application --> Redis Cache --> Database                        |    |
-|  |                    |                                             |   |
-|  |             Cache hit: Return                                   |    |
-|  |             Cache miss: Query DB, cache result                  |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Application --> Redis Cache --> Database                           | |
+|  |                    |                                               | |
+|  |             Cache hit: Return                                      | |
+|  |             Cache miss: Query DB, cache result                     | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  See Chapter 4 for caching strategies                                   |
 |                                                                         |

@@ -15,25 +15,25 @@ covers Redis internals, data structures, persistence, and best practices.
 |  All operations are atomic (no locks needed for single commands)        |
 |  In-memory data structure store                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Client 1 -+                                                   |    |
-|  |             |                                                   |    |
-|  |   Client 2 -+--> Event Loop (epoll/kqueue) --> Execute Command |     |
-|  |             |         |                             |          |     |
-|  |   Client 3 -+         |                             v          |     |
-|  |                       |                      +--------------+  |     |
-|  |                       |                      |  In-Memory   |  |     |
-|  |                       |                      |  Data Store  |  |     |
-|  |                       |                      +--------------+  |     |
-|  |                       |                             |          |     |
-|  |                       |                             v          |     |
-|  |                       |                      +--------------+  |     |
-|  |                       |                      |  Persistence |  |     |
-|  |                       |                      |  (RDB/AOF)   |  |     |
-|  |                       |                      +--------------+  |     |
-|  |                       |                                        |     |
-|  +-----------------------+----------------------------------------+     |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   Client 1 -+                                                     |  |
+|  |             |                                                     |  |
+|  |   Client 2 -+--> Event Loop (epoll/kqueue) --> Execute Command    |  |
+|  |             |         |                             |             |  |
+|  |   Client 3 -+         |                             v             |  |
+|  |                       |                      +-----------------+  |  |
+|  |                       |                      |  In-Memory      |  |  |
+|  |                       |                      |  Data Store     |  |  |
+|  |                       |                      +-----------------+  |  |
+|  |                       |                             |             |  |
+|  |                       |                             v             |  |
+|  |                       |                      +-----------------+  |  |
+|  |                       |                      |  Persistence    |  |  |
+|  |                       |                      |  (RDB/AOF)      |  |  |
+|  |                       |                      +-----------------+  |  |
+|  |                       |                                           |  |
+|  +-----------------------+-------------------------------------------+  |
 |                                                                         |
 |  WHY SINGLE-THREADED?                                                   |
 |  ---------------------                                                  |

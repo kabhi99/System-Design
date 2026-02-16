@@ -15,24 +15,24 @@ informed decisions and explain your choices in interviews.
 |  Server doesn't store any client session data.                          |
 |  Each request contains all information needed to process it.            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request 1 --> Server A --> Response                           |     |
-|  |  Request 2 --> Server B --> Response  (different server, OK!) |      |
-|  |  Request 3 --> Server C --> Response                           |     |
-|  |                                                                 |    |
-|  |  Each request is independent, any server can handle it        |      |
-|  |                                                                 |    |
-|  |  Example: REST API with JWT token                              |     |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |  GET /api/orders                                        |  |      |
-|  |  |  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...  |  |      |
-|  |  |                                                          |  |     |
-|  |  |  Token contains user_id, roles, expiry                  |  |      |
-|  |  |  Server validates token, doesn't need session           |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request 1 --> Server A --> Response                              |  |
+|  |  Request 2 --> Server B --> Response  (different server, OK!)     |  |
+|  |  Request 3 --> Server C --> Response                              |  |
+|  |                                                                   |  |
+|  |  Each request is independent, any server can handle it            |  |
+|  |                                                                   |  |
+|  |  Example: REST API with JWT token                                 |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |  GET /api/orders                                            |  |  |
+|  |  |  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6...      |  |  |
+|  |  |                                                             |  |  |
+|  |  |  Token contains user_id, roles, expiry                      |  |  |
+|  |  |  Server validates token, doesn't need session               |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Easy to scale horizontally (add more servers)                        |
@@ -55,15 +55,15 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  Server maintains client session data between requests.                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request 1 --> Server A --> Store session --> Response         |     |
-|  |  Request 2 --> Server A --> Use session --> Response           |     |
-|  |  Request 3 --> Server B --> Session not found! ERROR!         |      |
-|  |                                                                 |    |
-|  |  Must route same user to same server (sticky sessions)        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request 1 --> Server A --> Store session --> Response            |  |
+|  |  Request 2 --> Server A --> Use session --> Response              |  |
+|  |  Request 3 --> Server B --> Session not found! ERROR!             |  |
+|  |                                                                   |  |
+|  |  Must route same user to same server (sticky sessions)            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EXAMPLES:                                                              |
 |  * WebSocket connections                                                |
@@ -92,11 +92,11 @@ informed decisions and explain your choices in interviews.
 |     Store session in Redis instead of server memory                     |
 |     Any server can access session from Redis                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request --> Any Server --> Redis (session) --> Response       |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request --> Any Server --> Redis (session) --> Response          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  2. STICKY SESSIONS WITH FALLBACK                                       |
 |     Route to same server, but have backup in Redis                      |
@@ -117,24 +117,24 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  Client periodically asks server for updates                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client                                Server                   |    |
-|  |     |                                     |                     |    |
-|  |     |---- Any updates? ----------------->|                     |     |
-|  |     |<---- No ----------------------------|                     |    |
-|  |     |                                     |                     |    |
-|  |     |  (wait 5 seconds)                   |                     |    |
-|  |     |                                     |                     |    |
-|  |     |---- Any updates? ----------------->|                     |     |
-|  |     |<---- No ----------------------------|                     |    |
-|  |     |                                     |                     |    |
-|  |     |  (wait 5 seconds)                   |                     |    |
-|  |     |                                     |                     |    |
-|  |     |---- Any updates? ----------------->|                     |     |
-|  |     |<---- Yes, here's data --------------|                     |    |
-|  |     |                                     |                     |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client                                Server                     |  |
+|  |     |                                     |                       |  |
+|  |     |---- Any updates? ----------------->|                        |  |
+|  |     |<---- No ----------------------------|                       |  |
+|  |     |                                     |                       |  |
+|  |     |  (wait 5 seconds)                   |                       |  |
+|  |     |                                     |                       |  |
+|  |     |---- Any updates? ----------------->|                        |  |
+|  |     |<---- No ----------------------------|                       |  |
+|  |     |                                     |                       |  |
+|  |     |  (wait 5 seconds)                   |                       |  |
+|  |     |                                     |                       |  |
+|  |     |---- Any updates? ----------------->|                        |  |
+|  |     |<---- Yes, here's data --------------|                       |  |
+|  |     |                                     |                       |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Simple to implement                                                  |
@@ -158,22 +158,22 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  Server sends updates to client when they occur                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client                                Server                   |    |
-|  |     |                                     |                     |    |
-|  |     |---- Subscribe -------------------->|                     |     |
-|  |     |<---- Connection established --------|                     |    |
-|  |     |                                     |                     |    |
-|  |     |  (waiting...)                       | (event occurs)     |     |
-|  |     |                                     |                     |    |
-|  |     |<---- Here's update! ----------------|                     |    |
-|  |     |                                     |                     |    |
-|  |     |  (waiting...)                       | (event occurs)     |     |
-|  |     |                                     |                     |    |
-|  |     |<---- Here's update! ----------------|                     |    |
-|  |     |                                     |                     |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client                                Server                     |  |
+|  |     |                                     |                       |  |
+|  |     |---- Subscribe -------------------->|                        |  |
+|  |     |<---- Connection established --------|                       |  |
+|  |     |                                     |                       |  |
+|  |     |  (waiting...)                       | (event occurs)        |  |
+|  |     |                                     |                       |  |
+|  |     |<---- Here's update! ----------------|                       |  |
+|  |     |                                     |                       |  |
+|  |     |  (waiting...)                       | (event occurs)        |  |
+|  |     |                                     |                       |  |
+|  |     |<---- Here's update! ----------------|                       |  |
+|  |     |                                     |                       |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  IMPLEMENTATIONS:                                                       |
 |  * WebSockets                                                           |
@@ -200,20 +200,20 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  COMPARISON                                                             |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Aspect          Pull (Polling)       Push                    |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Latency         High (interval)      Low (instant)           |      |
-|  |  Server Load     Higher (many polls)  Lower (on-demand)       |      |
-|  |  Complexity      Simple               Complex                 |      |
-|  |  Scalability     Easier               Harder                  |      |
-|  |  Connection      Stateless            Stateful               |       |
-|  |  Real-time       No                   Yes                    |       |
-|  |  Battery (mobile) Higher              Lower                  |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Aspect          Pull (Polling)       Push                       |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Latency         High (interval)      Low (instant)              |   |
+|  |  Server Load     Higher (many polls)  Lower (on-demand)          |   |
+|  |  Complexity      Simple               Complex                    |   |
+|  |  Scalability     Easier               Harder                     |   |
+|  |  Connection      Stateless            Stateful                   |   |
+|  |  Real-time       No                   Yes                        |   |
+|  |  Battery (mobile) Higher              Lower                      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  HYBRID APPROACH:                                                       |
 |  Use push for real-time needs, pull for initial load/sync               |
@@ -233,18 +233,18 @@ informed decisions and explain your choices in interviews.
 |  Tasks can START before others FINISH                                   |
 |  May not actually run simultaneously                                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  SINGLE CPU (Concurrency via context switching):               |     |
-|  |                                                                 |    |
-|  |  Time ----------------------------------------------------->   |     |
-|  |                                                                 |    |
-|  |  Task A: ####....####....####....                              |     |
-|  |  Task B: ....####....####....####                              |     |
-|  |                                                                 |    |
-|  |  Only ONE task runs at any moment, but both PROGRESS           |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  SINGLE CPU (Concurrency via context switching):                  |  |
+|  |                                                                   |  |
+|  |  Time ----------------------------------------------------->      |  |
+|  |                                                                   |  |
+|  |  Task A: ####....####....####....                                 |  |
+|  |  Task B: ....####....####....####                                 |  |
+|  |                                                                   |  |
+|  |  Only ONE task runs at any moment, but both PROGRESS              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EXAMPLE: Single-threaded event loop (Node.js)                          |
 |  * Handle 1000 concurrent connections                                   |
@@ -263,20 +263,20 @@ informed decisions and explain your choices in interviews.
 |  Actually executing multiple tasks simultaneously                       |
 |  Requires multiple CPU cores                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  MULTI CPU (True parallelism):                                 |     |
-|  |                                                                 |    |
-|  |  Time ----------------------------------------------------->   |     |
-|  |                                                                 |    |
-|  |  CPU 1 - Task A: ####################                          |     |
-|  |  CPU 2 - Task B: ####################                          |     |
-|  |  CPU 3 - Task C: ####################                          |     |
-|  |  CPU 4 - Task D: ####################                          |     |
-|  |                                                                 |    |
-|  |  ALL tasks run at the SAME TIME on different cores            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  MULTI CPU (True parallelism):                                    |  |
+|  |                                                                   |  |
+|  |  Time ----------------------------------------------------->      |  |
+|  |                                                                   |  |
+|  |  CPU 1 - Task A: ####################                             |  |
+|  |  CPU 2 - Task B: ####################                             |  |
+|  |  CPU 3 - Task C: ####################                             |  |
+|  |  CPU 4 - Task D: ####################                             |  |
+|  |                                                                   |  |
+|  |  ALL tasks run at the SAME TIME on different cores                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EXAMPLE: Video encoding                                                |
 |  * Split video into chunks                                              |
@@ -291,38 +291,38 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  KEY DIFFERENCE                                                         |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Concurrency: "Dealing with" multiple things                  |      |
-|  |  Parallelism: "Doing" multiple things                         |      |
-|  |                                                                |     |
-|  |  Concurrency is about STRUCTURE                               |      |
-|  |  Parallelism is about EXECUTION                               |      |
-|  |                                                                |     |
-|  |  You can have:                                                 |     |
-|  |  * Concurrency without parallelism (single core)              |      |
-|  |  * Parallelism without concurrency (SIMD operations)          |      |
-|  |  * Both (multi-threaded on multi-core)                        |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Concurrency: "Dealing with" multiple things                     |   |
+|  |  Parallelism: "Doing" multiple things                            |   |
+|  |                                                                  |   |
+|  |  Concurrency is about STRUCTURE                                  |   |
+|  |  Parallelism is about EXECUTION                                  |   |
+|  |                                                                  |   |
+|  |  You can have:                                                   |   |
+|  |  * Concurrency without parallelism (single core)                 |   |
+|  |  * Parallelism without concurrency (SIMD operations)             |   |
+|  |  * Both (multi-threaded on multi-core)                           |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PRACTICAL EXAMPLES:                                                    |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Task Type       Best Approach        Example                 |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  I/O Bound       Concurrency          Web server handling     |      |
-|  |                  (async/await)        many connections        |      |
-|  |                                                                |     |
-|  |  CPU Bound       Parallelism          Image processing,       |      |
-|  |                  (multi-process)      ML training             |      |
-|  |                                                                |     |
-|  |  Mixed           Both                 Web server with         |      |
-|  |                                       background workers      |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Task Type       Best Approach        Example                    |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  I/O Bound       Concurrency          Web server handling        |   |
+|  |                  (async/await)        many connections           |   |
+|  |                                                                  |   |
+|  |  CPU Bound       Parallelism          Image processing,          |   |
+|  |                  (multi-process)      ML training                |   |
+|  |                                                                  |   |
+|  |  Mixed           Both                 Web server with            |   |
+|  |                                       background workers         |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -337,19 +337,19 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  Caller waits for response before continuing                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Service A                                Service B             |    |
-|  |      |                                        |                 |    |
-|  |      |-------- HTTP Request ----------------->|                 |    |
-|  |      |                                        |                 |    |
-|  |      |          (A is BLOCKED)                | (processing)   |     |
-|  |      |                                        |                 |    |
-|  |      |<------- HTTP Response -----------------|                 |    |
-|  |      |                                        |                 |    |
-|  |      | (A continues)                          |                 |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Service A                                Service B               |  |
+|  |      |                                        |                   |  |
+|  |      |-------- HTTP Request ----------------->|                   |  |
+|  |      |                                        |                   |  |
+|  |      |          (A is BLOCKED)                | (processing)      |  |
+|  |      |                                        |                   |  |
+|  |      |<------- HTTP Response -----------------|                   |  |
+|  |      |                                        |                   |  |
+|  |      | (A continues)                          |                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROTOCOLS: HTTP, gRPC, direct function calls                           |
 |                                                                         |
@@ -376,19 +376,19 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  Caller continues immediately, response comes later (or never)          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Service A             Queue              Service B             |    |
-|  |      |                   |                    |                 |    |
-|  |      |-- Publish msg --->|                    |                 |    |
-|  |      |<-- ACK -----------|                    |                 |    |
-|  |      |                   |                    |                 |    |
-|  |      | (A continues      |-- Deliver msg ---->|                 |    |
-|  |      |  immediately)     |                    | (processing)   |     |
-|  |      |                   |                    |                 |    |
-|  |      |                   |<-- ACK ------------|                 |    |
-|  |      |                   |                    |                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Service A             Queue              Service B               |  |
+|  |      |                   |                    |                   |  |
+|  |      |-- Publish msg --->|                    |                   |  |
+|  |      |<-- ACK -----------|                    |                   |  |
+|  |      |                   |                    |                   |  |
+|  |      | (A continues      |-- Deliver msg ---->|                   |  |
+|  |      |  immediately)     |                    | (processing)      |  |
+|  |      |                   |                    |                   |  |
+|  |      |                   |<-- ACK ------------|                   |  |
+|  |      |                   |                    |                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROTOCOLS: Message queues (Kafka, RabbitMQ, SQS), webhooks             |
 |                                                                         |
@@ -413,20 +413,20 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  COMPARISON                                                             |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Aspect          Synchronous          Asynchronous            |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Coupling        Tight                Loose                   |      |
-|  |  Response        Immediate            Eventually              |      |
-|  |  Complexity      Simple               Complex                 |      |
-|  |  Fault Tolerance Lower                Higher                  |      |
-|  |  Scalability     Limited              Better                  |      |
-|  |  Consistency     Strong               Eventual                |      |
-|  |  Debugging       Easier               Harder                  |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Aspect          Synchronous          Asynchronous               |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Coupling        Tight                Loose                      |   |
+|  |  Response        Immediate            Eventually                 |   |
+|  |  Complexity      Simple               Complex                    |   |
+|  |  Fault Tolerance Lower                Higher                     |   |
+|  |  Scalability     Limited              Better                     |   |
+|  |  Consistency     Strong               Eventual                   |   |
+|  |  Debugging       Easier               Harder                     |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -441,19 +441,19 @@ informed decisions and explain your choices in interviews.
 |  LATENCY: Time to complete ONE request (response time)                  |
 |  THROUGHPUT: Number of requests completed per unit time                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  HIGHWAY ANALOGY:                                              |     |
-|  |                                                                 |    |
-|  |  Latency = Time for ONE car to travel from A to B              |     |
-|  |  Throughput = Number of cars passing per hour                  |     |
-|  |                                                                 |    |
-|  |  You can have:                                                 |     |
-|  |  * Low latency, low throughput (empty highway, drive fast)    |      |
-|  |  * High latency, high throughput (traffic, many cars moving)  |      |
-|  |  * High latency, low throughput (traffic jam!)                 |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  HIGHWAY ANALOGY:                                                 |  |
+|  |                                                                   |  |
+|  |  Latency = Time for ONE car to travel from A to B                 |  |
+|  |  Throughput = Number of cars passing per hour                     |  |
+|  |                                                                   |  |
+|  |  You can have:                                                    |  |
+|  |  * Low latency, low throughput (empty highway, drive fast)        |  |
+|  |  * High latency, high throughput (traffic, many cars moving)      |  |
+|  |  * High latency, low throughput (traffic jam!)                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -461,32 +461,32 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  TRADEOFFS                                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  OPTIMIZE FOR LATENCY:                                         |     |
-|  |                                                                 |    |
-|  |  * Process one request immediately                             |     |
-|  |  * No batching                                                  |    |
-|  |  * Keep queues short                                           |     |
-|  |                                                                 |    |
-|  |  Example: Real-time trading                                    |     |
-|  |  - Every millisecond matters                                   |     |
-|  |  - Process each trade immediately                              |     |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  OPTIMIZE FOR THROUGHPUT:                                      |     |
-|  |                                                                 |    |
-|  |  * Batch requests together                                     |     |
-|  |  * Amortize overhead                                           |     |
-|  |  * Use queues                                                   |    |
-|  |                                                                 |    |
-|  |  Example: Data pipeline                                        |     |
-|  |  - Process 1M records/hour                                     |     |
-|  |  - Individual record latency doesn't matter                   |      |
-|  |  - Batch for efficiency                                        |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  OPTIMIZE FOR LATENCY:                                            |  |
+|  |                                                                   |  |
+|  |  * Process one request immediately                                |  |
+|  |  * No batching                                                    |  |
+|  |  * Keep queues short                                              |  |
+|  |                                                                   |  |
+|  |  Example: Real-time trading                                       |  |
+|  |  - Every millisecond matters                                      |  |
+|  |  - Process each trade immediately                                 |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  OPTIMIZE FOR THROUGHPUT:                                         |  |
+|  |                                                                   |  |
+|  |  * Batch requests together                                        |  |
+|  |  * Amortize overhead                                              |  |
+|  |  * Use queues                                                     |  |
+|  |                                                                   |  |
+|  |  Example: Data pipeline                                           |  |
+|  |  - Process 1M records/hour                                        |  |
+|  |  - Individual record latency doesn't matter                       |  |
+|  |  - Batch for efficiency                                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  LITTLE'S LAW:                                                          |
 |  L = L x W                                                              |
@@ -507,21 +507,21 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  QUICK SUMMARY:                                                         |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  STRONG CONSISTENCY (CP)                                       |     |
-|  |  * All nodes see same data at same time                       |      |
-|  |  * May reject requests during partition                       |      |
-|  |  * Use: Banking, inventory                                    |      |
-|  |  * Systems: Zookeeper, etcd, HBase                           |       |
-|  |                                                                |     |
-|  |  EVENTUAL CONSISTENCY (AP)                                     |     |
-|  |  * Nodes may temporarily have different data                  |      |
-|  |  * Always accepts requests                                    |      |
-|  |  * Use: Social media, caching                                 |      |
-|  |  * Systems: Cassandra, DynamoDB, CouchDB                     |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  STRONG CONSISTENCY (CP)                                         |   |
+|  |  * All nodes see same data at same time                          |   |
+|  |  * May reject requests during partition                          |   |
+|  |  * Use: Banking, inventory                                       |   |
+|  |  * Systems: Zookeeper, etcd, HBase                               |   |
+|  |                                                                  |   |
+|  |  EVENTUAL CONSISTENCY (AP)                                       |   |
+|  |  * Nodes may temporarily have different data                     |   |
+|  |  * Always accepts requests                                       |   |
+|  |  * Use: Social media, caching                                    |   |
+|  |  * Systems: Cassandra, DynamoDB, CouchDB                         |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SPECTRUM OF CONSISTENCY:                                               |
 |                                                                         |
@@ -540,20 +540,20 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  QUICK COMPARISON:                                                      |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Aspect          SQL                  NoSQL                   |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Schema          Fixed, predefined    Flexible, dynamic       |      |
-|  |  Relationships   JOINs, foreign keys  Denormalized, embedded  |      |
-|  |  Scaling         Vertical (mainly)    Horizontal              |      |
-|  |  ACID            Yes                  Usually BASE            |      |
-|  |  Query Language  SQL (standard)       Varies by database      |      |
-|  |  Best For        Complex queries,     High scale, flexible    |      |
-|  |                  transactions         schema, simple queries  |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Aspect          SQL                  NoSQL                      |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Schema          Fixed, predefined    Flexible, dynamic          |   |
+|  |  Relationships   JOINs, foreign keys  Denormalized, embedded     |   |
+|  |  Scaling         Vertical (mainly)    Horizontal                 |   |
+|  |  ACID            Yes                  Usually BASE               |   |
+|  |  Query Language  SQL (standard)       Varies by database         |   |
+|  |  Best For        Complex queries,     High scale, flexible       |   |
+|  |                  transactions         schema, simple queries     |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHEN SQL:                                                              |
 |  * Complex relationships, JOINs                                         |
@@ -577,21 +577,21 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  See Microservices Architecture files for full details                  |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Aspect          Monolith             Microservices            |     |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Deployment      Single unit          Many small units        |      |
-|  |  Scaling         All or nothing       Independent             |      |
-|  |  Team Size       Any                  Large, distributed      |      |
-|  |  Complexity      Lower initially      Higher                  |      |
-|  |  Latency         Lower (in-process)   Higher (network)        |      |
-|  |  Debugging       Easier               Harder                  |      |
-|  |  Tech Stack      Single               Polyglot                |      |
-|  |  Fault Isolation None                 Per-service             |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Aspect          Monolith             Microservices              |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Deployment      Single unit          Many small units           |   |
+|  |  Scaling         All or nothing       Independent                |   |
+|  |  Team Size       Any                  Large, distributed         |   |
+|  |  Complexity      Lower initially      Higher                     |   |
+|  |  Latency         Lower (in-process)   Higher (network)           |   |
+|  |  Debugging       Easier               Harder                     |   |
+|  |  Tech Stack      Single               Polyglot                   |   |
+|  |  Fault Isolation None                 Per-service                |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHEN MONOLITH:                                                         |
 |  * Small team (< 10 developers)                                         |
@@ -615,48 +615,48 @@ informed decisions and explain your choices in interviews.
 |                                                                         |
 |  MASTER TRADEOFFS TABLE                                                 |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Tradeoff              Option A           Option B            |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  State                 Stateless          Stateful            |      |
-|  |                        (scale easy)       (simpler logic)     |      |
-|  |                                                                |     |
-|  |  Updates               Pull (simple)      Push (real-time)    |      |
-|  |                                                                |     |
-|  |  Processing            Concurrent         Parallel            |      |
-|  |                        (I/O bound)        (CPU bound)         |      |
-|  |                                                                |     |
-|  |  Communication         Sync (simple)      Async (resilient)   |      |
-|  |                                                                |     |
-|  |  Optimize              Latency            Throughput          |      |
-|  |                        (fast response)    (high volume)       |      |
-|  |                                                                |     |
-|  |  CAP                   Consistency        Availability        |      |
-|  |                        (correct data)     (always respond)    |      |
-|  |                                                                |     |
-|  |  Database              SQL (ACID,         NoSQL (scale,       |      |
-|  |                        complex queries)   flexible schema)    |      |
-|  |                                                                |     |
-|  |  Architecture          Monolith           Microservices       |      |
-|  |                        (simple)           (scalable)          |      |
-|  |                                                                |     |
-|  |  Data Processing       Batch              Stream              |      |
-|  |                        (high volume)      (real-time)         |      |
-|  |                                                                |     |
-|  |  Cache Strategy        Read-through       Write-through       |      |
-|  |                        (read heavy)       (write consistency) |      |
-|  |                                                                |     |
-|  |  Scaling               Vertical           Horizontal          |      |
-|  |                        (simple, limited)  (complex, infinite) |      |
-|  |                                                                |     |
-|  |  API Style             REST (standard)    RPC (fast)          |      |
-|  |                                                                |     |
-|  |  Real-time             Long Polling       WebSockets          |      |
-|  |                        (simpler)          (efficient)         |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Tradeoff              Option A           Option B               |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  State                 Stateless          Stateful               |   |
+|  |                        (scale easy)       (simpler logic)        |   |
+|  |                                                                  |   |
+|  |  Updates               Pull (simple)      Push (real-time)       |   |
+|  |                                                                  |   |
+|  |  Processing            Concurrent         Parallel               |   |
+|  |                        (I/O bound)        (CPU bound)            |   |
+|  |                                                                  |   |
+|  |  Communication         Sync (simple)      Async (resilient)      |   |
+|  |                                                                  |   |
+|  |  Optimize              Latency            Throughput             |   |
+|  |                        (fast response)    (high volume)          |   |
+|  |                                                                  |   |
+|  |  CAP                   Consistency        Availability           |   |
+|  |                        (correct data)     (always respond)       |   |
+|  |                                                                  |   |
+|  |  Database              SQL (ACID,         NoSQL (scale,          |   |
+|  |                        complex queries)   flexible schema)       |   |
+|  |                                                                  |   |
+|  |  Architecture          Monolith           Microservices          |   |
+|  |                        (simple)           (scalable)             |   |
+|  |                                                                  |   |
+|  |  Data Processing       Batch              Stream                 |   |
+|  |                        (high volume)      (real-time)            |   |
+|  |                                                                  |   |
+|  |  Cache Strategy        Read-through       Write-through          |   |
+|  |                        (read heavy)       (write consistency)    |   |
+|  |                                                                  |   |
+|  |  Scaling               Vertical           Horizontal             |   |
+|  |                        (simple, limited)  (complex, infinite)    |   |
+|  |                                                                  |   |
+|  |  API Style             REST (standard)    RPC (fast)             |   |
+|  |                                                                  |   |
+|  |  Real-time             Long Polling       WebSockets             |   |
+|  |                        (simpler)          (efficient)            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  KEY PRINCIPLE:                                                         |
 |  There is no "best" choice. Every decision depends on:                  |

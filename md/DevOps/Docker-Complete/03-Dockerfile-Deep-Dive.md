@@ -16,14 +16,14 @@ A Dockerfile is a recipe for creating Docker images:
 |                                                                         |
 |  DOCKERFILE > docker build > IMAGE > docker run > CONTAINER             |
 |                                                                         |
-|  +----------------+      +----------------+      +----------------+     |
-|  |   Dockerfile   |      |     Image      |      |   Container    |     |
-|  |                |      |                |      |                |     |
-|  |  FROM node:16  |----->|   my-app:v1   |----->|   Running app  |      |
-|  |  COPY . .      |      |                |      |                |     |
-|  |  RUN npm i     |      |    (layers)    |      |   (process)    |     |
-|  |  CMD npm start |      |                |      |                |     |
-|  +----------------+      +----------------+      +----------------+     |
+|  +----------------+      +----------------+      +------------------+   |
+|  |   Dockerfile   |      |     Image      |      |   Container      |   |
+|  |                |      |                |      |                  |   |
+|  |  FROM node:16  |----->|   my-app:v1   |----->|   Running app     |   |
+|  |  COPY . .      |      |                |      |                  |   |
+|  |  RUN npm i     |      |    (layers)    |      |   (process)      |   |
+|  |  CMD npm start |      |                |      |                  |   |
+|  +----------------+      +----------------+      +------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

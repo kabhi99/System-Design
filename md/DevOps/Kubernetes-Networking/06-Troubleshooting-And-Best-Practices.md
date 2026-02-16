@@ -607,33 +607,33 @@ data:
 |                                                                         |
 |  TROUBLESHOOTING AND BEST PRACTICES - KEY TAKEAWAYS                     |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  TROUBLESHOOTING APPROACH                                        |   |
-|  |  * Work through layers: Pod > Pod-to-Pod > Service > DNS >      |    |
-|  |    External                                                      |   |
-|  |  * Check Endpoints first (most common issue!)                   |    |
-|  |  * Use netshoot for debugging                                   |    |
-|  |  * tcpdump for deep packet analysis                            |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  PRODUCTION CHECKLIST                                            |   |
-|  |  * Plan IP ranges for growth                                    |    |
-|  |  * Choose CNI based on requirements                             |    |
-|  |  * Default deny Network Policies                                |    |
-|  |  * HA for DNS, Ingress, and CNI components                     |     |
-|  |  * Monitor networking metrics                                   |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  COMMON PITFALLS                                                 |   |
-|  |  * Forgetting DNS in egress policies                            |    |
-|  |  * Flannel without policy support                               |    |
-|  |  * Insufficient pod CIDR size                                   |    |
-|  |  * Missing readiness probes causing traffic to unready pods    |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  TROUBLESHOOTING APPROACH                                          | |
+|  |  * Work through layers: Pod > Pod-to-Pod > Service > DNS >         | |
+|  |    External                                                        | |
+|  |  * Check Endpoints first (most common issue!)                      | |
+|  |  * Use netshoot for debugging                                      | |
+|  |  * tcpdump for deep packet analysis                                | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  PRODUCTION CHECKLIST                                              | |
+|  |  * Plan IP ranges for growth                                       | |
+|  |  * Choose CNI based on requirements                                | |
+|  |  * Default deny Network Policies                                   | |
+|  |  * HA for DNS, Ingress, and CNI components                         | |
+|  |  * Monitor networking metrics                                      | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  COMMON PITFALLS                                                   | |
+|  |  * Forgetting DNS in egress policies                               | |
+|  |  * Flannel without policy support                                  | |
+|  |  * Insufficient pod CIDR size                                      | |
+|  |  * Missing readiness probes causing traffic to unready pods        | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

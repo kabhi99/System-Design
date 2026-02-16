@@ -939,31 +939,31 @@ ORDER APIs:
 +-------------------------------------------------------------------------+
 |                    DATABASE SELECTION                                   |
 |                                                                         |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Data Type      | Choice          | Why                            |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Transactional  | PostgreSQL      | ACID for orders, payments      |  |
-|  | (Orders,       |                 | Strong consistency required    |  |
-|  |  Payments)     |                 | Complex queries, joins         |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Shopping Cart  | Redis           | Fast read/write                |  |
-|  |                |                 | TTL for cart expiration        |  |
-|  |                |                 | Session affinity optional      |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Inventory      | PostgreSQL +    | Strong consistency for stock   |  |
-|  | (Critical)     | Redis cache     | Redis for fast availability    |  |
-|  |                |                 | DB for source of truth         |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Product Search | Elasticsearch   | Full-text search               |  |
-|  |                |                 | Faceted filtering              |  |
-|  |                |                 | Autocomplete                   |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Product Catalog| PostgreSQL +    | Relational for categories      |  |
-|  |                | Redis cache     | Heavy caching (rarely changes) |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Analytics      | ClickHouse/     | Time-series aggregations       |  |
-|  |                | Druid           | Real-time dashboards           |  |
-|  +----------------+-----------------+--------------------------------+  |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Data Type      | Choice          | Why                             | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Transactional  | PostgreSQL      | ACID for orders, payments       | |
+|  | (Orders,       |                 | Strong consistency required     | |
+|  |  Payments)     |                 | Complex queries, joins          | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Shopping Cart  | Redis           | Fast read/write                 | |
+|  |                |                 | TTL for cart expiration         | |
+|  |                |                 | Session affinity optional       | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Inventory      | PostgreSQL +    | Strong consistency for stock    | |
+|  | (Critical)     | Redis cache     | Redis for fast availability     | |
+|  |                |                 | DB for source of truth          | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Product Search | Elasticsearch   | Full-text search                | |
+|  |                |                 | Faceted filtering               | |
+|  |                |                 | Autocomplete                    | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Product Catalog| PostgreSQL +    | Relational for categories       | |
+|  |                | Redis cache     | Heavy caching (rarely changes)  | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Analytics      | ClickHouse/     | Time-series aggregations        | |
+|  |                | Druid           | Real-time dashboards            | |
+|  +----------------+-----------------+---------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -974,28 +974,28 @@ ORDER APIs:
 +-------------------------------------------------------------------------+
 |                    ACCESS POLICY                                        |
 |                                                                         |
-|  +--------------------------------+------------+-------------------+    |
-|  | Endpoint                       | Auth       | Notes             |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | GET /api/products              | PUBLIC     | Browse catalog    |    |
-|  | GET /api/search                | PUBLIC     | Search products   |    |
-|  | GET /api/categories            | PUBLIC     | Category tree     |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/cart/items           | OPTIONAL   | Guest or user     |    |
-|  | GET /api/cart                  | OPTIONAL   | Cart by ID/user   |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/checkout/initiate    | USER       | Requires login    |    |
-|  | POST /api/checkout/pay         | USER       | Process payment   |    |
-|  | GET /api/orders                | USER       | User's orders     |    |
-|  | POST /api/orders/{id}/cancel   | USER       | Cancel own order  |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/admin/products       | ADMIN      | Add products      |    |
-|  | PUT /api/admin/inventory       | ADMIN      | Update stock      |    |
-|  | GET /api/admin/reports         | ADMIN      | Sales reports     |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/seller/products      | SELLER     | List products     |    |
-|  | GET /api/seller/orders         | SELLER     | Seller's orders   |    |
-|  +--------------------------------+------------+-------------------+    |
+|  +--------------------------------+------------+--------------------+   |
+|  | Endpoint                       | Auth       | Notes              |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | GET /api/products              | PUBLIC     | Browse catalog     |   |
+|  | GET /api/search                | PUBLIC     | Search products    |   |
+|  | GET /api/categories            | PUBLIC     | Category tree      |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/cart/items           | OPTIONAL   | Guest or user      |   |
+|  | GET /api/cart                  | OPTIONAL   | Cart by ID/user    |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/checkout/initiate    | USER       | Requires login     |   |
+|  | POST /api/checkout/pay         | USER       | Process payment    |   |
+|  | GET /api/orders                | USER       | User's orders      |   |
+|  | POST /api/orders/{id}/cancel   | USER       | Cancel own order   |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/admin/products       | ADMIN      | Add products       |   |
+|  | PUT /api/admin/inventory       | ADMIN      | Update stock       |   |
+|  | GET /api/admin/reports         | ADMIN      | Sales reports      |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/seller/products      | SELLER     | List products      |   |
+|  | GET /api/seller/orders         | SELLER     | Seller's orders    |   |
+|  +--------------------------------+------------+--------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1208,18 +1208,18 @@ DATA SYNC (PostgreSQL > Elasticsearch):
 |  Search: "laptop"                                                       |
 |                                                                         |
 |  FILTERS (with counts):                                                 |
-|  +-----------------------------------------------------------------+    |
-|  | Brand                    | Price Range                          |    |
-|  | o Apple (45)            | o Under $500 (23)                    |     |
-|  | o Dell (38)             | o $500 - $1000 (67)                  |     |
-|  | o HP (52)               | o $1000 - $1500 (45)                 |     |
-|  | o Lenovo (41)           | o Over $1500 (15)                    |     |
-|  |                          |                                      |    |
-|  | RAM                      | Customer Rating                      |    |
-|  | o 8 GB (78)             | o 4* & up (120)                      |     |
-|  | o 16 GB (56)            | o 3* & up (145)                      |     |
-|  | o 32 GB (16)            |                                      |     |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  | Brand                    | Price Range                           |   |
+|  | o Apple (45)            | o Under $500 (23)                      |   |
+|  | o Dell (38)             | o $500 - $1000 (67)                    |   |
+|  | o HP (52)               | o $1000 - $1500 (45)                   |   |
+|  | o Lenovo (41)           | o Over $1500 (15)                      |   |
+|  |                          |                                       |   |
+|  | RAM                      | Customer Rating                       |   |
+|  | o 8 GB (78)             | o 4* & up (120)                        |   |
+|  | o 16 GB (56)            | o 3* & up (145)                        |   |
+|  | o 32 GB (16)            |                                        |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  ELASTICSEARCH AGGREGATION QUERY:                                       |
 |  {                                                                      |
@@ -1422,12 +1422,12 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 |   |           |            |             |  cart:user:items             |
 |   |           |            |             |<-User items--|               |
 |   |           |            |             |              |               |
-|   |           |            |             |  +---------------------+     |
-|   |           |            |             |  | MERGE LOGIC:        |     |
-|   |           |            |             |  | * Sum quantities    |     |
-|   |           |            |             |  | * Check max limits  |     |
-|   |           |            |             |  | * Validate products |     |
-|   |           |            |             |  +---------------------+     |
+|   |           |            |             |  +----------------------+    |
+|   |           |            |             |  | MERGE LOGIC:         |    |
+|   |           |            |             |  | * Sum quantities     |    |
+|   |           |            |             |  | * Check max limits   |    |
+|   |           |            |             |  | * Validate products  |    |
+|   |           |            |             |  +----------------------+    |
 |   |           |            |             |              |               |
 |   |           |            |             |--HSET (merged)-->            |
 |   |           |            |             |  cart:user:items             |
@@ -2079,43 +2079,43 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |                                                                         |
 |  Orchestrator (Order Service) coordinates:                              |
 |                                                                         |
-|  +---------------------------------------------------------------+      |
-|  |                      HAPPY PATH                               |      |
-|  |                                                               |      |
-|  |  1. Reserve inventory     -------->  Inventory Service       |       |
-|  |  2. Process payment       -------->  Payment Service         |       |
-|  |  3. Create order          -------->  Order Service           |       |
-|  |  4. Confirm inventory     -------->  Inventory Service       |       |
-|  |  5. Send notification     -------->  Notification Service    |       |
-|  |  6. Clear cart            -------->  Cart Service            |       |
-|  |                                                               |      |
-|  +---------------------------------------------------------------+      |
+|  +-----------------------------------------------------------------+    |
+|  |                      HAPPY PATH                                 |    |
+|  |                                                                 |    |
+|  |  1. Reserve inventory     -------->  Inventory Service          |    |
+|  |  2. Process payment       -------->  Payment Service            |    |
+|  |  3. Create order          -------->  Order Service              |    |
+|  |  4. Confirm inventory     -------->  Inventory Service          |    |
+|  |  5. Send notification     -------->  Notification Service       |    |
+|  |  6. Clear cart            -------->  Cart Service               |    |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  +---------------------------------------------------------------+      |
-|  |                    COMPENSATION (Payment Fails)               |      |
-|  |                                                               |      |
-|  |  1. Reserve inventory     Y Success                         |        |
-|  |  2. Process payment       X FAILED                          |        |
-|  |                                                               |      |
-|  |  COMPENSATE:                                                 |       |
-|  |  > Release inventory reservation                             |       |
-|  |  > Return error to user                                     |        |
-|  |                                                               |      |
-|  +---------------------------------------------------------------+      |
+|  +-----------------------------------------------------------------+    |
+|  |                    COMPENSATION (Payment Fails)                 |    |
+|  |                                                                 |    |
+|  |  1. Reserve inventory     Y Success                             |    |
+|  |  2. Process payment       X FAILED                              |    |
+|  |                                                                 |    |
+|  |  COMPENSATE:                                                    |    |
+|  |  > Release inventory reservation                                |    |
+|  |  > Return error to user                                         |    |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  +---------------------------------------------------------------+      |
-|  |              COMPENSATION (Order Creation Fails)              |      |
-|  |                                                               |      |
-|  |  1. Reserve inventory     Y Success                         |        |
-|  |  2. Process payment       Y Success                         |        |
-|  |  3. Create order          X FAILED                          |        |
-|  |                                                               |      |
-|  |  COMPENSATE:                                                 |       |
-|  |  > Refund payment                                           |        |
-|  |  > Release inventory reservation                             |       |
-|  |  > Notify user: "Sorry, refund initiated"                  |         |
-|  |                                                               |      |
-|  +---------------------------------------------------------------+      |
+|  +-----------------------------------------------------------------+    |
+|  |              COMPENSATION (Order Creation Fails)                |    |
+|  |                                                                 |    |
+|  |  1. Reserve inventory     Y Success                             |    |
+|  |  2. Process payment       Y Success                             |    |
+|  |  3. Create order          X FAILED                              |    |
+|  |                                                                 |    |
+|  |  COMPENSATE:                                                    |    |
+|  |  > Refund payment                                               |    |
+|  |  > Release inventory reservation                                |    |
+|  |  > Notify user: "Sorry, refund initiated"                       |    |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2297,25 +2297,25 @@ SAGA COMPENSATION SEQUENCE (Order Creation Fails After Payment):
 +-------------------------------------------------------------------------+
 |                    ORCHESTRATION VS CHOREOGRAPHY                        |
 |                                                                         |
-|  +------------------+---------------------+------------------------+    |
-|  | Aspect           | Orchestration       | Choreography           |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Coordinator      | Central (Order Svc) | None (Event-driven)    |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Coupling         | Orchestrator knows  | Services are loosely   |    |
-|  |                  | all services        | coupled via events     |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Single point     | Yes (orchestrator)  | No                     |    |
-|  | of failure       |                     |                        |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Visibility       | Easy (central log)  | Hard (distributed)     |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Complexity       | In orchestrator     | Distributed            |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Scalability      | Limited by coord    | Better (no bottleneck) |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Debugging        | Easier              | Harder                 |    |
-|  +------------------+---------------------+------------------------+    |
+|  +------------------+---------------------+-------------------------+   |
+|  | Aspect           | Orchestration       | Choreography            |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Coordinator      | Central (Order Svc) | None (Event-driven)     |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Coupling         | Orchestrator knows  | Services are loosely    |   |
+|  |                  | all services        | coupled via events      |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Single point     | Yes (orchestrator)  | No                      |   |
+|  | of failure       |                     |                         |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Visibility       | Easy (central log)  | Hard (distributed)      |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Complexity       | In orchestrator     | Distributed             |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Scalability      | Limited by coord    | Better (no bottleneck)  |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Debugging        | Easier              | Harder                  |   |
+|  +------------------+---------------------+-------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3083,26 +3083,26 @@ EVENT SCHEMAS (Avro/JSON):
 +-------------------------------------------------------------------------+
 |                    CACHING LAYERS                                       |
 |                                                                         |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Data               | Cache       | TTL          | Invalidation    |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Product catalog    | Redis       | 1 hour       | On product edit |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Product details    | Redis       | 30 min       | On product edit |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Category tree      | Redis       | 6 hours      | On change       |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Inventory count    | Redis       | Real-time    | On reservation  |  |
-|  | (available)        |             |              |                 |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Shopping cart      | Redis       | 30 days      | On cart change  |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | User session       | Redis       | 24 hours     | On logout       |  |
-|  +--------------------+-------------+--------------+-----------------+  |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Data               | Cache       | TTL          | Invalidation     | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Product catalog    | Redis       | 1 hour       | On product edit  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Product details    | Redis       | 30 min       | On product edit  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Category tree      | Redis       | 6 hours      | On change        | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Inventory count    | Redis       | Real-time    | On reservation   | |
+|  | (available)        |             |              |                  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Shopping cart      | Redis       | 30 days      | On cart change   | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | User session       | Redis       | 24 hours     | On logout        | |
+|  +--------------------+-------------+--------------+------------------+ |
 |  | Search results     | Elasticsearch| In-memory   | On product change| |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Static assets      | CDN         | 1 year       | URL versioning  |  |
-|  +--------------------+-------------+--------------+-----------------+  |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Static assets      | CDN         | 1 year       | URL versioning   | |
+|  +--------------------+-------------+--------------+------------------+ |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3595,24 +3595,24 @@ EVENT SCHEMAS (Avro/JSON):
 +-------------------------------------------------------------------------+
 |                    CAP TRADE-OFFS IN PRACTICE                           |
 |                                                                         |
-|  +-------------+------------------------+----------------------------+  |
-|  | Choice      | What You Get           | Examples                   |  |
-|  +-------------+------------------------+----------------------------+  |
-|  | CP          | Consistency +          | MongoDB (strong read),     |  |
-|  |             | Partition Tolerance    | HBase, Redis Cluster,      |  |
-|  |             | (sacrifice availability| Zookeeper, etcd            |  |
-|  |             | during partition)      |                            |  |
-|  +-------------+------------------------+----------------------------+  |
-|  | AP          | Availability +         | Cassandra, DynamoDB,       |  |
-|  |             | Partition Tolerance    | CouchDB, Riak              |  |
-|  |             | (sacrifice consistency |                            |  |
-|  |             | during partition)      |                            |  |
-|  +-------------+------------------------+----------------------------+  |
-|  | CA          | Consistency +          | Single-node RDBMS          |  |
-|  |             | Availability           | (PostgreSQL, MySQL)        |  |
-|  |             | (no partition tolerance| NOT truly distributed!     |  |
-|  |             | = not distributed)     |                            |  |
-|  +-------------+------------------------+----------------------------+  |
+|  +-------------+------------------------+-----------------------------+ |
+|  | Choice      | What You Get           | Examples                    | |
+|  +-------------+------------------------+-----------------------------+ |
+|  | CP          | Consistency +          | MongoDB (strong read),      | |
+|  |             | Partition Tolerance    | HBase, Redis Cluster,       | |
+|  |             | (sacrifice availability| Zookeeper, etcd             | |
+|  |             | during partition)      |                             | |
+|  +-------------+------------------------+-----------------------------+ |
+|  | AP          | Availability +         | Cassandra, DynamoDB,        | |
+|  |             | Partition Tolerance    | CouchDB, Riak               | |
+|  |             | (sacrifice consistency |                             | |
+|  |             | during partition)      |                             | |
+|  +-------------+------------------------+-----------------------------+ |
+|  | CA          | Consistency +          | Single-node RDBMS           | |
+|  |             | Availability           | (PostgreSQL, MySQL)         | |
+|  |             | (no partition tolerance| NOT truly distributed!      | |
+|  |             | = not distributed)     |                             | |
+|  +-------------+------------------------+-----------------------------+ |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3680,14 +3680,14 @@ EVENT SCHEMAS (Avro/JSON):
 |                      REPEATABLE READ > SERIALIZABLE                     |
 |                                                                         |
 |  ISOLATION LEVELS:                                                      |
-|  +------------------+------------+-------------+-------------------+    |
-|  | Level            | Dirty Read | Non-Repeat  | Phantom Read      |    |
-|  +------------------+------------+-------------+-------------------+    |
-|  | READ UNCOMMITTED | Possible   | Possible    | Possible          |    |
-|  | READ COMMITTED   | Prevented  | Possible    | Possible          |    |
-|  | REPEATABLE READ  | Prevented  | Prevented   | Possible          |    |
-|  | SERIALIZABLE     | Prevented  | Prevented   | Prevented         |    |
-|  +------------------+------------+-------------+-------------------+    |
+|  +------------------+------------+-------------+--------------------+   |
+|  | Level            | Dirty Read | Non-Repeat  | Phantom Read       |   |
+|  +------------------+------------+-------------+--------------------+   |
+|  | READ UNCOMMITTED | Possible   | Possible    | Possible           |   |
+|  | READ COMMITTED   | Prevented  | Possible    | Possible           |   |
+|  | REPEATABLE READ  | Prevented  | Prevented   | Possible           |   |
+|  | SERIALIZABLE     | Prevented  | Prevented   | Prevented          |   |
+|  +------------------+------------+-------------+--------------------+   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3726,19 +3726,19 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  ACID vs BASE COMPARISON:                                               |
 |                                                                         |
-|  +------------------+---------------------+-------------------------+   |
-|  | Aspect           | ACID                | BASE                    |   |
-|  +------------------+---------------------+-------------------------+   |
-|  | Consistency      | Strong              | Eventual                |   |
-|  +------------------+---------------------+-------------------------+   |
-|  | Availability     | May be sacrificed   | Prioritized             |   |
-|  +------------------+---------------------+-------------------------+   |
-|  | Scalability      | Vertical (limited)  | Horizontal (easier)     |   |
-|  +------------------+---------------------+-------------------------+   |
-|  | Data Model       | Rigid schema        | Flexible schema         |   |
-|  +------------------+---------------------+-------------------------+   |
-|  | Use Case         | Banking, inventory  | Social feeds, analytics |   |
-|  +------------------+---------------------+-------------------------+   |
+|  +------------------+---------------------+--------------------------+  |
+|  | Aspect           | ACID                | BASE                     |  |
+|  +------------------+---------------------+--------------------------+  |
+|  | Consistency      | Strong              | Eventual                 |  |
+|  +------------------+---------------------+--------------------------+  |
+|  | Availability     | May be sacrificed   | Prioritized              |  |
+|  +------------------+---------------------+--------------------------+  |
+|  | Scalability      | Vertical (limited)  | Horizontal (easier)      |  |
+|  +------------------+---------------------+--------------------------+  |
+|  | Data Model       | Rigid schema        | Flexible schema          |  |
+|  +------------------+---------------------+--------------------------+  |
+|  | Use Case         | Banking, inventory  | Social feeds, analytics  |  |
+|  +------------------+---------------------+--------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3751,10 +3751,10 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  STRONGEST <---------------------------------------------> WEAKEST      |
 |                                                                         |
-|  +-----------+-----------+------------+----------+-----------------+    |
-|  |Lineariz-  |Sequential | Causal     | Eventual | No Consistency  |    |
-|  |ability    |Consistency| Consistency|Consistency| (Chaos)        |    |
-|  +-----------+-----------+------------+----------+-----------------+    |
+|  +-----------+-----------+------------+----------+-------------------+  |
+|  |Lineariz-  |Sequential | Causal     | Eventual | No Consistency    |  |
+|  |ability    |Consistency| Consistency|Consistency| (Chaos)          |  |
+|  +-----------+-----------+------------+----------+-------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -4516,10 +4516,10 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  STATES:                                                                |
 |                                                                         |
-|  +---------+  Failures exceed  +----------+  Timeout   +-----------+    |
-|  | CLOSED  | ---threshold----> |   OPEN   | ---------> |HALF-OPEN  |    |
-|  |(normal) |                   |(fail fast)|           | (testing) |    |
-|  +----+----+                   +-----+----+           +-----+-----+     |
+|  +---------+  Failures exceed  +----------+  Timeout   +-------------+  |
+|  | CLOSED  | ---threshold----> |   OPEN   | ---------> |HALF-OPEN    |  |
+|  |(normal) |                   |(fail fast)|           | (testing)   |  |
+|  +----+----+                   +-----+----+           +-----+--------+  |
 |       |                              |                      |           |
 |       |<---------Success-------------+------Failure---------+           |
 |                                                                         |
@@ -4749,22 +4749,22 @@ EVENT SCHEMAS (Avro/JSON):
 +-------------------------------------------------------------------------+
 |                    REST vs GraphQL vs gRPC                              |
 |                                                                         |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Aspect     | REST              | GraphQL         | gRPC           |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Protocol   | HTTP              | HTTP            | HTTP/2         |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Format     | JSON              | JSON            | Protobuf       |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Contract   | OpenAPI (opt)     | Schema (req)    | Proto (req)    |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Fetching   | Over/under fetch  | Exact fields    | Defined types  |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Caching    | HTTP caching      | Complex         | No HTTP cache  |  |
-|  +------------+-------------------+-----------------+----------------+  |
-|  | Use case   | Public APIs,      | Flexible client | Internal,      |  |
-|  |            | simple CRUD       | needs, mobile   | high perf      |  |
-|  +------------+-------------------+-----------------+----------------+  |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Aspect     | REST              | GraphQL         | gRPC            | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Protocol   | HTTP              | HTTP            | HTTP/2          | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Format     | JSON              | JSON            | Protobuf        | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Contract   | OpenAPI (opt)     | Schema (req)    | Proto (req)     | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Fetching   | Over/under fetch  | Exact fields    | Defined types   | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Caching    | HTTP caching      | Complex         | No HTTP cache   | |
+|  +------------+-------------------+-----------------+-----------------+ |
+|  | Use case   | Public APIs,      | Flexible client | Internal,       | |
+|  |            | simple CRUD       | needs, mobile   | high perf       | |
+|  +------------+-------------------+-----------------+-----------------+ |
 |                                                                         |
 |  CHOOSE:                                                                |
 |  * REST: Simple, cacheable, public APIs                                 |

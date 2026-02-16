@@ -35,26 +35,26 @@ This file provides syntax and examples for the most common operations.
 |                                                                         |
 |  COMMON RESOURCE ABBREVIATIONS                                          |
 |                                                                         |
-|  +----------------------+-------------+----------------------------+    |
+|  +----------------------+-------------+-----------------------------+   |
 |  | Full Name            | Short       | Example                     |   |
-|  +----------------------+-------------+----------------------------+    |
-|  | pods                 | po          | kubectl get po             |    |
-|  | services             | svc         | kubectl get svc            |    |
-|  | deployments          | deploy      | kubectl get deploy         |    |
-|  | replicasets          | rs          | kubectl get rs             |    |
-|  | namespaces           | ns          | kubectl get ns             |    |
-|  | nodes                | no          | kubectl get no             |    |
-|  | configmaps           | cm          | kubectl get cm             |    |
-|  | secrets              | secret      | kubectl get secret         |    |
-|  | persistentvolumes    | pv          | kubectl get pv             |    |
-|  | persistentvolumeclaim| pvc         | kubectl get pvc            |    |
-|  | serviceaccounts      | sa          | kubectl get sa             |    |
-|  | ingresses            | ing         | kubectl get ing            |    |
-|  | daemonsets           | ds          | kubectl get ds             |    |
-|  | statefulsets         | sts         | kubectl get sts            |    |
-|  | cronjobs             | cj          | kubectl get cj             |    |
-|  | horizontalpodauto... | hpa         | kubectl get hpa            |    |
-|  +----------------------+-------------+----------------------------+    |
+|  +----------------------+-------------+-----------------------------+   |
+|  | pods                 | po          | kubectl get po              |   |
+|  | services             | svc         | kubectl get svc             |   |
+|  | deployments          | deploy      | kubectl get deploy          |   |
+|  | replicasets          | rs          | kubectl get rs              |   |
+|  | namespaces           | ns          | kubectl get ns              |   |
+|  | nodes                | no          | kubectl get no              |   |
+|  | configmaps           | cm          | kubectl get cm              |   |
+|  | secrets              | secret      | kubectl get secret          |   |
+|  | persistentvolumes    | pv          | kubectl get pv              |   |
+|  | persistentvolumeclaim| pvc         | kubectl get pvc             |   |
+|  | serviceaccounts      | sa          | kubectl get sa              |   |
+|  | ingresses            | ing         | kubectl get ing             |   |
+|  | daemonsets           | ds          | kubectl get ds              |   |
+|  | statefulsets         | sts         | kubectl get sts             |   |
+|  | cronjobs             | cj          | kubectl get cj              |   |
+|  | horizontalpodauto... | hpa         | kubectl get hpa             |   |
+|  +----------------------+-------------+-----------------------------+   |
 |                                                                         |
 |  # List all resource types                                              |
 |  kubectl api-resources                                                  |

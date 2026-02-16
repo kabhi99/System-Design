@@ -11,28 +11,28 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |                    BOOKMYSHOW ARCHITECTURE                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                         CLIENTS                                 |    |
-|  |    [Mobile App]    [Web Browser]    [Partner APIs]             |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                         CLIENTS                                   |  |
+|  |    [Mobile App]    [Web Browser]    [Partner APIs]                |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                           CDN                                   |    |
-|  |               (Static assets, images, JS/CSS)                  |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                           CDN                                     |  |
+|  |               (Static assets, images, JS/CSS)                     |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                      LOAD BALANCER                              |    |
-|  |                   (L7 - Application Layer)                     |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      LOAD BALANCER                                |  |
+|  |                   (L7 - Application Layer)                        |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                      API GATEWAY                                |    |
-|  |    [Rate Limiting] [Auth] [Routing] [SSL Termination]          |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      API GATEWAY                                  |  |
+|  |    [Rate Limiting] [Auth] [Routing] [SSL Termination]             |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |           +------------------+------------------+                       |
 |           v                  v                  v                       |
@@ -48,21 +48,21 @@ explaining each component, its responsibilities, and how they interact.
 |  +-------------+    +-------------+    +-------------+                  |
 |           |                  |                  |                       |
 |           v                  v                  v                       |
-|  +-----------------------------------------------------------------+    |
-|  |                      DATA LAYER                                 |    |
-|  |                                                                 |    |
-|  |  +-------------+  +-------------+  +-------------+            |      |
-|  |  | PostgreSQL  |  |    Redis    |  |Elasticsearch|            |      |
-|  |  |  (Primary)  |  |   (Cache)   |  |  (Search)   |            |      |
-|  |  +-------------+  +-------------+  +-------------+            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      DATA LAYER                                   |  |
+|  |                                                                   |  |
+|  |  +-------------+  +-------------+  +-------------+                |  |
+|  |  | PostgreSQL  |  |    Redis    |  |Elasticsearch|                |  |
+|  |  |  (Primary)  |  |   (Cache)   |  |  (Search)   |                |  |
+|  |  +-------------+  +-------------+  +-------------+                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                    MESSAGE QUEUE (Kafka)                        |    |
-|  |            [Events] [Notifications] [Analytics]                |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                    MESSAGE QUEUE (Kafka)                          |  |
+|  |            [Events] [Notifications] [Analytics]                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -151,11 +151,11 @@ explaining each component, its responsibilities, and how they interact.
 |  The API Gateway is the single entry point for all API requests.        |
 |  It handles cross-cutting concerns.                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request --> [Rate Limit] --> [Auth] --> [Route] --> Service  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request --> [Rate Limit] --> [Auth] --> [Route] --> Service      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  RESPONSIBILITIES:                                                      |
 |                                                                         |
@@ -165,14 +165,14 @@ explaining each component, its responsibilities, and how they interact.
 |     Pass user info to downstream services                               |
 |                                                                         |
 |  2. RATE LIMITING                                                       |
-|     +------------------------------------------------------------+      |
-|     | Endpoint              | Rate Limit                        |       |
-|     +------------------------------------------------------------+      |
-|     | /api/search           | 100 req/min per IP                |       |
-|     | /api/shows/{id}/seats | 30 req/min per user               |       |
-|     | /api/bookings         | 10 req/min per user               |       |
-|     | /api/payments         | 5 req/min per user                |       |
-|     +------------------------------------------------------------+      |
+|     +--------------------------------------------------------------+    |
+|     | Endpoint              | Rate Limit                           |    |
+|     +--------------------------------------------------------------+    |
+|     | /api/search           | 100 req/min per IP                   |    |
+|     | /api/shows/{id}/seats | 30 req/min per user                  |    |
+|     | /api/bookings         | 10 req/min per user                  |    |
+|     | /api/payments         | 5 req/min per user                   |    |
+|     +--------------------------------------------------------------+    |
 |                                                                         |
 |  3. REQUEST ROUTING                                                     |
 |     Route to appropriate microservice based on path                     |
@@ -424,38 +424,38 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  USER SEARCHES FOR "AVENGERS IN MUMBAI"                                 |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  User                                                          |     |
-|  |   |                                                            |     |
-|  |   |  GET /search?q=avengers&city=mumbai                       |      |
-|  |   v                                                            |     |
-|  |  API Gateway                                                   |     |
-|  |   |                                                            |     |
-|  |   |  1. Validate token                                        |      |
-|  |   |  2. Rate limit check                                      |      |
-|  |   v                                                            |     |
-|  |  Search Service                                                |     |
-|  |   |                                                            |     |
-|  |   |  3. Query Elasticsearch                                   |      |
-|  |   |     - Match "avengers" in title                           |      |
-|  |   |     - Filter by city "mumbai"                             |      |
-|  |   |     - Sort by relevance                                   |      |
-|  |   v                                                            |     |
-|  |  Elasticsearch                                                 |     |
-|  |   |                                                            |     |
-|  |   |  Returns: [Avengers Endgame, Avengers Infinity War, ...]  |      |
-|  |   v                                                            |     |
-|  |  Search Service                                                |     |
-|  |   |                                                            |     |
-|  |   |  4. Enrich with cache data (ratings, images)              |      |
-|  |   v                                                            |     |
-|  |  Redis Cache                                                   |     |
-|  |   |                                                            |     |
-|  |   v                                                            |     |
-|  |  Response: { movies: [...], venues: [...] }                   |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  User                                                            |   |
+|  |   |                                                              |   |
+|  |   |  GET /search?q=avengers&city=mumbai                          |   |
+|  |   v                                                              |   |
+|  |  API Gateway                                                     |   |
+|  |   |                                                              |   |
+|  |   |  1. Validate token                                           |   |
+|  |   |  2. Rate limit check                                         |   |
+|  |   v                                                              |   |
+|  |  Search Service                                                  |   |
+|  |   |                                                              |   |
+|  |   |  3. Query Elasticsearch                                      |   |
+|  |   |     - Match "avengers" in title                              |   |
+|  |   |     - Filter by city "mumbai"                                |   |
+|  |   |     - Sort by relevance                                      |   |
+|  |   v                                                              |   |
+|  |  Elasticsearch                                                   |   |
+|  |   |                                                              |   |
+|  |   |  Returns: [Avengers Endgame, Avengers Infinity War, ...]     |   |
+|  |   v                                                              |   |
+|  |  Search Service                                                  |   |
+|  |   |                                                              |   |
+|  |   |  4. Enrich with cache data (ratings, images)                 |   |
+|  |   v                                                              |   |
+|  |  Redis Cache                                                     |   |
+|  |   |                                                              |   |
+|  |   v                                                              |   |
+|  |  Response: { movies: [...], venues: [...] }                      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  LATENCY TARGET: < 200ms                                                |
 |                                                                         |
@@ -469,38 +469,38 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  USER VIEWS SEAT MAP FOR A SHOW                                         |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  User                                                          |     |
-|  |   |                                                            |     |
-|  |   |  GET /shows/123/seats                                     |      |
-|  |   v                                                            |     |
-|  |  Booking Service                                               |     |
-|  |   |                                                            |     |
-|  |   |  1. Get seat layout (venue template)                      |      |
-|  |   v                                                            |     |
-|  |  Redis: venue:456:layout > seat positions, categories        |       |
-|  |   |                                                            |     |
-|  |   |  2. Get real-time availability                            |      |
-|  |   v                                                            |     |
-|  |  Redis: show:123:seats > bitmap of availability               |      |
-|  |   |                                                            |     |
-|  |   |     Bit 0 = A1, Bit 1 = A2, ...                           |      |
-|  |   |     0 = available, 1 = taken/locked                       |      |
-|  |   |                                                            |     |
-|  |   |  3. Merge layout + availability                           |      |
-|  |   v                                                            |     |
-|  |  Response:                                                     |     |
-|  |  {                                                             |     |
-|  |    seats: [                                                    |     |
-|  |      { id: "A1", row: "A", number: 1, status: "available",   |       |
-|  |        category: "GOLD", price: 300 },                        |      |
-|  |      { id: "A2", row: "A", number: 2, status: "booked", ... },|      |
-|  |      { id: "A3", row: "A", number: 3, status: "locked", ... } |      |
-|  |    ]                                                           |     |
-|  |  }                                                             |     |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  User                                                            |   |
+|  |   |                                                              |   |
+|  |   |  GET /shows/123/seats                                        |   |
+|  |   v                                                              |   |
+|  |  Booking Service                                                 |   |
+|  |   |                                                              |   |
+|  |   |  1. Get seat layout (venue template)                         |   |
+|  |   v                                                              |   |
+|  |  Redis: venue:456:layout > seat positions, categories            |   |
+|  |   |                                                              |   |
+|  |   |  2. Get real-time availability                               |   |
+|  |   v                                                              |   |
+|  |  Redis: show:123:seats > bitmap of availability                  |   |
+|  |   |                                                              |   |
+|  |   |     Bit 0 = A1, Bit 1 = A2, ...                              |   |
+|  |   |     0 = available, 1 = taken/locked                          |   |
+|  |   |                                                              |   |
+|  |   |  3. Merge layout + availability                              |   |
+|  |   v                                                              |   |
+|  |  Response:                                                       |   |
+|  |  {                                                               |   |
+|  |    seats: [                                                      |   |
+|  |      { id: "A1", row: "A", number: 1, status: "available",       |   |
+|  |        category: "GOLD", price: 300 },                           |   |
+|  |      { id: "A2", row: "A", number: 2, status: "booked", ... },   |   |
+|  |      { id: "A3", row: "A", number: 3, status: "locked", ... }    |   |
+|  |    ]                                                             |   |
+|  |  }                                                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  LATENCY TARGET: < 500ms                                                |
 |                                                                         |

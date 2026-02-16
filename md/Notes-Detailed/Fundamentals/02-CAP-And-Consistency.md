@@ -95,18 +95,18 @@ you must choose between Consistency and Availability.
 |                                                                         |
 |  SCENARIO: NETWORK PARTITION                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |              Network Partition (connection lost)               |     |
-|  |                                                                 |    |
-|  |     Client A                              Client B              |    |
-|  |         |                                     |                 |    |
-|  |         v                                     v                 |    |
-|  |    +------------+         X X X X        +------------+       |      |
-|  |    |  Node 1    |<---- Can't talk ---->  |  Node 2    |       |      |
-|  |    | balance=100|                        | balance=100|       |      |
-|  |    +------------+                        +------------+       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |              Network Partition (connection lost)                  |  |
+|  |                                                                   |  |
+|  |     Client A                              Client B                |  |
+|  |         |                                     |                   |  |
+|  |         v                                     v                   |  |
+|  |    +------------+         X X X X        +------------+           |  |
+|  |    |  Node 1    |<---- Can't talk ---->  |  Node 2    |           |  |
+|  |    | balance=100|                        | balance=100|           |  |
+|  |    +------------+                        +------------+           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Client A: "Withdraw $50"                                               |
 |  Client B: "Withdraw $50"                                               |
@@ -198,14 +198,14 @@ CAP only describes behavior during partitions. PACELC extends this:
 |  |                                                                 |    |
 |  |              P A C E L C                                        |    |
 |  |              | | | | | |                                        |    |
-|  |              | | | | | +-- Consistency (normal operation)       |    |
-|  |              | | | | +---- Latency                              |    |
-|  |              | | | +------ Else (no partition)                  |    |
-|  |              | | +-------- Consistency (during partition)     |      |
-|  |              | +---------- Availability                       |      |
-|  |              +------------ Partition                          |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  |              | | | | | +-- Consistency (normal operation)         |  |
+|  |              | | | | +---- Latency                                |  |
+|  |              | | | +------ Else (no partition)                    |  |
+|  |              | | +-------- Consistency (during partition)         |  |
+|  |              | +---------- Availability                           |  |
+|  |              +------------ Partition                              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CLASSIFICATIONS:                                                       |
 |                                                                         |
@@ -315,30 +315,30 @@ Two philosophies for database transactions:
 |                                                                         |
 |  ACID vs BASE                                                           |
 |                                                                         |
-|  +---------------------------+    +-------------------------------+     |
-|  |           ACID            |    |            BASE               |     |
-|  |   (Traditional RDBMS)     |    |      (NoSQL/Distributed)      |     |
-|  |                           |    |                               |     |
-|  | A - Atomicity            |    | BA - Basically Available     |       |
-|  |     All or nothing        |    |      System works most of    |      |
-|  |     Transaction succeeds  |    |      the time, even if      |       |
-|  |     completely or fails   |    |      some nodes fail        |       |
-|  |     completely            |    |                               |     |
-|  |                           |    | S - Soft state              |       |
-|  | C - Consistency          |    |     State may change over   |        |
-|  |     Database moves from   |    |     time without input      |       |
-|  |     one valid state to    |    |     (due to async replication)|     |
-|  |     another               |    |                               |     |
-|  |                           |    | E - Eventually consistent   |       |
-|  | I - Isolation            |    |     System becomes          |        |
-|  |     Concurrent txns don't |    |     consistent eventually   |       |
-|  |     interfere             |    |                               |     |
-|  |                           |    |                               |     |
-|  | D - Durability           |    |                               |      |
-|  |     Committed data        |    |                               |     |
-|  |     survives crashes      |    |                               |     |
-|  |                           |    |                               |     |
-|  +---------------------------+    +-------------------------------+     |
+|  +---------------------------+    +---------------------------------+   |
+|  |           ACID            |    |            BASE                 |   |
+|  |   (Traditional RDBMS)     |    |      (NoSQL/Distributed)        |   |
+|  |                           |    |                                 |   |
+|  | A - Atomicity            |    | BA - Basically Available         |   |
+|  |     All or nothing        |    |      System works most of       |   |
+|  |     Transaction succeeds  |    |      the time, even if          |   |
+|  |     completely or fails   |    |      some nodes fail            |   |
+|  |     completely            |    |                                 |   |
+|  |                           |    | S - Soft state                  |   |
+|  | C - Consistency          |    |     State may change over        |   |
+|  |     Database moves from   |    |     time without input          |   |
+|  |     one valid state to    |    |     (due to async replication)   |  |
+|  |     another               |    |                                 |   |
+|  |                           |    | E - Eventually consistent       |   |
+|  | I - Isolation            |    |     System becomes               |   |
+|  |     Concurrent txns don't |    |     consistent eventually       |   |
+|  |     interfere             |    |                                 |   |
+|  |                           |    |                                 |   |
+|  | D - Durability           |    |                                  |   |
+|  |     Committed data        |    |                                 |   |
+|  |     survives crashes      |    |                                 |   |
+|  |                           |    |                                 |   |
+|  +---------------------------+    +---------------------------------+   |
 |                                                                         |
 |  ACID: Strong guarantees, harder to scale                               |
 |  BASE: Weaker guarantees, easier to scale                               |
@@ -479,15 +479,15 @@ A practical pattern that's often needed:
 |                                                                         |
 |  EXAMPLE (N=3):                                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Configuration    |  Consistency | Availability | Latency       |    |
-|  +-----------------------------------------------------------------+    |
-|  |  W=1, R=1        |  Weak        | High         | Low           |     |
-|  |  W=2, R=2        |  Strong      | Medium       | Medium        |     |
-|  |  W=3, R=1        |  Strong      | Low writes   | High writes   |     |
-|  |  W=1, R=3        |  Strong      | Low reads    | High reads    |     |
-|  |  W=ALL, R=ONE    |  Strong      | Low          | High          |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Configuration    |  Consistency | Availability | Latency          | |
+|  +-------------------------------------------------------------------+  |
+|  |  W=1, R=1        |  Weak        | High         | Low               | |
+|  |  W=2, R=2        |  Strong      | Medium       | Medium            | |
+|  |  W=3, R=1        |  Strong      | Low writes   | High writes       | |
+|  |  W=1, R=3        |  Strong      | Low reads    | High reads        | |
+|  |  W=ALL, R=ONE    |  Strong      | Low          | High              | |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CASSANDRA CONSISTENCY LEVELS:                                          |
 |                                                                         |
@@ -550,27 +550,27 @@ How distributed systems agree on values:
 |                                                                         |
 |  RAFT SIMPLIFIED:                                                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  STATES:                                                        |    |
-|  |  * Follower: Normal state, listens to leader                   |     |
-|  |  * Candidate: Tries to become leader                           |     |
-|  |  * Leader: Handles all client requests                         |     |
-|  |                                                                 |    |
-|  |  LEADER ELECTION:                                               |    |
-|  |  1. Follower times out (no heartbeat from leader)              |     |
-|  |  2. Becomes candidate, requests votes                          |     |
-|  |  3. Gets majority votes > becomes leader                       |     |
-|  |  4. Sends heartbeats to maintain leadership                    |     |
-|  |                                                                 |    |
-|  |  LOG REPLICATION:                                               |    |
-|  |  1. Client sends request to leader                             |     |
-|  |  2. Leader appends to local log                                |     |
-|  |  3. Leader sends to followers                                  |     |
-|  |  4. Majority acknowledge > committed                           |     |
-|  |  5. Leader responds to client                                  |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STATES:                                                          |  |
+|  |  * Follower: Normal state, listens to leader                      |  |
+|  |  * Candidate: Tries to become leader                              |  |
+|  |  * Leader: Handles all client requests                            |  |
+|  |                                                                   |  |
+|  |  LEADER ELECTION:                                                 |  |
+|  |  1. Follower times out (no heartbeat from leader)                 |  |
+|  |  2. Becomes candidate, requests votes                             |  |
+|  |  3. Gets majority votes > becomes leader                          |  |
+|  |  4. Sends heartbeats to maintain leadership                       |  |
+|  |                                                                   |  |
+|  |  LOG REPLICATION:                                                 |  |
+|  |  1. Client sends request to leader                                |  |
+|  |  2. Leader appends to local log                                   |  |
+|  |  3. Leader sends to followers                                     |  |
+|  |  4. Majority acknowledge > committed                              |  |
+|  |  5. Leader responds to client                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  ZAB (ZOOKEEPER ATOMIC BROADCAST)                                       |
 |  ===============================                                        |
@@ -756,25 +756,25 @@ With eventual consistency, conflicts will happen. How do we resolve them?
 |                                                                         |
 |  CHOOSING CONSISTENCY LEVELS BY USE CASE                                |
 |                                                                         |
-|  +-----------------------------+------------------------------------+   |
-|  | USE CASE                    | CONSISTENCY LEVEL                  |   |
-|  +-----------------------------+------------------------------------+   |
-|  | Bank balance               | Strong (Linearizable)              |    |
-|  | Seat reservation           | Strong (Linearizable)              |    |
-|  | Inventory count (critical) | Strong                             |    |
-|  | Distributed locks          | Strong (Linearizable)              |    |
-|  | Leader election            | Strong (Consensus)                 |    |
-|  | User profile updates       | Read-Your-Writes                  |     |
-|  | Shopping cart              | Eventual + Merge conflicts        |     |
-|  | Social media feed          | Eventual                          |     |
-|  | Like/View counters         | Eventual                          |     |
-|  | Comment threads            | Causal                            |     |
-|  | Chat messages              | Causal                            |     |
-|  | Analytics                  | Eventual                          |     |
-|  | Search index               | Eventual (seconds lag OK)         |     |
-|  | Recommendations            | Eventual (minutes lag OK)         |     |
-|  | Email                      | Eventual (minutes lag OK)         |     |
-|  +-----------------------------+------------------------------------+   |
+|  +-----------------------------+--------------------------------------+ |
+|  | USE CASE                    | CONSISTENCY LEVEL                    | |
+|  +-----------------------------+--------------------------------------+ |
+|  | Bank balance               | Strong (Linearizable)                 | |
+|  | Seat reservation           | Strong (Linearizable)                 | |
+|  | Inventory count (critical) | Strong                                | |
+|  | Distributed locks          | Strong (Linearizable)                 | |
+|  | Leader election            | Strong (Consensus)                    | |
+|  | User profile updates       | Read-Your-Writes                      | |
+|  | Shopping cart              | Eventual + Merge conflicts            | |
+|  | Social media feed          | Eventual                              | |
+|  | Like/View counters         | Eventual                              | |
+|  | Comment threads            | Causal                                | |
+|  | Chat messages              | Causal                                | |
+|  | Analytics                  | Eventual                              | |
+|  | Search index               | Eventual (seconds lag OK)             | |
+|  | Recommendations            | Eventual (minutes lag OK)             | |
+|  | Email                      | Eventual (minutes lag OK)             | |
+|  +-----------------------------+--------------------------------------+ |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |

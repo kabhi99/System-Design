@@ -286,42 +286,42 @@ Let's estimate the scale for a large e-commerce platform.
 |                                                                         |
 |  E-COMMERCE SCALE SUMMARY                                               |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  USERS                                                        |      |
-|  |  -----                                                        |      |
-|  |  MAU: 100 million                                             |      |
-|  |  DAU: 30 million                                              |      |
-|  |  Peak concurrent: 3 million                                   |      |
-|  |                                                                |     |
-|  |  PRODUCTS                                                     |      |
-|  |  --------                                                     |      |
-|  |  Total: 500 million                                           |      |
-|  |  Sellers: 5 million                                           |      |
-|  |                                                                |     |
-|  |  TRAFFIC                                                      |      |
-|  |  -------                                                      |      |
-|  |  Normal: ~6,000 RPS                                          |       |
-|  |  Peak: ~60,000 RPS                                           |       |
-|  |                                                                |     |
-|  |  ORDERS                                                       |      |
-|  |  ------                                                       |      |
-|  |  Daily: 5-20 million                                         |       |
-|  |  Peak: 200+ orders/second                                    |       |
-|  |                                                                |     |
-|  |  STORAGE                                                      |      |
-|  |  -------                                                      |      |
-|  |  Structured: ~25 TB                                          |       |
-|  |  Media: ~1-2 PB                                              |       |
-|  |                                                                |     |
-|  |  KEY CHALLENGES                                               |      |
-|  |  --------------                                               |      |
-|  |  1. Inventory consistency                                    |       |
-|  |  2. Search at scale                                          |       |
-|  |  3. Flash sale handling                                      |       |
-|  |  4. Distributed transactions                                 |       |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  USERS                                                           |   |
+|  |  -----                                                           |   |
+|  |  MAU: 100 million                                                |   |
+|  |  DAU: 30 million                                                 |   |
+|  |  Peak concurrent: 3 million                                      |   |
+|  |                                                                  |   |
+|  |  PRODUCTS                                                        |   |
+|  |  --------                                                        |   |
+|  |  Total: 500 million                                              |   |
+|  |  Sellers: 5 million                                              |   |
+|  |                                                                  |   |
+|  |  TRAFFIC                                                         |   |
+|  |  -------                                                         |   |
+|  |  Normal: ~6,000 RPS                                              |   |
+|  |  Peak: ~60,000 RPS                                               |   |
+|  |                                                                  |   |
+|  |  ORDERS                                                          |   |
+|  |  ------                                                          |   |
+|  |  Daily: 5-20 million                                             |   |
+|  |  Peak: 200+ orders/second                                        |   |
+|  |                                                                  |   |
+|  |  STORAGE                                                         |   |
+|  |  -------                                                         |   |
+|  |  Structured: ~25 TB                                              |   |
+|  |  Media: ~1-2 PB                                                  |   |
+|  |                                                                  |   |
+|  |  KEY CHALLENGES                                                  |   |
+|  |  --------------                                                  |   |
+|  |  1. Inventory consistency                                        |   |
+|  |  2. Search at scale                                              |   |
+|  |  3. Flash sale handling                                          |   |
+|  |  4. Distributed transactions                                     |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

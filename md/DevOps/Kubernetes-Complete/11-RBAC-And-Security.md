@@ -13,17 +13,17 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 |                                                                         |
 |  Without RBAC, anyone with kubectl access can:                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Junior Developer with kubectl:                               |     |
-|  |                                                                 |    |
-|  |   kubectl delete deployment production-api     < Oops!        |      |
-|  |   kubectl delete pvc database-storage          < Data gone!   |      |
-|  |   kubectl exec -it prod-db -- mysql            < Sees secrets |      |
-|  |   kubectl get secrets --all-namespaces         < All passwords|      |
-|  |   kubectl create deployment bitcoin-miner...   < Crypto mining|      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   Junior Developer with kubectl:                                 |   |
+|  |                                                                  |   |
+|  |   kubectl delete deployment production-api     < Oops!           |   |
+|  |   kubectl delete pvc database-storage          < Data gone!      |   |
+|  |   kubectl exec -it prod-db -- mysql            < Sees secrets    |   |
+|  |   kubectl get secrets --all-namespaces         < All passwords   |   |
+|  |   kubectl create deployment bitcoin-miner...   < Crypto mining   |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PROBLEMS:                                                              |
 |                                                                         |
@@ -52,31 +52,31 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 |                                                                         |
 |  Define WHO can do WHAT on WHICH resources:                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Junior Developer:                                            |     |
-|  |   Y Can view pods in dev namespace                            |      |
-|  |   Y Can view logs                                              |     |
-|  |   X Cannot delete anything                                     |     |
-|  |   X Cannot access prod namespace                               |     |
-|  |   X Cannot read secrets                                        |     |
-|  |                                                                 |    |
-|  |   Senior Developer:                                            |     |
-|  |   Y Can create/delete in dev namespace                        |      |
-|  |   Y Can view prod (read-only)                                  |     |
-|  |   X Cannot delete in prod                                      |     |
-|  |                                                                 |    |
-|  |   Ops Team:                                                    |     |
-|  |   Y Full access to prod                                       |      |
-|  |   Y Can manage nodes                                           |     |
-|  |   Y Can read secrets                                           |     |
-|  |                                                                 |    |
-|  |   CI/CD Pipeline (ServiceAccount):                            |      |
-|  |   Y Can create/update deployments                             |      |
-|  |   X Cannot delete PVCs                                         |     |
-|  |   X Cannot access other namespaces                            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   Junior Developer:                                              |   |
+|  |   Y Can view pods in dev namespace                               |   |
+|  |   Y Can view logs                                                |   |
+|  |   X Cannot delete anything                                       |   |
+|  |   X Cannot access prod namespace                                 |   |
+|  |   X Cannot read secrets                                          |   |
+|  |                                                                  |   |
+|  |   Senior Developer:                                              |   |
+|  |   Y Can create/delete in dev namespace                           |   |
+|  |   Y Can view prod (read-only)                                    |   |
+|  |   X Cannot delete in prod                                        |   |
+|  |                                                                  |   |
+|  |   Ops Team:                                                      |   |
+|  |   Y Full access to prod                                          |   |
+|  |   Y Can manage nodes                                             |   |
+|  |   Y Can read secrets                                             |   |
+|  |                                                                  |   |
+|  |   CI/CD Pipeline (ServiceAccount):                               |   |
+|  |   Y Can create/update deployments                                |   |
+|  |   X Cannot delete PVCs                                           |   |
+|  |   X Cannot access other namespaces                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -142,21 +142,21 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 |                                                                         |
 |  RBAC COMPONENTS                                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   WHO              WHAT                    WHERE               |     |
-|  |   (Subject)        (Role)                  (Binding)           |     |
-|  |                                                                 |    |
-|  |   +---------+      +-----------------+     +----------------+  |     |
-|  |   |  User   |      |  Role           |     | RoleBinding    |  |     |
-|  |   |  Group  | <----|  (namespace)    |<----| (namespace)    |  |     |
-|  |   | Service |      |                 |     |                |  |     |
-|  |   | Account |      |  ClusterRole    |     | ClusterRole    |  |     |
-|  |   +---------+      |  (cluster-wide) |<----| Binding        |  |     |
-|  |                    +-----------------+     | (cluster-wide) |  |     |
-|  |                                            +----------------+  |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   WHO              WHAT                    WHERE                  |  |
+|  |   (Subject)        (Role)                  (Binding)              |  |
+|  |                                                                   |  |
+|  |   +---------+      +-----------------+     +-------------------+  |  |
+|  |   |  User   |      |  Role           |     | RoleBinding       |  |  |
+|  |   |  Group  | <----|  (namespace)    |<----| (namespace)       |  |  |
+|  |   | Service |      |                 |     |                   |  |  |
+|  |   | Account |      |  ClusterRole    |     | ClusterRole       |  |  |
+|  |   +---------+      |  (cluster-wide) |<----| Binding           |  |  |
+|  |                    +-----------------+     | (cluster-wide)    |  |  |
+|  |                                            +-------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  * Role: What actions are allowed on what resources                     |
 |  * RoleBinding: Links Role to Subject                                   |

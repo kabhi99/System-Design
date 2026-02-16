@@ -14,20 +14,20 @@ of complex applications.
 |                                                                         |
 |  To deploy a simple web app, you need MULTIPLE YAML files:              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   deployment.yaml       (the app containers)                   |     |
-|  |   service.yaml          (networking)                           |     |
-|  |   ingress.yaml          (external access)                      |     |
-|  |   configmap.yaml        (configuration)                        |     |
-|  |   secret.yaml           (passwords)                            |     |
-|  |   pvc.yaml              (storage)                              |     |
-|  |   serviceaccount.yaml   (permissions)                          |     |
-|  |   hpa.yaml              (autoscaling)                          |     |
-|  |                                                                 |    |
-|  |   That's 8+ files for ONE application!                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   deployment.yaml       (the app containers)                     |   |
+|  |   service.yaml          (networking)                             |   |
+|  |   ingress.yaml          (external access)                        |   |
+|  |   configmap.yaml        (configuration)                          |   |
+|  |   secret.yaml           (passwords)                              |   |
+|  |   pvc.yaml              (storage)                                |   |
+|  |   serviceaccount.yaml   (permissions)                            |   |
+|  |   hpa.yaml              (autoscaling)                            |   |
+|  |                                                                  |   |
+|  |   That's 8+ files for ONE application!                           |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PROBLEMS WITHOUT HELM:                                                 |
 |                                                                         |
@@ -65,46 +65,46 @@ of complex applications.
 |                                                                         |
 |  Think of Helm like apt/yum for Linux or npm for JavaScript:            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Linux:      apt install mysql                                |     |
-|  |   JavaScript: npm install express                              |     |
-|  |   Kubernetes: helm install mysql bitnami/mysql                 |     |
-|  |                                                                 |    |
-|  |   ONE command installs everything needed!                      |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   Linux:      apt install mysql                                  |   |
+|  |   JavaScript: npm install express                                |   |
+|  |   Kubernetes: helm install mysql bitnami/mysql                   |   |
+|  |                                                                  |   |
+|  |   ONE command installs everything needed!                        |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHAT HELM DOES:                                                        |
 |                                                                         |
 |  1. PACKAGES MULTIPLE YAMLS INTO ONE "CHART"                            |
-|     +------------------------------------------------------------+      |
-|     |  MySQL Chart contains:                                      |     |
-|     |  * Deployment (MySQL server)                               |      |
-|     |  * Service (networking)                                    |      |
-|     |  * Secret (root password)                                  |      |
-|     |  * PVC (data storage)                                      |      |
-|     |  * ConfigMap (mysql.cnf)                                   |      |
-|     |                                                             |     |
-|     |  ALL in one package, deployed with ONE command!            |      |
-|     +------------------------------------------------------------+      |
+|     +--------------------------------------------------------------+    |
+|     |  MySQL Chart contains:                                       |    |
+|     |  * Deployment (MySQL server)                                 |    |
+|     |  * Service (networking)                                      |    |
+|     |  * Secret (root password)                                    |    |
+|     |  * PVC (data storage)                                        |    |
+|     |  * ConfigMap (mysql.cnf)                                     |    |
+|     |                                                              |    |
+|     |  ALL in one package, deployed with ONE command!              |    |
+|     +--------------------------------------------------------------+    |
 |                                                                         |
 |  2. TEMPLATING (Same chart, different values)                           |
-|     +------------------------------------------------------------+      |
-|     |                                                             |     |
-|     |  # DEV install                                             |      |
-|     |  helm install mysql bitnami/mysql \                        |      |
-|     |    --set replicas=1 \                                      |      |
-|     |    --set persistence.size=1Gi                              |      |
-|     |                                                             |     |
-|     |  # PROD install                                            |      |
-|     |  helm install mysql bitnami/mysql \                        |      |
-|     |    --set replicas=3 \                                      |      |
-|     |    --set persistence.size=100Gi                            |      |
-|     |                                                             |     |
-|     |  SAME chart, DIFFERENT configuration!                      |      |
-|     |                                                             |     |
-|     +------------------------------------------------------------+      |
+|     +--------------------------------------------------------------+    |
+|     |                                                              |    |
+|     |  # DEV install                                               |    |
+|     |  helm install mysql bitnami/mysql \                          |    |
+|     |    --set replicas=1 \                                        |    |
+|     |    --set persistence.size=1Gi                                |    |
+|     |                                                              |    |
+|     |  # PROD install                                              |    |
+|     |  helm install mysql bitnami/mysql \                          |    |
+|     |    --set replicas=3 \                                        |    |
+|     |    --set persistence.size=100Gi                              |    |
+|     |                                                              |    |
+|     |  SAME chart, DIFFERENT configuration!                        |    |
+|     |                                                              |    |
+|     +--------------------------------------------------------------+    |
 |                                                                         |
 |  3. VERSIONING & ROLLBACK                                               |
 |     helm upgrade mysql bitnami/mysql --set replicas=5                   |
@@ -197,26 +197,26 @@ of complex applications.
 |  KEY TERMS EXPLAINED                                                    |
 |  ====================                                                   |
 |                                                                         |
-|  +-------------+----------------------------------------------------+   |
-|  | Term        | What It Is                                         |   |
-|  +-------------+----------------------------------------------------+   |
-|  | CHART       | A package containing all K8s YAML templates       |    |
-|  |             | Like: apt package, npm package                     |   |
-|  |             | Example: bitnami/mysql, prometheus/prometheus     |    |
-|  +-------------+----------------------------------------------------+   |
-|  | RELEASE     | A deployed instance of a chart                    |    |
-|  |             | You can install same chart multiple times         |    |
-|  |             | Example: "my-mysql" is a release of mysql chart   |    |
-|  +-------------+----------------------------------------------------+   |
-|  | VALUES      | Configuration for customizing the chart           |    |
-|  |             | Example: replicas=3, image.tag=v2.0               |    |
-|  +-------------+----------------------------------------------------+   |
-|  | REPOSITORY  | Where charts are stored (like apt repo)           |    |
-|  |             | Example: bitnami, prometheus-community            |    |
-|  +-------------+----------------------------------------------------+   |
-|  | TEMPLATE    | YAML file with placeholders ({{ .Values.x }})    |     |
-|  |             | Helm fills in values when installing              |    |
-|  +-------------+----------------------------------------------------+   |
+|  +-------------+-----------------------------------------------------+  |
+|  | Term        | What It Is                                          |  |
+|  +-------------+-----------------------------------------------------+  |
+|  | CHART       | A package containing all K8s YAML templates         |  |
+|  |             | Like: apt package, npm package                      |  |
+|  |             | Example: bitnami/mysql, prometheus/prometheus       |  |
+|  +-------------+-----------------------------------------------------+  |
+|  | RELEASE     | A deployed instance of a chart                      |  |
+|  |             | You can install same chart multiple times           |  |
+|  |             | Example: "my-mysql" is a release of mysql chart     |  |
+|  +-------------+-----------------------------------------------------+  |
+|  | VALUES      | Configuration for customizing the chart             |  |
+|  |             | Example: replicas=3, image.tag=v2.0                 |  |
+|  +-------------+-----------------------------------------------------+  |
+|  | REPOSITORY  | Where charts are stored (like apt repo)             |  |
+|  |             | Example: bitnami, prometheus-community              |  |
+|  +-------------+-----------------------------------------------------+  |
+|  | TEMPLATE    | YAML file with placeholders ({{ .Values.x }})       |  |
+|  |             | Helm fills in values when installing                |  |
+|  +-------------+-----------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -228,22 +228,22 @@ of complex applications.
 |  CHART = Recipe (reusable)                                              |
 |  RELEASE = Actual dish made from recipe (instance)                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   bitnami/mysql (CHART)                                        |     |
-|  |          |                                                      |    |
-|  |          +----> helm install orders-db bitnami/mysql           |     |
-|  |          |      RELEASE: orders-db                             |     |
-|  |          |                                                      |    |
-|  |          +----> helm install users-db bitnami/mysql            |     |
-|  |          |      RELEASE: users-db                              |     |
-|  |          |                                                      |    |
-|  |          +----> helm install analytics-db bitnami/mysql        |     |
-|  |                 RELEASE: analytics-db                          |     |
-|  |                                                                 |    |
-|  |   ONE chart > THREE releases (3 different MySQL instances)    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   bitnami/mysql (CHART)                                          |   |
+|  |          |                                                       |   |
+|  |          +----> helm install orders-db bitnami/mysql             |   |
+|  |          |      RELEASE: orders-db                               |   |
+|  |          |                                                       |   |
+|  |          +----> helm install users-db bitnami/mysql              |   |
+|  |          |      RELEASE: users-db                                |   |
+|  |          |                                                       |   |
+|  |          +----> helm install analytics-db bitnami/mysql          |   |
+|  |                 RELEASE: analytics-db                            |   |
+|  |                                                                  |   |
+|  |   ONE chart > THREE releases (3 different MySQL instances)       |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 

@@ -589,28 +589,28 @@ Containers on this network:
 * CANNOT be reached from outside Docker                                 
 ### ```                                                                 
 
-```bash                                                                 
-STRATEGY 3: IPTABLES RULES                                              
+```bash
+STRATEGY 3: IPTABLES RULES
 
-Add custom firewall rules:                                              
+Add custom firewall rules:
 
-# Block container-to-container on specific ports                        
-iptables -I DOCKER-USER -p tcp --dport 5432 -j DROP                     
+# Block container-to-container on specific ports
+iptables -I DOCKER-USER -p tcp --dport 5432 -j DROP
 
-# Allow only specific source                                            
-iptables -I DOCKER-USER -p tcp -s 172.17.0.2 --dport 5432 -j ACCEPT     
+# Allow only specific source
+iptables -I DOCKER-USER -p tcp -s 172.17.0.2 --dport 5432 -j ACCEPT
 ```
 
-### THE DOCKER-USER CHAIN
+### THE DOCKER-USER CHAIN                                                  
 
 Docker manages its own iptables rules. If you add rules to standard chains,
-Docker might overwrite them on restart.
+Docker might overwrite them on restart.                                    
 
-USE DOCKER-USER CHAIN for custom rules:
+USE DOCKER-USER CHAIN for custom rules:                                    
 
 ```bash
-# This chain is processed BEFORE Docker's rules            
-# Your rules here won't be overwritten                     
+# This chain is processed BEFORE Docker's rules
+# Your rules here won't be overwritten
 
 # Example: Block all external access to container port 3306
 iptables -I DOCKER-USER -i eth0 -p tcp --dport 3306 -j DROP
@@ -618,40 +618,40 @@ iptables -I DOCKER-USER -i eth0 -p tcp --dport 3306 -j DROP
 
 ## SECTION 3.6: TROUBLESHOOTING DOCKER NETWORKING
 
-### COMMON ISSUES AND SOLUTIONS
+### COMMON ISSUES AND SOLUTIONS                  
 
-ISSUE 1: "CONTAINER CAN'T REACH INTERNET"
+ISSUE 1: "CONTAINER CAN'T REACH INTERNET"        
 
 ```bash
-DIAGNOSIS STEPS:                                                 
+DIAGNOSIS STEPS:
 
-# 1. Check if container has IP                                   
-docker exec container ip addr                                    
+# 1. Check if container has IP
+docker exec container ip addr
 
-# 2. Check default gateway                                       
-docker exec container ip route                                   
-# Should show: default via 172.17.0.1 dev eth0                   
+# 2. Check default gateway
+docker exec container ip route
+# Should show: default via 172.17.0.1 dev eth0
 
-# 3. Can container reach gateway?                                
-docker exec container ping 172.17.0.1                            
+# 3. Can container reach gateway?
+docker exec container ping 172.17.0.1
 
-# 4. Check host's IP forwarding                                  
-cat /proc/sys/net/ipv4/ip_forward                                
-# Should be: 1                                                   
+# 4. Check host's IP forwarding
+cat /proc/sys/net/ipv4/ip_forward
+# Should be: 1
 
-# 5. Check iptables NAT rules                                    
-iptables -t nat -L POSTROUTING -v                                
-# Should show MASQUERADE rule for Docker subnet                  
+# 5. Check iptables NAT rules
+iptables -t nat -L POSTROUTING -v
+# Should show MASQUERADE rule for Docker subnet
 
-SOLUTIONS:                                                       
-- Enable IP forwarding: sysctl -w net.ipv4.ip_forward=1          
-- Restart Docker: systemctl restart docker                       
-- Check if firewall is blocking: iptables -L FORWARD             
-### ```                                                          
+SOLUTIONS:
+- Enable IP forwarding: sysctl -w net.ipv4.ip_forward=1
+- Restart Docker: systemctl restart docker
+- Check if firewall is blocking: iptables -L FORWARD
+### ```
 
-ISSUE 2: "CONTAINERS CAN'T REACH EACH OTHER BY NAME"             
+ISSUE 2: "CONTAINERS CAN'T REACH EACH OTHER BY NAME"
 
-```bash                                                          
+```bash
 CAUSE: Probably using default bridge network                     
 
 # Check network                                                  
@@ -668,45 +668,45 @@ docker network connect my-net container2
 
 ISSUE 3: "PORT PUBLISHING NOT WORKING"                           
 
-```bash                                                          
-DIAGNOSIS:                                                       
+```bash
+DIAGNOSIS:
 
-# 1. Is port actually published?                                 
-docker port container_name                                       
+# 1. Is port actually published?
+docker port container_name
 
-# 2. Check if something else is using the port                   
-netstat -tulpn | grep 8080                                       
-lsof -i :8080                                                    
+# 2. Check if something else is using the port
+netstat -tulpn | grep 8080
+lsof -i :8080
 
-# 3. Check iptables rules                                        
-iptables -t nat -L DOCKER -v                                     
+# 3. Check iptables rules
+iptables -t nat -L DOCKER -v
 
-# 4. Check docker-proxy                                          
-ps aux | grep docker-proxy                                       
+# 4. Check docker-proxy
+ps aux | grep docker-proxy
 
-# 5. Check if container is listening                             
-docker exec container netstat -tulpn                             
-### ```                                                          
+# 5. Check if container is listening
+docker exec container netstat -tulpn
+### ```
 
-ISSUE 4: "SLOW NETWORK PERFORMANCE"                              
+ISSUE 4: "SLOW NETWORK PERFORMANCE"
 
-```bash                                                          
-POSSIBLE CAUSES:                                                 
+```bash
+POSSIBLE CAUSES:                                        
 
-1. MTU mismatch                                                  
-   docker network inspect bridge | grep MTU                      
-   # Default is 1500, might need adjustment for overlays         
+1. MTU mismatch                                         
+   docker network inspect bridge | grep MTU             
+   # Default is 1500, might need adjustment for overlays
 
-2. Network driver overhead                                       
-   # Try host networking for maximum performance                 
-   docker run --network host ...                                 
+2. Network driver overhead                              
+   # Try host networking for maximum performance        
+   docker run --network host ...                        
 
-3. Too many iptables rules                                       
-   iptables -L | wc -l                                           
+3. Too many iptables rules                              
+   iptables -L | wc -l                                  
 
-4. DNS resolution issues                                         
-   # Add explicit DNS servers                                    
-   docker run --dns 8.8.8.8 ...                                  
+4. DNS resolution issues                                
+   # Add explicit DNS servers                           
+   docker run --dns 8.8.8.8 ...                         
 ```
 
 ### USEFUL TROUBLESHOOTING COMMANDS
@@ -748,34 +748,34 @@ journalctl -u docker | grep -i network
 |                                                                         |
 |                       THREE-TIER NETWORK DESIGN                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |                         DMZ Network                              |   |
 |  |                     (internet-facing)                            |   |
 |  |                                                                  |   |
-|  |     +---------+      +---------+      +---------+              |     |
-|  |     |  nginx  |      |  nginx  |      |  nginx  |              |     |
-|  |     |   LB    |      |   LB    |      |   LB    |              |     |
-|  |     +----+----+      +----+----+      +----+----+              |     |
-|  |          |                |                |                    |    |
-|  +----------+----------------+----------------+--------------------+    |
+|  |     +---------+      +---------+      +---------+                |   |
+|  |     |  nginx  |      |  nginx  |      |  nginx  |                |   |
+|  |     |   LB    |      |   LB    |      |   LB    |                |   |
+|  |     +----+----+      +----+----+      +----+----+                |   |
+|  |          |                |                |                     |   |
+|  +----------+----------------+----------------+---------------------+   |
 |             |                |                |                         |
-|  +----------+----------------+----------------+--------------------+    |
-|  |          |      APP Network (internal)     |                    |    |
-|  |          |                |                |                    |    |
-|  |     +----v----+      +----v----+      +----v----+              |     |
-|  |     |   API   |      |   API   |      |   API   |              |     |
-|  |     | Server  |      | Server  |      | Server  |              |     |
-|  |     +----+----+      +----+----+      +----+----+              |     |
-|  |          |                |                |                    |    |
-|  +----------+----------------+----------------+--------------------+    |
+|  +----------+----------------+----------------+---------------------+   |
+|  |          |      APP Network (internal)     |                     |   |
+|  |          |                |                |                     |   |
+|  |     +----v----+      +----v----+      +----v----+                |   |
+|  |     |   API   |      |   API   |      |   API   |                |   |
+|  |     | Server  |      | Server  |      | Server  |                |   |
+|  |     +----+----+      +----+----+      +----+----+                |   |
+|  |          |                |                |                     |   |
+|  +----------+----------------+----------------+---------------------+   |
 |             |                |                |                         |
-|  +----------+----------------+----------------+--------------------+    |
-|  |          |    DATA Network (internal)      |                    |    |
-|  |          |                |                |                    |    |
-|  |     +----v----+      +----v----+      +----v----+              |     |
-|  |     | Postgres|      |  Redis  |      | Elastic |              |     |
-|  |     | Primary |      | Cluster |      | Search  |              |     |
-|  |     +---------+      +---------+      +---------+              |     |
+|  +----------+----------------+----------------+---------------------+   |
+|  |          |    DATA Network (internal)      |                     |   |
+|  |          |                |                |                     |   |
+|  |     +----v----+      +----v----+      +----v----+                |   |
+|  |     | Postgres|      |  Redis  |      | Elastic |                |   |
+|  |     | Primary |      | Cluster |      | Search  |                |   |
+|  |     +---------+      +---------+      +---------+                |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
@@ -872,39 +872,39 @@ docker run \
 |                                                                         |
 |  ADVANCED DOCKER NETWORKING TOPICS                                      |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  MACVLAN & IPVLAN                                                |   |
-|  |  * Give containers real network IPs                              |   |
-|  |  * Macvlan: Unique MAC per container                            |    |
-|  |  * IPvlan: Shared MAC, unique IPs                               |    |
-|  |  * Use for legacy apps needing "real" network presence          |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  DOCKER COMPOSE NETWORKING                                       |   |
-|  |  * Auto-creates network per project                             |    |
-|  |  * Service names become DNS hostnames                           |    |
-|  |  * Use multiple networks for isolation                          |    |
-|  |  * Internal networks block internet access                      |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  NETWORK SECURITY                                                |   |
-|  |  * Use separate networks for security zones                     |    |
-|  |  * DOCKER-USER chain for custom firewall rules                  |    |
-|  |  * Internal networks for sensitive services                     |    |
-|  |  * ICC can be disabled for paranoid isolation                   |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  TROUBLESHOOTING                                                 |   |
-|  |  * Check IP forwarding, iptables, DNS                           |    |
-|  |  * Use nsenter for deep namespace inspection                    |    |
-|  |  * tcpdump inside containers for traffic analysis              |     |
-|  |  * Most issues: wrong network or missing DNS                    |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  MACVLAN & IPVLAN                                                  | |
+|  |  * Give containers real network IPs                                | |
+|  |  * Macvlan: Unique MAC per container                               | |
+|  |  * IPvlan: Shared MAC, unique IPs                                  | |
+|  |  * Use for legacy apps needing "real" network presence             | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  DOCKER COMPOSE NETWORKING                                         | |
+|  |  * Auto-creates network per project                                | |
+|  |  * Service names become DNS hostnames                              | |
+|  |  * Use multiple networks for isolation                             | |
+|  |  * Internal networks block internet access                         | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  NETWORK SECURITY                                                  | |
+|  |  * Use separate networks for security zones                        | |
+|  |  * DOCKER-USER chain for custom firewall rules                     | |
+|  |  * Internal networks for sensitive services                        | |
+|  |  * ICC can be disabled for paranoid isolation                      | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  TROUBLESHOOTING                                                   | |
+|  |  * Check IP forwarding, iptables, DNS                              | |
+|  |  * Use nsenter for deep namespace inspection                       | |
+|  |  * tcpdump inside containers for traffic analysis                  | |
+|  |  * Most issues: wrong network or missing DNS                       | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

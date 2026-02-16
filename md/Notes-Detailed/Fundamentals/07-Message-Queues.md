@@ -14,23 +14,23 @@ distributed applications.
 |                                                                         |
 |  SYNCHRONOUS COMMUNICATION                                              |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  User Request                                                    |   |
-|  |      |                                                           |   |
-|  |      v                                                           |   |
-|  |  Order Service ---> Payment Service ---> Notification Service   |    |
-|  |      |                    |                      |               |   |
-|  |      |                    |                      |               |   |
-|  |      |               [wait 2s]              [wait 1s]           |    |
-|  |      |                    |                      |               |   |
-|  |      |<-------------------+                      |               |   |
-|  |      |<------------------------------------------+               |   |
-|  |      |                                                           |   |
-|  |  Total latency: 3+ seconds                                      |    |
-|  |  User waits for entire chain to complete                        |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  User Request                                                      | |
+|  |      |                                                             | |
+|  |      v                                                             | |
+|  |  Order Service ---> Payment Service ---> Notification Service      | |
+|  |      |                    |                      |                 | |
+|  |      |                    |                      |                 | |
+|  |      |               [wait 2s]              [wait 1s]              | |
+|  |      |                    |                      |                 | |
+|  |      |<-------------------+                      |                 | |
+|  |      |<------------------------------------------+                 | |
+|  |      |                                                             | |
+|  |  Total latency: 3+ seconds                                         | |
+|  |  User waits for entire chain to complete                           | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  PROBLEMS:                                                              |
 |  * Caller blocks until response                                         |
@@ -50,21 +50,21 @@ distributed applications.
 |                                                                         |
 |  ASYNCHRONOUS COMMUNICATION                                             |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  User Request                                                    |   |
-|  |      |                                                           |   |
-|  |      v                                                           |   |
-|  |  Order Service ---> Message Queue ---> (respond immediately)    |    |
-|  |      |                    |                                      |   |
-|  |      |                    | (async processing)                   |   |
-|  |  Response: "Order created,+----> Payment Service               |     |
-|  |            processing..."  |                                     |   |
-|  |                           +----> Notification Service           |    |
-|  |                                                                  |   |
-|  |  Total user wait: ~100ms (just queue publish)                   |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  User Request                                                      | |
+|  |      |                                                             | |
+|  |      v                                                             | |
+|  |  Order Service ---> Message Queue ---> (respond immediately)       | |
+|  |      |                    |                                        | |
+|  |      |                    | (async processing)                     | |
+|  |  Response: "Order created,+----> Payment Service                   | |
+|  |            processing..."  |                                       | |
+|  |                           +----> Notification Service              | |
+|  |                                                                    | |
+|  |  Total user wait: ~100ms (just queue publish)                      | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  BENEFITS:                                                              |
 |  Y Fast response to user                                                |
@@ -272,15 +272,15 @@ distributed applications.
 |  * Combine message processing with DB transaction                       |
 |                                                                         |
 |  HOW KAFKA TRANSACTIONS WORK:                                           |
-|  +----------------------------------------------------------------+     |
-|  | BEGIN TRANSACTION                                              |     |
-|  | 1. Consume message from input topic                           |      |
-|  | 2. Process message                                            |      |
-|  | 3. Produce to output topic                                    |      |
-|  | 4. Commit consumer offset                                     |      |
-|  | COMMIT TRANSACTION                                             |     |
-|  | (All or nothing - message processed exactly once)             |      |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  | BEGIN TRANSACTION                                                |   |
+|  | 1. Consume message from input topic                              |   |
+|  | 2. Process message                                               |   |
+|  | 3. Produce to output topic                                       |   |
+|  | 4. Commit consumer offset                                        |   |
+|  | COMMIT TRANSACTION                                               |   |
+|  | (All or nothing - message processed exactly once)                |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -314,25 +314,25 @@ distributed applications.
 |  --------------------------------------------                           |
 |  Order guaranteed WITHIN a partition, not across partitions.            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Topic: orders                                                  |    |
-|  |                                                                 |    |
-|  |  +--------------------+  +--------------------+               |      |
-|  |  |    Partition 0     |  |    Partition 1     |               |      |
-|  |  |  [User A orders]   |  |  [User B orders]   |               |      |
-|  |  |  M1 > M3 > M5      |  |  M2 > M4 > M6      |               |      |
-|  |  |      v             |  |      v             |               |      |
-|  |  |  Consumer 1        |  |  Consumer 2        |               |      |
-|  |  |  (processes in     |  |  (processes in     |               |      |
-|  |  |   order: M1,M3,M5) |  |   order: M2,M4,M6) |               |      |
-|  |  +--------------------+  +--------------------+               |      |
-|  |                                                                 |    |
-|  |  Partition key: user_id                                        |     |
-|  |  All orders for User A > Partition 0 > Same consumer          |      |
-|  |  All orders for User B > Partition 1 > Same consumer          |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Topic: orders                                                    |  |
+|  |                                                                   |  |
+|  |  +--------------------+  +--------------------+                   |  |
+|  |  |    Partition 0     |  |    Partition 1     |                   |  |
+|  |  |  [User A orders]   |  |  [User B orders]   |                   |  |
+|  |  |  M1 > M3 > M5      |  |  M2 > M4 > M6      |                   |  |
+|  |  |      v             |  |      v             |                   |  |
+|  |  |  Consumer 1        |  |  Consumer 2        |                   |  |
+|  |  |  (processes in     |  |  (processes in     |                   |  |
+|  |  |   order: M1,M3,M5) |  |   order: M2,M4,M6) |                   |  |
+|  |  +--------------------+  +--------------------+                   |  |
+|  |                                                                   |  |
+|  |  Partition key: user_id                                           |  |
+|  |  All orders for User A > Partition 0 > Same consumer              |  |
+|  |  All orders for User B > Partition 1 > Same consumer              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CHOOSE PARTITION KEY CAREFULLY:                                        |
 |  * user_id: Order per user (common for user operations)                 |
@@ -367,22 +367,22 @@ distributed applications.
 |  Distributed event streaming platform. The industry standard.           |
 |                                                                         |
 |  ARCHITECTURE:                                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Topic: orders                                                  |    |
-|  |  +---------------+ +---------------+ +---------------+        |      |
-|  |  | Partition 0   | | Partition 1   | | Partition 2   |        |      |
-|  |  | [0][1][2][3]  | | [0][1][2]     | | [0][1]        |        |      |
-|  |  | ^ oldest      | |               | |           ^   |        |      |
-|  |  |      newest ^ | |               | |      newest   |        |      |
-|  |  +---------------+ +---------------+ +---------------+        |      |
-|  |                                                                 |    |
-|  |  * Messages are immutable, append-only                         |     |
-|  |  * Retained for configurable time (days/weeks)                |      |
-|  |  * Consumers track their own offset                           |      |
-|  |  * Can replay from any point                                   |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Topic: orders                                                    |  |
+|  |  +---------------+ +---------------+ +---------------+            |  |
+|  |  | Partition 0   | | Partition 1   | | Partition 2   |            |  |
+|  |  | [0][1][2][3]  | | [0][1][2]     | | [0][1]        |            |  |
+|  |  | ^ oldest      | |               | |           ^   |            |  |
+|  |  |      newest ^ | |               | |      newest   |            |  |
+|  |  +---------------+ +---------------+ +---------------+            |  |
+|  |                                                                   |  |
+|  |  * Messages are immutable, append-only                            |  |
+|  |  * Retained for configurable time (days/weeks)                    |  |
+|  |  * Consumers track their own offset                               |  |
+|  |  * Can replay from any point                                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  KEY FEATURES:                                                          |
 |  Y Very high throughput (millions of messages/sec)                      |
@@ -487,18 +487,18 @@ distributed applications.
 |                                                                         |
 |  Messages that fail processing go to a separate queue for inspection.   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Main Queue ----> Consumer ----> Process                       |     |
-|  |                       |                                         |    |
-|  |                       | Failed 3 times?                        |     |
-|  |                       v                                         |    |
-|  |                 Dead Letter Queue                              |     |
-|  |                       |                                         |    |
-|  |                       v                                         |    |
-|  |              Alert + Manual inspection                         |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Main Queue ----> Consumer ----> Process                          |  |
+|  |                       |                                           |  |
+|  |                       | Failed 3 times?                           |  |
+|  |                       v                                           |  |
+|  |                 Dead Letter Queue                                 |  |
+|  |                       |                                           |  |
+|  |                       v                                           |  |
+|  |              Alert + Manual inspection                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
@@ -513,17 +513,17 @@ distributed applications.
 |  > Database updated but message never sent!                             |
 |                                                                         |
 |  SOLUTION:                                                              |
-|  +-----------------------------------------------------------------+    |
-|  |  BEGIN TRANSACTION                                             |     |
-|  |    1. Update orders table                                      |     |
-|  |    2. Insert into outbox table                                 |     |
-|  |  COMMIT                                                        |     |
-|  |                                                                 |    |
-|  |  Background process:                                           |     |
-|  |    1. Read from outbox table                                   |     |
-|  |    2. Publish to message queue                                 |     |
-|  |    3. Mark outbox entry as published                          |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  BEGIN TRANSACTION                                                |  |
+|  |    1. Update orders table                                         |  |
+|  |    2. Insert into outbox table                                    |  |
+|  |  COMMIT                                                           |  |
+|  |                                                                   |  |
+|  |  Background process:                                              |  |
+|  |    1. Read from outbox table                                      |  |
+|  |    2. Publish to message queue                                    |  |
+|  |    3. Mark outbox entry as published                              |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
@@ -550,31 +550,31 @@ distributed applications.
 |  Store state changes as a sequence of events, not current state.        |
 |                                                                         |
 |  TRADITIONAL APPROACH (Current State):                                  |
-|  +-----------------------------------------------------------------+    |
-|  |  Account Table                                                  |    |
-|  |  +------------+----------+                                     |     |
-|  |  | account_id | balance  |   UPDATE accounts                    |    |
-|  |  +------------+----------+   SET balance = 750                 |     |
-|  |  | 123        | 750      |   WHERE id = 123;                   |     |
-|  |  +------------+----------+                                     |     |
-|  |                                                                 |    |
-|  |  Previous balance lost! No history.                           |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Account Table                                                    |  |
+|  |  +------------+----------+                                        |  |
+|  |  | account_id | balance  |   UPDATE accounts                      |  |
+|  |  +------------+----------+   SET balance = 750                    |  |
+|  |  | 123        | 750      |   WHERE id = 123;                      |  |
+|  |  +------------+----------+                                        |  |
+|  |                                                                   |  |
+|  |  Previous balance lost! No history.                               |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  EVENT SOURCING APPROACH:                                               |
-|  +-----------------------------------------------------------------+    |
-|  |  Events Log                                                     |    |
-|  |  +---------------------------------------------------------+   |     |
-|  |  | 1. AccountCreated { id: 123, balance: 0 }               |   |     |
-|  |  | 2. MoneyDeposited { id: 123, amount: 1000 }             |   |     |
-|  |  | 3. MoneyWithdrawn { id: 123, amount: 200 }              |   |     |
-|  |  | 4. MoneyWithdrawn { id: 123, amount: 50 }               |   |     |
-|  |  +---------------------------------------------------------+   |     |
-|  |                                                                 |    |
-|  |  Current balance = replay events: 0 + 1000 - 200 - 50 = 750   |      |
-|  |  Full history preserved!                                       |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Events Log                                                       |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  | 1. AccountCreated { id: 123, balance: 0 }                  |   |  |
+|  |  | 2. MoneyDeposited { id: 123, amount: 1000 }                |   |  |
+|  |  | 3. MoneyWithdrawn { id: 123, amount: 200 }                 |   |  |
+|  |  | 4. MoneyWithdrawn { id: 123, amount: 50 }                  |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  |  Current balance = replay events: 0 + 1000 - 200 - 50 = 750       |  |
+|  |  Full history preserved!                                          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFITS:                                                              |
 |  Y Complete audit trail                                                 |
@@ -609,32 +609,32 @@ distributed applications.
 |  Separate models for reading and writing data.                          |
 |                                                                         |
 |  TRADITIONAL (Same model for reads and writes):                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Application --> Single Database Model --> Database            |     |
-|  |                  (reads & writes)                               |    |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Application --> Single Database Model --> Database               |  |
+|  |                  (reads & writes)                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CQRS (Separate models):                                                |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  COMMANDS (Writes)                  QUERIES (Reads)            |     |
-|  |       |                                   |                     |    |
-|  |       v                                   v                     |    |
-|  |  +-------------+                 +-------------+               |     |
-|  |  |Write Model  |                 | Read Model  |               |     |
-|  |  |(Normalized) |                 |(Denormalized|               |     |
-|  |  +------+------+                 | for queries)|               |     |
-|  |         |                        +------^------+               |     |
-|  |         v                               |                      |     |
-|  |  +-------------+        Events         |                      |      |
-|  |  |  Write DB   | -----------------------+                      |     |
-|  |  | (Source of  |     (async sync)                             |      |
-|  |  |   truth)    |                                               |     |
-|  |  +-------------+                                               |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  COMMANDS (Writes)                  QUERIES (Reads)               |  |
+|  |       |                                   |                       |  |
+|  |       v                                   v                       |  |
+|  |  +-------------+                 +-------------+                  |  |
+|  |  |Write Model  |                 | Read Model  |                  |  |
+|  |  |(Normalized) |                 |(Denormalized|                  |  |
+|  |  +------+------+                 | for queries)|                  |  |
+|  |         |                        +------^------+                  |  |
+|  |         v                               |                         |  |
+|  |  +-------------+        Events         |                          |  |
+|  |  |  Write DB   | -----------------------+                         |  |
+|  |  | (Source of  |     (async sync)                                 |  |
+|  |  |   truth)    |                                                  |  |
+|  |  +-------------+                                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WRITE SIDE:                                                            |
 |  * Handles commands (CreateOrder, UpdateProfile)                        |
@@ -677,16 +677,16 @@ distributed applications.
 |                                                                         |
 |  What happens when producer is faster than consumer?                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Producer (1000 msg/s) --> Queue --> Consumer (100 msg/s)     |      |
-|  |                             |                                   |    |
-|  |                         GROWING!                                |    |
-|  |                    [][][][][][][][][]...                       |     |
-|  |                                                                 |    |
-|  |  Queue grows > Memory exhausted > System crash!               |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Producer (1000 msg/s) --> Queue --> Consumer (100 msg/s)         |  |
+|  |                             |                                     |  |
+|  |                         GROWING!                                  |  |
+|  |                    [][][][][][][][][]...                          |  |
+|  |                                                                   |  |
+|  |  Queue grows > Memory exhausted > System crash!                   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  BACKPRESSURE STRATEGIES:                                               |
 |                                                                         |
@@ -741,17 +741,17 @@ distributed applications.
 |                                                                         |
 |  KAFKA CONSUMER LAG                                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Partition                                                      |    |
-|  |  [0][1][2][3][4][5][6][7][8][9][10][11][12]                    |     |
-|  |              ^                       ^                          |    |
-|  |         Consumer                 Latest                        |     |
-|  |         Offset (5)              Offset (12)                    |     |
-|  |                                                                 |    |
-|  |  LAG = 12 - 5 = 7 messages                                    |      |
-|  |                                                                 |    |
-|  |  ALERT IF: Lag > threshold OR lag growing consistently        |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Partition                                                        |  |
+|  |  [0][1][2][3][4][5][6][7][8][9][10][11][12]                       |  |
+|  |              ^                       ^                            |  |
+|  |         Consumer                 Latest                           |  |
+|  |         Offset (5)              Offset (12)                       |  |
+|  |                                                                   |  |
+|  |  LAG = 12 - 5 = 7 messages                                        |  |
+|  |                                                                   |  |
+|  |  ALERT IF: Lag > threshold OR lag growing consistently            |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

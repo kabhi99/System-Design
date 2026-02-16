@@ -22,26 +22,26 @@ and architect-level interviews.
 |                                                                         |
 |  2. HIGH-LEVEL COMPONENTS (5 min)                                       |
 |                                                                         |
-|     +------------------------------------------------------------+      |
-|     |                                                            |      |
-|     |   [Rider App]     [Driver App]                            |       |
-|     |        |               |                                   |      |
-|     |        +-------+-------+                                   |      |
-|     |                v                                           |      |
-|     |        [API Gateway]                                       |      |
-|     |                |                                           |      |
-|     |    +-----------+-----------+--------------+               |       |
-|     |    v           v           v              v               |       |
-|     |  [User]    [Location]   [Matching]    [Pricing]           |       |
-|     | Service    Service      Service       Service             |       |
-|     |                                                            |      |
-|     |    |           |           |              |               |       |
-|     |    v           v           v              v               |       |
-|     | [Postgres]  [Redis]    [Redis]        [Redis]            |        |
-|     |                                                            |      |
-|     |            [Kafka for async events]                       |       |
-|     |                                                            |      |
-|     +------------------------------------------------------------+      |
+|     +--------------------------------------------------------------+    |
+|     |                                                              |    |
+|     |   [Rider App]     [Driver App]                               |    |
+|     |        |               |                                     |    |
+|     |        +-------+-------+                                     |    |
+|     |                v                                             |    |
+|     |        [API Gateway]                                         |    |
+|     |                |                                             |    |
+|     |    +-----------+-----------+--------------+                  |    |
+|     |    v           v           v              v                  |    |
+|     |  [User]    [Location]   [Matching]    [Pricing]              |    |
+|     | Service    Service      Service       Service                |    |
+|     |                                                              |    |
+|     |    |           |           |              |                  |    |
+|     |    v           v           v              v                  |    |
+|     | [Postgres]  [Redis]    [Redis]        [Redis]                |    |
+|     |                                                              |    |
+|     |            [Kafka for async events]                          |    |
+|     |                                                              |    |
+|     +--------------------------------------------------------------+    |
 |                                                                         |
 |  3. KEY SERVICES                                                        |
 |     * Location Service: Store/query driver locations                    |

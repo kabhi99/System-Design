@@ -8,36 +8,36 @@
 |                                                                         |
 |  RESPONSE CACHING AT GATEWAY                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request                                                        |    |
-|  |     |                                                           |    |
-|  |     v                                                           |    |
-|  |  +---------------------+                                       |     |
-|  |  |   Check Cache       |                                       |     |
-|  |  |   (Redis/In-memory) |                                       |     |
-|  |  +---------+-----------+                                       |     |
-|  |            |                                                    |    |
-|  |     +------+------+                                            |     |
-|  |     |             |                                             |    |
-|  |   HIT           MISS                                           |     |
-|  |     |             |                                             |    |
-|  |     |             v                                             |    |
-|  |     |      +-------------+                                     |     |
-|  |     |      |   Backend   |                                     |     |
-|  |     |      |   Service   |                                     |     |
-|  |     |      +------+------+                                     |     |
-|  |     |             |                                             |    |
-|  |     |             v                                             |    |
-|  |     |      Store in Cache                                      |     |
-|  |     |      (if cacheable)                                      |     |
-|  |     |             |                                             |    |
-|  |     +------+------+                                            |     |
-|  |            |                                                    |    |
-|  |            v                                                    |    |
-|  |       Return Response                                          |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request                                                          |  |
+|  |     |                                                             |  |
+|  |     v                                                             |  |
+|  |  +---------------------+                                          |  |
+|  |  |   Check Cache       |                                          |  |
+|  |  |   (Redis/In-memory) |                                          |  |
+|  |  +---------+-----------+                                          |  |
+|  |            |                                                      |  |
+|  |     +------+------+                                               |  |
+|  |     |             |                                               |  |
+|  |   HIT           MISS                                              |  |
+|  |     |             |                                               |  |
+|  |     |             v                                               |  |
+|  |     |      +-------------+                                        |  |
+|  |     |      |   Backend   |                                        |  |
+|  |     |      |   Service   |                                        |  |
+|  |     |      +------+------+                                        |  |
+|  |     |             |                                               |  |
+|  |     |             v                                               |  |
+|  |     |      Store in Cache                                         |  |
+|  |     |      (if cacheable)                                         |  |
+|  |     |             |                                               |  |
+|  |     +------+------+                                               |  |
+|  |            |                                                      |  |
+|  |            v                                                      |  |
+|  |       Return Response                                             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -154,22 +154,22 @@
 |  4. PROTOCOL TRANSLATION                                                |
 |  ==========================                                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client --(REST/JSON)--> Gateway --(gRPC/Protobuf)--> Backend |      |
-|  |                                                                 |    |
-|  |  Gateway handles:                                              |     |
-|  |  * JSON - Protobuf serialization                              |      |
-|  |  * HTTP methods - gRPC methods                                |      |
-|  |  * HTTP status codes - gRPC status codes                     |       |
-|  |                                                                 |    |
-|  |  Config:                                                        |    |
-|  |  routes:                                                        |    |
-|  |    - path: /api/v1/users/{id}                                 |      |
-|  |      grpc_service: UserService                                |      |
-|  |      grpc_method: GetUser                                     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client --(REST/JSON)--> Gateway --(gRPC/Protobuf)--> Backend     |  |
+|  |                                                                   |  |
+|  |  Gateway handles:                                                 |  |
+|  |  * JSON - Protobuf serialization                                  |  |
+|  |  * HTTP methods - gRPC methods                                    |  |
+|  |  * HTTP status codes - gRPC status codes                          |  |
+|  |                                                                   |  |
+|  |  Config:                                                          |  |
+|  |  routes:                                                          |  |
+|  |    - path: /api/v1/users/{id}                                     |  |
+|  |      grpc_service: UserService                                    |  |
+|  |      grpc_method: GetUser                                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -224,22 +224,22 @@
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  GATEWAY HANDLES VERSION ROUTING:                                       |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  def route_request(request):                                   |     |
-|  |      # Check URL path first                                    |     |
-|  |      if '/v2/' in request.path:                               |      |
-|  |          return route_to_v2(request)                          |      |
-|  |                                                                 |    |
-|  |      # Check header                                            |     |
-|  |      version = request.headers.get('X-API-Version', '1')      |      |
-|  |      if version == '2':                                        |     |
-|  |          return route_to_v2(request)                          |      |
-|  |                                                                 |    |
-|  |      # Default to v1                                           |     |
-|  |      return route_to_v1(request)                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  def route_request(request):                                      |  |
+|  |      # Check URL path first                                       |  |
+|  |      if '/v2/' in request.path:                                   |  |
+|  |          return route_to_v2(request)                              |  |
+|  |                                                                   |  |
+|  |      # Check header                                               |  |
+|  |      version = request.headers.get('X-API-Version', '1')          |  |
+|  |      if version == '2':                                           |  |
+|  |          return route_to_v2(request)                              |  |
+|  |                                                                   |  |
+|  |      # Default to v1                                              |  |
+|  |      return route_to_v1(request)                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -255,31 +255,31 @@
 |  Without aggregation: 5 round trips from mobile                         |
 |  With aggregation: 1 round trip, gateway fetches from 5 services        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  WITHOUT AGGREGATION:                                          |     |
-|  |                                                                 |    |
-|  |  Mobile --> User Service                                       |     |
-|  |  Mobile --> Order Service                                      |     |
-|  |  Mobile --> Product Service                                    |     |
-|  |  Mobile --> Review Service                                     |     |
-|  |  Mobile --> Recommendation Service                             |     |
-|  |                                                                 |    |
-|  |  5 round trips! Bad for mobile (latency, battery)             |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  WITH AGGREGATION:                                             |     |
-|  |                                                                 |    |
-|  |  Mobile --> Gateway/BFF --+--> User Service                   |      |
-|  |                           +--> Order Service                   |     |
-|  |                           +--> Product Service                 |     |
-|  |                           +--> Review Service                  |     |
-|  |                           +--> Recommendation Service          |     |
-|  |                                                                 |    |
-|  |  1 round trip! Gateway aggregates responses                   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  WITHOUT AGGREGATION:                                             |  |
+|  |                                                                   |  |
+|  |  Mobile --> User Service                                          |  |
+|  |  Mobile --> Order Service                                         |  |
+|  |  Mobile --> Product Service                                       |  |
+|  |  Mobile --> Review Service                                        |  |
+|  |  Mobile --> Recommendation Service                                |  |
+|  |                                                                   |  |
+|  |  5 round trips! Bad for mobile (latency, battery)                 |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  WITH AGGREGATION:                                                |  |
+|  |                                                                   |  |
+|  |  Mobile --> Gateway/BFF --+--> User Service                       |  |
+|  |                           +--> Order Service                      |  |
+|  |                           +--> Product Service                    |  |
+|  |                           +--> Review Service                     |  |
+|  |                           +--> Recommendation Service             |  |
+|  |                                                                   |  |
+|  |  1 round trip! Gateway aggregates responses                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  AGGREGATION ENDPOINT:                                                  |
 |                                                                         |
@@ -451,36 +451,36 @@
 |                                                                         |
 |  HIGH AVAILABILITY ARCHITECTURE                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                        DNS (Route 53)                          |     |
-|  |                     Health-check routing                       |     |
-|  |                            |                                    |    |
-|  |         +------------------+------------------+                |     |
-|  |         |                  |                  |                 |    |
-|  |         v                  v                  v                 |    |
-|  |  +-----------+      +-----------+      +-----------+          |      |
-|  |  |   AZ-1    |      |   AZ-2    |      |   AZ-3    |          |      |
-|  |  |           |      |           |      |           |          |      |
-|  |  |  +-----+  |      |  +-----+  |      |  +-----+  |          |      |
-|  |  |  | NLB |  |      |  | NLB |  |      |  | NLB |  |          |      |
-|  |  |  +--+--+  |      |  +--+--+  |      |  +--+--+  |          |      |
-|  |  |     |     |      |     |     |      |     |     |          |      |
-|  |  |  +--v--+  |      |  +--v--+  |      |  +--v--+  |          |      |
-|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |          |      |
-|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |          |      |
-|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |          |      |
-|  |  |  +-----+  |      |  +-----+  |      |  +-----+  |          |      |
-|  |  |           |      |           |      |           |          |      |
-|  |  +-----------+      +-----------+      +-----------+          |      |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |                    Redis Cluster                        |  |      |
-|  |  |              (Rate limiting, caching)                   |  |      |
-|  |  |         [Master]  [Replica]  [Replica]                 |  |       |
-|  |  +---------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                        DNS (Route 53)                             |  |
+|  |                     Health-check routing                          |  |
+|  |                            |                                      |  |
+|  |         +------------------+------------------+                   |  |
+|  |         |                  |                  |                   |  |
+|  |         v                  v                  v                   |  |
+|  |  +-----------+      +-----------+      +-----------+              |  |
+|  |  |   AZ-1    |      |   AZ-2    |      |   AZ-3    |              |  |
+|  |  |           |      |           |      |           |              |  |
+|  |  |  +-----+  |      |  +-----+  |      |  +-----+  |              |  |
+|  |  |  | NLB |  |      |  | NLB |  |      |  | NLB |  |              |  |
+|  |  |  +--+--+  |      |  +--+--+  |      |  +--+--+  |              |  |
+|  |  |     |     |      |     |     |      |     |     |              |  |
+|  |  |  +--v--+  |      |  +--v--+  |      |  +--v--+  |              |  |
+|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |              |  |
+|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |              |  |
+|  |  |  | GW  |  |      |  | GW  |  |      |  | GW  |  |              |  |
+|  |  |  +-----+  |      |  +-----+  |      |  +-----+  |              |  |
+|  |  |           |      |           |      |           |              |  |
+|  |  +-----------+      +-----------+      +-----------+              |  |
+|  |                                                                   |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |                    Redis Cluster                            |  |  |
+|  |  |              (Rate limiting, caching)                       |  |  |
+|  |  |         [Master]  [Replica]  [Replica]                      |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  KEY PRINCIPLES:                                                        |
 |  * Stateless gateway nodes (share nothing)                              |
@@ -499,26 +499,26 @@
 |                                                                         |
 |  HOT RELOAD (No restart for config changes)                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Admin API       Config Store        Gateway Nodes             |     |
-|  |      |                |                    |                    |    |
-|  |      |--1. Update --->|                    |                    |    |
-|  |      |   route        |                    |                    |    |
-|  |      |                |--2. Notify ------->|                    |    |
-|  |      |                |   (watch/pubsub)   |                    |    |
-|  |      |                |                    |                    |    |
-|  |      |                |                    |--3. Reload config  |    |
-|  |      |                |                    |   (atomic swap)    |    |
-|  |      |                |                    |                    |    |
-|  |                                                                 |    |
-|  |  Config Store Options:                                         |     |
-|  |  * PostgreSQL (Kong)                                          |      |
-|  |  * etcd (Envoy)                                               |      |
-|  |  * Consul                                                     |      |
-|  |  * File (watched for changes)                                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Admin API       Config Store        Gateway Nodes                |  |
+|  |      |                |                    |                      |  |
+|  |      |--1. Update --->|                    |                      |  |
+|  |      |   route        |                    |                      |  |
+|  |      |                |--2. Notify ------->|                      |  |
+|  |      |                |   (watch/pubsub)   |                      |  |
+|  |      |                |                    |                      |  |
+|  |      |                |                    |--3. Reload config    |  |
+|  |      |                |                    |   (atomic swap)      |  |
+|  |      |                |                    |                      |  |
+|  |                                                                   |  |
+|  |  Config Store Options:                                            |  |
+|  |  * PostgreSQL (Kong)                                              |  |
+|  |  * etcd (Envoy)                                                   |  |
+|  |  * Consul                                                         |  |
+|  |  * File (watched for changes)                                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  DECLARATIVE CONFIG (GitOps):                                           |
 |  * Config in Git repository                                             |

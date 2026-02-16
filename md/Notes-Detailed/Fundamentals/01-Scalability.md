@@ -235,9 +235,9 @@ Clone the entire application behind a load balancer.
 |                                                                         |
 |  X-AXIS: HORIZONTAL CLONING                                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                      Load Balancer                              |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                      Load Balancer                                |  |
+|  +-------------------------------------------------------------------+  |
 |            |              |              |              |               |
 |            v              v              v              v               |
 |       +--------+    +--------+    +--------+    +--------+              |
@@ -276,12 +276,12 @@ Split by function (microservices).
 |                                                                         |
 |  Y-AXIS: FUNCTIONAL DECOMPOSITION (MICROSERVICES)                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                       Monolith                                  |    |
-|  |  +----------------------------------------------------------+  |     |
-|  |  |  Users  |  Orders  |  Payments  |  Inventory  |  Search  |  |     |
-|  |  +----------------------------------------------------------+  |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                       Monolith                                    |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |  Users  |  Orders  |  Payments  |  Inventory  |  Search     |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v  Decompose by business domain            |
 |                                                                         |
@@ -303,24 +303,24 @@ Split by function (microservices).
 |  Product info, reviews, recommendations, pricing, inventory...          |
 |                                                                         |
 |  UBER EXAMPLE:                                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   Rider App    Driver App    Eats App    Business Portal       |     |
-|  |       |             |            |              |               |    |
-|  |       +-------------+------------+--------------+               |    |
-|  |                         |                                       |    |
-|  |                    API Gateway                                  |    |
-|  |                         |                                       |    |
-|  |    +--------------------+--------------------+                 |     |
-|  |    |                    |                    |                 |     |
-|  | Trip Service     User Service     Payment Service             |      |
-|  | Match Service    Pricing Service  Notification Service        |      |
-|  | Map Service      Surge Service    Rating Service              |      |
-|  | ETA Service      Promo Service    Support Service             |      |
-|  |                                                                 |    |
-|  | (2,000+ microservices)                                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   Rider App    Driver App    Eats App    Business Portal          |  |
+|  |       |             |            |              |                 |  |
+|  |       +-------------+------------+--------------+                 |  |
+|  |                         |                                         |  |
+|  |                    API Gateway                                    |  |
+|  |                         |                                         |  |
+|  |    +--------------------+--------------------+                    |  |
+|  |    |                    |                    |                    |  |
+|  | Trip Service     User Service     Payment Service                 |  |
+|  | Match Service    Pricing Service  Notification Service            |  |
+|  | Map Service      Surge Service    Rating Service                  |  |
+|  | ETA Service      Promo Service    Support Service                 |  |
+|  |                                                                   |  |
+|  | (2,000+ microservices)                                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -334,10 +334,10 @@ Split data across databases.
 |                                                                         |
 |  Z-AXIS: DATA PARTITIONING (SHARDING)                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                       All Data                                  |    |
-|  |                    (100M users)                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                       All Data                                    |  |
+|  |                    (100M users)                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                              |                                          |
 |                              v  Partition by user_id                    |
 |                                                                         |
@@ -423,10 +423,10 @@ Split data across databases.
 |  * Uneven load distribution                                             |
 |                                                                         |
 |  "STICKY SESSIONS" WORKAROUND:                                          |
-|  +-----------------------------------------------------------------+    |
-|  |                   Load Balancer                                 |    |
-|  |         (routes User A always to Server 1)                      |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                   Load Balancer                                   |  |
+|  |         (routes User A always to Server 1)                        |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  STILL HAS PROBLEMS:                                                    |
 |  X Uneven load distribution                                             |
@@ -441,9 +441,9 @@ Split data across databases.
 |                                                                         |
 |  Server stores NO state. State is stored externally:                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                    Load Balancer                                |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                    Load Balancer                                  |  |
+|  +-------------------------------------------------------------------+  |
 |            |              |              |              |               |
 |            v              v              v              v               |
 |       +--------+    +--------+    +--------+    +--------+              |
@@ -455,9 +455,9 @@ Split data across databases.
 |            +--------------+--------------+--------------+               |
 |                              |                                          |
 |                              v                                          |
-|  +-----------------------------------------------------------------+    |
-|  |              External State Store (Redis Cluster)               |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |              External State Store (Redis Cluster)                 |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFITS:                                                              |
 |  Y Any request can hit any server                                       |
@@ -494,11 +494,11 @@ Split data across databases.
 |  Token contains all user info, signed by server                         |
 |                                                                         |
 |  JWT Token Structure:                                                   |
-|  +-----------------------------------------------------------------+    |
-|  |  Header:     { "alg": "HS256", "typ": "JWT" }                   |    |
-|  |  Payload:    { "user_id": 123, "role": "admin", "exp": ... }   |     |
-|  |  Signature:  HMAC(header + payload, secret_key)                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Header:     { "alg": "HS256", "typ": "JWT" }                     |  |
+|  |  Payload:    { "user_id": 123, "role": "admin", "exp": ... }      |  |
+|  |  Signature:  HMAC(header + payload, secret_key)                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Server validates token signature - no session lookup needed!           |
 |                                                                         |
@@ -539,27 +539,27 @@ Split data across databases.
 |                                                                         |
 |  NETFLIX STATELESS ARCHITECTURE                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client Device                                                  |    |
-|  |  (TV, Phone, Browser)                                          |     |
-|  |       |                                                         |    |
-|  |       | JWT Token in header                                    |     |
-|  |       v                                                         |    |
-|  |  API Gateway (Zuul)                                            |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  Stateless Microservices <---- NO session state               |      |
-|  |  (Hundreds of services)                                        |     |
-|  |       |                                                         |    |
-|  |       |                                                         |    |
-|  |       +--> EVCache (Memcached cluster) <-- Session/cache      |      |
-|  |       +--> Cassandra                    <-- User data          |     |
-|  |       +--> MySQL                        <-- Billing            |     |
-|  |                                                                 |    |
-|  |  Result: Any request can be handled by any service instance   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client Device                                                    |  |
+|  |  (TV, Phone, Browser)                                             |  |
+|  |       |                                                           |  |
+|  |       | JWT Token in header                                       |  |
+|  |       v                                                           |  |
+|  |  API Gateway (Zuul)                                               |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  Stateless Microservices <---- NO session state                   |  |
+|  |  (Hundreds of services)                                           |  |
+|  |       |                                                           |  |
+|  |       |                                                           |  |
+|  |       +--> EVCache (Memcached cluster) <-- Session/cache          |  |
+|  |       +--> Cassandra                    <-- User data             |  |
+|  |       +--> MySQL                        <-- Billing               |  |
+|  |                                                                   |  |
+|  |  Result: Any request can be handled by any service instance       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -817,16 +817,16 @@ Defining and measuring reliability and performance.
 |                                                                         |
 |  THE NINES OF AVAILABILITY:                                             |
 |  ----------------------------                                           |
-|  +------------+----------------------------------------------------+    |
-|  | Availability | Downtime per year | Downtime per month          |     |
-|  +------------+----------------------------------------------------+    |
-|  | 90%        | 36.5 days         | 3 days                        |     |
-|  | 99%        | 3.65 days         | 7.3 hours                     |     |
-|  | 99.9%      | 8.76 hours        | 43.8 minutes                  |     |
-|  | 99.95%     | 4.38 hours        | 21.9 minutes                  |     |
-|  | 99.99%     | 52.6 minutes      | 4.38 minutes                  |     |
-|  | 99.999%    | 5.26 minutes      | 26 seconds                    |     |
-|  +------------+----------------------------------------------------+    |
+|  +------------+-------------------------------------------------------+ |
+|  | Availability | Downtime per year | Downtime per month              | |
+|  +------------+-------------------------------------------------------+ |
+|  | 90%        | 36.5 days         | 3 days                            | |
+|  | 99%        | 3.65 days         | 7.3 hours                         | |
+|  | 99.9%      | 8.76 hours        | 43.8 minutes                      | |
+|  | 99.95%     | 4.38 hours        | 21.9 minutes                      | |
+|  | 99.99%     | 52.6 minutes      | 4.38 minutes                      | |
+|  | 99.999%    | 5.26 minutes      | 26 seconds                        | |
+|  +------------+-------------------------------------------------------+ |
 |                                                                         |
 |  REAL-WORLD SLOs:                                                       |
 |  * AWS S3: 99.9% availability (SLA), targets 99.99%+ (SLO)              |
@@ -861,15 +861,15 @@ Defining and measuring reliability and performance.
 |  (Buffer for operational issues)                                        |
 |                                                                         |
 |  EXAMPLE (AWS RDS SLA):                                                 |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Monthly Uptime %    |  Service Credit %                       |     |
-|  |  -------------------------------------------                    |    |
-|  |  Less than 99.95%    |  10%                                    |     |
-|  |  Less than 99.0%     |  25%                                    |     |
-|  |  Less than 95.0%     |  100%                                   |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Monthly Uptime %    |  Service Credit %                          |  |
+|  |  -------------------------------------------                      |  |
+|  |  Less than 99.95%    |  10%                                       |  |
+|  |  Less than 99.0%     |  25%                                       |  |
+|  |  Less than 95.0%     |  100%                                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  RELATIONSHIP:                                                          |
 |                                                                         |

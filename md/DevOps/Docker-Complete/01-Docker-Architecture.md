@@ -15,34 +15,34 @@ Docker uses a client-server architecture:
 |                                                                         |
 |  HIGH-LEVEL DOCKER ARCHITECTURE                                         |
 |                                                                         |
-|  +-----------------+          +-------------------------------------+   |
-|  |                 |          |                                     |   |
-|  |  DOCKER CLIENT  |          |          DOCKER HOST                |   |
-|  |  (docker CLI)   |          |                                     |   |
-|  |                 |          |  +-------------------------------+  |   |
-|  |  Commands:      |   REST   |  |       DOCKER DAEMON           |  |   |
-|  |  * docker run   |   API    |  |       (dockerd)               |  |   |
-|  |  * docker build | ------>  |  |                               |  |   |
-|  |  * docker pull  |          |  |  * Manages containers        |  |    |
-|  |  * docker push  |          |  |  * Manages images            |  |    |
-|  |                 |          |  |  * Manages networks          |  |    |
-|  +-----------------+          |  |  * Manages volumes           |  |    |
-|                               |  |                               |  |   |
-|                               |  +-------------------------------+  |   |
-|                               |                |                    |   |
-|                               |                v                    |   |
-|                               |  +-------------------------------+  |   |
-|                               |  |        CONTAINERD            |  |    |
-|                               |  |  (container runtime)          |  |   |
-|                               |  +-------------------------------+  |   |
-|                               |                |                    |   |
-|                               |                v                    |   |
-|                               |  +-------------------------------+  |   |
-|                               |  |           runc               |  |    |
-|                               |  |  (creates containers)         |  |   |
-|                               |  +-------------------------------+  |   |
-|                               |                                     |   |
-|                               +-------------------------------------+   |
+|  +-----------------+          +--------------------------------------+  |
+|  |                 |          |                                      |  |
+|  |  DOCKER CLIENT  |          |          DOCKER HOST                 |  |
+|  |  (docker CLI)   |          |                                      |  |
+|  |                 |          |  +--------------------------------+  |  |
+|  |  Commands:      |   REST   |  |       DOCKER DAEMON            |  |  |
+|  |  * docker run   |   API    |  |       (dockerd)                |  |  |
+|  |  * docker build | ------>  |  |                                |  |  |
+|  |  * docker pull  |          |  |  * Manages containers          |  |  |
+|  |  * docker push  |          |  |  * Manages images              |  |  |
+|  |                 |          |  |  * Manages networks            |  |  |
+|  +-----------------+          |  |  * Manages volumes             |  |  |
+|                               |  |                                |  |  |
+|                               |  +--------------------------------+  |  |
+|                               |                |                     |  |
+|                               |                v                     |  |
+|                               |  +--------------------------------+  |  |
+|                               |  |        CONTAINERD              |  |  |
+|                               |  |  (container runtime)           |  |  |
+|                               |  +--------------------------------+  |  |
+|                               |                |                     |  |
+|                               |                v                     |  |
+|                               |  +--------------------------------+  |  |
+|                               |  |           runc                 |  |  |
+|                               |  |  (creates containers)          |  |  |
+|                               |  +--------------------------------+  |  |
+|                               |                                      |  |
+|                               +--------------------------------------+  |
 |                                                                         |
 |  +-----------------+                                                    |
 |  | DOCKER REGISTRY | <---- Docker Host pulls/pushes images              |
@@ -95,17 +95,17 @@ you understand why it's structured the way it is.
 |                                                                         |
 |  MONOLITHIC DOCKER (OLD)                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |                       Docker Daemon                              |   |
 |  |                                                                  |   |
-|  |  Everything in ONE process:                                     |    |
-|  |  * API server                                                   |    |
-|  |  * Image management                                             |    |
-|  |  * Container runtime                                            |    |
-|  |  * Networking                                                   |    |
-|  |  * Volumes                                                      |    |
+|  |  Everything in ONE process:                                      |   |
+|  |  * API server                                                    |   |
+|  |  * Image management                                              |   |
+|  |  * Container runtime                                             |   |
+|  |  * Networking                                                    |   |
+|  |  * Volumes                                                       |   |
 |  |                                                                  |   |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PROBLEMS:                                                              |
 |  * Daemon restart = ALL containers restart                              |
@@ -123,35 +123,35 @@ you understand why it's structured the way it is.
 |                                                                         |
 |  MODULAR DOCKER (CURRENT)                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Docker Daemon (dockerd)                                        |    |
-|  |  * API server                                                   |    |
-|  |  * Image management (build, push, pull)                        |     |
-|  |  * High-level orchestration                                    |     |
-|  +--------------------------+--------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Docker Daemon (dockerd)                                         |   |
+|  |  * API server                                                    |   |
+|  |  * Image management (build, push, pull)                          |   |
+|  |  * High-level orchestration                                      |   |
+|  +--------------------------+---------------------------------------+   |
 |                             | gRPC                                      |
 |                             v                                           |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |  containerd                                                      |   |
-|  |  * Container lifecycle (create, start, stop, delete)           |     |
-|  |  * Image pulling and pushing                                   |     |
-|  |  * Network and storage management                              |     |
-|  +--------------------------+--------------------------------------+    |
+|  |  * Container lifecycle (create, start, stop, delete)             |   |
+|  |  * Image pulling and pushing                                     |   |
+|  |  * Network and storage management                                |   |
+|  +--------------------------+---------------------------------------+   |
 |                             |                                           |
 |                             v                                           |
-|  +-----------------------------------------------------------------+    |
-|  |  containerd-shim                                                |    |
-|  |  * Decouples container from containerd                         |     |
-|  |  * Keeps STDIO and fds open                                    |     |
-|  |  * Reports exit status to containerd                           |     |
-|  +--------------------------+--------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  containerd-shim                                                 |   |
+|  |  * Decouples container from containerd                           |   |
+|  |  * Keeps STDIO and fds open                                      |   |
+|  |  * Reports exit status to containerd                             |   |
+|  +--------------------------+---------------------------------------+   |
 |                             |                                           |
 |                             v                                           |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |  runc                                                            |   |
-|  |  * Creates container                                            |    |
-|  |  * Exits after container starts (daemonless)                   |     |
-|  +-----------------------------------------------------------------+    |
+|  |  * Creates container                                             |   |
+|  |  * Exits after container starts (daemonless)                     |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  BENEFITS:                                                              |
 |  Y Daemon restart doesn't affect running containers                     |

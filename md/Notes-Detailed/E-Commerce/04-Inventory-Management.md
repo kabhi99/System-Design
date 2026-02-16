@@ -294,17 +294,17 @@ handling race conditions during flash sales.
 |  }                                                                      |
 |                                                                         |
 |  Lua Script (DECR_IF_ENOUGH):                                           |
-|  +----------------------------------------------------------------+     |
-|  |  local current = tonumber(redis.call('GET', KEYS[1]) or 0)    |      |
-|  |  local requested = tonumber(ARGV[1])                          |      |
-|  |                                                                |     |
-|  |  if current >= requested then                                 |      |
-|  |      redis.call('DECRBY', KEYS[1], requested)                |       |
-|  |      return current - requested                               |      |
-|  |  else                                                          |     |
-|  |      return -1  -- Not enough stock                          |       |
-|  |  end                                                           |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |  local current = tonumber(redis.call('GET', KEYS[1]) or 0)       |   |
+|  |  local requested = tonumber(ARGV[1])                             |   |
+|  |                                                                  |   |
+|  |  if current >= requested then                                    |   |
+|  |      redis.call('DECRBY', KEYS[1], requested)                    |   |
+|  |      return current - requested                                  |   |
+|  |  else                                                            |   |
+|  |      return -1  -- Not enough stock                              |   |
+|  |  end                                                             |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SYNC WITH DATABASE:                                                    |
 |  * After Redis success, create reservation in DB (can be async)         |

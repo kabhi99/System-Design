@@ -331,15 +331,15 @@ works, and when to use it.
 |                                                                         |
 |  COMPARISON                                                             |
 |                                                                         |
-|  +-----------+----------------------------------------------------+     |
-|  | Policy    | Best For                                          |      |
-|  +-----------+----------------------------------------------------+     |
-|  | LRU       | General purpose, good default                     |      |
-|  | LFU       | Highly skewed access (few very hot items)        |       |
-|  | FIFO      | Simple queues, streaming data                     |      |
-|  | Random    | When access pattern is truly random               |      |
-|  | TTL       | Time-sensitive data, sessions                     |      |
-|  +-----------+----------------------------------------------------+     |
+|  +-----------+------------------------------------------------------+   |
+|  | Policy    | Best For                                             |   |
+|  +-----------+------------------------------------------------------+   |
+|  | LRU       | General purpose, good default                        |   |
+|  | LFU       | Highly skewed access (few very hot items)            |   |
+|  | FIFO      | Simple queues, streaming data                        |   |
+|  | Random    | When access pattern is truly random                  |   |
+|  | TTL       | Time-sensitive data, sessions                        |   |
+|  +-----------+------------------------------------------------------+   |
 |                                                                         |
 |  REDIS EVICTION POLICIES                                                |
 |  -------------------------                                              |

@@ -52,21 +52,21 @@ Jobs run tasks to completion. CronJobs run Jobs on a schedule.
 |  DEPLOYMENT vs JOB vs CRONJOB                                           |
 |  =============================                                          |
 |                                                                         |
-|  +----------------+--------------------+----------------------------+   |
-|  | Workload       | Use For            | Behavior                   |   |
-|  +----------------+--------------------+----------------------------+   |
-|  | Deployment     | Long-running       | Keeps pods RUNNING         |   |
-|  |                | services           | Restarts if they exit      |   |
-|  |                | (web, API, DB)     |                            |   |
-|  +----------------+--------------------+----------------------------+   |
-|  | Job            | Run-to-completion  | Runs until SUCCESS         |   |
-|  |                | tasks              | Does NOT restart on        |   |
-|  |                | (migration, batch) | successful exit            |   |
-|  +----------------+--------------------+----------------------------+   |
-|  | CronJob        | Scheduled tasks    | Creates Jobs on schedule   |   |
-|  |                | (daily backup,     | Like cron on Linux         |   |
-|  |                |  hourly cleanup)   |                            |   |
-|  +----------------+--------------------+----------------------------+   |
+|  +----------------+--------------------+-----------------------------+  |
+|  | Workload       | Use For            | Behavior                    |  |
+|  +----------------+--------------------+-----------------------------+  |
+|  | Deployment     | Long-running       | Keeps pods RUNNING          |  |
+|  |                | services           | Restarts if they exit       |  |
+|  |                | (web, API, DB)     |                             |  |
+|  +----------------+--------------------+-----------------------------+  |
+|  | Job            | Run-to-completion  | Runs until SUCCESS          |  |
+|  |                | tasks              | Does NOT restart on         |  |
+|  |                | (migration, batch) | successful exit             |  |
+|  +----------------+--------------------+-----------------------------+  |
+|  | CronJob        | Scheduled tasks    | Creates Jobs on schedule    |  |
+|  |                | (daily backup,     | Like cron on Linux          |  |
+|  |                |  hourly cleanup)   |                             |  |
+|  +----------------+--------------------+-----------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 

@@ -20,31 +20,31 @@ Kubernetes identifies FOUR distinct networking challenges:
 |                                                                         |
 |  THE FOUR KUBERNETES NETWORKING CHALLENGES                              |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  1. CONTAINER-TO-CONTAINER COMMUNICATION                         |   |
-|  |     How do containers within the same pod communicate?           |   |
-|  |     Solution: Shared network namespace (localhost)               |   |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  2. POD-TO-POD COMMUNICATION                                     |   |
-|  |     How do pods communicate with other pods?                     |   |
-|  |     Solution: Flat network where every pod can reach every pod   |   |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  3. POD-TO-SERVICE COMMUNICATION                                 |   |
-|  |     How do pods access services (stable endpoints)?              |   |
-|  |     Solution: Virtual IPs and kube-proxy                         |   |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  4. EXTERNAL-TO-SERVICE COMMUNICATION                            |   |
-|  |     How does external traffic reach services?                    |   |
-|  |     Solution: LoadBalancers, Ingress, NodePort                   |   |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  1. CONTAINER-TO-CONTAINER COMMUNICATION                           | |
+|  |     How do containers within the same pod communicate?             | |
+|  |     Solution: Shared network namespace (localhost)                 | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  2. POD-TO-POD COMMUNICATION                                       | |
+|  |     How do pods communicate with other pods?                       | |
+|  |     Solution: Flat network where every pod can reach every pod     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  3. POD-TO-SERVICE COMMUNICATION                                   | |
+|  |     How do pods access services (stable endpoints)?                | |
+|  |     Solution: Virtual IPs and kube-proxy                           | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  4. EXTERNAL-TO-SERVICE COMMUNICATION                              | |
+|  |     How does external traffic reach services?                      | |
+|  |     Solution: LoadBalancers, Ingress, NodePort                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -64,24 +64,24 @@ KEY INSIGHT: All containers in a pod share the SAME network namespace.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |                             POD                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                  SHARED NETWORK NAMESPACE                       |    |
-|  |                                                                 |    |
-|  |   +-------------+    +-------------+    +-------------+        |     |
-|  |   | Container A |    | Container B |    | Container C |        |     |
-|  |   |  (app)      |    |  (sidecar)  |    |  (logging)  |        |     |
-|  |   |             |    |             |    |             |        |     |
-|  |   | Port: 8080  |    | Port: 9090  |    | Port: 3000  |        |     |
-|  |   +-------------+    +-------------+    +-------------+        |     |
-|  |           |                 |                 |                |     |
-|  |           |                 |                 |                |     |
-|  |           +-----------------+-----------------+                |     |
-|  |                             |                                   |    |
-|  |                       SHARED eth0                              |     |
-|  |                     IP: 10.244.1.5                             |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |                  SHARED NETWORK NAMESPACE                        |   |
+|  |                                                                  |   |
+|  |   +-------------+    +-------------+    +-------------+          |   |
+|  |   | Container A |    | Container B |    | Container C |          |   |
+|  |   |  (app)      |    |  (sidecar)  |    |  (logging)  |          |   |
+|  |   |             |    |             |    |             |          |   |
+|  |   | Port: 8080  |    | Port: 9090  |    | Port: 3000  |          |   |
+|  |   +-------------+    +-------------+    +-------------+          |   |
+|  |           |                 |                 |                  |   |
+|  |           |                 |                 |                  |   |
+|  |           +-----------------+-----------------+                  |   |
+|  |                             |                                    |   |
+|  |                       SHARED eth0                                |   |
+|  |                     IP: 10.244.1.5                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHAT THIS MEANS:                                                       |
 |  * All containers share the SAME IP address (10.244.1.5)                |
@@ -141,27 +141,27 @@ STEP 2: Create app containers with shared namespace
 +-------------------------------------------------------------------------+
 |                                                                         |
 |                             POD                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |       +------------+                                           |     |
-|  |       |   PAUSE    | < Holds network namespace                |      |
-|  |       | container  |   Extremely lightweight                  |      |
-|  |       |            |   Runs: /pause (or equivalent)           |      |
-|  |       +------+-----+                                           |     |
-|  |              |                                                 |     |
-|  |              | Network Namespace                               |     |
-|  |              |                                                 |     |
-|  |   +----------+------------------------------------------+     |      |
-|  |   |          |                                          |     |      |
-|  |   |  +-------+-------+    +--------------+             |     |       |
-|  |   |  |  App Container |    | Sidecar      |             |     |      |
-|  |   |  |  --net=pause   |    | --net=pause  |             |     |      |
-|  |   |  +---------------+    +--------------+             |     |       |
-|  |   |                                                     |     |      |
-|  |   |            Shared namespace (eth0, lo)             |     |       |
-|  |   +-----------------------------------------------------+     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |       +------------+                                             |   |
+|  |       |   PAUSE    | < Holds network namespace                   |   |
+|  |       | container  |   Extremely lightweight                     |   |
+|  |       |            |   Runs: /pause (or equivalent)              |   |
+|  |       +------+-----+                                             |   |
+|  |              |                                                   |   |
+|  |              | Network Namespace                                 |   |
+|  |              |                                                   |   |
+|  |   +----------+------------------------------------------+        |   |
+|  |   |          |                                          |        |   |
+|  |   |  +-------+-------+    +--------------+             |         |   |
+|  |   |  |  App Container |    | Sidecar      |             |        |   |
+|  |   |  |  --net=pause   |    | --net=pause  |             |        |   |
+|  |   |  +---------------+    +--------------+             |         |   |
+|  |   |                                                     |        |   |
+|  |   |            Shared namespace (eth0, lo)             |         |   |
+|  |   +-----------------------------------------------------+        |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -422,49 +422,49 @@ Let's visualize the complete networking model:
 |  EXTERNAL WORLD (Internet)                                              |
 |        |                                                                |
 |        v                                                                |
-|  +-------------------------------------------------------------------+  |
-|  |  INGRESS CONTROLLER                                               |  |
-|  |  Routes HTTP/HTTPS traffic to services                           |   |
-|  |  * Path-based routing (/api > api-service)                       |   |
-|  |  * Host-based routing (api.example.com > api-service)           |    |
-|  |  * TLS termination                                               |   |
-|  +----------------------------+--------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |  INGRESS CONTROLLER                                                | |
+|  |  Routes HTTP/HTTPS traffic to services                             | |
+|  |  * Path-based routing (/api > api-service)                         | |
+|  |  * Host-based routing (api.example.com > api-service)              | |
+|  |  * TLS termination                                                 | |
+|  +----------------------------+---------------------------------------+ |
 |                               |                                         |
 |                               v                                         |
-|  +-------------------------------------------------------------------+  |
-|  |  SERVICES                                                         |  |
-|  |  Stable network identity for pods                                |   |
-|  |                                                                   |  |
-|  |  +-----------------+  +-----------------+  +-----------------+   |   |
-|  |  |  ClusterIP      |  |  NodePort       |  |  LoadBalancer   |   |   |
-|  |  |  10.96.0.1      |  |  10.96.0.2      |  |  10.96.0.3      |   |   |
-|  |  |  Internal only  |  |  + Node:30080   |  |  + External LB  |   |   |
-|  |  +--------+--------+  +--------+--------+  +--------+--------+   |   |
-|  |           |                    |                    |            |   |
-|  |           +--------------------+--------------------+            |   |
-|  |                                |                                  |  |
-|  |                    +-----------+-----------+                     |   |
-|  |                    |     ENDPOINTS         |                     |   |
-|  |                    |  (Pod IP:Port list)   |                     |   |
-|  |                    +-----------------------+                     |   |
-|  |                                                                   |  |
-|  +----------------------------+--------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |  SERVICES                                                          | |
+|  |  Stable network identity for pods                                  | |
+|  |                                                                    | |
+|  |  +-----------------+  +-----------------+  +-------------------+   | |
+|  |  |  ClusterIP      |  |  NodePort       |  |  LoadBalancer     |   | |
+|  |  |  10.96.0.1      |  |  10.96.0.2      |  |  10.96.0.3        |   | |
+|  |  |  Internal only  |  |  + Node:30080   |  |  + External LB    |   | |
+|  |  +--------+--------+  +--------+--------+  +--------+----------+   | |
+|  |           |                    |                    |              | |
+|  |           +--------------------+--------------------+              | |
+|  |                                |                                   | |
+|  |                    +-----------+-----------+                       | |
+|  |                    |     ENDPOINTS         |                       | |
+|  |                    |  (Pod IP:Port list)   |                       | |
+|  |                    +-----------------------+                       | |
+|  |                                                                    | |
+|  +----------------------------+---------------------------------------+ |
 |                               |                                         |
 |                               v                                         |
-|  +-------------------------------------------------------------------+  |
-|  |  POD NETWORK (Flat network via CNI)                              |   |
-|  |                                                                   |  |
-|  |   NODE 1                              NODE 2                      |  |
-|  |   +----------------------+            +----------------------+   |   |
-|  |   | +--------+ +--------+|            |+--------+ +--------+ |   |   |
-|  |   | | Pod A  | | Pod B  ||            || Pod C  | | Pod D  | |   |   |
-|  |   | |10.244  | |10.244  ||<---------->||10.244  | |10.244  | |   |   |
-|  |   | |.0.2    | |.0.3    ||  Direct    ||.1.2    | |.1.3    | |   |   |
-|  |   | +--------+ +--------+|  pod-to-   |+--------+ +--------+ |   |   |
-|  |   |                      |  pod       |                      |   |   |
-|  |   +----------------------+            +----------------------+   |   |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |  POD NETWORK (Flat network via CNI)                                | |
+|  |                                                                    | |
+|  |   NODE 1                              NODE 2                       | |
+|  |   +----------------------+            +------------------------+   | |
+|  |   | +--------+ +--------+|            |+--------+ +----------+ |   | |
+|  |   | | Pod A  | | Pod B  ||            || Pod C  | | Pod D    | |   | |
+|  |   | |10.244  | |10.244  ||<---------->||10.244  | |10.244    | |   | |
+|  |   | |.0.2    | |.0.3    ||  Direct    ||.1.2    | |.1.3      | |   | |
+|  |   | +--------+ +--------+|  pod-to-   |+--------+ +----------+ |   | |
+|  |   |                      |  pod       |                        |   | |
+|  |   +----------------------+            +------------------------+   | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -690,36 +690,36 @@ dig mysql.default.svc.cluster.local
 |                                                                         |
 |  KUBERNETES NETWORKING FUNDAMENTALS                                     |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  THE FOUR NETWORKING PROBLEMS                                    |   |
-|  |  1. Container-to-Container: Shared namespace (localhost)         |   |
-|  |  2. Pod-to-Pod: Flat network via CNI                            |    |
-|  |  3. Pod-to-Service: Virtual IPs via kube-proxy                  |    |
-|  |  4. External-to-Service: Ingress/LoadBalancer/NodePort          |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  THE FLAT NETWORK MODEL                                          |   |
-|  |  * Every pod gets a unique, routable IP                         |    |
-|  |  * All pods can reach all pods without NAT                      |    |
-|  |  * Implemented by CNI plugins, not Kubernetes itself            |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  THREE IP RANGES                                                 |   |
-|  |  * Node IPs: Physical/VM IPs (your infrastructure)              |    |
-|  |  * Pod IPs: Assigned by CNI (--pod-network-cidr)               |     |
-|  |  * Service IPs: Virtual IPs (--service-cluster-ip-range)       |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  DNS                                                              |  |
-|  |  * CoreDNS provides service discovery                           |    |
-|  |  * Services: <svc>.<ns>.svc.cluster.local                       |    |
-|  |  * Headless services return individual pod IPs                  |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  THE FOUR NETWORKING PROBLEMS                                      | |
+|  |  1. Container-to-Container: Shared namespace (localhost)           | |
+|  |  2. Pod-to-Pod: Flat network via CNI                               | |
+|  |  3. Pod-to-Service: Virtual IPs via kube-proxy                     | |
+|  |  4. External-to-Service: Ingress/LoadBalancer/NodePort             | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  THE FLAT NETWORK MODEL                                            | |
+|  |  * Every pod gets a unique, routable IP                            | |
+|  |  * All pods can reach all pods without NAT                         | |
+|  |  * Implemented by CNI plugins, not Kubernetes itself               | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  THREE IP RANGES                                                   | |
+|  |  * Node IPs: Physical/VM IPs (your infrastructure)                 | |
+|  |  * Pod IPs: Assigned by CNI (--pod-network-cidr)                   | |
+|  |  * Service IPs: Virtual IPs (--service-cluster-ip-range)           | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  DNS                                                               | |
+|  |  * CoreDNS provides service discovery                              | |
+|  |  * Services: <svc>.<ns>.svc.cluster.local                          | |
+|  |  * Headless services return individual pod IPs                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 |  KEY INSIGHT:                                                           |
 |  Kubernetes specifies WHAT networking should do.                        |

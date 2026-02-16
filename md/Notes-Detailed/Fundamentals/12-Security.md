@@ -75,20 +75,20 @@ authorization, encryption, and defense against common attacks.
 |  4. Browser sends cookie with every request                             |
 |  5. Server looks up session, gets user                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Client                        Server                          |     |
-|  |     |                             |                             |    |
-|  |     |-- POST /login ------------->|                            |     |
-|  |     |   {user, pass}              |                             |    |
-|  |     |                             |                             |    |
-|  |     |<-- Set-Cookie: session=abc -| (Store session in Redis)   |     |
-|  |     |                             |                             |    |
-|  |     |-- GET /profile ------------>|                            |     |
-|  |     |   Cookie: session=abc       |                             |    |
-|  |     |                             | (Lookup session in Redis)  |     |
-|  |     |<-- User profile ------------|                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Client                        Server                             |  |
+|  |     |                             |                               |  |
+|  |     |-- POST /login ------------->|                               |  |
+|  |     |   {user, pass}              |                               |  |
+|  |     |                             |                               |  |
+|  |     |<-- Set-Cookie: session=abc -| (Store session in Redis)      |  |
+|  |     |                             |                               |  |
+|  |     |-- GET /profile ------------>|                               |  |
+|  |     |   Cookie: session=abc       |                               |  |
+|  |     |                             | (Lookup session in Redis)     |  |
+|  |     |<-- User profile ------------|                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  COOKIE FLAGS:                                                          |
 |  * HttpOnly: JavaScript can't access (prevents XSS theft)               |
@@ -141,20 +141,20 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  JWT FLOW                                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Client                        Server                          |     |
-|  |     |                             |                             |    |
-|  |     |-- POST /login ------------->|                            |     |
-|  |     |                             | Generate JWT                |    |
-|  |     |<-- { token: "eyJ..." } -----|                            |     |
-|  |     |                             |                             |    |
-|  |     |-- GET /profile ------------>|                            |     |
-|  |     |   Authorization: Bearer eyJ |                             |    |
-|  |     |                             | Verify signature,          |     |
-|  |     |                             | decode payload             |     |
-|  |     |<-- User profile ------------|                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Client                        Server                             |  |
+|  |     |                             |                               |  |
+|  |     |-- POST /login ------------->|                               |  |
+|  |     |                             | Generate JWT                  |  |
+|  |     |<-- { token: "eyJ..." } -----|                               |  |
+|  |     |                             |                               |  |
+|  |     |-- GET /profile ------------>|                               |  |
+|  |     |   Authorization: Bearer eyJ |                               |  |
+|  |     |                             | Verify signature,             |  |
+|  |     |                             | decode payload                |  |
+|  |     |<-- User profile ------------|                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
 |  Y Stateless (no server storage)                                        |
@@ -211,34 +211,34 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  AUTHORIZATION CODE FLOW (Most common for web apps)                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  User    Client App       Auth Server (Google)     Resource    |     |
-|  |   |          |                    |                    |        |    |
-|  |   |- Click "Login" -->|           |                    |        |    |
-|  |   |                   |           |                    |        |    |
-|  |   |<-- Redirect ------|           |                    |        |    |
-|  |   |    to Google               |                    |        |       |
-|  |   |                               |                    |        |    |
-|  |   |-- Login to Google ----------->|                    |        |    |
-|  |   |   Grant permission            |                    |        |    |
-|  |   |                               |                    |        |    |
-|  |   |<-- Redirect with code --------|                    |        |    |
-|  |   |    ?code=abc123               |                    |        |    |
-|  |   |                               |                    |        |    |
-|  |   |--- code to app -->|           |                    |        |    |
-|  |                       |           |                    |        |    |
-|  |                       |-- Exchange code -->|           |        |    |
-|  |                       |   + client_secret  |           |        |    |
-|  |                       |                    |           |        |    |
-|  |                       |<-- Access token ---|           |        |    |
-|  |                       |                               |        |     |
-|  |                       |-- API call with token -------->|        |    |
-|  |                       |   Authorization: Bearer xyz    |        |    |
-|  |                       |                               |        |     |
-|  |                       |<-- User data -----------------|        |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  User    Client App       Auth Server (Google)     Resource       |  |
+|  |   |          |                    |                    |          |  |
+|  |   |- Click "Login" -->|           |                    |          |  |
+|  |   |                   |           |                    |          |  |
+|  |   |<-- Redirect ------|           |                    |          |  |
+|  |   |    to Google               |                    |             |  |
+|  |   |                               |                    |          |  |
+|  |   |-- Login to Google ----------->|                    |          |  |
+|  |   |   Grant permission            |                    |          |  |
+|  |   |                               |                    |          |  |
+|  |   |<-- Redirect with code --------|                    |          |  |
+|  |   |    ?code=abc123               |                    |          |  |
+|  |   |                               |                    |          |  |
+|  |   |--- code to app -->|           |                    |          |  |
+|  |                       |           |                    |          |  |
+|  |                       |-- Exchange code -->|           |          |  |
+|  |                       |   + client_secret  |           |          |  |
+|  |                       |                    |           |          |  |
+|  |                       |<-- Access token ---|           |          |  |
+|  |                       |                               |           |  |
+|  |                       |-- API call with token -------->|          |  |
+|  |                       |   Authorization: Bearer xyz    |          |  |
+|  |                       |                               |           |  |
+|  |                       |<-- User data -----------------|           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  TOKENS:                                                                |
 |  * Access Token: Short-lived, used to call APIs                         |

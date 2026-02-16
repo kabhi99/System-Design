@@ -869,7 +869,7 @@ SEAT_INVENTORY (Per Show):
 ```
 +-------------------------------------------------------------------------+
 |  CODE                    | HTTP | DESCRIPTION                           |
-|  ------------------------+------+-------------------------------------- |
+|  ------------------------+------+---------------------------------------|
 |  SEATS_UNAVAILABLE       | 409  | Requested seats already taken         |
 |  LOCK_EXPIRED            | 410  | Seat lock has expired                 |
 |  LOCK_NOT_FOUND          | 404  | Invalid lock ID                       |
@@ -1029,52 +1029,52 @@ SEAT_INVENTORY (Per Show):
 +-------------------------------------------------------------------------+
 |                    DATABASE SELECTION                                   |
 |                                                                         |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Data Type      | Choice          | Why                            |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Transactional  | PostgreSQL      | ACID for bookings, payments   |   |
-|  | (Bookings,     |                 | Strong consistency required   |   |
-|  |  Payments)     |                 | Complex queries, joins        |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Seat Locks     | Redis           | Sub-ms latency for locks      |   |
-|  | (Hot Data)     |                 | TTL for auto-expiry           |   |
-|  |                |                 | Atomic operations (SETNX)     |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Seat Avail-    | Redis           | Extremely high read rate      |   |
-|  | ability Cache  |                 | Eventual consistency OK       |   |
-|  |                |                 | In-memory speed               |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Search         | Elasticsearch   | Full-text search              |   |
-|  | (Movies,       |                 | Faceted filtering             |   |
-|  |  Theaters)     |                 | Autocomplete                  |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Analytics      | ClickHouse/     | Time-series aggregations      |   |
-|  |                | Druid           | Real-time dashboards          |   |
-|  +----------------+-----------------+--------------------------------+  |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Data Type      | Choice          | Why                             | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Transactional  | PostgreSQL      | ACID for bookings, payments     | |
+|  | (Bookings,     |                 | Strong consistency required     | |
+|  |  Payments)     |                 | Complex queries, joins          | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Seat Locks     | Redis           | Sub-ms latency for locks        | |
+|  | (Hot Data)     |                 | TTL for auto-expiry             | |
+|  |                |                 | Atomic operations (SETNX)       | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Seat Avail-    | Redis           | Extremely high read rate        | |
+|  | ability Cache  |                 | Eventual consistency OK         | |
+|  |                |                 | In-memory speed                 | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Search         | Elasticsearch   | Full-text search                | |
+|  | (Movies,       |                 | Faceted filtering               | |
+|  |  Theaters)     |                 | Autocomplete                    | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Analytics      | ClickHouse/     | Time-series aggregations        | |
+|  |                | Druid           | Real-time dashboards            | |
+|  +----------------+-----------------+---------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                    COMMUNICATION PROTOCOLS                              |
 |                                                                         |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Communication  | Protocol        | Why                            |  |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Client > API   | HTTPS/REST      | Browser/mobile compatibility  |   |
-|  |                |                 | Cacheable responses           |   |
-|  |                |                 | Widely understood             |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Real-time      | WebSocket       | Seat availability updates     |   |
-|  | updates        |                 | Lock countdown timer sync     |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Service-to-    | gRPC            | Low latency, binary           |   |
-|  | Service        |                 | Strong typing (protobuf)      |   |
-|  |                |                 | Streaming support             |   |
-|  +----------------+-----------------+--------------------------------+  |
-|  | Async Events   | Kafka           | Durable, ordered              |   |
-|  |                |                 | Replay capability             |   |
-|  |                |                 | Decoupled services            |   |
-|  +----------------+-----------------+--------------------------------+  |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Communication  | Protocol        | Why                             | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Client > API   | HTTPS/REST      | Browser/mobile compatibility    | |
+|  |                |                 | Cacheable responses             | |
+|  |                |                 | Widely understood               | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Real-time      | WebSocket       | Seat availability updates       | |
+|  | updates        |                 | Lock countdown timer sync       | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Service-to-    | gRPC            | Low latency, binary             | |
+|  | Service        |                 | Strong typing (protobuf)        | |
+|  |                |                 | Streaming support               | |
+|  +----------------+-----------------+---------------------------------+ |
+|  | Async Events   | Kafka           | Durable, ordered                | |
+|  |                |                 | Replay capability               | |
+|  |                |                 | Decoupled services              | |
+|  +----------------+-----------------+---------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -1128,27 +1128,27 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  ACCESS MATRIX:                                                         |
 |                                                                         |
-|  +--------------------------------+------------+-------------------+    |
-|  | Endpoint                       | Auth       | Notes             |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | GET /api/search                | PUBLIC     | Browse events     |    |
-|  | GET /api/events                | PUBLIC     | List events       |    |
-|  | GET /api/events/{id}           | PUBLIC     | Event details     |    |
-|  | GET /api/shows/{id}/seats      | PUBLIC     | Seat map view     |    |
-|  | GET /api/theaters              | PUBLIC     | Theater list      |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/reservations         | USER       | Lock seats        |    |
-|  | POST /api/bookings/confirm     | USER       | Complete booking  |    |
-|  | GET /api/bookings/me           | USER       | My bookings       |    |
-|  | DELETE /api/bookings/{id}      | USER       | Cancel booking    |    |
-|  | GET /api/users/profile         | USER       | View profile      |    |
-|  +--------------------------------+------------+-------------------+    |
-|  | POST /api/events               | ADMIN      | Create event      |    |
-|  | PUT /api/events/{id}           | ADMIN      | Update event      |    |
-|  | POST /api/theaters             | PARTNER    | Add theater       |    |
-|  | PUT /api/pricing               | ADMIN      | Pricing rules     |    |
-|  | GET /api/admin/reports         | ADMIN      | Revenue reports   |    |
-|  +--------------------------------+------------+-------------------+    |
+|  +--------------------------------+------------+--------------------+   |
+|  | Endpoint                       | Auth       | Notes              |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | GET /api/search                | PUBLIC     | Browse events      |   |
+|  | GET /api/events                | PUBLIC     | List events        |   |
+|  | GET /api/events/{id}           | PUBLIC     | Event details      |   |
+|  | GET /api/shows/{id}/seats      | PUBLIC     | Seat map view      |   |
+|  | GET /api/theaters              | PUBLIC     | Theater list       |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/reservations         | USER       | Lock seats         |   |
+|  | POST /api/bookings/confirm     | USER       | Complete booking   |   |
+|  | GET /api/bookings/me           | USER       | My bookings        |   |
+|  | DELETE /api/bookings/{id}      | USER       | Cancel booking     |   |
+|  | GET /api/users/profile         | USER       | View profile       |   |
+|  +--------------------------------+------------+--------------------+   |
+|  | POST /api/events               | ADMIN      | Create event       |   |
+|  | PUT /api/events/{id}           | ADMIN      | Update event       |   |
+|  | POST /api/theaters             | PARTNER    | Add theater        |   |
+|  | PUT /api/pricing               | ADMIN      | Pricing rules      |   |
+|  | GET /api/admin/reports         | ADMIN      | Revenue reports    |   |
+|  +--------------------------------+------------+--------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -1511,88 +1511,88 @@ SEAT_INVENTORY (Per Show):
 +-------------------------------------------------------------------------+
 |                    SERVICE > DATABASE MAPPING                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  AUTH SERVICE > Auth DB (PostgreSQL)                           |     |
-|  |  ------------------------------------                          |     |
-|  |  Tables:                                                       |     |
-|  |    * users (user_id, email, password_hash, created_at)        |      |
-|  |    * roles (role_id, role_name)                               |      |
-|  |    * user_roles (user_id, role_id)                            |      |
-|  |    * refresh_tokens (token_id, user_id, token, expires_at)    |      |
-|  |    * sessions (optional, for session-based fallback)          |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  AUTH SERVICE > Auth DB (PostgreSQL)                             |   |
+|  |  ------------------------------------                            |   |
+|  |  Tables:                                                         |   |
+|  |    * users (user_id, email, password_hash, created_at)           |   |
+|  |    * roles (role_id, role_name)                                  |   |
+|  |    * user_roles (user_id, role_id)                               |   |
+|  |    * refresh_tokens (token_id, user_id, token, expires_at)       |   |
+|  |    * sessions (optional, for session-based fallback)             |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  EVENT SERVICE > Events DB (PostgreSQL)                        |     |
-|  |  -------------------------------------                         |     |
-|  |  Tables:                                                       |     |
-|  |    * movies (movie_id, title, genre, language, duration)      |      |
-|  |    * theaters (theater_id, name, city_id, location)           |      |
-|  |    * screens (screen_id, theater_id, name, capacity)          |      |
-|  |    * shows (show_id, movie_id, screen_id, start_time, status) |      |
-|  |    * seat_templates (template_id, screen_id, layout_json)     |      |
-|  |    * pricing_rules (rule_id, show_id, seat_type, price)       |      |
-|  |    * outbox_events (for CDC to Search service)                |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  EVENT SERVICE > Events DB (PostgreSQL)                          |   |
+|  |  -------------------------------------                           |   |
+|  |  Tables:                                                         |   |
+|  |    * movies (movie_id, title, genre, language, duration)         |   |
+|  |    * theaters (theater_id, name, city_id, location)              |   |
+|  |    * screens (screen_id, theater_id, name, capacity)             |   |
+|  |    * shows (show_id, movie_id, screen_id, start_time, status)    |   |
+|  |    * seat_templates (template_id, screen_id, layout_json)        |   |
+|  |    * pricing_rules (rule_id, show_id, seat_type, price)          |   |
+|  |    * outbox_events (for CDC to Search service)                   |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  INVENTORY SERVICE > Inventory DB (PostgreSQL)                 |     |
-|  |  --------------------------------------------                  |     |
-|  |  Tables:                                                       |     |
-|  |    * seats (seat_id, show_id, seat_number, status, price,     |      |
-|  |            version, reserved_by, reserved_until, booking_id)  |      |
-|  |    * reservations (reservation_id, seat_id, user_id,          |      |
-|  |                    expires_at, status)                        |      |
-|  |    * seat_audit (audit_id, seat_id, old_status, new_status,   |      |
-|  |                  changed_by, changed_at)                      |      |
-|  |                                                                 |    |
-|  |  NOTE: This is the HOT PATH - consider Redis for seat locks   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  INVENTORY SERVICE > Inventory DB (PostgreSQL)                   |   |
+|  |  --------------------------------------------                    |   |
+|  |  Tables:                                                         |   |
+|  |    * seats (seat_id, show_id, seat_number, status, price,        |   |
+|  |            version, reserved_by, reserved_until, booking_id)     |   |
+|  |    * reservations (reservation_id, seat_id, user_id,             |   |
+|  |                    expires_at, status)                           |   |
+|  |    * seat_audit (audit_id, seat_id, old_status, new_status,      |   |
+|  |                  changed_by, changed_at)                         |   |
+|  |                                                                  |   |
+|  |  NOTE: This is the HOT PATH - consider Redis for seat locks      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  BOOKING SERVICE > Bookings DB (PostgreSQL)                    |     |
-|  |  -----------------------------------------                     |     |
-|  |  Tables:                                                       |     |
-|  |    * bookings (booking_id, user_id, show_id, total_amount,    |      |
-|  |               status, booking_reference, created_at)          |      |
-|  |    * booking_seats (booking_seat_id, booking_id, seat_id,     |      |
-|  |                     price_at_purchase)                        |      |
-|  |    * payments (payment_id, booking_id, amount, status,        |      |
-|  |               gateway_ref, idempotency_key)                   |      |
-|  |    * refunds (refund_id, booking_id, amount, status)          |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  BOOKING SERVICE > Bookings DB (PostgreSQL)                      |   |
+|  |  -----------------------------------------                       |   |
+|  |  Tables:                                                         |   |
+|  |    * bookings (booking_id, user_id, show_id, total_amount,       |   |
+|  |               status, booking_reference, created_at)             |   |
+|  |    * booking_seats (booking_seat_id, booking_id, seat_id,        |   |
+|  |                     price_at_purchase)                           |   |
+|  |    * payments (payment_id, booking_id, amount, status,           |   |
+|  |               gateway_ref, idempotency_key)                      |   |
+|  |    * refunds (refund_id, booking_id, amount, status)             |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  SEARCH SERVICE > Elasticsearch / OpenSearch                   |     |
-|  |  -------------------------------------------                   |     |
-|  |  Indexes:                                                      |     |
-|  |    * movies_index (denormalized movie + show data)            |      |
-|  |    * theaters_index (theater + geo-location)                  |      |
-|  |    * events_index (combined search view)                      |      |
-|  |                                                                 |    |
-|  |  Data synced via CDC (Debezium) from Events DB                |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  SEARCH SERVICE > Elasticsearch / OpenSearch                     |   |
+|  |  -------------------------------------------                     |   |
+|  |  Indexes:                                                        |   |
+|  |    * movies_index (denormalized movie + show data)               |   |
+|  |    * theaters_index (theater + geo-location)                     |   |
+|  |    * events_index (combined search view)                         |   |
+|  |                                                                  |   |
+|  |  Data synced via CDC (Debezium) from Events DB                   |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  NOTIFICATION SERVICE > Notifications DB (PostgreSQL/NoSQL)    |     |
-|  |  ---------------------------------------------------------     |     |
-|  |  Tables:                                                       |     |
-|  |    * notification_templates (template_id, type, content)      |      |
-|  |    * notification_log (log_id, user_id, type, status, sent_at)|      |
-|  |    * user_preferences (user_id, email_enabled, sms_enabled)   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  NOTIFICATION SERVICE > Notifications DB (PostgreSQL/NoSQL)      |   |
+|  |  ---------------------------------------------------------       |   |
+|  |  Tables:                                                         |   |
+|  |    * notification_templates (template_id, type, content)         |   |
+|  |    * notification_log (log_id, user_id, type, status, sent_at)   |   |
+|  |    * user_preferences (user_id, email_enabled, sms_enabled)      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -2297,22 +2297,22 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 +-------------------------------------------------------------------------+
 |                    LOCKING STRATEGY COMPARISON                          |
 |                                                                         |
-|  +----------------+----------------------+------------------------+     |
-|  | Aspect         | Pessimistic          | Optimistic             |     |
-|  |                | (Redis SETNX)        | (Version Column)       |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Lock acquired  | BEFORE reading       | Not at all             |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Conflict check | At lock time         | At write time          |     |
-|  +----------------+----------------------+------------------------+     |
-|  | On conflict    | Immediate rejection  | Retry required         |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Contention     | Handles well         | High retry rate        |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Latency        | Fast (Redis)         | Depends on retries     |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Complexity     | Medium (Redis Lua)   | Low                    |     |
-|  +----------------+----------------------+------------------------+     |
+|  +----------------+----------------------+-------------------------+    |
+|  | Aspect         | Pessimistic          | Optimistic              |    |
+|  |                | (Redis SETNX)        | (Version Column)        |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Lock acquired  | BEFORE reading       | Not at all              |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Conflict check | At lock time         | At write time           |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | On conflict    | Immediate rejection  | Retry required          |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Contention     | Handles well         | High retry rate         |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Latency        | Fast (Redis)         | Depends on retries      |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Complexity     | Medium (Redis Lua)   | Low                     |    |
+|  +----------------+----------------------+-------------------------+    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2574,27 +2574,27 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 +-------------------------------------------------------------------------+
 |                    WHEN TO USE REDLOCK VS SIMPLE REDIS LOCK             |
 |                                                                         |
-|  +------------------+---------------------+------------------------+    |
-|  | Aspect           | Simple Redis Lock   | Redlock                |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Infrastructure   | Single Redis or     | N independent Redis   |     |
-|  |                  | Redis Sentinel      | masters (N=5 typical) |     |
-|  +------------------+---------------------+------------------------+    |
-|  | Complexity       | Low                 | High                   |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Latency          | ~1ms                | ~5-50ms (N calls)      |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Failure          | Redis down = no     | Tolerates N/2-1        |    |
-|  | tolerance        | locks               | failures               |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Consistency      | May lose locks on   | Stronger guarantees    |    |
-|  |                  | failover            |                        |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Cost             | Low                 | 5x Redis instances     |    |
-|  +------------------+---------------------+------------------------+    |
-|  | Use case         | 99% of applications | Mission-critical       |    |
-|  |                  |                     | (banking, tickets)     |    |
-|  +------------------+---------------------+------------------------+    |
+|  +------------------+---------------------+-------------------------+   |
+|  | Aspect           | Simple Redis Lock   | Redlock                 |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Infrastructure   | Single Redis or     | N independent Redis     |   |
+|  |                  | Redis Sentinel      | masters (N=5 typical)   |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Complexity       | Low                 | High                    |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Latency          | ~1ms                | ~5-50ms (N calls)       |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Failure          | Redis down = no     | Tolerates N/2-1         |   |
+|  | tolerance        | locks               | failures                |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Consistency      | May lose locks on   | Stronger guarantees     |   |
+|  |                  | failover            |                         |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Cost             | Low                 | 5x Redis instances      |   |
+|  +------------------+---------------------+-------------------------+   |
+|  | Use case         | 99% of applications | Mission-critical        |   |
+|  |                  |                     | (banking, tickets)      |   |
+|  +------------------+---------------------+-------------------------+   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3142,27 +3142,27 @@ WHAT IS IDEMPOTENCY?
 +-------------------------------------------------------------------------+
 |                    CACHING TIERS                                        |
 |                                                                         |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Data               | Cache       | TTL          | Invalidation    |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Movie list         | Redis       | 1 hour       | On movie update |  |
-|  | (by city/date)     |             |              |                 |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Movie details      | Redis       | 24 hours     | On movie update |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Theater list       | Redis       | 6 hours      | On theater edit |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Show listings      | Redis       | 15 minutes   | On show change  |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Seat availability  | Redis       | 5 seconds    | On lock/book    |  |
-|  | (summary)          |             |              |                 |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Seat locks         | Redis       | 10 minutes   | TTL-based       |  |
-|  | (distributed lock) |             |              |                 |  |
-|  +--------------------+-------------+--------------+-----------------+  |
-|  | Static assets      | CDN         | 1 year       | URL versioning  |  |
-|  | (images, CSS, JS)  |             |              |                 |  |
-|  +--------------------+-------------+--------------+-----------------+  |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Data               | Cache       | TTL          | Invalidation     | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Movie list         | Redis       | 1 hour       | On movie update  | |
+|  | (by city/date)     |             |              |                  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Movie details      | Redis       | 24 hours     | On movie update  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Theater list       | Redis       | 6 hours      | On theater edit  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Show listings      | Redis       | 15 minutes   | On show change   | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Seat availability  | Redis       | 5 seconds    | On lock/book     | |
+|  | (summary)          |             |              |                  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Seat locks         | Redis       | 10 minutes   | TTL-based        | |
+|  | (distributed lock) |             |              |                  | |
+|  +--------------------+-------------+--------------+------------------+ |
+|  | Static assets      | CDN         | 1 year       | URL versioning   | |
+|  | (images, CSS, JS)  |             |              |                  | |
+|  +--------------------+-------------+--------------+------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3531,19 +3531,19 @@ WHY DOES THIS HAPPEN?
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +--------------------------+---------------------------------------+   |
-|  | Technique                | When to Use                           |   |
-|  +--------------------------+---------------------------------------+   |
-|  | Jittered TTL             | Always (simple, effective)            |   |
-|  +--------------------------+---------------------------------------+   |
-|  | Locking/Single-flight    | Expensive queries, high traffic keys  |   |
-|  +--------------------------+---------------------------------------+   |
-|  | Background refresh       | Predictable, critical data            |   |
-|  +--------------------------+---------------------------------------+   |
-|  | Stale-while-revalidate   | When slight staleness is acceptable   |   |
-|  +--------------------------+---------------------------------------+   |
-|  | Cache warming            | After restarts, deployments           |   |
-|  +--------------------------+---------------------------------------+   |
+|  +--------------------------+----------------------------------------+  |
+|  | Technique                | When to Use                            |  |
+|  +--------------------------+----------------------------------------+  |
+|  | Jittered TTL             | Always (simple, effective)             |  |
+|  +--------------------------+----------------------------------------+  |
+|  | Locking/Single-flight    | Expensive queries, high traffic keys   |  |
+|  +--------------------------+----------------------------------------+  |
+|  | Background refresh       | Predictable, critical data             |  |
+|  +--------------------------+----------------------------------------+  |
+|  | Stale-while-revalidate   | When slight staleness is acceptable    |  |
+|  +--------------------------+----------------------------------------+  |
+|  | Cache warming            | After restarts, deployments            |  |
+|  +--------------------------+----------------------------------------+  |
 |                                                                         |
 |  BOOKMYSHOW RECOMMENDATION:                                             |
 |  ---------------------------                                            |
@@ -4763,17 +4763,17 @@ WHY DOES THIS HAPPEN?
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  WHAT TO CACHE:                                                         |
-|  +-----------------+-----------+------------------------------------+   |
-|  | Data            | TTL       | Notes                              |   |
-|  +-----------------+-----------+------------------------------------+   |
-|  | Movie catalog   | 1 hour    | Invalidate on admin update         |   |
-|  | Theater list    | 6 hours   | Rarely changes                     |   |
-|  | Show schedule   | 30 min    | More dynamic                       |   |
-|  | Seat map layout | 24 hours  | Theater-specific, static           |   |
-|  | Seat status     | NO CACHE  | Must be real-time                  |   |
-|  | User session    | 24 hours  | Redis                              |   |
-|  | Seat locks      | 10 min    | Redis with TTL                     |   |
-|  +-----------------+-----------+------------------------------------+   |
+|  +-----------------+-----------+-------------------------------------+  |
+|  | Data            | TTL       | Notes                               |  |
+|  +-----------------+-----------+-------------------------------------+  |
+|  | Movie catalog   | 1 hour    | Invalidate on admin update          |  |
+|  | Theater list    | 6 hours   | Rarely changes                      |  |
+|  | Show schedule   | 30 min    | More dynamic                        |  |
+|  | Seat map layout | 24 hours  | Theater-specific, static            |  |
+|  | Seat status     | NO CACHE  | Must be real-time                   |  |
+|  | User session    | 24 hours  | Redis                               |  |
+|  | Seat locks      | 10 min    | Redis with TTL                      |  |
+|  +-----------------+-----------+-------------------------------------+  |
 |                                                                         |
 |  CRITICAL: Never cache seat availability for booking flow!              |
 |                                                                         |
@@ -4847,15 +4847,15 @@ WHY DOES THIS HAPPEN?
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  BOOKING SYSTEM LIMITS:                                                 |
-|  +-----------------------+----------------------------------------+     |
-|  | Endpoint              | Limit                                  |     |
-|  +-----------------------+----------------------------------------+     |
-|  | Search / Browse       | 100 req/min per user                   |     |
-|  | Seat Selection        | 20 req/min per user                    |     |
-|  | Payment               | 5 req/min per user                     |     |
-|  | OTP Requests          | 3 req/min per phone                    |     |
-|  | Booking (global)      | 10,000 req/sec (circuit breaker)       |     |
-|  +-----------------------+----------------------------------------+     |
+|  +-----------------------+-----------------------------------------+    |
+|  | Endpoint              | Limit                                   |    |
+|  +-----------------------+-----------------------------------------+    |
+|  | Search / Browse       | 100 req/min per user                    |    |
+|  | Seat Selection        | 20 req/min per user                     |    |
+|  | Payment               | 5 req/min per user                      |    |
+|  | OTP Requests          | 3 req/min per phone                     |    |
+|  | Booking (global)      | 10,000 req/sec (circuit breaker)        |    |
+|  +-----------------------+-----------------------------------------+    |
 |                                                                         |
 |  IMPLEMENTATION (Redis):                                                |
 |  -------------------------                                              |

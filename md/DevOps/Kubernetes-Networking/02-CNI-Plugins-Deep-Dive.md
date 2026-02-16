@@ -158,40 +158,40 @@ CNI plugins implement the flat network requirement using different strategies:
 |                                                                         |
 |  THREE MAIN APPROACHES TO POD NETWORKING                                |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  1. OVERLAY NETWORKS                                             |   |
-|  |  ---------------------                                           |   |
-|  |  * Encapsulate pod traffic in outer packet                      |    |
-|  |  * Works regardless of underlay network                         |    |
-|  |  * Examples: Flannel (VXLAN), Weave, Calico (VXLAN mode)       |     |
-|  |                                                                   |  |
-|  |  Pros: Works anywhere, simple setup                             |    |
-|  |  Cons: Encapsulation overhead, MTU issues, debugging harder     |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  2. ROUTING-BASED                                                |   |
-|  |  -------------------                                             |   |
-|  |  * Pod IPs routed directly (no encapsulation)                   |    |
-|  |  * Requires underlay network cooperation                        |    |
-|  |  * Examples: Calico (BGP), Cilium, kube-router                  |    |
-|  |                                                                   |  |
-|  |  Pros: No overhead, full MTU, standard networking              |     |
-|  |  Cons: Requires infrastructure support, more complex setup      |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  3. CLOUD-NATIVE                                                 |   |
-|  |  -----------------                                               |   |
-|  |  * Use cloud provider's native networking                       |    |
-|  |  * Pods get real VPC IPs                                        |    |
-|  |  * Examples: AWS VPC CNI, Azure CNI, GKE VPC-native            |     |
-|  |                                                                   |  |
-|  |  Pros: Native performance, security groups work, no overlay    |     |
-|  |  Cons: Cloud-specific, IP address consumption                   |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  1. OVERLAY NETWORKS                                               | |
+|  |  ---------------------                                             | |
+|  |  * Encapsulate pod traffic in outer packet                         | |
+|  |  * Works regardless of underlay network                            | |
+|  |  * Examples: Flannel (VXLAN), Weave, Calico (VXLAN mode)           | |
+|  |                                                                    | |
+|  |  Pros: Works anywhere, simple setup                                | |
+|  |  Cons: Encapsulation overhead, MTU issues, debugging harder        | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  2. ROUTING-BASED                                                  | |
+|  |  -------------------                                               | |
+|  |  * Pod IPs routed directly (no encapsulation)                      | |
+|  |  * Requires underlay network cooperation                           | |
+|  |  * Examples: Calico (BGP), Cilium, kube-router                     | |
+|  |                                                                    | |
+|  |  Pros: No overhead, full MTU, standard networking                  | |
+|  |  Cons: Requires infrastructure support, more complex setup         | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  3. CLOUD-NATIVE                                                   | |
+|  |  -----------------                                                 | |
+|  |  * Use cloud provider's native networking                          | |
+|  |  * Pods get real VPC IPs                                           | |
+|  |  * Examples: AWS VPC CNI, Azure CNI, GKE VPC-native                | |
+|  |                                                                    | |
+|  |  Pros: Native performance, security groups work, no overlay        | |
+|  |  Cons: Cloud-specific, IP address consumption                      | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -206,34 +206,34 @@ Overlay networks create a virtual network "on top of" the physical network:
 |  OVERLAY NETWORK (VXLAN)                                                |
 |                                                                         |
 |   NODE 1 (Host IP: 192.168.1.10)       NODE 2 (Host IP: 192.168.1.11)   |
-|   +----------------------------+       +----------------------------+   |
-|   |                            |       |                            |   |
-|   |   +--------+  +--------+   |       |   +--------+  +--------+   |   |
-|   |   | Pod A  |  | Pod B  |   |       |   | Pod C  |  | Pod D  |   |   |
-|   |   |10.244  |  |10.244  |   |       |   |10.244  |  |10.244  |   |   |
-|   |   |.0.2    |  |.0.3    |   |       |   |.1.2    |  |.1.3    |   |   |
-|   |   +---+----+  +---+----+   |       |   +---+----+  +---+----+   |   |
-|   |       |           |        |       |       |           |        |   |
-|   |   +---+-----------+----+   |       |   +---+-----------+----+   |   |
-|   |   |       cni0         |   |       |   |       cni0         |   |   |
-|   |   |   (Linux bridge)   |   |       |   |   (Linux bridge)   |   |   |
-|   |   +---------+----------+   |       |   +---------+----------+   |   |
-|   |             |              |       |             |              |   |
-|   |   +---------+----------+   |       |   +---------+----------+   |   |
-|   |   |    VXLAN Device    |   |       |   |    VXLAN Device    |   |   |
-|   |   |   (flannel.1)      |   |       |   |   (flannel.1)      |   |   |
-|   |   |                    |   |       |   |                    |   |   |
-|   |   | Encapsulates pod   |   |       |   | Decapsulates pod   |   |   |
-|   |   | traffic in UDP     |<--+-------+-->| traffic from UDP   |   |   |
-|   |   | (port 4789)        |   |       |   | (port 4789)        |   |   |
-|   |   +---------+----------+   |       |   +---------+----------+   |   |
-|   |             |              |       |             |              |   |
-|   |   +---------+----------+   |       |   +---------+----------+   |   |
-|   |   |       eth0         |   |       |   |       eth0         |   |   |
-|   |   |   192.168.1.10     |   |       |   |   192.168.1.11     |   |   |
-|   |   +---------+----------+   |       |   +---------+----------+   |   |
-|   |             |              |       |             |              |   |
-|   +-------------+--------------+       +-------------+--------------+   |
+|   +----------------------------+       +-----------------------------+  |
+|   |                            |       |                             |  |
+|   |   +--------+  +--------+   |       |   +--------+  +---------+   |  |
+|   |   | Pod A  |  | Pod B  |   |       |   | Pod C  |  | Pod D   |   |  |
+|   |   |10.244  |  |10.244  |   |       |   |10.244  |  |10.244   |   |  |
+|   |   |.0.2    |  |.0.3    |   |       |   |.1.2    |  |.1.3     |   |  |
+|   |   +---+----+  +---+----+   |       |   +---+----+  +---+-----+   |  |
+|   |       |           |        |       |       |           |         |  |
+|   |   +---+-----------+----+   |       |   +---+-----------+-----+   |  |
+|   |   |       cni0         |   |       |   |       cni0          |   |  |
+|   |   |   (Linux bridge)   |   |       |   |   (Linux bridge)    |   |  |
+|   |   +---------+----------+   |       |   +---------+-----------+   |  |
+|   |             |              |       |             |               |  |
+|   |   +---------+----------+   |       |   +---------+-----------+   |  |
+|   |   |    VXLAN Device    |   |       |   |    VXLAN Device     |   |  |
+|   |   |   (flannel.1)      |   |       |   |   (flannel.1)       |   |  |
+|   |   |                    |   |       |   |                     |   |  |
+|   |   | Encapsulates pod   |   |       |   | Decapsulates pod    |   |  |
+|   |   | traffic in UDP     |<--+-------+-->| traffic from UDP    |   |  |
+|   |   | (port 4789)        |   |       |   | (port 4789)         |   |  |
+|   |   +---------+----------+   |       |   +---------+-----------+   |  |
+|   |             |              |       |             |               |  |
+|   |   +---------+----------+   |       |   +---------+-----------+   |  |
+|   |   |       eth0         |   |       |   |       eth0          |   |  |
+|   |   |   192.168.1.10     |   |       |   |   192.168.1.11      |   |  |
+|   |   +---------+----------+   |       |   +---------+-----------+   |  |
+|   |             |              |       |             |               |  |
+|   +-------------+--------------+       +-------------+---------------+  |
 |                 |                                    |                  |
 |                 +------------ PHYSICAL --------------+                  |
 |                              NETWORK                                    |
@@ -246,13 +246,13 @@ Overlay networks create a virtual network "on top of" the physical network:
 |  +------------------------------------------+                           |
 |                                                                         |
 |  AFTER ENCAPSULATION:                                                   |
-|  +------------------------------------------------------------------+   |
-|  | Outer IP: 192.168.1.10 > 192.168.1.11                           |    |
-|  | UDP Port: 4789 (VXLAN)                                           |   |
-|  | +------------------------------------------+                    |    |
-|  | | Src: 10.244.0.2  Dst: 10.244.1.2  Data  |  (Original packet) |     |
-|  | +------------------------------------------+                    |    |
-|  +------------------------------------------------------------------+   |
+|  +--------------------------------------------------------------------+ |
+|  | Outer IP: 192.168.1.10 > 192.168.1.11                              | |
+|  | UDP Port: 4789 (VXLAN)                                             | |
+|  | +------------------------------------------+                       | |
+|  | | Src: 10.244.0.2  Dst: 10.244.1.2  Data  |  (Original packet)     | |
+|  | +------------------------------------------+                       | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -267,24 +267,24 @@ Routing-based CNIs advertise pod routes directly:
 |  ROUTING-BASED NETWORK (BGP with Calico)                                |
 |                                                                         |
 |   NODE 1 (192.168.1.10)                NODE 2 (192.168.1.11)            |
-|   +----------------------------+       +----------------------------+   |
-|   |                            |       |                            |   |
-|   |   +--------+  +--------+   |       |   +--------+  +--------+   |   |
-|   |   | Pod A  |  | Pod B  |   |       |   | Pod C  |  | Pod D  |   |   |
-|   |   |10.244  |  |10.244  |   |       |   |10.244  |  |10.244  |   |   |
-|   |   |.0.2    |  |.0.3    |   |       |   |.1.2    |  |.1.3    |   |   |
-|   |   +---+----+  +---+----+   |       |   +---+----+  +---+----+   |   |
-|   |       |           |        |       |       |           |        |   |
-|   |   Routes to pods via      |       |   Routes to pods via       |    |
-|   |   direct veth pairs        |       |   direct veth pairs        |   |
-|   |                            |       |                            |   |
-|   |   ROUTING TABLE:           |       |   ROUTING TABLE:           |   |
-|   |   10.244.0.2 > caliXXX     |       |   10.244.1.2 > caliYYY     |   |
-|   |   10.244.0.3 > caliZZZ     |       |   10.244.1.3 > caliWWW     |   |
-|   |   10.244.1.0/24 >          |       |   10.244.0.0/24 >          |   |
-|   |     via 192.168.1.11       |       |     via 192.168.1.10       |   |
-|   |                            |       |                            |   |
-|   +-------------+--------------+       +-------------+--------------+   |
+|   +----------------------------+       +-----------------------------+  |
+|   |                            |       |                             |  |
+|   |   +--------+  +--------+   |       |   +--------+  +---------+   |  |
+|   |   | Pod A  |  | Pod B  |   |       |   | Pod C  |  | Pod D   |   |  |
+|   |   |10.244  |  |10.244  |   |       |   |10.244  |  |10.244   |   |  |
+|   |   |.0.2    |  |.0.3    |   |       |   |.1.2    |  |.1.3     |   |  |
+|   |   +---+----+  +---+----+   |       |   +---+----+  +---+-----+   |  |
+|   |       |           |        |       |       |           |         |  |
+|   |   Routes to pods via      |       |   Routes to pods via         |  |
+|   |   direct veth pairs        |       |   direct veth pairs         |  |
+|   |                            |       |                             |  |
+|   |   ROUTING TABLE:           |       |   ROUTING TABLE:            |  |
+|   |   10.244.0.2 > caliXXX     |       |   10.244.1.2 > caliYYY      |  |
+|   |   10.244.0.3 > caliZZZ     |       |   10.244.1.3 > caliWWW      |  |
+|   |   10.244.1.0/24 >          |       |   10.244.0.0/24 >           |  |
+|   |     via 192.168.1.11       |       |     via 192.168.1.10        |  |
+|   |                            |       |                             |  |
+|   +-------------+--------------+       +-------------+---------------+  |
 |                 |                                    |                  |
 |                 |      BGP peering between nodes     |                  |
 |                 |<------------------------------------>                 |
@@ -581,33 +581,33 @@ You need to plan VPC CIDR carefully to have enough IPs!
 |                                                                                        |
 |  CNI PLUGIN COMPARISON                                                                 |
 |                                                                                        |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Feature  | Flannel   | Calico    | Cilium    | AWS VPC   | Notes                 |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Network  | Overlay   | BGP/      | eBPF +    | Native    | Calico most flexible  |  |
-|  | Mode     | (VXLAN)   | Overlay   | routing   | VPC       |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Network  | No        | Yes       | Yes +     | Via SGs   | Cilium adds L7        |  |
-|  | Policies | (use +    | (K8s +    | L7        |           |                       |  |
-|  |          | Calico)   | extended) |           |           |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Perf.    | Good      | Excellent | Best      | Excellent | eBPF is fastest       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Complex. | Low       | Medium    | High      | Low       | Flannel simplest      |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Resource | Low       | Medium    | High      | Low       | Cilium needs memory   |  |
-|  | Usage    |           |           |           |           |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Encrypt. | WireGuard | WireGuard | WireGuard | VPC       | All support encrypt.  |  |
-|  |          | backend   | option    | option    | encrypt   |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Replace  | No        | No        | Yes       | No        | Cilium major feature  |  |
-|  | kube-    |           |           |           |           |                       |  |
-|  | proxy    |           |           |           |           |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
-|  | Best For | Simple    | Prod      | High-perf | EKS       | Choose based on needs |  |
-|  |          | clusters  | clusters  | security  | clusters  |                       |  |
-|  +----------+-----------+-----------+-----------+-----------+-----------------------+  |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Feature  | Flannel   | Calico    | Cilium    | AWS VPC   | Notes                  | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Network  | Overlay   | BGP/      | eBPF +    | Native    | Calico most flexible   | |
+|  | Mode     | (VXLAN)   | Overlay   | routing   | VPC       |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Network  | No        | Yes       | Yes +     | Via SGs   | Cilium adds L7         | |
+|  | Policies | (use +    | (K8s +    | L7        |           |                        | |
+|  |          | Calico)   | extended) |           |           |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Perf.    | Good      | Excellent | Best      | Excellent | eBPF is fastest        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Complex. | Low       | Medium    | High      | Low       | Flannel simplest       | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Resource | Low       | Medium    | High      | Low       | Cilium needs memory    | |
+|  | Usage    |           |           |           |           |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Encrypt. | WireGuard | WireGuard | WireGuard | VPC       | All support encrypt.   | |
+|  |          | backend   | option    | option    | encrypt   |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Replace  | No        | No        | Yes       | No        | Cilium major feature   | |
+|  | kube-    |           |           |           |           |                        | |
+|  | proxy    |           |           |           |           |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
+|  | Best For | Simple    | Prod      | High-perf | EKS       | Choose based on needs  | |
+|  |          | clusters  | clusters  | security  | clusters  |                        | |
+|  +----------+-----------+-----------+-----------+-----------+------------------------+ |
 |                                                                                        |
 +----------------------------------------------------------------------------------------+
 ```
@@ -619,29 +619,29 @@ You need to plan VPC CIDR carefully to have enough IPs!
 |                                                                         |
 |  CNI PLUGINS - KEY TAKEAWAYS                                            |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  CNI IS A SPECIFICATION                                          |   |
-|  |  * Defines ADD/DEL/CHECK/VERSION operations                      |   |
-|  |  * Plugins are executables called by container runtime           |   |
-|  |  * Config in /etc/cni/net.d/                                    |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  THREE APPROACHES                                                |   |
-|  |  * Overlay: Encapsulate traffic (Flannel, Weave)                |    |
-|  |  * Routing: Direct routes via BGP (Calico)                      |    |
-|  |  * Cloud-native: Use cloud networking (AWS VPC CNI)             |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  CHOOSING A CNI                                                  |   |
-|  |  * Just starting? Flannel                                       |    |
-|  |  * Production? Calico                                           |    |
-|  |  * Need maximum performance + L7 policies? Cilium               |    |
-|  |  * On AWS EKS? AWS VPC CNI                                      |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  CNI IS A SPECIFICATION                                            | |
+|  |  * Defines ADD/DEL/CHECK/VERSION operations                        | |
+|  |  * Plugins are executables called by container runtime             | |
+|  |  * Config in /etc/cni/net.d/                                       | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  THREE APPROACHES                                                  | |
+|  |  * Overlay: Encapsulate traffic (Flannel, Weave)                   | |
+|  |  * Routing: Direct routes via BGP (Calico)                         | |
+|  |  * Cloud-native: Use cloud networking (AWS VPC CNI)                | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  CHOOSING A CNI                                                    | |
+|  |  * Just starting? Flannel                                          | |
+|  |  * Production? Calico                                              | |
+|  |  * Need maximum performance + L7 policies? Cilium                  | |
+|  |  * On AWS EKS? AWS VPC CNI                                         | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

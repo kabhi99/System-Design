@@ -16,27 +16,27 @@ Without Network Policies, Kubernetes is completely open:
 |                                                                         |
 |  DEFAULT KUBERNETES NETWORKING                                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |                         CLUSTER                                  |   |
 |  |                                                                  |   |
-|  |  +---------+    +---------+    +---------+    +---------+      |     |
-|  |  | Frontend|<-->|   API   |<-->| Database|<-->|  Cache  |      |     |
-|  |  +---------+    +---------+    +---------+    +---------+      |     |
-|  |       |              |              |              |           |     |
-|  |       |              |              |              |           |     |
-|  |       +--------------+--------------+--------------+           |     |
-|  |                      |              |                          |     |
-|  |  +---------+    +---------+    +---------+                    |      |
-|  |  |  Debug  |<-->| Attacker|<-->| Logging |                    |      |
-|  |  |   Pod   |    |   Pod   |    |   Pod   |                    |      |
-|  |  +---------+    +---------+    +---------+                    |      |
+|  |  +---------+    +---------+    +---------+    +---------+        |   |
+|  |  | Frontend|<-->|   API   |<-->| Database|<-->|  Cache  |        |   |
+|  |  +---------+    +---------+    +---------+    +---------+        |   |
+|  |       |              |              |              |             |   |
+|  |       |              |              |              |             |   |
+|  |       +--------------+--------------+--------------+             |   |
+|  |                      |              |                            |   |
+|  |  +---------+    +---------+    +---------+                       |   |
+|  |  |  Debug  |<-->| Attacker|<-->| Logging |                       |   |
+|  |  |   Pod   |    |   Pod   |    |   Pod   |                       |   |
+|  |  +---------+    +---------+    +---------+                       |   |
 |  |                                                                  |   |
-|  |  EVERYONE CAN TALK TO EVERYONE!                                 |    |
+|  |  EVERYONE CAN TALK TO EVERYONE!                                  |   |
 |  |                                                                  |   |
 |  |  Problems:                                                       |   |
-|  |  * Compromised pod can reach database directly                  |    |
-|  |  * No isolation between namespaces                              |    |
-|  |  * No east-west traffic control                                 |    |
+|  |  * Compromised pod can reach database directly                   |   |
+|  |  * No isolation between namespaces                               |   |
+|  |  * No east-west traffic control                                  |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
@@ -52,28 +52,28 @@ Network Policies implement the principle of least privilege:
 |                                                                         |
 |  WITH NETWORK POLICIES                                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
 |  |                         CLUSTER                                  |   |
 |  |                                                                  |   |
-|  |  +---------+    +---------+    +---------+    +---------+      |     |
-|  |  | Frontend|--->|   API   |--->| Database|    |  Cache  |      |     |
-|  |  +---------+    +----+----+    +---------+    +----^----+      |     |
-|  |                      |                              |           |    |
-|  |                      +------------------------------+           |    |
+|  |  +---------+    +---------+    +---------+    +---------+        |   |
+|  |  | Frontend|--->|   API   |--->| Database|    |  Cache  |        |   |
+|  |  +---------+    +----+----+    +---------+    +----^----+        |   |
+|  |                      |                              |            |   |
+|  |                      +------------------------------+            |   |
 |  |                                                                  |   |
-|  |  +---------+    +---------+    +---------+                    |      |
-|  |  |  Debug  |    | Attacker|    | Logging |<---- (metrics only) |     |
-|  |  |   Pod   |    |   Pod   |    |   Pod   |                    |      |
-|  |  +---------+    +----+----+    +---------+                    |      |
-|  |                      |                                          |    |
-|  |                      X BLOCKED!                                |     |
+|  |  +---------+    +---------+    +---------+                       |   |
+|  |  |  Debug  |    | Attacker|    | Logging |<---- (metrics only)   |   |
+|  |  |   Pod   |    |   Pod   |    |   Pod   |                       |   |
+|  |  +---------+    +----+----+    +---------+                       |   |
+|  |                      |                                           |   |
+|  |                      X BLOCKED!                                  |   |
 |  |                                                                  |   |
-|  |  CONTROLLED COMMUNICATION:                                      |    |
-|  |  Y Frontend > API (allowed)                                    |     |
-|  |  Y API > Database (allowed)                                    |     |
-|  |  Y API > Cache (allowed)                                       |     |
-|  |  X Attacker > Database (blocked!)                              |     |
-|  |  X Frontend > Database (blocked!)                              |     |
+|  |  CONTROLLED COMMUNICATION:                                       |   |
+|  |  Y Frontend > API (allowed)                                      |   |
+|  |  Y API > Database (allowed)                                      |   |
+|  |  Y API > Cache (allowed)                                         |   |
+|  |  X Attacker > Database (blocked!)                                |   |
+|  |  X Frontend > Database (blocked!)                                |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
@@ -716,38 +716,38 @@ spec:
 |                                                                         |
 |  NETWORK POLICIES - KEY TAKEAWAYS                                       |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  CORE CONCEPTS                                                   |   |
-|  |  * Policies are ADDITIVE (allow rules, not deny)                |    |
-|  |  * Empty selector {} = all pods                                 |    |
-|  |  * Unselected pods have NO restrictions                         |    |
-|  |  * Start with "default deny" then allow what's needed          |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  SELECTORS                                                       |   |
-|  |  * podSelector: Pods in same namespace                          |    |
-|  |  * namespaceSelector: Pods in matching namespaces               |    |
-|  |  * ipBlock: External IP ranges                                  |    |
-|  |  * Separate list items = OR                                     |    |
-|  |  * Same list item = AND                                         |    |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  COMMON PATTERNS                                                 |   |
-|  |  * Default deny ingress + egress                                |    |
-|  |  * Allow DNS (port 53 to kube-system)                          |     |
-|  |  * Tier-based policies (frontend>api>database)                 |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  CNI REQUIREMENTS                                                |   |
-|  |  * Must use CNI that supports policies                          |    |
-|  |  * Calico, Cilium, Weave = full support                        |     |
-|  |  * Flannel = NO support (add Calico for policies)              |     |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  CORE CONCEPTS                                                     | |
+|  |  * Policies are ADDITIVE (allow rules, not deny)                   | |
+|  |  * Empty selector {} = all pods                                    | |
+|  |  * Unselected pods have NO restrictions                            | |
+|  |  * Start with "default deny" then allow what's needed              | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  SELECTORS                                                         | |
+|  |  * podSelector: Pods in same namespace                             | |
+|  |  * namespaceSelector: Pods in matching namespaces                  | |
+|  |  * ipBlock: External IP ranges                                     | |
+|  |  * Separate list items = OR                                        | |
+|  |  * Same list item = AND                                            | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  COMMON PATTERNS                                                   | |
+|  |  * Default deny ingress + egress                                   | |
+|  |  * Allow DNS (port 53 to kube-system)                              | |
+|  |  * Tier-based policies (frontend>api>database)                     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  CNI REQUIREMENTS                                                  | |
+|  |  * Must use CNI that supports policies                             | |
+|  |  * Calico, Cilium, Weave = full support                            | |
+|  |  * Flannel = NO support (add Calico for policies)                  | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

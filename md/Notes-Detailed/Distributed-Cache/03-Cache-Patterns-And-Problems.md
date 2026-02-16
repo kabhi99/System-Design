@@ -269,26 +269,26 @@ problems like cache stampede, thundering herd, and consistency issues.
 |  Probabilistic data structure to check membership.                      |
 |  "Definitely not in set" or "Probably in set".                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Request: GET user:12345                                       |     |
-|  |       |                                                         |    |
-|  |       v                                                         |    |
-|  |  +--------------+                                               |    |
-|  |  | Bloom Filter |                                               |    |
-|  |  | "Does user   |                                               |    |
-|  |  |  exist?"     |                                               |    |
-|  |  +------+-------+                                               |    |
-|  |         |                                                       |    |
-|  |    +----+----+                                                  |    |
-|  |    v         v                                                  |    |
-|  |   NO      MAYBE                                                |     |
-|  |    |         |                                                  |    |
-|  |    v         v                                                  |    |
-|  |  Return   Check cache/DB                                       |     |
-|  |  null     as normal                                            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Request: GET user:12345                                          |  |
+|  |       |                                                           |  |
+|  |       v                                                           |  |
+|  |  +--------------+                                                 |  |
+|  |  | Bloom Filter |                                                 |  |
+|  |  | "Does user   |                                                 |  |
+|  |  |  exist?"     |                                                 |  |
+|  |  +------+-------+                                                 |  |
+|  |         |                                                         |  |
+|  |    +----+----+                                                    |  |
+|  |    v         v                                                    |  |
+|  |   NO      MAYBE                                                   |  |
+|  |    |         |                                                    |  |
+|  |    v         v                                                    |  |
+|  |  Return   Check cache/DB                                          |  |
+|  |  null     as normal                                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  BLOOM FILTER PROPERTIES:                                               |
 |  * No false negatives (if says NO, definitely not there)                |

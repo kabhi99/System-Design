@@ -24,17 +24,17 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  * Clocks are not synchronized                                           |
 |  * Nodes can crash                                                       |
 |                                                                          |
-|  +-----------------------------------------------------------------+     |
-|  |                                                                 |     |
-|  |  Server A                    Server B                          |      |
-|  |     |                           |                               |     |
-|  |     |---- "acquire lock" ------>| Lock Server                  |      |
-|  |     |                           | (crashes!)                    |     |
-|  |     |     (no response...)      |                               |     |
-|  |     |                           |                               |     |
-|  |     |  Did I get the lock?                                  |         |
-|  |                                                                 |     |
-|  +-----------------------------------------------------------------+     |
+|  +-------------------------------------------------------------------+   |
+|  |                                                                   |   |
+|  |  Server A                    Server B                             |   |
+|  |     |                           |                                 |   |
+|  |     |---- "acquire lock" ------>| Lock Server                     |   |
+|  |     |                           | (crashes!)                      |   |
+|  |     |     (no response...)      |                                 |   |
+|  |     |                           |                                 |   |
+|  |     |  Did I get the lock?                                        |   |
+|  |                                                                   |   |
+|  +-------------------------------------------------------------------+   |
 |                                                                          |
 |  SCENARIOS REQUIRING DISTRIBUTED LOCKS:                                  |
 |  * Only one server should process a payment                              |
@@ -112,22 +112,22 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  THE TTL DILEMMA                                                        |
 |                                                                         |
 |  TTL too short:                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Client A acquires lock (TTL=5s)                                |    |
+|  +------------------------------------------------------------------+   |
+|  |  Client A acquires lock (TTL=5s)                                 |   |
 |  |       |                                                          |   |
-|  |       +---- starts work...                                      |    |
-|  |       |     (GC pause / slow network)                           |    |
+|  |       +---- starts work...                                       |   |
+|  |       |     (GC pause / slow network)                            |   |
 |  |       |                                                          |   |
-|  |  [5 seconds pass - LOCK EXPIRES]                                |    |
+|  |  [5 seconds pass - LOCK EXPIRES]                                 |   |
 |  |                                                                  |   |
-|  |  Client B acquires lock Y                                       |    |
+|  |  Client B acquires lock Y                                        |   |
 |  |       |                                                          |   |
-|  |       +---- starts work...                                      |    |
+|  |       +---- starts work...                                       |   |
 |  |       |                                                          |   |
-|  |  Client A resumes (thinks it still has lock!)                   |    |
+|  |  Client A resumes (thinks it still has lock!)                    |   |
 |  |       |                                                          |   |
-|  |       +---- modifies resource X CONFLICT!                       |    |
-|  +-----------------------------------------------------------------+    |
+|  |       +---- modifies resource X CONFLICT!                        |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  TTL too long:                                                          |
 |  * Client crashes > lock held until TTL expires                         |
@@ -152,20 +152,20 @@ simultaneously. This chapter covers patterns for safe coordination.
 |                                                                          |
 |  HOW IT WORKS:                                                           |
 |                                                                          |
-|  +-----------------------------------------------------------------+     |
-|  |                                                                 |     |
-|  |  Lock Server assigns incrementing token with each lock:        |      |
-|  |                                                                 |     |
-|  |  Client A acquires lock > token = 33                           |      |
-|  |  Client A pauses (GC)                                          |      |
-|  |  Lock expires                                                  |      |
-|  |  Client B acquires lock > token = 34                           |      |
-|  |  Client B writes to storage: "value=X, token=34"               |      |
-|  |  Client A resumes, tries to write: "value=Y, token=33"         |      |
-|  |                                                                 |     |
-|  |  Storage: "33 < 34? REJECT!" X                                 |      |
-|  |                                                                 |     |
-|  +-----------------------------------------------------------------+     |
+|  +-------------------------------------------------------------------+   |
+|  |                                                                   |   |
+|  |  Lock Server assigns incrementing token with each lock:           |   |
+|  |                                                                   |   |
+|  |  Client A acquires lock > token = 33                              |   |
+|  |  Client A pauses (GC)                                             |   |
+|  |  Lock expires                                                     |   |
+|  |  Client B acquires lock > token = 34                              |   |
+|  |  Client B writes to storage: "value=X, token=34"                  |   |
+|  |  Client A resumes, tries to write: "value=Y, token=33"            |   |
+|  |                                                                   |   |
+|  |  Storage: "33 < 34? REJECT!" X                                    |   |
+|  |                                                                   |   |
+|  +-------------------------------------------------------------------+   |
 |                                                                          |
 |  IMPLEMENTATION:                                                         |
 |                                                                          |
@@ -206,20 +206,20 @@ simultaneously. This chapter covers patterns for safe coordination.
 |                                                                         |
 |  REDLOCK: Lock across N independent Redis instances (N=5 recommended)   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |              Client wants to acquire lock                      |     |
-|  |                         |                                       |    |
-|  |      +------------------+------------------+                   |     |
-|  |      v          v       v       v          v                   |     |
-|  |  +-------+ +-------+ +-------+ +-------+ +-------+           |       |
-|  |  |Redis 1| |Redis 2| |Redis 3| |Redis 4| |Redis 5|           |       |
-|  |  |  Y    | |  Y    | |  Y    | |  X    | |  Y    |           |       |
-|  |  +-------+ +-------+ +-------+ +-------+ +-------+           |       |
-|  |                                                                 |    |
-|  |  Got 4/5 = majority > LOCK ACQUIRED Y                         |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |              Client wants to acquire lock                        |   |
+|  |                         |                                        |   |
+|  |      +------------------+------------------+                     |   |
+|  |      v          v       v       v          v                     |   |
+|  |  +-------+ +-------+ +-------+ +-------+ +-------+               |   |
+|  |  |Redis 1| |Redis 2| |Redis 3| |Redis 4| |Redis 5|               |   |
+|  |  |  Y    | |  Y    | |  Y    | |  X    | |  Y    |               |   |
+|  |  +-------+ +-------+ +-------+ +-------+ +-------+               |   |
+|  |                                                                  |   |
+|  |  Got 4/5 = majority > LOCK ACQUIRED Y                            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -274,17 +274,17 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  * ZooKeeper appends incrementing number to node name                   |
 |  * Built-in ordering for fair queuing                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  /locks/my-resource/                                           |     |
-|  |      +-- lock-0000000001  (Client A) < Holds lock              |     |
-|  |      +-- lock-0000000002  (Client B) < Waiting                 |     |
-|  |      +-- lock-0000000003  (Client C) < Waiting                 |     |
-|  |                                                                 |    |
-|  |  Client B watches lock-0000000001                              |     |
-|  |  When it's deleted > Client B gets lock                        |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  /locks/my-resource/                                             |   |
+|  |      +-- lock-0000000001  (Client A) < Holds lock                |   |
+|  |      +-- lock-0000000002  (Client B) < Waiting                   |   |
+|  |      +-- lock-0000000003  (Client C) < Waiting                   |   |
+|  |                                                                  |   |
+|  |  Client B watches lock-0000000001                                |   |
+|  |  When it's deleted > Client B gets lock                          |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  ALGORITHM:                                                             |
 |  1. Create ephemeral sequential node under /locks/resource/             |
@@ -331,26 +331,26 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  * Database master (only leader accepts writes)                         |
 |  * Cron runner (only leader runs cron tasks)                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +---------+  +---------+  +---------+                        |      |
-|  |  | Node A  |  | Node B  |  | Node C  |                        |      |
-|  |  | LEADER  |  | follower|  | follower|                        |      |
-|  |  |   *     |  |         |  |         |                        |      |
-|  |  +----+----+  +----+----+  +----+----+                        |      |
-|  |       |            |            |                               |    |
-|  |       +------------+------------+                               |    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  +---------+  +---------+  +---------+                           |   |
+|  |  | Node A  |  | Node B  |  | Node C  |                           |   |
+|  |  | LEADER  |  | follower|  | follower|                           |   |
+|  |  |   *     |  |         |  |         |                           |   |
+|  |  +----+----+  +----+----+  +----+----+                           |   |
+|  |       |            |            |                                |   |
+|  |       +------------+------------+                                |   |
 |  |                    |                                             |   |
-|  |            +-------v-------+                                    |    |
-|  |            |   ZooKeeper/  |                                    |    |
-|  |            |     etcd      |                                    |    |
-|  |            +---------------+                                    |    |
-|  |                                                                 |    |
-|  |  All nodes try to acquire leadership                          |      |
-|  |  Only one succeeds > becomes leader                           |      |
-|  |  Leader fails > another takes over                            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  |            +-------v-------+                                     |   |
+|  |            |   ZooKeeper/  |                                     |   |
+|  |            |     etcd      |                                     |   |
+|  |            +---------------+                                     |   |
+|  |                                                                  |   |
+|  |  All nodes try to acquire leadership                             |   |
+|  |  Only one succeeds > becomes leader                              |   |
+|  |  Leader fails > another takes over                               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -382,24 +382,24 @@ simultaneously. This chapter covers patterns for safe coordination.
 |                                                                         |
 |  DISTRIBUTED LOCKING OPTIONS                                            |
 |                                                                         |
-|  +----------------+-------------------------------------------------+   |
-|  | Approach       | When to Use                                     |   |
-|  +----------------+-------------------------------------------------+   |
-|  | Redis SETNX    | Simple cases, efficiency lock (not safety)     |    |
-|  |                | Already have Redis, low latency needed         |    |
-|  +----------------+-------------------------------------------------+   |
-|  | Redlock        | Need higher availability than single Redis     |    |
-|  |                | Willing to accept complexity                   |    |
-|  +----------------+-------------------------------------------------+   |
-|  | ZooKeeper      | Need strong correctness guarantees             |    |
-|  |                | Already have ZK (Kafka, Hadoop ecosystem)      |    |
-|  +----------------+-------------------------------------------------+   |
-|  | etcd           | Kubernetes environments                        |    |
-|  |                | Need strong consistency                        |    |
-|  +----------------+-------------------------------------------------+   |
-|  | Database Lock  | Simple cases, no extra infrastructure          |    |
-|  |                | SELECT FOR UPDATE or advisory locks            |    |
-|  +----------------+-------------------------------------------------+   |
+|  +----------------+--------------------------------------------------+  |
+|  | Approach       | When to Use                                      |  |
+|  +----------------+--------------------------------------------------+  |
+|  | Redis SETNX    | Simple cases, efficiency lock (not safety)       |  |
+|  |                | Already have Redis, low latency needed           |  |
+|  +----------------+--------------------------------------------------+  |
+|  | Redlock        | Need higher availability than single Redis       |  |
+|  |                | Willing to accept complexity                     |  |
+|  +----------------+--------------------------------------------------+  |
+|  | ZooKeeper      | Need strong correctness guarantees               |  |
+|  |                | Already have ZK (Kafka, Hadoop ecosystem)        |  |
+|  +----------------+--------------------------------------------------+  |
+|  | etcd           | Kubernetes environments                          |  |
+|  |                | Need strong consistency                          |  |
+|  +----------------+--------------------------------------------------+  |
+|  | Database Lock  | Simple cases, no extra infrastructure            |  |
+|  |                | SELECT FOR UPDATE or advisory locks              |  |
+|  +----------------+--------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 |                                                                         |

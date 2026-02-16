@@ -535,18 +535,18 @@ REST (Representational State Transfer) is the most common API style.
 |                                                                         |
 |  gRPC vs REST                                                           |
 |  -------------                                                          |
-|  +--------------------+-----------------+-------------------------+     |
-|  | Aspect             | REST            | gRPC                    |     |
-|  +--------------------+-----------------+-------------------------+     |
-|  | Protocol           | HTTP/1.1 (JSON) | HTTP/2 (Protobuf)      |      |
-|  | Payload size       | Larger (text)   | Smaller (binary)       |      |
-|  | Latency            | Higher          | Lower                   |     |
-|  | Browser support    | Native          | Requires grpc-web      |      |
-|  | Streaming          | Limited         | Full bidirectional     |      |
-|  | Code generation    | Optional        | Built-in               |      |
-|  | Human readable     | Yes             | No (binary)            |      |
-|  | Learning curve     | Low             | Medium                  |     |
-|  +--------------------+-----------------+-------------------------+     |
+|  +--------------------+-----------------+----------------------------+  |
+|  | Aspect             | REST            | gRPC                       |  |
+|  +--------------------+-----------------+----------------------------+  |
+|  | Protocol           | HTTP/1.1 (JSON) | HTTP/2 (Protobuf)          |  |
+|  | Payload size       | Larger (text)   | Smaller (binary)           |  |
+|  | Latency            | Higher          | Lower                      |  |
+|  | Browser support    | Native          | Requires grpc-web          |  |
+|  | Streaming          | Limited         | Full bidirectional         |  |
+|  | Code generation    | Optional        | Built-in                   |  |
+|  | Human readable     | Yes             | No (binary)                |  |
+|  | Learning curve     | Low             | Medium                     |  |
+|  +--------------------+-----------------+----------------------------+  |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
@@ -803,31 +803,31 @@ REST (Representational State Transfer) is the most common API style.
 |  events. Instead of polling for updates, the server pushes data         |
 |  to your endpoint when something happens.                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  POLLING (Traditional):                                        |     |
-|  |                                                                 |    |
-|  |  Your App -- "Any new orders?" --> Payment Service             |     |
-|  |  Your App -- "Any new orders?" --> Payment Service             |     |
-|  |  Your App -- "Any new orders?" --> Payment Service             |     |
-|  |  Your App -- "Any new orders?" --> "Yes, here's one!"          |     |
-|  |                                                                 |    |
-|  |  > Wasteful, most requests return nothing                      |     |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  WEBHOOK (Event-driven):                                       |     |
-|  |                                                                 |    |
-|  |  Your App -- "Call me at /webhooks/payment when order paid" -->|     |
-|  |                                                                 |    |
-|  |  (later, when event occurs)                                    |     |
-|  |                                                                 |    |
-|  |  Payment Service -- POST /webhooks/payment --> Your App       |      |
-|  |  { "event": "payment.completed", "data": {...} }              |      |
-|  |                                                                 |    |
-|  |  > Efficient, only notified when something happens            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  POLLING (Traditional):                                           |  |
+|  |                                                                   |  |
+|  |  Your App -- "Any new orders?" --> Payment Service                |  |
+|  |  Your App -- "Any new orders?" --> Payment Service                |  |
+|  |  Your App -- "Any new orders?" --> Payment Service                |  |
+|  |  Your App -- "Any new orders?" --> "Yes, here's one!"             |  |
+|  |                                                                   |  |
+|  |  > Wasteful, most requests return nothing                         |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  WEBHOOK (Event-driven):                                          |  |
+|  |                                                                   |  |
+|  |  Your App -- "Call me at /webhooks/payment when order paid" -->   |  |
+|  |                                                                   |  |
+|  |  (later, when event occurs)                                       |  |
+|  |                                                                   |  |
+|  |  Payment Service -- POST /webhooks/payment --> Your App           |  |
+|  |  { "event": "payment.completed", "data": {...} }                  |  |
+|  |                                                                   |  |
+|  |  > Efficient, only notified when something happens                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -839,37 +839,37 @@ REST (Representational State Transfer) is the most common API style.
 |                                                                         |
 |  TYPICAL WEBHOOK FLOW                                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. REGISTRATION                                                |    |
-|  |     Your App --> Provider: "Register webhook"                  |     |
-|  |     POST /webhooks                                             |     |
-|  |     {                                                           |    |
-|  |       "url": "https://myapp.com/webhooks/stripe",             |      |
-|  |       "events": ["payment.completed", "refund.created"]        |     |
-|  |     }                                                           |    |
-|  |                                                                 |    |
-|  |  2. EVENT OCCURS                                                |    |
-|  |     Customer makes a payment                                   |     |
-|  |                                                                 |    |
-|  |  3. NOTIFICATION                                                |    |
-|  |     Provider --> Your App                                      |     |
-|  |     POST https://myapp.com/webhooks/stripe                    |      |
-|  |     {                                                           |    |
-|  |       "id": "evt_123",                                         |     |
-|  |       "type": "payment.completed",                             |     |
-|  |       "data": {                                                 |    |
-|  |         "amount": 9999,                                        |     |
-|  |         "currency": "usd",                                     |     |
-|  |         "customer_id": "cust_456"                             |      |
-|  |       },                                                        |    |
-|  |       "created": 1705000000                                    |     |
-|  |     }                                                           |    |
-|  |                                                                 |    |
-|  |  4. ACKNOWLEDGMENT                                              |    |
-|  |     Your App --> 200 OK                                        |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. REGISTRATION                                                  |  |
+|  |     Your App --> Provider: "Register webhook"                     |  |
+|  |     POST /webhooks                                                |  |
+|  |     {                                                             |  |
+|  |       "url": "https://myapp.com/webhooks/stripe",                 |  |
+|  |       "events": ["payment.completed", "refund.created"]           |  |
+|  |     }                                                             |  |
+|  |                                                                   |  |
+|  |  2. EVENT OCCURS                                                  |  |
+|  |     Customer makes a payment                                      |  |
+|  |                                                                   |  |
+|  |  3. NOTIFICATION                                                  |  |
+|  |     Provider --> Your App                                         |  |
+|  |     POST https://myapp.com/webhooks/stripe                        |  |
+|  |     {                                                             |  |
+|  |       "id": "evt_123",                                            |  |
+|  |       "type": "payment.completed",                                |  |
+|  |       "data": {                                                   |  |
+|  |         "amount": 9999,                                           |  |
+|  |         "currency": "usd",                                        |  |
+|  |         "customer_id": "cust_456"                                 |  |
+|  |       },                                                          |  |
+|  |       "created": 1705000000                                       |  |
+|  |     }                                                             |  |
+|  |                                                                   |  |
+|  |  4. ACKNOWLEDGMENT                                                |  |
+|  |     Your App --> 200 OK                                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -988,20 +988,20 @@ REST (Representational State Transfer) is the most common API style.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Pattern       Direction     Real-time   Complexity   Scale   |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Polling       Pull          No          Low          Low     |      |
-|  |                                                                |     |
-|  |  Webhooks      Push          Yes         Medium       Medium  |      |
-|  |                                                                |     |
-|  |  WebSockets    Bidirectional Yes         High         High    |      |
-|  |                                                                |     |
-|  |  Message Queue Push          Yes         High         High    |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Pattern       Direction     Real-time   Complexity   Scale      |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Polling       Pull          No          Low          Low        |   |
+|  |                                                                  |   |
+|  |  Webhooks      Push          Yes         Medium       Medium     |   |
+|  |                                                                  |   |
+|  |  WebSockets    Bidirectional Yes         High         High       |   |
+|  |                                                                  |   |
+|  |  Message Queue Push          Yes         High         High       |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  WHEN TO USE WEBHOOKS:                                                  |
 |  Y Infrequent events                                                    |

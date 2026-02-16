@@ -8,43 +8,43 @@
 |                                                                         |
 |  END-TO-END CARD PAYMENT FLOW                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Customer    Merchant    Payment     Token    Card      Issuing |    |
-|  |  Browser     Server     Gateway     Vault    Network    Bank   |     |
-|  |     |          |           |          |         |         |    |     |
-|  |     |--1. Enter card-->|   |          |         |         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |--2. Card data---------------->|          |         |    |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |<-3. Token--------------------|          |         |    |       |
-|  |     |   (tok_xxx)      |   |          |         |         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |--4. Pay-->|      |   |          |         |         |    |     |
-|  |     |  (token)  |      |   |          |         |         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |--5. Create Payment-->|        |         |    |      |
-|  |     |          |  {token, amount}  |   |        |         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |--6. Decrypt token-->|  |         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |<-7. Card PAN-|        |         |    |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |--8. Authorization Request------>|    |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |   |          |    9. Check funds,     |     |
-|  |     |          |       |   |          |       fraud rules     |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |<-10. Auth Response (approved/declined)|     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |<-11. Payment result--|        |         |    |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |<-12. Redirect to success/fail   |        |         |    |      |
-|  |     |          |       |   |          |         |         |    |     |
-|  |     |          |       |--13. Webhook (async)-->|         |    |     |
-|  |     |          |       |   |          |         |         |    |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Customer    Merchant    Payment     Token    Card      Issuing   |  |
+|  |  Browser     Server     Gateway     Vault    Network    Bank      |  |
+|  |     |          |           |          |         |            |    |  |
+|  |     |--1. Enter card-->|   |          |         |            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |--2. Card data---------------->|          |             |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |<-3. Token--------------------|          |              |    |  |
+|  |     |   (tok_xxx)      |   |          |         |            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |--4. Pay-->|      |   |          |         |            |    |  |
+|  |     |  (token)  |      |   |          |         |            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |--5. Create Payment-->|        |             |    |  |
+|  |     |          |  {token, amount}  |   |        |            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |--6. Decrypt token-->|  |            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |<-7. Card PAN-|        |             |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |--8. Authorization Request------>    |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |   |          |    9. Check funds,        |  |
+|  |     |          |       |   |          |       fraud rules         |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |<-10. Auth Response (approved/declined)   |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |<-11. Payment result--|        |             |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |<-12. Redirect to success/fail   |        |             |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |     |          |       |--13. Webhook (async)-->|            |    |  |
+|  |     |          |       |   |          |         |            |    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  TIMELINE:                                                              |
 |  Steps 1-4: ~500ms (client-side, depends on user)                       |
@@ -61,79 +61,79 @@
 |                                                                         |
 |  PAYMENT SERVICE INTERNAL FLOW                                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. REQUEST RECEIVED                                           |     |
-|  |     POST /payments                                             |     |
-|  |     {                                                          |     |
-|  |       idempotency_key: "order_123_attempt_1",                  |     |
-|  |       amount: 10000,  // cents                                 |     |
-|  |       currency: "USD",                                         |     |
-|  |       payment_method: "tok_abc123",                            |     |
-|  |       capture: true                                            |     |
-|  |     }                                                          |     |
-|  |                                                                 |    |
-|  |  2. IDEMPOTENCY CHECK                                          |     |
-|  |     +-------------------------------------------------------+ |      |
-|  |     | Redis: GET idempotency:{key}                         | |       |
-|  |     |                                                       | |      |
-|  |     | IF EXISTS:                                           | |       |
-|  |     |   Return cached response (prevent duplicate)         | |       |
-|  |     |                                                       | |      |
-|  |     | IF NOT EXISTS:                                       | |       |
-|  |     |   SET idempotency:{key} = "processing" EX 86400     | |        |
-|  |     |   Continue with payment                              | |       |
-|  |     +-------------------------------------------------------+ |      |
-|  |                                                                 |    |
-|  |  3. CREATE PAYMENT RECORD                                      |     |
-|  |     +-------------------------------------------------------+ |      |
-|  |     | BEGIN TRANSACTION                                    | |       |
-|  |     |                                                       | |      |
-|  |     | INSERT INTO payments (id, merchant_id, amount, ...)  | |       |
-|  |     | VALUES (uuid, ..., 'CREATED')                        | |       |
-|  |     |                                                       | |      |
-|  |     | INSERT INTO payment_events                           | |       |
-|  |     | VALUES (payment_id, 'CREATED', ...)                  | |       |
-|  |     |                                                       | |      |
-|  |     | COMMIT                                               | |       |
-|  |     +-------------------------------------------------------+ |      |
-|  |                                                                 |    |
-|  |  4. ACQUIRE DISTRIBUTED LOCK                                   |     |
-|  |     Redis: SET lock:payment:{id} = worker_id NX EX 30         |      |
-|  |     (Prevents concurrent processing of same payment)          |      |
-|  |                                                                 |    |
-|  |  5. PROCESS WITH CARD NETWORK                                  |     |
-|  |     * Detokenize card number                                  |      |
-|  |     * Send to appropriate processor                           |      |
-|  |     * Wait for response (with timeout)                        |      |
-|  |                                                                 |    |
-|  |  6. UPDATE PAYMENT STATUS                                      |     |
-|  |     +-------------------------------------------------------+ |      |
-|  |     | BEGIN TRANSACTION                                    | |       |
-|  |     |                                                       | |      |
-|  |     | UPDATE payments                                      | |       |
-|  |     | SET status = 'CAPTURED',                             | |       |
-|  |     |     processor_response = {...}                       | |       |
-|  |     | WHERE id = ? AND version = ?                         | |       |
-|  |     |                                                       | |      |
-|  |     | INSERT INTO payment_events (...)                     | |       |
-|  |     |                                                       | |      |
-|  |     | COMMIT                                               | |       |
-|  |     +-------------------------------------------------------+ |      |
-|  |                                                                 |    |
-|  |  7. CACHE RESPONSE FOR IDEMPOTENCY                            |      |
-|  |     Redis: SET idempotency:{key} = {response} EX 86400        |      |
-|  |                                                                 |    |
-|  |  8. EMIT EVENT                                                 |     |
-|  |     Kafka: payment.events > { payment_id, status: CAPTURED }  |      |
-|  |                                                                 |    |
-|  |  9. RELEASE LOCK                                               |     |
-|  |     Redis: DEL lock:payment:{id}                              |      |
-|  |                                                                 |    |
-|  |  10. RETURN RESPONSE                                           |     |
-|  |      { id: "pay_xxx", status: "captured", amount: 10000 }     |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. REQUEST RECEIVED                                              |  |
+|  |     POST /payments                                                |  |
+|  |     {                                                             |  |
+|  |       idempotency_key: "order_123_attempt_1",                     |  |
+|  |       amount: 10000,  // cents                                    |  |
+|  |       currency: "USD",                                            |  |
+|  |       payment_method: "tok_abc123",                               |  |
+|  |       capture: true                                               |  |
+|  |     }                                                             |  |
+|  |                                                                   |  |
+|  |  2. IDEMPOTENCY CHECK                                             |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |     | Redis: GET idempotency:{key}                              | |  |
+|  |     |                                                           | |  |
+|  |     | IF EXISTS:                                                | |  |
+|  |     |   Return cached response (prevent duplicate)              | |  |
+|  |     |                                                           | |  |
+|  |     | IF NOT EXISTS:                                            | |  |
+|  |     |   SET idempotency:{key} = "processing" EX 86400           | |  |
+|  |     |   Continue with payment                                   | |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |                                                                   |  |
+|  |  3. CREATE PAYMENT RECORD                                         |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |     | BEGIN TRANSACTION                                         | |  |
+|  |     |                                                           | |  |
+|  |     | INSERT INTO payments (id, merchant_id, amount, ...)       | |  |
+|  |     | VALUES (uuid, ..., 'CREATED')                             | |  |
+|  |     |                                                           | |  |
+|  |     | INSERT INTO payment_events                                | |  |
+|  |     | VALUES (payment_id, 'CREATED', ...)                       | |  |
+|  |     |                                                           | |  |
+|  |     | COMMIT                                                    | |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |                                                                   |  |
+|  |  4. ACQUIRE DISTRIBUTED LOCK                                      |  |
+|  |     Redis: SET lock:payment:{id} = worker_id NX EX 30             |  |
+|  |     (Prevents concurrent processing of same payment)              |  |
+|  |                                                                   |  |
+|  |  5. PROCESS WITH CARD NETWORK                                     |  |
+|  |     * Detokenize card number                                      |  |
+|  |     * Send to appropriate processor                               |  |
+|  |     * Wait for response (with timeout)                            |  |
+|  |                                                                   |  |
+|  |  6. UPDATE PAYMENT STATUS                                         |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |     | BEGIN TRANSACTION                                         | |  |
+|  |     |                                                           | |  |
+|  |     | UPDATE payments                                           | |  |
+|  |     | SET status = 'CAPTURED',                                  | |  |
+|  |     |     processor_response = {...}                            | |  |
+|  |     | WHERE id = ? AND version = ?                              | |  |
+|  |     |                                                           | |  |
+|  |     | INSERT INTO payment_events (...)                          | |  |
+|  |     |                                                           | |  |
+|  |     | COMMIT                                                    | |  |
+|  |     +-----------------------------------------------------------+ |  |
+|  |                                                                   |  |
+|  |  7. CACHE RESPONSE FOR IDEMPOTENCY                                |  |
+|  |     Redis: SET idempotency:{key} = {response} EX 86400            |  |
+|  |                                                                   |  |
+|  |  8. EMIT EVENT                                                    |  |
+|  |     Kafka: payment.events > { payment_id, status: CAPTURED }      |  |
+|  |                                                                   |  |
+|  |  9. RELEASE LOCK                                                  |  |
+|  |     Redis: DEL lock:payment:{id}                                  |  |
+|  |                                                                   |  |
+|  |  10. RETURN RESPONSE                                              |  |
+|  |      { id: "pay_xxx", status: "captured", amount: 10000 }         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -148,29 +148,29 @@
 |  SCENARIO: Customer clicks "Pay" button twice                           |
 |                                                                         |
 |  WITHOUT IDEMPOTENCY:                                                   |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Click 1 > POST /payments > $100 charged Y                    |      |
-|  |  Click 2 > POST /payments > $100 charged Y (DUPLICATE!)       |      |
-|  |                                                                 |    |
-|  |  Customer charged $200 instead of $100!                       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Click 1 > POST /payments > $100 charged Y                        |  |
+|  |  Click 2 > POST /payments > $100 charged Y (DUPLICATE!)           |  |
+|  |                                                                   |  |
+|  |  Customer charged $200 instead of $100!                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WITH IDEMPOTENCY:                                                      |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Click 1 > POST /payments                                     |      |
-|  |            Idempotency-Key: order_123                         |      |
-|  |            > $100 charged Y                                   |      |
-|  |                                                                 |    |
-|  |  Click 2 > POST /payments                                     |      |
-|  |            Idempotency-Key: order_123 (same key)              |      |
-|  |            > Return cached result (no duplicate charge)       |      |
-|  |                                                                 |    |
-|  |  Customer charged exactly $100 Y                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Click 1 > POST /payments                                         |  |
+|  |            Idempotency-Key: order_123                             |  |
+|  |            > $100 charged Y                                       |  |
+|  |                                                                   |  |
+|  |  Click 2 > POST /payments                                         |  |
+|  |            Idempotency-Key: order_123 (same key)                  |  |
+|  |            > Return cached result (no duplicate charge)           |  |
+|  |                                                                   |  |
+|  |  Customer charged exactly $100 Y                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -257,16 +257,16 @@
 |                                                                         |
 |  RESPONSE CACHING RULES:                                                |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  First Request Result    |  Subsequent Request Returns        |      |
-|  |  ------------------------------------------------------------ |      |
-|  |  200 Success            |  Same 200 response (cached)         |      |
-|  |  400 Bad Request        |  Process again (request was wrong) |       |
-|  |  500 Server Error       |  Process again (transient failure) |       |
-|  |  In Progress            |  409 Conflict                       |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  First Request Result    |  Subsequent Request Returns           |   |
+|  |  ------------------------------------------------------------    |   |
+|  |  200 Success            |  Same 200 response (cached)            |   |
+|  |  400 Bad Request        |  Process again (request was wrong)     |   |
+|  |  500 Server Error       |  Process again (transient failure)     |   |
+|  |  In Progress            |  409 Conflict                          |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Only cache SUCCESSFUL terminal states, not errors                      |
 |                                                                         |
@@ -284,17 +284,17 @@
 |  Problem: Sent authorization request, never got response                |
 |  Is the payment charged or not? WE DON'T KNOW!                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Gateway ---- Auth Request ----> Card Network                  |     |
-|  |     |                               |                           |    |
-|  |     |                               | (processes payment)       |    |
-|  |     |                               |                           |    |
-|  |     | <-- TIMEOUT (no response) ---|                           |     |
-|  |     |                                                           |    |
-|  |  Payment status = UNKNOWN                                      |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Gateway ---- Auth Request ----> Card Network                     |  |
+|  |     |                               |                             |  |
+|  |     |                               | (processes payment)         |  |
+|  |     |                               |                             |  |
+|  |     | <-- TIMEOUT (no response) ---|                              |  |
+|  |     |                                                             |  |
+|  |  Payment status = UNKNOWN                                         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  SOLUTION:                                                              |
 |  1. Mark payment as "PENDING_VERIFICATION"                              |
@@ -327,14 +327,14 @@
 |                                                                         |
 |  Problem: Card charged but DB update failed                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. Card charged successfully Y                                |     |
-|  |  2. UPDATE payments SET status = 'CAPTURED' > DB ERROR!       |      |
-|  |  3. Transaction rolled back                                    |     |
-|  |  4. Customer sees "failed" but money is gone!                 |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. Card charged successfully Y                                   |  |
+|  |  2. UPDATE payments SET status = 'CAPTURED' > DB ERROR!           |  |
+|  |  3. Transaction rolled back                                       |  |
+|  |  4. Customer sees "failed" but money is gone!                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  SOLUTION: Write to WAL/Event log BEFORE processing                     |
 |                                                                         |
@@ -371,22 +371,22 @@
 |                                                                         |
 |  SOLUTION: Distributed locking + state machine                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. Acquire lock: SET lock:{payment_id} NX EX 30               |     |
-|  |                                                                 |    |
-|  |  2. If can't acquire:                                          |     |
-|  |     - Another worker processing                                |     |
-|  |     - Or previous worker crashed                               |     |
-|  |                                                                 |    |
-|  |  3. Lock expires after 30s > next worker can take over        |      |
-|  |                                                                 |    |
-|  |  4. State machine ensures idempotent processing:               |     |
-|  |     IF status == 'PROCESSING':                                 |     |
-|  |       Check with processor if already charged                  |     |
-|  |       Continue from last known state                           |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. Acquire lock: SET lock:{payment_id} NX EX 30                  |  |
+|  |                                                                   |  |
+|  |  2. If can't acquire:                                             |  |
+|  |     - Another worker processing                                   |  |
+|  |     - Or previous worker crashed                                  |  |
+|  |                                                                   |  |
+|  |  3. Lock expires after 30s > next worker can take over            |  |
+|  |                                                                   |  |
+|  |  4. State machine ensures idempotent processing:                  |  |
+|  |     IF status == 'PROCESSING':                                    |  |
+|  |       Check with processor if already charged                     |  |
+|  |       Continue from last known state                              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -405,43 +405,43 @@
 |  * Manual adjustments by banks                                          |
 |                                                                         |
 |  DAILY RECONCILIATION PROCESS                                           |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  1. FETCH EXTERNAL RECORDS                                     |     |
-|  |     * Download settlement files from each processor            |     |
-|  |     * Usually available T+1 (next day)                        |      |
-|  |                                                                 |    |
-|  |  2. MATCH TRANSACTIONS                                         |     |
-|  |     For each external transaction:                             |     |
-|  |       Find matching internal record (by reference ID)         |      |
-|  |       Compare: amount, status, timestamp                      |      |
-|  |                                                                 |    |
-|  |  3. IDENTIFY DISCREPANCIES                                     |     |
-|  |                                                                 |    |
-|  |     +------------------------------------------------------+  |      |
-|  |     |                                                      |  |      |
-|  |     |  Type          | Internal | External | Action       |  |       |
-|  |     |  -------------------------------------------------- |  |       |
-|  |     |  Match         | $100     | $100     | OK           |  |       |
-|  |     |  Amount diff   | $100     | $95      | Investigate  |  |       |
-|  |     |  Missing       | Exists   | Missing  | Query proc   |  |       |
-|  |     |  Orphan        | Missing  | Exists   | Create record|  |       |
-|  |     |  Status diff   | Captured | Declined | Reconcile    |  |       |
-|  |     |                                                      |  |      |
-|  |     +------------------------------------------------------+  |      |
-|  |                                                                 |    |
-|  |  4. RESOLVE DISCREPANCIES                                      |     |
-|  |     * Auto-resolve known patterns                             |      |
-|  |     * Flag for manual review if unclear                       |      |
-|  |     * Update internal records to match truth                  |      |
-|  |                                                                 |    |
-|  |  5. SETTLEMENT CALCULATION                                     |     |
-|  |     * Sum all captured payments                               |      |
-|  |     * Subtract refunds                                        |      |
-|  |     * Subtract fees                                           |      |
-|  |     * = Net settlement to merchant                            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. FETCH EXTERNAL RECORDS                                        |  |
+|  |     * Download settlement files from each processor               |  |
+|  |     * Usually available T+1 (next day)                            |  |
+|  |                                                                   |  |
+|  |  2. MATCH TRANSACTIONS                                            |  |
+|  |     For each external transaction:                                |  |
+|  |       Find matching internal record (by reference ID)             |  |
+|  |       Compare: amount, status, timestamp                          |  |
+|  |                                                                   |  |
+|  |  3. IDENTIFY DISCREPANCIES                                        |  |
+|  |                                                                   |  |
+|  |     +----------------------------------------------------------+  |  |
+|  |     |                                                          |  |  |
+|  |     |  Type          | Internal | External | Action            |  |  |
+|  |     |  --------------------------------------------------      |  |  |
+|  |     |  Match         | $100     | $100     | OK                |  |  |
+|  |     |  Amount diff   | $100     | $95      | Investigate       |  |  |
+|  |     |  Missing       | Exists   | Missing  | Query proc        |  |  |
+|  |     |  Orphan        | Missing  | Exists   | Create record     |  |  |
+|  |     |  Status diff   | Captured | Declined | Reconcile         |  |  |
+|  |     |                                                          |  |  |
+|  |     +----------------------------------------------------------+  |  |
+|  |                                                                   |  |
+|  |  4. RESOLVE DISCREPANCIES                                         |  |
+|  |     * Auto-resolve known patterns                                 |  |
+|  |     * Flag for manual review if unclear                           |  |
+|  |     * Update internal records to match truth                      |  |
+|  |                                                                   |  |
+|  |  5. SETTLEMENT CALCULATION                                        |  |
+|  |     * Sum all captured payments                                   |  |
+|  |     * Subtract refunds                                            |  |
+|  |     * Subtract fees                                               |  |
+|  |     * = Net settlement to merchant                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

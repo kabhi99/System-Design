@@ -81,16 +81,16 @@ Operates at TCP/UDP level. Doesn't look at packet content.
 |  * Doesn't inspect packet content (can't read HTTP headers)             |
 |  * Forwards raw TCP/UDP packets                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  TCP Packet Header                                              |    |
-|  |  +----------------------------------------------------------+  |     |
-|  |  | Src IP: 1.2.3.4 | Dst IP: 5.6.7.8 | Port: 443            |  |     |
-|  |  +----------------------------------------------------------+  |     |
-|  |           v                                                     |    |
-|  |  L4 Load Balancer (routes based on header only)                |     |
-|  |           v                                                     |    |
-|  |  [Server 1] [Server 2] [Server 3]                             |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  TCP Packet Header                                                |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  | Src IP: 1.2.3.4 | Dst IP: 5.6.7.8 | Port: 443               |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |           v                                                       |  |
+|  |  L4 Load Balancer (routes based on header only)                   |  |
+|  |           v                                                       |  |
+|  |  [Server 1] [Server 2] [Server 3]                                 |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  TWO MODES:                                                             |
 |                                                                         |
@@ -143,25 +143,25 @@ Operates at HTTP/HTTPS level. Inspects request content.
 |  * Makes intelligent routing decisions                                  |
 |  * Can modify requests/responses                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  HTTP Request                                                   |    |
-|  |  +----------------------------------------------------------+  |     |
-|  |  | GET /api/users HTTP/1.1                                  |  |     |
-|  |  | Host: api.example.com                                    |  |     |
-|  |  | Cookie: session=abc123                                   |  |     |
-|  |  | X-Tenant-ID: tenant-456                                  |  |     |
-|  |  +----------------------------------------------------------+  |     |
-|  |           v                                                     |    |
-|  |  L7 Load Balancer (inspects all content)                       |     |
-|  |           v                                                     |    |
-|  |  ROUTING RULES:                                                |     |
-|  |  /api/users > API Servers (v2)                                |      |
-|  |  /api/v1/*  > API Servers (legacy)                            |      |
-|  |  /static/*  > CDN/Static Servers                              |      |
-|  |  /admin/*   > Admin Servers (internal only)                   |      |
-|  |  Host: api-beta.* > Beta cluster                              |      |
-|  |  Header X-Tenant-ID: premium > Premium cluster                |      |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  HTTP Request                                                     |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  | GET /api/users HTTP/1.1                                     |  |  |
+|  |  | Host: api.example.com                                       |  |  |
+|  |  | Cookie: session=abc123                                      |  |  |
+|  |  | X-Tenant-ID: tenant-456                                     |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |           v                                                       |  |
+|  |  L7 Load Balancer (inspects all content)                          |  |
+|  |           v                                                       |  |
+|  |  ROUTING RULES:                                                   |  |
+|  |  /api/users > API Servers (v2)                                    |  |
+|  |  /api/v1/*  > API Servers (legacy)                                |  |
+|  |  /static/*  > CDN/Static Servers                                  |  |
+|  |  /admin/*   > Admin Servers (internal only)                       |  |
+|  |  Host: api-beta.* > Beta cluster                                  |  |
+|  |  Header X-Tenant-ID: premium > Premium cluster                    |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  CAPABILITIES:                                                          |
 |                                                                         |
@@ -237,12 +237,12 @@ Operates at HTTP/HTTPS level. Inspects request content.
 |  Application Servers                                                    |
 |                                                                         |
 |  NETFLIX ARCHITECTURE:                                                  |
-|  +-----------------------------------------------------------------+    |
-|  |  Internet > AWS NLB > Zuul (L7) > Microservices                |     |
-|  |                                                                 |    |
-|  |  NLB: High throughput, handles millions of connections         |     |
-|  |  Zuul: Routing, rate limiting, auth, canary                    |     |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |  Internet > AWS NLB > Zuul (L7) > Microservices                   |  |
+|  |                                                                   |  |
+|  |  NLB: High throughput, handles millions of connections            |  |
+|  |  Zuul: Routing, rate limiting, auth, canary                       |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -493,18 +493,18 @@ Simple but surprisingly effective for large clusters.
 |                                                                         |
 |  CHOOSING THE RIGHT ALGORITHM                                           |
 |                                                                         |
-|  +---------------------+--------------------------------------------+   |
-|  | Algorithm           | Best For                                   |   |
-|  +---------------------+--------------------------------------------+   |
-|  | Round Robin         | Identical servers, similar requests       |    |
-|  | Weighted RR         | Different server capacities               |    |
-|  | Least Connections   | Long-lived connections, variable requests |    |
-|  | Weighted LC         | Different capacities + variable requests |     |
-|  | IP Hash             | Session affinity without cookies          |    |
-|  | Least Response Time | Heterogeneous performance                 |    |
-|  | Random              | Very large clusters, simplicity          |     |
-|  | Power of Two        | Balance of simplicity and effectiveness  |     |
-|  +---------------------+--------------------------------------------+   |
+|  +---------------------+----------------------------------------------+ |
+|  | Algorithm           | Best For                                     | |
+|  +---------------------+----------------------------------------------+ |
+|  | Round Robin         | Identical servers, similar requests          | |
+|  | Weighted RR         | Different server capacities                  | |
+|  | Least Connections   | Long-lived connections, variable requests    | |
+|  | Weighted LC         | Different capacities + variable requests     | |
+|  | IP Hash             | Session affinity without cookies             | |
+|  | Least Response Time | Heterogeneous performance                    | |
+|  | Random              | Very large clusters, simplicity              | |
+|  | Power of Two        | Balance of simplicity and effectiveness      | |
+|  +---------------------+----------------------------------------------+ |
 |                                                                         |
 |  DEFAULT RECOMMENDATION: Start with Round Robin or Least Connections    |
 |                                                                         |
@@ -774,19 +774,19 @@ The load balancer itself can be a single point of failure:
 |  PATTERN 1: ACTIVE-PASSIVE (Failover)                                   |
 |  ------------------------------------                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                        Virtual IP (VIP)                        |     |
-|  |                             |                                   |    |
-|  |               +-------------+-------------+                    |     |
-|  |               v                           v                    |     |
-|  |         +---------+                +---------+                 |     |
-|  |         | Active  | <-- heartbeat --> Passive|                 |     |
+|  +-------------------------------------------------------------------+  |
+|  |                        Virtual IP (VIP)                           |  |
+|  |                             |                                     |  |
+|  |               +-------------+-------------+                       |  |
+|  |               v                           v                       |  |
+|  |         +---------+                +---------+                    |  |
+|  |         | Active  | <-- heartbeat --> Passive|                    |  |
 |  |         |   LB    |      (VRRP)       |   LB    |                 |  |
-|  |         +---------+                +---------+                 |     |
-|  |               |                           |                    |     |
-|  |               v                           |                    |     |
-|  |         [Servers]               (standby, ready)              |      |
-|  +-----------------------------------------------------------------+    |
+|  |         +---------+                +---------+                    |  |
+|  |               |                           |                       |  |
+|  |               v                           |                       |  |
+|  |         [Servers]               (standby, ready)                  |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |  * Both LBs share a Virtual IP (VIP)                                    |
@@ -804,19 +804,19 @@ The load balancer itself can be a single point of failure:
 |  PATTERN 2: ACTIVE-ACTIVE                                               |
 |  --------------------------                                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                         DNS                                     |    |
-|  |           +--------------+--------------+                       |    |
-|  |           v                             v                       |    |
-|  |     +---------+                   +---------+                  |     |
-|  |     |  LB 1   |                   |  LB 2   |                  |     |
-|  |     | Active  |                   | Active  |                  |     |
-|  |     +---------+                   +---------+                  |     |
-|  |           |                             |                       |    |
-|  |           +--------------+--------------+                       |    |
-|  |                          v                                      |    |
-|  |                     [Servers]                                   |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                         DNS                                       |  |
+|  |           +--------------+--------------+                         |  |
+|  |           v                             v                         |  |
+|  |     +---------+                   +---------+                     |  |
+|  |     |  LB 1   |                   |  LB 2   |                     |  |
+|  |     | Active  |                   | Active  |                     |  |
+|  |     +---------+                   +---------+                     |  |
+|  |           |                             |                         |  |
+|  |           +--------------+--------------+                         |  |
+|  |                          v                                        |  |
+|  |                     [Servers]                                     |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |  * DNS returns multiple LB IPs                                          |
@@ -860,33 +860,33 @@ Distribute traffic across multiple geographic regions:
 |                                                                         |
 |  GLOBAL SERVER LOAD BALANCING                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |                        User in Europe                          |     |
-|  |                             |                                   |    |
-|  |                             v                                   |    |
-|  |                         DNS Query                               |    |
-|  |                   "Where is api.example.com?"                  |     |
-|  |                             |                                   |    |
-|  |                             v                                   |    |
-|  |         +---------- GSLB/DNS ----------+                       |     |
-|  |         |  Intelligent DNS Resolution  |                       |     |
-|  |         |                              |                       |     |
-|  |         |  User in Europe > EU IP      |                       |     |
-|  |         |  User in Asia > APAC IP      |                       |     |
-|  |         |  User in US > US IP          |                       |     |
-|  |         +------------------------------+                       |     |
-|  |                             |                                   |    |
-|  |              +--------------+--------------+                   |     |
-|  |              v              v              v                   |     |
-|  |         +--------+    +--------+    +--------+                |      |
-|  |         | EU-WEST|    |  APAC  |    |US-EAST |                |      |
-|  |         |   LB   |    |   LB   |    |   LB   |                |      |
-|  |         +--------+    +--------+    +--------+                |      |
-|  |              |              |              |                   |     |
-|  |         [EU Servers] [APAC Servers] [US Servers]              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |                        User in Europe                             |  |
+|  |                             |                                     |  |
+|  |                             v                                     |  |
+|  |                         DNS Query                                 |  |
+|  |                   "Where is api.example.com?"                     |  |
+|  |                             |                                     |  |
+|  |                             v                                     |  |
+|  |         +---------- GSLB/DNS ----------+                          |  |
+|  |         |  Intelligent DNS Resolution  |                          |  |
+|  |         |                              |                          |  |
+|  |         |  User in Europe > EU IP      |                          |  |
+|  |         |  User in Asia > APAC IP      |                          |  |
+|  |         |  User in US > US IP          |                          |  |
+|  |         +------------------------------+                          |  |
+|  |                             |                                     |  |
+|  |              +--------------+--------------+                      |  |
+|  |              v              v              v                      |  |
+|  |         +--------+    +--------+    +--------+                    |  |
+|  |         | EU-WEST|    |  APAC  |    |US-EAST |                    |  |
+|  |         |   LB   |    |   LB   |    |   LB   |                    |  |
+|  |         +--------+    +--------+    +--------+                    |  |
+|  |              |              |              |                      |  |
+|  |         [EU Servers] [APAC Servers] [US Servers]                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  GSLB ROUTING METHODS:                                                  |
 |                                                                         |
@@ -975,17 +975,17 @@ How do load balancers and services find each other?
 |                                                                         |
 |  Dedicated service for tracking instances                               |
 |                                                                         |
-|  +---------------------------------------------------------------+      |
-|  |                                                               |      |
-|  |    Service Instance --register--> Service Registry           |       |
-|  |         |                              |                      |      |
-|  |    (on startup)                   +----+----+                |       |
-|  |                                   | Consul  |                |       |
-|  |    Load Balancer <---query------ |  etcd   |                |        |
-|  |                                   |ZooKeeper|                |       |
-|  |                                   +---------+                |       |
-|  |                                                               |      |
-|  +---------------------------------------------------------------+      |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |    Service Instance --register--> Service Registry               |   |
+|  |         |                              |                         |   |
+|  |    (on startup)                   +----+----+                    |   |
+|  |                                   | Consul  |                    |   |
+|  |    Load Balancer <---query------ |  etcd   |                     |   |
+|  |                                   |ZooKeeper|                    |   |
+|  |                                   +---------+                    |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  POPULAR SERVICE REGISTRIES:                                            |
 |  * Consul (HashiCorp) - Full service mesh                               |

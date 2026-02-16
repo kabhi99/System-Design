@@ -14,27 +14,27 @@ commonly asked in system design interviews.
 |  A distributed architecture where clients request services and          |
 |  servers provide them. The most common architecture on the web.         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +----------+                        +----------+              |     |
-|  |  |  CLIENT  | ------ Request ------> |  SERVER  |              |     |
-|  |  |          |                        |          |              |     |
-|  |  | (Browser,| <----- Response ------ | (Web,    |              |     |
-|  |  |  Mobile) |                        |  API)    |              |     |
-|  |  +----------+                        +----------+              |     |
-|  |                                                                 |    |
-|  |  CLIENT:                                                       |     |
-|  |  * Initiates requests                                         |      |
-|  |  * Displays data to user                                      |      |
-|  |  * Lightweight processing                                     |      |
-|  |                                                                 |    |
-|  |  SERVER:                                                       |     |
-|  |  * Waits for requests                                         |      |
-|  |  * Processes business logic                                   |      |
-|  |  * Manages data storage                                       |      |
-|  |  * Serves multiple clients                                    |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  +----------+                        +----------+                 |  |
+|  |  |  CLIENT  | ------ Request ------> |  SERVER  |                 |  |
+|  |  |          |                        |          |                 |  |
+|  |  | (Browser,| <----- Response ------ | (Web,    |                 |  |
+|  |  |  Mobile) |                        |  API)    |                 |  |
+|  |  +----------+                        +----------+                 |  |
+|  |                                                                   |  |
+|  |  CLIENT:                                                          |  |
+|  |  * Initiates requests                                             |  |
+|  |  * Displays data to user                                          |  |
+|  |  * Lightweight processing                                         |  |
+|  |                                                                   |  |
+|  |  SERVER:                                                          |  |
+|  |  * Waits for requests                                             |  |
+|  |  * Processes business logic                                       |  |
+|  |  * Manages data storage                                           |  |
+|  |  * Serves multiple clients                                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -103,30 +103,30 @@ commonly asked in system design interviews.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  THIN CLIENT                    THICK CLIENT                   |     |
-|  |  ===========                    ============                    |    |
-|  |                                                                 |    |
-|  |  Minimal processing             Significant processing         |     |
-|  |  Server does the work           Client does the work          |      |
-|  |                                                                 |    |
-|  |  Examples:                      Examples:                      |     |
-|  |  * Web browser                  * Native mobile apps          |      |
-|  |  * Terminal                     * Desktop applications        |      |
-|  |  * Chromebook                   * Games                       |      |
-|  |  * Dumb terminals              * PWAs with offline mode      |       |
-|  |                                                                 |    |
-|  |  PROS:                          PROS:                          |     |
-|  |  * Easy to update               * Works offline               |      |
-|  |  * Lower client cost            * Better UX (responsive)      |      |
-|  |  * Centralized control          * Less server load            |      |
-|  |                                                                 |    |
-|  |  CONS:                          CONS:                          |     |
-|  |  * Needs network                * Harder to update            |      |
-|  |  * Server bottleneck            * Security concerns           |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  THIN CLIENT                    THICK CLIENT                      |  |
+|  |  ===========                    ============                      |  |
+|  |                                                                   |  |
+|  |  Minimal processing             Significant processing            |  |
+|  |  Server does the work           Client does the work              |  |
+|  |                                                                   |  |
+|  |  Examples:                      Examples:                         |  |
+|  |  * Web browser                  * Native mobile apps              |  |
+|  |  * Terminal                     * Desktop applications            |  |
+|  |  * Chromebook                   * Games                           |  |
+|  |  * Dumb terminals              * PWAs with offline mode           |  |
+|  |                                                                   |  |
+|  |  PROS:                          PROS:                             |  |
+|  |  * Easy to update               * Works offline                   |  |
+|  |  * Lower client cost            * Better UX (responsive)          |  |
+|  |  * Centralized control          * Less server load                |  |
+|  |                                                                   |  |
+|  |  CONS:                          CONS:                             |  |
+|  |  * Needs network                * Harder to update                |  |
+|  |  * Server bottleneck            * Security concerns               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  MODERN TREND: Hybrid (React/Vue apps - thick client + API server)      |
 |                                                                         |
@@ -157,31 +157,31 @@ commonly asked in system design interviews.
 |                                                                         |
 |  HOW FaaS WORKS                                                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  TRADITIONAL SERVER                                            |     |
-|  |                                                                 |    |
-|  |  +---------------------------------------------------------+  |      |
-|  |  |                    Server Running 24/7                  |  |      |
-|  |  |  ##....###........##......####...............##....   |  |        |
-|  |  |      ^              ^            ^                ^     |  |      |
-|  |  |   requests       requests     requests         requests |  |      |
-|  |  +---------------------------------------------------------+  |      |
-|  |  Pay for: 24 hours, even when idle                          |        |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  SERVERLESS (FaaS)                                             |     |
-|  |                                                                 |    |
-|  |       +--+        +---+       +--+       +----+      +--+    |       |
-|  |       |##|        |###|       |##|       |####|      |##|    |       |
-|  |  -----+--+--------+---+-------+--+-------+----+------+--+--  |       |
-|  |       ^            ^           ^           ^          ^      |       |
-|  |    spin up      spin up    spin up     spin up    spin up    |       |
-|  |                                                                 |    |
-|  |  Pay for: Only execution time (ms billing)                   |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  TRADITIONAL SERVER                                               |  |
+|  |                                                                   |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  |                    Server Running 24/7                      |  |  |
+|  |  |  ##....###........##......####...............##....         |  |  |
+|  |  |      ^              ^            ^                ^         |  |  |
+|  |  |   requests       requests     requests         requests     |  |  |
+|  |  +-------------------------------------------------------------+  |  |
+|  |  Pay for: 24 hours, even when idle                                |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  SERVERLESS (FaaS)                                                |  |
+|  |                                                                   |  |
+|  |       +--+        +---+       +--+       +----+      +-------+    |  |
+|  |       |##|        |###|       |##|       |####|      |##     |    |  |
+|  |  -----+--+--------+---+-------+--+-------+----+------+--+--       |  |
+|  |       ^            ^           ^           ^          ^           |  |
+|  |    spin up      spin up    spin up     spin up    spin up         |  |
+|  |                                                                   |  |
+|  |  Pay for: Only execution time (ms billing)                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -193,63 +193,63 @@ commonly asked in system design interviews.
 |                                                                         |
 |  PATTERN 1: API BACKEND                                                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Client > API Gateway > Lambda > DynamoDB                     |      |
-|  |                                                                 |    |
-|  |  +--------+    +-------------+    +--------+    +----------+ |       |
-|  |  | Mobile |--->| API Gateway |--->| Lambda |--->| DynamoDB | |       |
-|  |  |  App   |    |             |    |        |    |          | |       |
-|  |  +--------+    +-------------+    +--------+    +----------+ |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Client > API Gateway > Lambda > DynamoDB                         |  |
+|  |                                                                   |  |
+|  |  +--------+    +-------------+    +--------+    +---------------+ |  |
+|  |  | Mobile |--->| API Gateway |--->| Lambda |--->| DynamoDB      | |  |
+|  |  |  App   |    |             |    |        |    |               | |  |
+|  |  +--------+    +-------------+    +--------+    +---------------+ |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  PATTERN 2: EVENT PROCESSING                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  S3 Upload > Lambda > Process > Store Result                  |      |
-|  |                                                                 |    |
-|  |  +--------+    +--------+    +--------+    +--------+        |       |
-|  |  | S3     |--->| Lambda |--->|Process |--->| S3 /   |        |       |
-|  |  | Bucket |    |Trigger |    | Image  |    |DynamoDB|        |       |
-|  |  +--------+    +--------+    +--------+    +--------+        |       |
-|  |                                                                 |    |
-|  |  Use case: Image thumbnails, video transcoding, ETL          |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  S3 Upload > Lambda > Process > Store Result                      |  |
+|  |                                                                   |  |
+|  |  +--------+    +--------+    +--------+    +--------+             |  |
+|  |  | S3     |--->| Lambda |--->|Process |--->| S3 /   |             |  |
+|  |  | Bucket |    |Trigger |    | Image  |    |DynamoDB|             |  |
+|  |  +--------+    +--------+    +--------+    +--------+             |  |
+|  |                                                                   |  |
+|  |  Use case: Image thumbnails, video transcoding, ETL               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  PATTERN 3: SCHEDULED JOBS                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  CloudWatch Events > Lambda (cron)                             |     |
-|  |                                                                 |    |
-|  |  +----------------+    +--------+                              |     |
-|  |  | EventBridge    |--->| Lambda |--> Send reports, cleanup    |      |
-|  |  | (cron: 0 9 * *)|    |        |                              |     |
-|  |  +----------------+    +--------+                              |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  CloudWatch Events > Lambda (cron)                                |  |
+|  |                                                                   |  |
+|  |  +----------------+    +--------+                                 |  |
+|  |  | EventBridge    |--->| Lambda |--> Send reports, cleanup        |  |
+|  |  | (cron: 0 9 * *)|    |        |                                 |  |
+|  |  +----------------+    +--------+                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
 |  PATTERN 4: STREAM PROCESSING                                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Kinesis/SQS > Lambda > Real-time processing                  |      |
-|  |                                                                 |    |
-|  |  +---------+    +--------+    +--------+                      |      |
-|  |  | Kinesis |--->| Lambda |--->|Analytics|                     |      |
-|  |  | Stream  |    |        |    |  DB     |                     |      |
-|  |  +---------+    +--------+    +--------+                      |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Kinesis/SQS > Lambda > Real-time processing                      |  |
+|  |                                                                   |  |
+|  |  +---------+    +--------+    +--------+                          |  |
+|  |  | Kinesis |--->| Lambda |--->|Analytics|                         |  |
+|  |  | Stream  |    |        |    |  DB     |                         |  |
+|  |  +---------+    +--------+    +--------+                          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -353,23 +353,23 @@ commonly asked in system design interviews.
 |  Each peer is both client AND server.                                   |
 |  No central server.                                                     |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  CLIENT-SERVER:                 PEER-TO-PEER:                  |     |
-|  |                                                                 |    |
-|  |       +--------+                +----+     +----+              |     |
-|  |       | SERVER |                | P1 |<--->| P2 |              |     |
-|  |       +---+----+                +--+-+     +-+--+              |     |
-|  |      +----+----+                   |    \  /  |                 |    |
-|  |      v    v    v                   |     \/   |                 |    |
-|  |   +--+  +--+  +--+                 |     /\   |                 |    |
-|  |   |C1|  |C2|  |C3|                 |    /  \  |                 |    |
-|  |   +--+  +--+  +--+              +--v--+     +v---+             |     |
-|  |                                 | P3  |<--->| P4 |             |     |
-|  |   All clients depend            +-----+     +----+             |     |
-|  |   on server                     All peers connected            |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  CLIENT-SERVER:                 PEER-TO-PEER:                     |  |
+|  |                                                                   |  |
+|  |       +--------+                +----+     +----+                 |  |
+|  |       | SERVER |                | P1 |<--->| P2 |                 |  |
+|  |       +---+----+                +--+-+     +-+--+                 |  |
+|  |      +----+----+                   |    \  /  |                   |  |
+|  |      v    v    v                   |     \/   |                   |  |
+|  |   +--+  +--+  +--+                 |     /\   |                   |  |
+|  |   |C1|  |C2|  |C3|                 |    /  \  |                   |  |
+|  |   +--+  +--+  +--+              +--v--+     +v---+                |  |
+|  |                                 | P3  |<--->| P4 |                |  |
+|  |   All clients depend            +-----+     +----+                |  |
+|  |   on server                     All peers connected               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -395,21 +395,21 @@ commonly asked in system design interviews.
 |                                                                         |
 |  Organized structure for efficient lookups                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  DHT: Keys mapped to specific nodes using consistent hashing   |     |
-|  |                                                                 |    |
-|  |  key = hash("file.mp3")                                        |     |
-|  |  node = find_successor(key)  > Route to responsible node      |      |
-|  |                                                                 |    |
-|  |  Lookup: O(log N) hops instead of O(N) flooding               |      |
-|  |                                                                 |    |
-|  |  Examples:                                                     |     |
-|  |  * Chord: Ring-based DHT                                      |      |
-|  |  * Kademlia: Used by BitTorrent, IPFS, Ethereum               |      |
-|  |  * Pastry, Tapestry                                           |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  DHT: Keys mapped to specific nodes using consistent hashing      |  |
+|  |                                                                   |  |
+|  |  key = hash("file.mp3")                                           |  |
+|  |  node = find_successor(key)  > Route to responsible node          |  |
+|  |                                                                   |  |
+|  |  Lookup: O(log N) hops instead of O(N) flooding                   |  |
+|  |                                                                   |  |
+|  |  Examples:                                                        |  |
+|  |  * Chord: Ring-based DHT                                          |  |
+|  |  * Kademlia: Used by BitTorrent, IPFS, Ethereum                   |  |
+|  |  * Pastry, Tapestry                                               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
@@ -418,22 +418,22 @@ commonly asked in system design interviews.
 |                                                                         |
 |  Central server for coordination, P2P for data transfer                 |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  +------------------+                                          |     |
-|  |  |  Tracker/Index   |  < Knows who has what files             |      |
-|  |  |     Server       |                                          |     |
-|  |  +--------+---------+                                          |     |
-|  |           | "Who has file X?"                                  |     |
-|  |           v                                                     |    |
-|  |  +----------------+                                            |     |
-|  |  | Peer A         |<------ Direct transfer ------>| Peer B   | |     |
-|  |  | (has file)     |        (P2P, no server)       | (wants)  | |     |
-|  |  +----------------+                                +----------+|     |
-|  |                                                                 |    |
-|  |  Example: BitTorrent with tracker                             |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  +------------------+                                             |  |
+|  |  |  Tracker/Index   |  < Knows who has what files                 |  |
+|  |  |     Server       |                                             |  |
+|  |  +--------+---------+                                             |  |
+|  |           | "Who has file X?"                                     |  |
+|  |           v                                                       |  |
+|  |  +----------------+                                               |  |
+|  |  | Peer A         |<------ Direct transfer ------>| Peer B      | |  |
+|  |  | (has file)     |        (P2P, no server)       | (wants)     | |  |
+|  |  +----------------+                                +----------+   |  |
+|  |                                                                   |  |
+|  |  Example: BitTorrent with tracker                                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -445,42 +445,42 @@ commonly asked in system design interviews.
 |                                                                         |
 |  BITTORRENT ARCHITECTURE                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  KEY CONCEPTS:                                                  |    |
-|  |                                                                 |    |
-|  |  * TORRENT FILE: Metadata (file info, tracker URL, piece hashes)|    |
-|  |  * TRACKER: Coordinates peers (who has what)                   |     |
-|  |  * SWARM: All peers sharing a file                            |      |
-|  |  * SEEDER: Has complete file, only uploads                    |      |
-|  |  * LEECHER: Downloading, also uploads pieces they have        |      |
-|  |  * PIECE: File split into chunks (typically 256KB-1MB)        |      |
-|  |                                                                 |    |
-|  |  ------------------------------------------------------------  |     |
-|  |                                                                 |    |
-|  |  HOW IT WORKS:                                                  |    |
-|  |                                                                 |    |
-|  |  1. Download .torrent file (or use magnet link)               |      |
-|  |  2. Contact tracker to get list of peers                      |      |
-|  |  3. Connect to multiple peers                                 |      |
-|  |  4. Request different pieces from different peers             |      |
-|  |  5. Share pieces you have with others (tit-for-tat)          |       |
-|  |  6. Verify pieces with hash (from .torrent)                   |      |
-|  |                                                                 |    |
-|  |  +--------------------------------------------------------+   |      |
-|  |  |                                                        |   |      |
-|  |  |  File: [P1][P2][P3][P4][P5][P6][P7][P8]               |   |       |
-|  |  |                                                        |   |      |
-|  |  |  Peer A has: [P1][P2][  ][P4][  ][  ][P7][  ]          |   |      |
-|  |  |  Peer B has: [  ][P2][P3][  ][P5][  ][  ][P8]          |   |      |
-|  |  |  Peer C has: [P1][  ][  ][P4][P5][P6][  ][  ]          |   |      |
-|  |  |                                                        |   |      |
-|  |  |  You download from multiple peers simultaneously!      |   |      |
-|  |  |  Rarest piece first strategy                          |   |       |
-|  |  |                                                        |   |      |
-|  |  +--------------------------------------------------------+   |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  KEY CONCEPTS:                                                    |  |
+|  |                                                                   |  |
+|  |  * TORRENT FILE: Metadata (file info, tracker URL, piece hashes)   | |
+|  |  * TRACKER: Coordinates peers (who has what)                      |  |
+|  |  * SWARM: All peers sharing a file                                |  |
+|  |  * SEEDER: Has complete file, only uploads                        |  |
+|  |  * LEECHER: Downloading, also uploads pieces they have            |  |
+|  |  * PIECE: File split into chunks (typically 256KB-1MB)            |  |
+|  |                                                                   |  |
+|  |  ------------------------------------------------------------     |  |
+|  |                                                                   |  |
+|  |  HOW IT WORKS:                                                    |  |
+|  |                                                                   |  |
+|  |  1. Download .torrent file (or use magnet link)                   |  |
+|  |  2. Contact tracker to get list of peers                          |  |
+|  |  3. Connect to multiple peers                                     |  |
+|  |  4. Request different pieces from different peers                 |  |
+|  |  5. Share pieces you have with others (tit-for-tat)               |  |
+|  |  6. Verify pieces with hash (from .torrent)                       |  |
+|  |                                                                   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |  |                                                            |   |  |
+|  |  |  File: [P1][P2][P3][P4][P5][P6][P7][P8]                    |   |  |
+|  |  |                                                            |   |  |
+|  |  |  Peer A has: [P1][P2][  ][P4][  ][  ][P7][  ]              |   |  |
+|  |  |  Peer B has: [  ][P2][P3][  ][P5][  ][  ][P8]              |   |  |
+|  |  |  Peer C has: [P1][  ][  ][P4][P5][P6][  ][  ]              |   |  |
+|  |  |                                                            |   |  |
+|  |  |  You download from multiple peers simultaneously!          |   |  |
+|  |  |  Rarest piece first strategy                               |   |  |
+|  |  |                                                            |   |  |
+|  |  +------------------------------------------------------------+   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY P2P IS BRILLIANT FOR FILE SHARING:                                 |
 |  * More popular file = more seeders = faster download                   |
@@ -564,45 +564,45 @@ commonly asked in system design interviews.
 |  GOSSIP PROPAGATION                                                     |
 |                                                                         |
 |  Round 1: Node A has new data                                           |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |      +----+                                                    |     |
-|  |      | A* | < Has new info                                    |      |
-|  |      +----+                                                    |     |
-|  |      /    \                                                    |     |
-|  |   +----+ +----+                                               |      |
-|  |   | B  | | C  |                                               |      |
-|  |   +----+ +----+                                               |      |
-|  |   /         \                                                  |     |
-|  | +----+    +----+                                              |      |
-|  | | D  |    | E  |                                              |      |
-|  | +----+    +----+                                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |      +----+                                                       |  |
+|  |      | A* | < Has new info                                        |  |
+|  |      +----+                                                       |  |
+|  |      /    \                                                       |  |
+|  |   +----+ +----+                                                   |  |
+|  |   | B  | | C  |                                                   |  |
+|  |   +----+ +----+                                                   |  |
+|  |   /         \                                                     |  |
+|  | +----+    +----+                                                  |  |
+|  | | D  |    | E  |                                                  |  |
+|  | +----+    +----+                                                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Round 2: A gossips to B                                                |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |      +----+ --gossip--> +----+                                |      |
-|  |      | A* |             | B* | < Now B has info              |       |
-|  |      +----+             +----+                                |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |      +----+ --gossip--> +----+                                    |  |
+|  |      | A* |             | B* | < Now B has info                   |  |
+|  |      +----+             +----+                                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Round 3: A>C, B>D (parallel gossip)                                    |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |      +----+             +----+                                |      |
-|  |      | A* |--gossip-->| C* |                                 |       |
-|  |      +----+             +----+                                |      |
-|  |      +----+             +----+                                |      |
-|  |      | B* |--gossip-->| D* |                                 |       |
-|  |      +----+             +----+                                |      |
-|  |                                                                 |    |
-|  |  Exponential spread: 1 > 2 > 4 > 8 > 16...                   |       |
-|  |  Time to reach all N nodes: O(log N) rounds                  |       |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |      +----+             +----+                                    |  |
+|  |      | A* |--gossip-->| C* |                                      |  |
+|  |      +----+             +----+                                    |  |
+|  |      +----+             +----+                                    |  |
+|  |      | B* |--gossip-->| D* |                                      |  |
+|  |      +----+             +----+                                    |  |
+|  |                                                                   |  |
+|  |  Exponential spread: 1 > 2 > 4 > 8 > 16...                        |  |
+|  |  Time to reach all N nodes: O(log N) rounds                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -617,16 +617,16 @@ commonly asked in system design interviews.
 |                                                                         |
 |  Nodes exchange ENTIRE state to reconcile differences                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Node A: {key1: v1, key2: v2}                                  |     |
-|  |  Node B: {key1: v1, key3: v3}                                  |     |
-|  |                                                                 |    |
-|  |  After exchange:                                                |    |
-|  |  Node A: {key1: v1, key2: v2, key3: v3}                       |      |
-|  |  Node B: {key1: v1, key2: v2, key3: v3}                       |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Node A: {key1: v1, key2: v2}                                     |  |
+|  |  Node B: {key1: v1, key3: v3}                                     |  |
+|  |                                                                   |  |
+|  |  After exchange:                                                  |  |
+|  |  Node A: {key1: v1, key2: v2, key3: v3}                           |  |
+|  |  Node B: {key1: v1, key2: v2, key3: v3}                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USE: Data synchronization, eventual consistency                        |
 |  USED BY: Cassandra (repair), Dynamo                                    |
@@ -638,14 +638,14 @@ commonly asked in system design interviews.
 |                                                                         |
 |  Spread updates like rumors, stop after a while                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Node A: "New update: key1 = v2"                               |     |
-|  |          > Tell random peer                                    |     |
-|  |          > Keep telling until k peers already knew             |     |
-|  |          > Then stop (rumor is "dead")                        |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Node A: "New update: key1 = v2"                                  |  |
+|  |          > Tell random peer                                       |  |
+|  |          > Keep telling until k peers already knew                |  |
+|  |          > Then stop (rumor is "dead")                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USE: Fast update propagation                                           |
 |                                                                         |
@@ -656,17 +656,17 @@ commonly asked in system design interviews.
 |                                                                         |
 |  Gossip about node health/membership                                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Node A: "Node C heartbeat: 1705000000"                       |      |
-|  |  Node B: "Node C heartbeat: 1705000010"                       |      |
-|  |                                                                 |    |
-|  |  Merge: Use latest heartbeat                                   |     |
-|  |  If heartbeat too old > Mark node as failed                   |      |
-|  |                                                                 |    |
-|  |  SWIM Protocol: Suspicion > Confirm > Remove                  |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Node A: "Node C heartbeat: 1705000000"                           |  |
+|  |  Node B: "Node C heartbeat: 1705000010"                           |  |
+|  |                                                                   |  |
+|  |  Merge: Use latest heartbeat                                      |  |
+|  |  If heartbeat too old > Mark node as failed                       |  |
+|  |                                                                   |  |
+|  |  SWIM Protocol: Suspicion > Confirm > Remove                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  USED BY: Consul, Cassandra, Serf                                       |
 |                                                                         |
@@ -738,24 +738,24 @@ commonly asked in system design interviews.
 |                                                                         |
 |  ARCHITECTURE COMPARISON                                                |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |                                                                |     |
-|  |  Architecture      Best For                   Trade-off       |      |
-|  |  ------------------------------------------------------------ |      |
-|  |                                                                |     |
-|  |  Client-Server     Most web apps,             Central point   |      |
-|  |                    clear responsibility        of failure      |     |
-|  |                                                                |     |
-|  |  Serverless        Variable load,             Cold start,     |      |
-|  |                    event-driven               vendor lock-in  |      |
-|  |                                                                |     |
-|  |  P2P               File sharing,              Complex,        |      |
-|  |                    censorship resistance      NAT issues      |      |
-|  |                                                                |     |
-|  |  Gossip            Failure detection,         Eventual        |      |
-|  |  Protocol          cluster membership         consistency     |      |
-|  |                                                                |     |
-|  +----------------------------------------------------------------+     |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Architecture      Best For                   Trade-off          |   |
+|  |  ------------------------------------------------------------    |   |
+|  |                                                                  |   |
+|  |  Client-Server     Most web apps,             Central point      |   |
+|  |                    clear responsibility        of failure        |   |
+|  |                                                                  |   |
+|  |  Serverless        Variable load,             Cold start,        |   |
+|  |                    event-driven               vendor lock-in     |   |
+|  |                                                                  |   |
+|  |  P2P               File sharing,              Complex,           |   |
+|  |                    censorship resistance      NAT issues         |   |
+|  |                                                                  |   |
+|  |  Gossip            Failure detection,         Eventual           |   |
+|  |  Protocol          cluster membership         consistency        |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

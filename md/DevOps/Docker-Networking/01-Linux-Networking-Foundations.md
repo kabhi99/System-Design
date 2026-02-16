@@ -764,35 +764,35 @@ All the complexity we explored manually-Docker handles it in milliseconds!
 |                                                                         |
 |  LINUX NETWORKING BUILDING BLOCKS FOR CONTAINERS                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   NETWORK NAMESPACE                                             |    |
-|  |   * Isolated network stack                                     |     |
-|  |   * Own interfaces, routes, iptables                           |     |
-|  |   * Foundation of container isolation                          |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   VETH PAIR                                                     |    |
-|  |   * Virtual cable with two ends                                |     |
-|  |   * Connects namespaces                                        |     |
-|  |   * Always created in pairs                                    |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   LINUX BRIDGE                                                  |    |
-|  |   * Virtual Layer 2 switch                                     |     |
-|  |   * Connects multiple containers                               |     |
-|  |   * docker0 is Docker's default bridge                         |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |   IPTABLES/NAT                                                  |    |
-|  |   * MASQUERADE: Containers reach internet                      |     |
-|  |   * DNAT: Port forwarding (host:port > container:port)        |      |
-|  |   * Firewall rules for isolation                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   NETWORK NAMESPACE                                              |   |
+|  |   * Isolated network stack                                       |   |
+|  |   * Own interfaces, routes, iptables                             |   |
+|  |   * Foundation of container isolation                            |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   VETH PAIR                                                      |   |
+|  |   * Virtual cable with two ends                                  |   |
+|  |   * Connects namespaces                                          |   |
+|  |   * Always created in pairs                                      |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   LINUX BRIDGE                                                   |   |
+|  |   * Virtual Layer 2 switch                                       |   |
+|  |   * Connects multiple containers                                 |   |
+|  |   * docker0 is Docker's default bridge                           |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |   IPTABLES/NAT                                                   |   |
+|  |   * MASQUERADE: Containers reach internet                        |   |
+|  |   * DNAT: Port forwarding (host:port > container:port)           |   |
+|  |   * Firewall rules for isolation                                 |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  These four concepts form the foundation of ALL container networking.   |
 |  Docker, Kubernetes, and other container platforms all build on top     |

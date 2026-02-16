@@ -254,20 +254,20 @@ This establishes the contract between components.
 |                           USERS TABLE                                   |
 |                     (PostgreSQL - ACID required)                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column           |  Type           |  Notes                    |    |
-|  +-------------------+-----------------+---------------------------+    |
-|  |  id               |  UUID (PK)      |  Unique user identifier   |    |
-|  |  email            |  VARCHAR(255)   |  Unique, indexed          |    |
-|  |  phone            |  VARCHAR(20)    |  Unique, indexed          |    |
-|  |  name             |  VARCHAR(100)   |                           |    |
-|  |  password_hash    |  VARCHAR(255)   |  bcrypt hashed            |    |
-|  |  user_type        |  ENUM           |  'RIDER', 'DRIVER'        |    |
-|  |  status           |  ENUM           |  'ACTIVE','SUSPENDED'     |    |
-|  |  rating           |  DECIMAL(3,2)   |  4.85 (average rating)    |    |
-|  |  created_at       |  TIMESTAMP      |                           |    |
-|  |  updated_at       |  TIMESTAMP      |                           |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column           |  Type           |  Notes                     |   |
+|  +-------------------+-----------------+----------------------------+   |
+|  |  id               |  UUID (PK)      |  Unique user identifier    |   |
+|  |  email            |  VARCHAR(255)   |  Unique, indexed           |   |
+|  |  phone            |  VARCHAR(20)    |  Unique, indexed           |   |
+|  |  name             |  VARCHAR(100)   |                            |   |
+|  |  password_hash    |  VARCHAR(255)   |  bcrypt hashed             |   |
+|  |  user_type        |  ENUM           |  'RIDER', 'DRIVER'         |   |
+|  |  status           |  ENUM           |  'ACTIVE','SUSPENDED'      |   |
+|  |  rating           |  DECIMAL(3,2)   |  4.85 (average rating)     |   |
+|  |  created_at       |  TIMESTAMP      |                            |   |
+|  |  updated_at       |  TIMESTAMP      |                            |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Indexes:                                                               |
 |  * PRIMARY KEY (id)                                                     |
@@ -280,20 +280,20 @@ This establishes the contract between components.
 |                         DRIVERS TABLE                                   |
 |                    (PostgreSQL - extends Users)                         |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column              |  Type           |  Notes                 |    |
-|  +----------------------+-----------------+------------------------+    |
-|  |  id                  |  UUID (PK, FK)  |  References users.id   |    |
-|  |  license_number      |  VARCHAR(50)    |  Driving license       |    |
-|  |  license_expiry      |  DATE           |                        |    |
-|  |  vehicle_id          |  UUID (FK)      |  Current vehicle       |    |
-|  |  is_online           |  BOOLEAN        |  Currently accepting   |    |
-|  |  current_location    |  POINT          |  Last known (lat,lng)  |    |
-|  |  location_updated_at |  TIMESTAMP      |  When last updated     |    |
-|  |  acceptance_rate     |  DECIMAL(5,2)   |  % of accepted rides   |    |
-|  |  total_trips         |  INTEGER        |  Lifetime trips        |    |
-|  |  earnings_balance    |  DECIMAL(10,2)  |  Pending payout        |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column              |  Type           |  Notes                  |   |
+|  +----------------------+-----------------+-------------------------+   |
+|  |  id                  |  UUID (PK, FK)  |  References users.id    |   |
+|  |  license_number      |  VARCHAR(50)    |  Driving license        |   |
+|  |  license_expiry      |  DATE           |                         |   |
+|  |  vehicle_id          |  UUID (FK)      |  Current vehicle        |   |
+|  |  is_online           |  BOOLEAN        |  Currently accepting    |   |
+|  |  current_location    |  POINT          |  Last known (lat,lng)   |   |
+|  |  location_updated_at |  TIMESTAMP      |  When last updated      |   |
+|  |  acceptance_rate     |  DECIMAL(5,2)   |  % of accepted rides    |   |
+|  |  total_trips         |  INTEGER        |  Lifetime trips         |   |
+|  |  earnings_balance    |  DECIMAL(10,2)  |  Pending payout         |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Indexes:                                                               |
 |  * PRIMARY KEY (id)                                                     |
@@ -305,20 +305,20 @@ This establishes the contract between components.
 +-------------------------------------------------------------------------+
 |                         VEHICLES TABLE                                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column           |  Type           |  Notes                    |    |
-|  +-------------------+-----------------+---------------------------+    |
-|  |  id               |  UUID (PK)      |                           |    |
-|  |  driver_id        |  UUID (FK)      |  Owner                    |    |
-|  |  make             |  VARCHAR(50)    |  Toyota, Honda            |    |
-|  |  model            |  VARCHAR(50)    |  Camry, Civic             |    |
-|  |  year             |  INTEGER        |  2022                     |    |
-|  |  color            |  VARCHAR(30)    |  Black, White             |    |
-|  |  license_plate    |  VARCHAR(20)    |  Unique                   |    |
-|  |  vehicle_type     |  ENUM           |  'UBERX','XL','BLACK'     |    |
-|  |  capacity         |  INTEGER        |  Number of seats          |    |
-|  |  is_active        |  BOOLEAN        |  Approved for trips       |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column           |  Type           |  Notes                     |   |
+|  +-------------------+-----------------+----------------------------+   |
+|  |  id               |  UUID (PK)      |                            |   |
+|  |  driver_id        |  UUID (FK)      |  Owner                     |   |
+|  |  make             |  VARCHAR(50)    |  Toyota, Honda             |   |
+|  |  model            |  VARCHAR(50)    |  Camry, Civic              |   |
+|  |  year             |  INTEGER        |  2022                      |   |
+|  |  color            |  VARCHAR(30)    |  Black, White              |   |
+|  |  license_plate    |  VARCHAR(20)    |  Unique                    |   |
+|  |  vehicle_type     |  ENUM           |  'UBERX','XL','BLACK'      |   |
+|  |  capacity         |  INTEGER        |  Number of seats           |   |
+|  |  is_active        |  BOOLEAN        |  Approved for trips        |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -326,40 +326,40 @@ This establishes the contract between components.
 |                          RIDES TABLE                                    |
 |            (PostgreSQL - ACID critical for ride state)                  |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column              |  Type           |  Notes                 |    |
-|  +----------------------+-----------------+------------------------+    |
-|  |  id                  |  UUID (PK)      |  Ride identifier       |    |
-|  |  rider_id            |  UUID (FK)      |  Who requested         |    |
-|  |  driver_id           |  UUID (FK)      |  Assigned driver       |    |
-|  |  vehicle_type        |  ENUM           |  Requested type        |    |
-|  |  status              |  ENUM           |  See state machine     |    |
-|  |                      |                 |                        |    |
-|  |  pickup_location     |  POINT          |  (lat, lng)            |    |
-|  |  pickup_address      |  VARCHAR(255)   |  Human readable        |    |
-|  |  dropoff_location    |  POINT          |  (lat, lng)            |    |
-|  |  dropoff_address     |  VARCHAR(255)   |  Human readable        |    |
-|  |                      |                 |                        |    |
-|  |  estimated_fare      |  DECIMAL(10,2)  |  Upfront estimate      |    |
-|  |  actual_fare         |  DECIMAL(10,2)  |  Final charge          |    |
-|  |  surge_multiplier    |  DECIMAL(3,2)   |  1.0, 1.5, 2.0         |    |
-|  |                      |                 |                        |    |
-|  |  estimated_eta       |  INTEGER        |  Minutes to pickup     |    |
-|  |  estimated_duration  |  INTEGER        |  Minutes for trip      |    |
-|  |  actual_duration     |  INTEGER        |  Actual minutes        |    |
-|  |  distance_km         |  DECIMAL(8,2)   |  Trip distance         |    |
-|  |                      |                 |                        |    |
-|  |  requested_at        |  TIMESTAMP      |  When ride requested   |    |
-|  |  accepted_at         |  TIMESTAMP      |  Driver accepted       |    |
-|  |  arrived_at          |  TIMESTAMP      |  Driver at pickup      |    |
-|  |  started_at          |  TIMESTAMP      |  Trip started          |    |
-|  |  completed_at        |  TIMESTAMP      |  Trip ended            |    |
-|  |  cancelled_at        |  TIMESTAMP      |  If cancelled          |    |
-|  |  cancelled_by        |  ENUM           |  'RIDER','DRIVER'      |    |
-|  |                      |                 |                        |    |
-|  |  fence_token         |  BIGINT         |  For distributed lock  |    |
-|  |  version             |  INTEGER        |  Optimistic locking    |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column              |  Type           |  Notes                  |   |
+|  +----------------------+-----------------+-------------------------+   |
+|  |  id                  |  UUID (PK)      |  Ride identifier        |   |
+|  |  rider_id            |  UUID (FK)      |  Who requested          |   |
+|  |  driver_id           |  UUID (FK)      |  Assigned driver        |   |
+|  |  vehicle_type        |  ENUM           |  Requested type         |   |
+|  |  status              |  ENUM           |  See state machine      |   |
+|  |                      |                 |                         |   |
+|  |  pickup_location     |  POINT          |  (lat, lng)             |   |
+|  |  pickup_address      |  VARCHAR(255)   |  Human readable         |   |
+|  |  dropoff_location    |  POINT          |  (lat, lng)             |   |
+|  |  dropoff_address     |  VARCHAR(255)   |  Human readable         |   |
+|  |                      |                 |                         |   |
+|  |  estimated_fare      |  DECIMAL(10,2)  |  Upfront estimate       |   |
+|  |  actual_fare         |  DECIMAL(10,2)  |  Final charge           |   |
+|  |  surge_multiplier    |  DECIMAL(3,2)   |  1.0, 1.5, 2.0          |   |
+|  |                      |                 |                         |   |
+|  |  estimated_eta       |  INTEGER        |  Minutes to pickup      |   |
+|  |  estimated_duration  |  INTEGER        |  Minutes for trip       |   |
+|  |  actual_duration     |  INTEGER        |  Actual minutes         |   |
+|  |  distance_km         |  DECIMAL(8,2)   |  Trip distance          |   |
+|  |                      |                 |                         |   |
+|  |  requested_at        |  TIMESTAMP      |  When ride requested    |   |
+|  |  accepted_at         |  TIMESTAMP      |  Driver accepted        |   |
+|  |  arrived_at          |  TIMESTAMP      |  Driver at pickup       |   |
+|  |  started_at          |  TIMESTAMP      |  Trip started           |   |
+|  |  completed_at        |  TIMESTAMP      |  Trip ended             |   |
+|  |  cancelled_at        |  TIMESTAMP      |  If cancelled           |   |
+|  |  cancelled_by        |  ENUM           |  'RIDER','DRIVER'       |   |
+|  |                      |                 |                         |   |
+|  |  fence_token         |  BIGINT         |  For distributed lock   |   |
+|  |  version             |  INTEGER        |  Optimistic locking     |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Status ENUM values:                                                    |
 |  'REQUESTED', 'MATCHING', 'ACCEPTED', 'EN_ROUTE', 'ARRIVED',            |
@@ -377,23 +377,23 @@ This establishes the contract between components.
 +-------------------------------------------------------------------------+
 |                        PAYMENTS TABLE                                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column              |  Type           |  Notes                 |    |
-|  +----------------------+-----------------+------------------------+    |
-|  |  id                  |  UUID (PK)      |                        |    |
-|  |  ride_id             |  UUID (FK)      |  Which ride            |    |
-|  |  rider_id            |  UUID (FK)      |  Who paid              |    |
-|  |  amount              |  DECIMAL(10,2)  |  Charge amount         |    |
-|  |  currency            |  CHAR(3)        |  'USD', 'EUR'          |    |
-|  |  payment_method_id   |  UUID (FK)      |  Card/wallet used      |    |
-|  |  status              |  ENUM           |  'AUTHORIZED',         |    |
-|  |                      |                 |  'CAPTURED','FAILED'   |    |
-|  |  gateway_txn_id      |  VARCHAR(100)   |  Stripe/Braintree ID   |    |
-|  |  idempotency_key     |  VARCHAR(255)   |  UNIQUE - prevents dup |    |
-|  |  authorized_at       |  TIMESTAMP      |                        |    |
-|  |  captured_at         |  TIMESTAMP      |                        |    |
-|  |  failure_reason      |  VARCHAR(255)   |  If failed             |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column              |  Type           |  Notes                  |   |
+|  +----------------------+-----------------+-------------------------+   |
+|  |  id                  |  UUID (PK)      |                         |   |
+|  |  ride_id             |  UUID (FK)      |  Which ride             |   |
+|  |  rider_id            |  UUID (FK)      |  Who paid               |   |
+|  |  amount              |  DECIMAL(10,2)  |  Charge amount          |   |
+|  |  currency            |  CHAR(3)        |  'USD', 'EUR'           |   |
+|  |  payment_method_id   |  UUID (FK)      |  Card/wallet used       |   |
+|  |  status              |  ENUM           |  'AUTHORIZED',          |   |
+|  |                      |                 |  'CAPTURED','FAILED'    |   |
+|  |  gateway_txn_id      |  VARCHAR(100)   |  Stripe/Braintree ID    |   |
+|  |  idempotency_key     |  VARCHAR(255)   |  UNIQUE - prevents dup  |   |
+|  |  authorized_at       |  TIMESTAMP      |                         |   |
+|  |  captured_at         |  TIMESTAMP      |                         |   |
+|  |  failure_reason      |  VARCHAR(255)   |  If failed              |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  Indexes:                                                               |
 |  * PRIMARY KEY (id)                                                     |
@@ -407,17 +407,17 @@ This establishes the contract between components.
 |                    DRIVER_LOCATIONS TABLE                               |
 |              (Cassandra - High write throughput, TTL)                   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  Column           |  Type           |  Notes                    |    |
-|  +-------------------+-----------------+---------------------------+    |
-|  |  driver_id        |  UUID           |  Partition key            |    |
-|  |  timestamp        |  TIMESTAMP      |  Clustering key (DESC)    |    |
-|  |  lat              |  DOUBLE         |  Latitude                 |    |
-|  |  lng              |  DOUBLE         |  Longitude                |    |
-|  |  heading          |  DOUBLE         |  Direction (0-360)        |    |
-|  |  speed            |  DOUBLE         |  km/h                     |    |
-|  |  accuracy         |  DOUBLE         |  GPS accuracy meters      |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  Column           |  Type           |  Notes                     |   |
+|  +-------------------+-----------------+----------------------------+   |
+|  |  driver_id        |  UUID           |  Partition key             |   |
+|  |  timestamp        |  TIMESTAMP      |  Clustering key (DESC)     |   |
+|  |  lat              |  DOUBLE         |  Latitude                  |   |
+|  |  lng              |  DOUBLE         |  Longitude                 |   |
+|  |  heading          |  DOUBLE         |  Direction (0-360)         |   |
+|  |  speed            |  DOUBLE         |  km/h                      |   |
+|  |  accuracy         |  DOUBLE         |  GPS accuracy meters       |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PRIMARY KEY: (driver_id, timestamp)                                    |
 |  * Partition by driver_id - all history for one driver together         |
@@ -2030,7 +2030,7 @@ This creates a recursive spatial partitioning where nearby points often
 |                    GEOHASH ENCODING ALGORITHM                           |
 |                                                                         |
 |  public class GeohashEncoder {                                          |
-|      private static final String BASE32 = "0123456789bcdefghjkmnpqrs"+  |
+|      private static final String BASE32 = "0123456789bcdefghjkmnpqrs" + |
 |                                           "tuvwxyz";                    |
 |                                                                         |
 |      /**                                                                |
@@ -2089,18 +2089,18 @@ This creates a recursive spatial partitioning where nearby points often
 +-------------------------------------------------------------------------+
 |                    PRECISION LEVELS                                     |
 |                                                                         |
-|  +----------+------------------+-------------------------------------+  |
-|  |  Length  |  Cell Size       |  Use Case                           |  |
-|  +----------+------------------+-------------------------------------+  |
-|  |  1       |  5,000 km        |  Continent                          |  |
-|  |  2       |  1,250 km        |  Large country                      |  |
-|  |  3       |  156 km          |  State/Province                     |  |
-|  |  4       |  39 km           |  City                               |  |
-|  |  5       |  4.9 km          |  Neighborhood (Uber uses this)     |   |
-|  |  6       |  1.2 km          |  Street                             |  |
-|  |  7       |  152 m           |  Block                              |  |
-|  |  8       |  38 m            |  Building                           |  |
-|  +----------+------------------+-------------------------------------+  |
+|  +----------+------------------+--------------------------------------+ |
+|  |  Length  |  Cell Size       |  Use Case                            | |
+|  +----------+------------------+--------------------------------------+ |
+|  |  1       |  5,000 km        |  Continent                           | |
+|  |  2       |  1,250 km        |  Large country                       | |
+|  |  3       |  156 km          |  State/Province                      | |
+|  |  4       |  39 km           |  City                                | |
+|  |  5       |  4.9 km          |  Neighborhood (Uber uses this)       | |
+|  |  6       |  1.2 km          |  Street                              | |
+|  |  7       |  152 m           |  Block                               | |
+|  |  8       |  38 m            |  Building                            | |
+|  +----------+------------------+--------------------------------------+ |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2743,14 +2743,14 @@ The granularity affects concurrency, performance, and correctness.
 +-------------------------------------------------------------------------+
 |                    LOCK GRANULARITY LEVELS                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |  LEVEL        |  LOCKS           |  CONCURRENCY  |  OVERHEAD    |    |
-|  +---------------+------------------+---------------+--------------+    |
-|  |  Database     |  Entire DB       |  Very Low     |  Very Low    |    |
-|  |  Table        |  Whole table     |  Low          |  Low         |    |
-|  |  Row          |  Single row      |  High         |  Medium      |    |
-|  |  Field/Column |  Single field    |  Very High    |  High        |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |  LEVEL        |  LOCKS           |  CONCURRENCY  |  OVERHEAD     |   |
+|  +---------------+------------------+---------------+---------------+   |
+|  |  Database     |  Entire DB       |  Very Low     |  Very Low     |   |
+|  |  Table        |  Whole table     |  Low          |  Low          |   |
+|  |  Row          |  Single row      |  High         |  Medium       |   |
+|  |  Field/Column |  Single field    |  Very High    |  High         |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  TRADE-OFF: Finer granularity = more concurrency but more overhead      |
 |                                                                         |
@@ -2847,13 +2847,13 @@ understanding the RACE CONDITION you're trying to prevent.
 |  The lock protects access to a SHARED RESOURCE.                         |
 |  Identify what's being competed for:                                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  | Scenario                     | Shared Resource | Lock Needed    |    |
-|  +------------------------------+-----------------+----------------+    |
-|  | 2 riders want same driver    | The DRIVER      | Driver Lock    |    |
-|  | 2 servers update same ride   | The RIDE        | Ride Lock      |    |
-|  | 2 threads charge same ride   | The PAYMENT     | Payment Lock   |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  | Scenario                     | Shared Resource | Lock Needed     |   |
+|  +------------------------------+-----------------+-----------------+   |
+|  | 2 riders want same driver    | The DRIVER      | Driver Lock     |   |
+|  | 2 servers update same ride   | The RIDE        | Ride Lock       |   |
+|  | 2 threads charge same ride   | The PAYMENT     | Payment Lock    |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  PRINCIPLE: Lock the resource that's being COMPETED FOR.                |
 |                                                                         |
@@ -2986,34 +2986,34 @@ understanding the RACE CONDITION you're trying to prevent.
 |                                                                         |
 |  When you need a lock, ask:                                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Q1: What RESOURCE is being modified?                          |     |
-|  |      v                                                          |    |
-|  |  +-----------------------------------------------------------+ |     |
-|  |  | Ride record (status, driver_id)    > Lock: RIDE           | |     |
-|  |  | Driver availability                > Lock: DRIVER         | |     |
-|  |  | Payment record                     > Lock: PAYMENT        | |     |
-|  |  | Both ride AND driver               > Lock: BOTH           | |     |
-|  |  +-----------------------------------------------------------+ |     |
-|  |                                                                 |    |
-|  |  Q2: What is being COMPETED FOR?                               |     |
-|  |      v                                                          |    |
-|  |  +-----------------------------------------------------------+ |     |
-|  |  | Two riders want same driver         > Lock: DRIVER        | |     |
-|  |  | Two servers process same ride       > Lock: RIDE          | |     |
-|  |  | Two requests charge same payment    > Lock: PAYMENT       | |     |
-|  |  +-----------------------------------------------------------+ |     |
-|  |                                                                 |    |
-|  |  Q3: What's the SMALLEST scope that ensures correctness?       |     |
-|  |      v                                                          |    |
-|  |  +-----------------------------------------------------------+ |     |
-|  |  | Lock the specific ride, not all rides                     | |     |
-|  |  | Lock the specific driver, not all drivers                 | |     |
-|  |  | Finer granularity = more concurrency                      | |     |
-|  |  +-----------------------------------------------------------+ |     |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Q1: What RESOURCE is being modified?                            |   |
+|  |      v                                                           |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |  | Ride record (status, driver_id)    > Lock: RIDE             | |   |
+|  |  | Driver availability                > Lock: DRIVER           | |   |
+|  |  | Payment record                     > Lock: PAYMENT          | |   |
+|  |  | Both ride AND driver               > Lock: BOTH             | |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |                                                                  |   |
+|  |  Q2: What is being COMPETED FOR?                                 |   |
+|  |      v                                                           |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |  | Two riders want same driver         > Lock: DRIVER          | |   |
+|  |  | Two servers process same ride       > Lock: RIDE            | |   |
+|  |  | Two requests charge same payment    > Lock: PAYMENT         | |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |                                                                  |   |
+|  |  Q3: What's the SMALLEST scope that ensures correctness?         |   |
+|  |      v                                                           |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |  | Lock the specific ride, not all rides                       | |   |
+|  |  | Lock the specific driver, not all drivers                   | |   |
+|  |  | Finer granularity = more concurrency                        | |   |
+|  |  +-------------------------------------------------------------+ |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3027,46 +3027,46 @@ understanding the RACE CONDITION you're trying to prevent.
 |  When a ride request comes in, both locks are used at different         |
 |  stages to prevent different race conditions:                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  STEP 1: Prevent duplicate processing of same ride             |     |
-|  |  -------------------------------------------------              |    |
-|  |  Lock: "lock:ride:123"                                         |     |
-|  |  Why: If two servers both pick up this ride request,           |     |
-|  |       only one should process it.                              |     |
-|  |                                                                 |    |
-|  |  STEP 2: Find nearby available drivers                         |     |
-|  |  -------------------------------------                         |     |
-|  |  No lock needed (read operation)                               |     |
-|  |  Query Redis: GEORADIUS drivers:sf 5km                        |      |
-|  |  Get list: [D1, D2, D3, D4, D5]                                |     |
-|  |                                                                 |    |
-|  |  STEP 3: Select best driver (D1)                               |     |
-|  |  -------------------------------                               |     |
-|  |  No lock needed (calculation)                                  |     |
-|  |  Consider: ETA, rating, acceptance rate                       |      |
-|  |                                                                 |    |
-|  |  STEP 4: Reserve the driver                                    |     |
-|  |  -----------------------------                                 |     |
-|  |  Lock: "lock:driver:D1"                                       |      |
-|  |  Why: Another ride might be trying to assign D1 too.          |      |
-|  |                                                                 |    |
-|  |  While holding driver lock:                                    |     |
-|  |  - Check D1 is still available (not assigned elsewhere)       |      |
-|  |  - If yes: Mark D1 as "reserved for ride 123"                 |      |
-|  |  - If no: Release lock, try D2                                |      |
-|  |                                                                 |    |
-|  |  STEP 5: Update ride with assigned driver                      |     |
-|  |  -------------------------------------                         |     |
-|  |  Already holding ride lock from Step 1                        |      |
-|  |  UPDATE rides SET driver_id = D1, status = ACCEPTED           |      |
-|  |                                                                 |    |
-|  |  STEP 6: Release both locks                                    |     |
-|  |  ------------------------                                      |     |
-|  |  Release "lock:driver:D1"                                     |      |
-|  |  Release "lock:ride:123"                                      |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  STEP 1: Prevent duplicate processing of same ride               |   |
+|  |  -------------------------------------------------               |   |
+|  |  Lock: "lock:ride:123"                                           |   |
+|  |  Why: If two servers both pick up this ride request,             |   |
+|  |       only one should process it.                                |   |
+|  |                                                                  |   |
+|  |  STEP 2: Find nearby available drivers                           |   |
+|  |  -------------------------------------                           |   |
+|  |  No lock needed (read operation)                                 |   |
+|  |  Query Redis: GEORADIUS drivers:sf 5km                           |   |
+|  |  Get list: [D1, D2, D3, D4, D5]                                  |   |
+|  |                                                                  |   |
+|  |  STEP 3: Select best driver (D1)                                 |   |
+|  |  -------------------------------                                 |   |
+|  |  No lock needed (calculation)                                    |   |
+|  |  Consider: ETA, rating, acceptance rate                          |   |
+|  |                                                                  |   |
+|  |  STEP 4: Reserve the driver                                      |   |
+|  |  -----------------------------                                   |   |
+|  |  Lock: "lock:driver:D1"                                          |   |
+|  |  Why: Another ride might be trying to assign D1 too.             |   |
+|  |                                                                  |   |
+|  |  While holding driver lock:                                      |   |
+|  |  - Check D1 is still available (not assigned elsewhere)          |   |
+|  |  - If yes: Mark D1 as "reserved for ride 123"                    |   |
+|  |  - If no: Release lock, try D2                                   |   |
+|  |                                                                  |   |
+|  |  STEP 5: Update ride with assigned driver                        |   |
+|  |  -------------------------------------                           |   |
+|  |  Already holding ride lock from Step 1                           |   |
+|  |  UPDATE rides SET driver_id = D1, status = ACCEPTED              |   |
+|  |                                                                  |   |
+|  |  STEP 6: Release both locks                                      |   |
+|  |  ------------------------                                        |   |
+|  |  Release "lock:driver:D1"                                        |   |
+|  |  Release "lock:ride:123"                                         |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  LOCK TIMELINE:                                                         |
 |                                                                         |
@@ -3211,25 +3211,25 @@ the difference and when to use each.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +----------------+----------------------+------------------------+     |
-|  | Aspect         | Pessimistic          | Optimistic             |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Philosophy     | Assume conflict      | Assume no conflict     |     |
-|  +----------------+----------------------+------------------------+     |
-|  | When to lock   | BEFORE reading       | Don't lock at all      |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Conflict check | Upfront (blocked)    | At commit time         |     |
-|  +----------------+----------------------+------------------------+     |
-|  | On conflict    | Others wait          | Retry your work        |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Concurrency    | Lower                | Higher                 |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Latency        | Blocked waiting      | Retry if conflict      |     |
-|  +----------------+----------------------+------------------------+     |
-|  | Best for       | High contention      | Low contention         |     |
-|  |                | Expensive retries    | Cheap retries          |     |
-|  |                | Short operations     | Read-heavy workloads   |     |
-|  +----------------+----------------------+------------------------+     |
+|  +----------------+----------------------+-------------------------+    |
+|  | Aspect         | Pessimistic          | Optimistic              |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Philosophy     | Assume conflict      | Assume no conflict      |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | When to lock   | BEFORE reading       | Don't lock at all       |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Conflict check | Upfront (blocked)    | At commit time          |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | On conflict    | Others wait          | Retry your work         |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Concurrency    | Lower                | Higher                  |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Latency        | Blocked waiting      | Retry if conflict       |    |
+|  +----------------+----------------------+-------------------------+    |
+|  | Best for       | High contention      | Low contention          |    |
+|  |                | Expensive retries    | Cheap retries           |    |
+|  |                | Short operations     | Read-heavy workloads    |    |
+|  +----------------+----------------------+-------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3299,11 +3299,11 @@ the difference and when to use each.
 |                    VERSION-BASED OPTIMISTIC LOCKING                     |
 |                                                                         |
 |  SCHEMA:                                                                |
-|  +------------------------------------------------------------------+   |
-|  |  id    |  status     |  driver_id  |  fare    |  version        |    |
-|  +--------+-------------+-------------+----------+-----------------+    |
-|  |  123   |  ACCEPTED   |  D1         |  NULL    |  5              |    |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |  id    |  status     |  driver_id  |  fare    |  version          |  |
+|  +--------+-------------+-------------+----------+-------------------+  |
+|  |  123   |  ACCEPTED   |  D1         |  NULL    |  5                |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  SCENARIO: Two servers try to update ride 123's fare                    |
 |                                                                         |
@@ -3704,21 +3704,21 @@ UBER'S DEFENSE-IN-DEPTH STRATEGY:
 +-------------------------------------------------------------------------+
 |                    DISTRIBUTED LOCK SELECTION                           |
 |                                                                         |
-|  +-----------+----------+----------+-----------+-------------------+    |
-|  | Approach  | Latency  | Guaranty | Complexity| Best For          |    |
-|  +-----------+----------+----------+-----------+-------------------+    |
-|  | Database  | 5-50ms   | Strong   | Low       | Low throughput,   |    |
-|  |           |          |          |           | already have DB   |    |
-|  +-----------+----------+----------+-----------+-------------------+    |
-|  | Zookeeper | 5-20ms   | Strong   | High      | Need strong       |    |
-|  |           |          | (CP)     |           | ordering, Kafka   |    |
-|  +-----------+----------+----------+-----------+-------------------+    |
-|  | Redis     | <1ms     | Weak     | Low       | High throughput,  |    |
-|  |           |          | (AP)     |           | verify in DB  Y   |    |
-|  +-----------+----------+----------+-----------+-------------------+    |
-|  | etcd      | 5-10ms   | Strong   | Medium    | Kubernetes-style  |    |
-|  |           |          | (CP)     |           | coordination      |    |
-|  +-----------+----------+----------+-----------+-------------------+    |
+|  +-----------+----------+----------+-----------+--------------------+   |
+|  | Approach  | Latency  | Guaranty | Complexity| Best For           |   |
+|  +-----------+----------+----------+-----------+--------------------+   |
+|  | Database  | 5-50ms   | Strong   | Low       | Low throughput,    |   |
+|  |           |          |          |           | already have DB    |   |
+|  +-----------+----------+----------+-----------+--------------------+   |
+|  | Zookeeper | 5-20ms   | Strong   | High      | Need strong        |   |
+|  |           |          | (CP)     |           | ordering, Kafka    |   |
+|  +-----------+----------+----------+-----------+--------------------+   |
+|  | Redis     | <1ms     | Weak     | Low       | High throughput,   |   |
+|  |           |          | (AP)     |           | verify in DB  Y    |   |
+|  +-----------+----------+----------+-----------+--------------------+   |
+|  | etcd      | 5-10ms   | Strong   | Medium    | Kubernetes-style   |   |
+|  |           |          | (CP)     |           | coordination       |   |
+|  +-----------+----------+----------+-----------+--------------------+   |
 |                                                                         |
 |  FOR UBER:                                                              |
 |  > Redis lock for speed                                                 |
@@ -4024,15 +4024,15 @@ willing to pay, matching supply.
 |                                                                         |
 |  The surge function is PIECEWISE LINEAR (not exponential):              |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  | Demand/Supply Ratio | Surge Multiplier | What It Means         |     |
-|  +---------------------+------------------+-----------------------+     |
-|  | < 1.0               | 1.0x             | Supply exceeds demand |     |
-|  | 1.0 - 2.0           | 1.0x - 1.5x      | Light imbalance       |     |
-|  | 2.0 - 4.0           | 1.5x - 2.5x      | Moderate shortage     |     |
-|  | > 4.0               | 2.5x - 4.0x      | Severe shortage       |     |
-|  | (capped at 4.0x)    |                  |                       |     |
-|  +----------------------------------------------------------------+     |
+|  +-----------------------------------------------------------------+    |
+|  | Demand/Supply Ratio | Surge Multiplier | What It Means          |    |
+|  +---------------------+------------------+------------------------+    |
+|  | < 1.0               | 1.0x             | Supply exceeds demand  |    |
+|  | 1.0 - 2.0           | 1.0x - 1.5x      | Light imbalance        |    |
+|  | 2.0 - 4.0           | 1.5x - 2.5x      | Moderate shortage      |    |
+|  | > 4.0               | 2.5x - 4.0x      | Severe shortage        |    |
+|  | (capped at 4.0x)    |                  |                        |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 |  VISUAL: SURGE CURVE                                                    |
 |                                                                         |
@@ -4108,32 +4108,32 @@ willing to pay, matching supply.
 |                                                                         |
 |  SOLUTION: Two-Level Cache                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Level 1: REDIS CACHE                                          |     |
-|  |  Key: surge:{h3_zone_id}                                       |     |
-|  |  Value: multiplier (e.g., 1.5)                                 |     |
-|  |  TTL: 2 minutes                                                |     |
-|  |                                                                 |    |
-|  |  When rider requests fare estimate:                            |     |
-|  |  1. Convert location to H3 zone                                |     |
-|  |  2. Check Redis: GET surge:89283082837ffff                    |      |
-|  |  3. If exists, return cached value (sub-millisecond)          |      |
-|  |  4. If miss, calculate and cache                              |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Level 1: REDIS CACHE                                            |   |
+|  |  Key: surge:{h3_zone_id}                                         |   |
+|  |  Value: multiplier (e.g., 1.5)                                   |   |
+|  |  TTL: 2 minutes                                                  |   |
+|  |                                                                  |   |
+|  |  When rider requests fare estimate:                              |   |
+|  |  1. Convert location to H3 zone                                  |   |
+|  |  2. Check Redis: GET surge:89283082837ffff                       |   |
+|  |  3. If exists, return cached value (sub-millisecond)             |   |
+|  |  4. If miss, calculate and cache                                 |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
-|  +-----------------------------------------------------------------+    |
-|  |                                                                 |    |
-|  |  Level 2: BACKGROUND CALCULATION                               |     |
-|  |                                                                 |    |
-|  |  A background job recalculates surge for ALL zones every       |     |
-|  |  1-2 minutes. This ensures:                                    |     |
-|  |  * Cache is always warm                                        |     |
-|  |  * No rider ever triggers expensive calculation                |     |
-|  |  * Surge is consistent across zone (no stale data)            |      |
-|  |                                                                 |    |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  |                                                                  |   |
+|  |  Level 2: BACKGROUND CALCULATION                                 |   |
+|  |                                                                  |   |
+|  |  A background job recalculates surge for ALL zones every         |   |
+|  |  1-2 minutes. This ensures:                                      |   |
+|  |  * Cache is always warm                                          |   |
+|  |  * No rider ever triggers expensive calculation                  |   |
+|  |  * Surge is consistent across zone (no stale data)               |   |
+|  |                                                                  |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -4435,10 +4435,10 @@ There are two fundamentally different ways to coordinate a saga.
 |                      +--------------------------+--------------+        |
 |                      |                          |              |        |
 |                      v                          v              v        |
-|              +-------------+           +-------------+  +-----------+   |
-|              | Payment Svc |           | Earnings Svc|  | Notif Svc |   |
-|              | (subscribes)|           | (subscribes)|  |(subscribes|   |
-|              +------+------+           +------+------+  +-----+-----+   |
+|              +-------------+           +-------------+  +------------+  |
+|              | Payment Svc |           | Earnings Svc|  | Notif Svc  |  |
+|              | (subscribes)|           | (subscribes)|  |(subscribes |  |
+|              +------+------+           +------+------+  +-----+------+  |
 |                     |                         |               |         |
 |                     v                         v               v         |
 |              Charges rider             Credits driver    Sends email    |
@@ -4532,12 +4532,12 @@ There are two fundamentally different ways to coordinate a saga.
 |         +------------------------+------------------------+             |
 |         |                        |                        |             |
 |         v                        v                        v             |
-|  +-------------+          +-------------+          +-------------+      |
-|  | Ride Service|          |Payment Svc  |          |Earnings Svc |      |
-|  |             |          |             |          |             |      |
-|  | "Mark ride  |          | "Charge     |          | "Credit     |      |
-|  |  completed" |          |  $20"       |          |  driver $16"|      |
-|  +-------------+          +-------------+          +-------------+      |
+|  +-------------+          +-------------+          +---------------+    |
+|  | Ride Service|          |Payment Svc  |          |Earnings Svc   |    |
+|  |             |          |             |          |               |    |
+|  | "Mark ride  |          | "Charge     |          | "Credit       |    |
+|  |  completed" |          |  $20"       |          |  driver $16"  |    |
+|  +-------------+          +-------------+          +---------------+    |
 |         |                        |                        |             |
 |         | done                   | done                   | done        |
 |         +------------------------+------------------------+             |
@@ -4850,80 +4850,80 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |                                                                         |
 |  Every idempotent operation follows this pattern:                       |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 1: CHECK CACHE (Fast Path)                                |    |
-|  |  -----------------------------                                  |    |
-|  |  Look up idempotency key in Redis cache.                        |    |
-|  |  If found > Return cached result immediately (sub-millisecond)  |    |
-|  |  If not found > Continue to step 2                              |    |
-|  |                                                                  |   |
-|  |  Why cache? Most retries happen within seconds.                 |    |
-|  |  Redis lookup: < 1ms. Database lookup: 5-20ms.                  |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 1: CHECK CACHE (Fast Path)                                  |  |
+|  |  -----------------------------                                    |  |
+|  |  Look up idempotency key in Redis cache.                          |  |
+|  |  If found > Return cached result immediately (sub-millisecond)    |  |
+|  |  If not found > Continue to step 2                                |  |
+|  |                                                                   |  |
+|  |  Why cache? Most retries happen within seconds.                   |  |
+|  |  Redis lookup: < 1ms. Database lookup: 5-20ms.                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                         |                                               |
 |                         v                                               |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 2: CHECK DATABASE (Cache Miss)                            |    |
-|  |  -----------------------------------                            |    |
-|  |  Cache might have expired but operation was done.               |    |
-|  |  Query database: "Any payment with this idempotency key?"      |     |
-|  |  If found > Return result, warm the cache                      |     |
-|  |  If not found > Continue to step 3                              |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 2: CHECK DATABASE (Cache Miss)                              |  |
+|  |  -----------------------------------                              |  |
+|  |  Cache might have expired but operation was done.                 |  |
+|  |  Query database: "Any payment with this idempotency key?"         |  |
+|  |  If found > Return result, warm the cache                         |  |
+|  |  If not found > Continue to step 3                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                         |                                               |
 |                         v                                               |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 3: ACQUIRE LOCK (Prevent Race Condition)                  |    |
-|  |  ---------------------------------------------                  |    |
-|  |  What if two retries arrive simultaneously?                     |    |
-|  |  Both pass steps 1 & 2 (nothing found yet).                    |     |
-|  |  Without locking, both would process > double charge!          |     |
-|  |                                                                  |   |
-|  |  Solution: Acquire distributed lock on idempotency key.         |    |
-|  |  * First request gets lock > proceeds to step 4                |     |
-|  |  * Second request waits or fails with "in progress"            |     |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 3: ACQUIRE LOCK (Prevent Race Condition)                    |  |
+|  |  ---------------------------------------------                    |  |
+|  |  What if two retries arrive simultaneously?                       |  |
+|  |  Both pass steps 1 & 2 (nothing found yet).                       |  |
+|  |  Without locking, both would process > double charge!             |  |
+|  |                                                                   |  |
+|  |  Solution: Acquire distributed lock on idempotency key.           |  |
+|  |  * First request gets lock > proceeds to step 4                   |  |
+|  |  * Second request waits or fails with "in progress"               |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                         |                                               |
 |                         v                                               |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 4: PROCESS THE OPERATION                                  |    |
-|  |  -----------------------------                                  |    |
-|  |  Now we know: not in cache, not in DB, we have the lock.        |    |
-|  |  Safe to process. Call payment gateway, charge the card.        |    |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 4: PROCESS THE OPERATION                                    |  |
+|  |  -----------------------------                                    |  |
+|  |  Now we know: not in cache, not in DB, we have the lock.          |  |
+|  |  Safe to process. Call payment gateway, charge the card.          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                         |                                               |
 |                         v                                               |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 5: STORE RESULT                                           |    |
-|  |  ------------------                                             |    |
-|  |  Store result with idempotency key in BOTH:                     |    |
-|  |  * Database (permanent, survives cache eviction)               |     |
-|  |  * Redis cache (fast lookup for retries)                       |     |
-|  |                                                                  |   |
-|  |  CRITICAL: Store BEFORE releasing lock!                        |     |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 5: STORE RESULT                                             |  |
+|  |  ------------------                                               |  |
+|  |  Store result with idempotency key in BOTH:                       |  |
+|  |  * Database (permanent, survives cache eviction)                  |  |
+|  |  * Redis cache (fast lookup for retries)                          |  |
+|  |                                                                   |  |
+|  |  CRITICAL: Store BEFORE releasing lock!                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                         |                                               |
 |                         v                                               |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  STEP 6: RELEASE LOCK & RETURN                                  |    |
-|  |  -----------------------------                                  |    |
-|  |  Release the distributed lock.                                  |    |
-|  |  Return result to caller.                                       |    |
-|  |                                                                  |   |
-|  |  Any future requests with same key will hit cache/DB.          |     |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  STEP 6: RELEASE LOCK & RETURN                                    |  |
+|  |  -----------------------------                                    |  |
+|  |  Release the distributed lock.                                    |  |
+|  |  Return result to caller.                                         |  |
+|  |                                                                   |  |
+|  |  Any future requests with same key will hit cache/DB.             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -5001,16 +5001,16 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |                                                                         |
 |  Store the COMPLETE response, not just "done":                          |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |  Idempotency Key        |  Stored Value                       |      |
-|  +-------------------------+-------------------------------------+      |
-|  |  payment:ride_123:1     |  {                                  |      |
-|  |                         |    "status": "SUCCESS",             |      |
-|  |                         |    "transaction_id": "txn_xyz",     |      |
-|  |                         |    "amount": 20.00,                 |      |
-|  |                         |    "charged_at": "2024-01-15..."    |      |
-|  |                         |  }                                  |      |
-|  +----------------------------------------------------------------+     |
+|  +-----------------------------------------------------------------+    |
+|  |  Idempotency Key        |  Stored Value                         |    |
+|  +-------------------------+---------------------------------------+    |
+|  |  payment:ride_123:1     |  {                                    |    |
+|  |                         |    "status": "SUCCESS",               |    |
+|  |                         |    "transaction_id": "txn_xyz",       |    |
+|  |                         |    "amount": 20.00,                   |    |
+|  |                         |    "charged_at": "2024-01-15..."      |    |
+|  |                         |  }                                    |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 |  WHY STORE COMPLETE RESPONSE?                                           |
 |  * Retry should return EXACTLY what original request returned           |
@@ -5023,13 +5023,13 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |                                                                         |
 |  Store failures too!                                                    |
 |                                                                         |
-|  +----------------------------------------------------------------+     |
-|  |  payment:ride_123:1     |  {                                  |      |
-|  |                         |    "status": "FAILED",              |      |
-|  |                         |    "error": "CARD_DECLINED",        |      |
-|  |                         |    "message": "Insufficient funds"  |      |
-|  |                         |  }                                  |      |
-|  +----------------------------------------------------------------+     |
+|  +-----------------------------------------------------------------+    |
+|  |  payment:ride_123:1     |  {                                    |    |
+|  |                         |    "status": "FAILED",                |    |
+|  |                         |    "error": "CARD_DECLINED",          |    |
+|  |                         |    "message": "Insufficient funds"    |    |
+|  |                         |  }                                    |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 |  On retry, client gets same failure > knows to try different card.      |
 |  Don't retry the charge (card is still declined!).                      |
@@ -5054,14 +5054,14 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  constraint as the ultimate safety net.                                 |
 |                                                                         |
 |  PAYMENTS TABLE:                                                        |
-|  +------------------------------------------------------------------+   |
-|  |  id                 |  UUID PRIMARY KEY                         |    |
-|  |  ride_id            |  UUID NOT NULL                            |    |
-|  |  amount             |  DECIMAL(10,2)                            |    |
-|  |  status             |  VARCHAR(20)                              |    |
-|  |  idempotency_key    |  VARCHAR(255) UNIQUE  < DATABASE ENFORCED |    |
-|  |  created_at         |  TIMESTAMP                                |    |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |  id                 |  UUID PRIMARY KEY                           |  |
+|  |  ride_id            |  UUID NOT NULL                              |  |
+|  |  amount             |  DECIMAL(10,2)                              |  |
+|  |  status             |  VARCHAR(20)                                |  |
+|  |  idempotency_key    |  VARCHAR(255) UNIQUE  < DATABASE ENFORCED   |  |
+|  |  created_at         |  TIMESTAMP                                  |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  WHY THIS MATTERS:                                                      |
 |                                                                         |
@@ -5316,14 +5316,14 @@ With these constraints, we can enumerate valid orderings efficiently.
 |                                                                         |
 |  VALID orderings (P before D for each rider):                           |
 |                                                                         |
-|  +------------------------------------------------------------------+   |
-|  |  P1 > P2 > D1 > D2    Pick both, drop 1, drop 2                 |    |
-|  |  P1 > P2 > D2 > D1    Pick both, drop 2, drop 1                 |    |
-|  |  P1 > D1 > P2 > D2    Pick 1, drop 1, then pick & drop 2        |    |
-|  |  P2 > P1 > D1 > D2    Pick 2, pick 1, drop 1, drop 2            |    |
-|  |  P2 > P1 > D2 > D1    Pick 2, pick 1, drop 2, drop 1            |    |
-|  |  P2 > D2 > P1 > D1    Pick 2, drop 2, then pick & drop 1        |    |
-|  +------------------------------------------------------------------+   |
+|  +-------------------------------------------------------------------+  |
+|  |  P1 > P2 > D1 > D2    Pick both, drop 1, drop 2                   |  |
+|  |  P1 > P2 > D2 > D1    Pick both, drop 2, drop 1                   |  |
+|  |  P1 > D1 > P2 > D2    Pick 1, drop 1, then pick & drop 2          |  |
+|  |  P2 > P1 > D1 > D2    Pick 2, pick 1, drop 1, drop 2              |  |
+|  |  P2 > P1 > D2 > D1    Pick 2, pick 1, drop 2, drop 1              |  |
+|  |  P2 > D2 > P1 > D1    Pick 2, drop 2, then pick & drop 1          |  |
+|  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  INVALID orderings (D before P):                                        |
 |  X D1 > P1 > ...  (Can't drop before pickup!)                           |
@@ -5526,27 +5526,27 @@ everything would be a mistake. We use specialized storage for each use case.
 +-------------------------------------------------------------------------+
 |                    DATABASE SELECTION                                   |
 |                                                                         |
-|  +----------------+---------------+-------------------------------+     |
-|  | Data Type      | Storage       | Why This Choice               |     |
-|  +----------------+---------------+-------------------------------+     |
-|  | User profiles  | PostgreSQL    | ACID, complex queries,        |     |
-|  | Rides          |               | relationships                 |     |
-|  | Payments       |               |                               |     |
-|  +----------------+---------------+-------------------------------+     |
-|  | Driver         | Redis         | Sub-ms reads, geospatial      |     |
-|  | locations      | (GEOADD)      | queries, 1M+ writes/sec       |     |
-|  | (real-time)    |               |                               |     |
-|  +----------------+---------------+-------------------------------+     |
-|  | Location       | Cassandra     | High write throughput,        |     |
-|  | history        |               | time-series optimized,        |     |
-|  |                |               | auto-TTL                      |     |
-|  +----------------+---------------+-------------------------------+     |
-|  | Events/        | Kafka         | Durable queue, replay,        |     |
-|  | messages       |               | decoupling                    |     |
-|  +----------------+---------------+-------------------------------+     |
-|  | Session data   | Redis         | Fast access, TTL support      |     |
-|  | Surge cache    |               |                               |     |
-|  +----------------+---------------+-------------------------------+     |
+|  +----------------+---------------+--------------------------------+    |
+|  | Data Type      | Storage       | Why This Choice                |    |
+|  +----------------+---------------+--------------------------------+    |
+|  | User profiles  | PostgreSQL    | ACID, complex queries,         |    |
+|  | Rides          |               | relationships                  |    |
+|  | Payments       |               |                                |    |
+|  +----------------+---------------+--------------------------------+    |
+|  | Driver         | Redis         | Sub-ms reads, geospatial       |    |
+|  | locations      | (GEOADD)      | queries, 1M+ writes/sec        |    |
+|  | (real-time)    |               |                                |    |
+|  +----------------+---------------+--------------------------------+    |
+|  | Location       | Cassandra     | High write throughput,         |    |
+|  | history        |               | time-series optimized,         |    |
+|  |                |               | auto-TTL                       |    |
+|  +----------------+---------------+--------------------------------+    |
+|  | Events/        | Kafka         | Durable queue, replay,         |    |
+|  | messages       |               | decoupling                     |    |
+|  +----------------+---------------+--------------------------------+    |
+|  | Session data   | Redis         | Fast access, TTL support       |    |
+|  | Surge cache    |               |                                |    |
+|  +----------------+---------------+--------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -5568,18 +5568,18 @@ gracefully.
 |  * WebSocket heartbeat fails                                            |
 |                                                                         |
 |  Timeline:                                                              |
-|  +-----------------------------------------------------------------+    |
-|  | T+0s:    Last location received                                |     |
-|  | T+30s:   Warning: Check connection                             |     |
-|  | T+60s:   Mark as "potentially offline"                         |     |
-|  | T+60s:   Push notification to driver                           |     |
-|  | T+120s:  Mark ride as "DRIVER_UNREACHABLE"                     |     |
-|  |          Notify rider with options:                            |     |
-|  |          1. Wait longer                                        |     |
-|  |          2. Cancel (no charge)                                 |     |
-|  |          3. Find new driver                                    |     |
-|  | T+180s:  Auto-reassign if still offline                        |     |
-|  +-----------------------------------------------------------------+    |
+|  +------------------------------------------------------------------+   |
+|  | T+0s:    Last location received                                  |   |
+|  | T+30s:   Warning: Check connection                               |   |
+|  | T+60s:   Mark as "potentially offline"                           |   |
+|  | T+60s:   Push notification to driver                             |   |
+|  | T+120s:  Mark ride as "DRIVER_UNREACHABLE"                       |   |
+|  |          Notify rider with options:                              |   |
+|  |          1. Wait longer                                          |   |
+|  |          2. Cancel (no charge)                                   |   |
+|  |          3. Find new driver                                      |   |
+|  | T+180s:  Auto-reassign if still offline                          |   |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 |  If ride was IN_PROGRESS:                                               |
 |  * Estimate position based on last known location + route               |
@@ -5635,20 +5635,20 @@ Let's bring everything together into a complete picture.
 |                  |                                  |                   |
 |                  | (HTTPS/REST)                     | (WebSocket)       |
 |                  v                                  v                   |
-|    +---------------------------------------------------------------+    |
-|    |                     CDN (CloudFront)                          |    |
-|    |                  Map tiles, static assets                     |    |
-|    +---------------------------+-----------------------------------+    |
+|    +----------------------------------------------------------------+   |
+|    |                     CDN (CloudFront)                           |   |
+|    |                  Map tiles, static assets                      |   |
+|    +---------------------------+------------------------------------+   |
 |                                |                                        |
-|    +---------------------------v-----------------------------------+    |
-|    |                    DNS (Route53)                              |    |
-|    |               Geolocation-based routing                       |    |
-|    +---------------------------+-----------------------------------+    |
+|    +---------------------------v------------------------------------+   |
+|    |                    DNS (Route53)                               |   |
+|    |               Geolocation-based routing                        |   |
+|    +---------------------------+------------------------------------+   |
 |                                |                                        |
-|    +---------------------------v-----------------------------------+    |
-|    |              API Gateway / Load Balancer                      |    |
-|    |         Auth, Rate Limiting, SSL Termination                  |    |
-|    +---------------------------+-----------------------------------+    |
+|    +---------------------------v------------------------------------+   |
+|    |              API Gateway / Load Balancer                       |   |
+|    |         Auth, Rate Limiting, SSL Termination                   |   |
+|    +---------------------------+------------------------------------+   |
 |                                |                                        |
 |         +--------------+-------+-------+--------------+                 |
 |         v              v               v              v                 |
@@ -6147,15 +6147,15 @@ Exploit this for sharding, caching, and latency optimization.
 |  * Allows bursts (user scrolling map)                                   |
 |  * Smooth rate limiting over time                                       |
 |                                                                         |
-|  +-------------------------+----------------------------------------+   |
-|  | Endpoint                | Limit                                  |   |
-|  +-------------------------+----------------------------------------+   |
-|  | Location updates        | 1/second per driver                    |   |
-|  | Ride requests           | 5/minute per user                      |   |
-|  | Driver search           | 10/minute per user                     |   |
-|  | Price quotes            | 20/minute per user                     |   |
-|  | OTP requests            | 3/minute per phone                     |   |
-|  +-------------------------+----------------------------------------+   |
+|  +-------------------------+-----------------------------------------+  |
+|  | Endpoint                | Limit                                   |  |
+|  +-------------------------+-----------------------------------------+  |
+|  | Location updates        | 1/second per driver                     |  |
+|  | Ride requests           | 5/minute per user                       |  |
+|  | Driver search           | 10/minute per user                      |  |
+|  | Price quotes            | 20/minute per user                      |  |
+|  | OTP requests            | 3/minute per phone                      |  |
+|  +-------------------------+-----------------------------------------+  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
