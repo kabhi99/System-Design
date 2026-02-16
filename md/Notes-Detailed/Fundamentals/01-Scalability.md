@@ -575,11 +575,11 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |                                                                         |
 |  LITTLE'S LAW                                                           |
 |                                                                         |
-|                    L = L x W                                            |
+|                    L = A x W                                            |
 |                                                                         |
 |  Where:                                                                 |
 |  L = Average number of items in system (concurrent requests)            |
-|  L = Average arrival rate (requests per second)                         |
+|  A = Average arrival rate (requests per second)                         |
 |  W = Average time in system (latency)                                   |
 |                                                                         |
 |  ====================================================================   |
@@ -593,7 +593,7 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |                                                                         |
 |  Question: How many concurrent connections do you need?                 |
 |                                                                         |
-|  L = L x W = 10,000 x 0.1 = 1,000 concurrent connections                |
+|  L = A x W = 10,000 x 0.1 = 1,000 concurrent connections                |
 |                                                                         |
 |  If each server handles 100 concurrent connections:                     |
 |  You need: 1,000 / 100 = 10 servers                                     |
@@ -1141,7 +1141,7 @@ Defining and measuring reliability and performance.
 |                                                                         |
 |  LAWS & FORMULAS                                                        |
 |  ----------------                                                       |
-|  * Little's Law: L = L x W (capacity planning)                          |
+|  * Little's Law: L = A x W (capacity planning)                          |
 |  * Amdahl's Law: Sequential parts limit speedup                         |
 |  * USL: Contention + coherence limit scaling                            |
 |                                                                         |

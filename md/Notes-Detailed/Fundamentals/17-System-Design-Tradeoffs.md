@@ -489,7 +489,7 @@ informed decisions and explain your choices in interviews.
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  LITTLE'S LAW:                                                          |
-|  L = L x W                                                              |
+|  L = A x W                                                              |
 |  (Concurrent requests = Arrival rate x Average time in system)          |
 |                                                                         |
 |  To handle 1000 req/sec with 100ms latency:                             |
