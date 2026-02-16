@@ -9,35 +9,35 @@ balancing, SSL termination, and name-based virtual hosting.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHY INGRESS?                                                          |
+|  WHY INGRESS?                                                           |
 |                                                                         |
-|  Without Ingress (LoadBalancer per service):                          |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   Internet                                                      |  |
-|  |      |                                                          |  |
-|  |      +--> LB --> api-service      (costs $)                    |  |
-|  |      +--> LB --> web-service      (costs $)                    |  |
-|  |      +--> LB --> admin-service    (costs $)                    |  |
-|  |                                                                 |  |
-|  |   3 LoadBalancers = 3x cost                                    |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  Without Ingress (LoadBalancer per service):                            |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Internet                                                      |    |
+|  |      |                                                          |    |
+|  |      +--> LB --> api-service      (costs $)                    |     |
+|  |      +--> LB --> web-service      (costs $)                    |     |
+|  |      +--> LB --> admin-service    (costs $)                    |     |
+|  |                                                                 |    |
+|  |   3 LoadBalancers = 3x cost                                    |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  With Ingress (single entry point):                                   |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   Internet                                                      |  |
-|  |      |                                                          |  |
-|  |      +--> LB --> Ingress Controller                            |  |
-|  |                       |                                         |  |
-|  |                       +--> /api   > api-service                |  |
-|  |                       +--> /      > web-service                |  |
-|  |                       +--> /admin > admin-service              |  |
-|  |                                                                 |  |
-|  |   1 LoadBalancer, routes by path/host                         |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  With Ingress (single entry point):                                     |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Internet                                                      |    |
+|  |      |                                                          |    |
+|  |      +--> LB --> Ingress Controller                            |     |
+|  |                       |                                         |    |
+|  |                       +--> /api   > api-service                |     |
+|  |                       +--> /      > web-service                |     |
+|  |                       +--> /admin > admin-service              |     |
+|  |                                                                 |    |
+|  |   1 LoadBalancer, routes by path/host                         |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -45,377 +45,377 @@ balancing, SSL termination, and name-based virtual hosting.
 ### WHY INGRESS OVER LOADBALANCER? (Detailed Comparison)
 
 ```
-LOADBALANCER SERVICE - HOW IT WORKS:
--------------------------------------
+LOADBALANCER SERVICE - HOW IT WORKS:                                       
+-------------------------------------                                      
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  Each LoadBalancer Service = Cloud provisions a NEW Load Balancer     |
+|  Each LoadBalancer Service = Cloud provisions a NEW Load Balancer       |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |        INTERNET                                                 |   |
-|  |            |                                                    |   |
-|  |   +-------+-------+---------------+---------------+            |   |
-|  |   |               |               |               |            |   |
-|  |   v               v               v               v            |   |
-|  | +-----+       +-----+       +-----+       +-----+             |   |
-|  | | ELB |       | ELB |       | ELB |       | ELB |   ...       |   |
-|  | | $18 |       | $18 |       | $18 |       | $18 |             |   |
-|  | +--+--+       +--+--+       +--+--+       +--+--+             |   |
-|  |    |             |             |             |                 |   |
-|  |    v             v             v             v                 |   |
-|  | +------+     +------+     +------+     +------+              |   |
-|  | | API  |     | Web  |     |Admin |     | Auth |              |   |
-|  | | Svc  |     | Svc  |     | Svc  |     | Svc  |              |   |
-|  | +------+     +------+     +------+     +------+              |   |
-|  |                                                                 |   |
-|  |  4 services = 4 LoadBalancers = $72/month (AWS ELB)           |   |
-|  |  10 services = $180/month                                      |   |
-|  |  50 services = $900/month                                      |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |        INTERNET                                                 |    |
+|  |            |                                                    |    |
+|  |   +-------+-------+---------------+---------------+            |     |
+|  |   |               |               |               |            |     |
+|  |   v               v               v               v            |     |
+|  | +-----+       +-----+       +-----+       +-----+             |      |
+|  | | ELB |       | ELB |       | ELB |       | ELB |   ...       |      |
+|  | | $18 |       | $18 |       | $18 |       | $18 |             |      |
+|  | +--+--+       +--+--+       +--+--+       +--+--+             |      |
+|  |    |             |             |             |                 |     |
+|  |    v             v             v             v                 |     |
+|  | +------+     +------+     +------+     +------+              |       |
+|  | | API  |     | Web  |     |Admin |     | Auth |              |       |
+|  | | Svc  |     | Svc  |     | Svc  |     | Svc  |              |       |
+|  | +------+     +------+     +------+     +------+              |       |
+|  |                                                                 |    |
+|  |  4 services = 4 LoadBalancers = $72/month (AWS ELB)           |      |
+|  |  10 services = $180/month                                      |     |
+|  |  50 services = $900/month                                      |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  PROBLEMS:                                                             |
-|  * Cost: Each LB costs ~$18-25/month (AWS/GCP/Azure)                 |
-|  * IP addresses: Each LB = separate public IP                        |
-|  * No path routing: Can't route /api to one service, / to another   |
-|  * No host routing: Can't use different domains                      |
-|  * SSL: Need separate cert for each LB                               |
-|  * Management: More resources to manage                              |
-|                                                                         |
-+-------------------------------------------------------------------------+
-```
-
-```
-INGRESS - HOW IT WORKS:
------------------------
-
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  One Ingress Controller = One Load Balancer = Routes ALL traffic      |
-|                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |        INTERNET                                                 |   |
-|  |            |                                                    |   |
-|  |            v                                                    |   |
-|  |      +----------+                                              |   |
-|  |      |   ELB    |  < Only ONE LoadBalancer ($18/month)        |   |
-|  |      |   $18    |                                              |   |
-|  |      +----+-----+                                              |   |
-|  |           |                                                     |   |
-|  |           v                                                     |   |
-|  |  +--------------------------------------------------------+    |   |
-|  |  |              INGRESS CONTROLLER                         |    |   |
-|  |  |                  (NGINX/Traefik)                        |    |   |
-|  |  |                                                         |    |   |
-|  |  |  Reads Ingress rules and routes traffic:               |    |   |
-|  |  |                                                         |    |   |
-|  |  |  api.example.com     -------> api-service              |    |   |
-|  |  |  web.example.com     -------> web-service              |    |   |
-|  |  |  example.com/admin   -------> admin-service            |    |   |
-|  |  |  example.com/auth    -------> auth-service             |    |   |
-|  |  |                                                         |    |   |
-|  |  +--------------------------------------------------------+    |   |
-|  |           |        |        |        |                          |   |
-|  |           v        v        v        v                          |   |
-|  |       +------+ +------+ +------+ +------+                      |   |
-|  |       | API  | | Web  | |Admin | | Auth |                      |   |
-|  |       | Svc  | | Svc  | | Svc  | | Svc  |                      |   |
-|  |       +------+ +------+ +------+ +------+                      |   |
-|  |                                                                 |   |
-|  |  50 services = Still just $18/month!                          |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  PROBLEMS:                                                              |
+|  * Cost: Each LB costs ~$18-25/month (AWS/GCP/Azure)                    |
+|  * IP addresses: Each LB = separate public IP                           |
+|  * No path routing: Can't route /api to one service, / to another       |
+|  * No host routing: Can't use different domains                         |
+|  * SSL: Need separate cert for each LB                                  |
+|  * Management: More resources to manage                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-DETAILED COMPARISON TABLE:
---------------------------
+INGRESS - HOW IT WORKS:                                                    
+-----------------------                                                    
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  +--------------------+--------------------+------------------------+  |
-|  | Feature            | LoadBalancer       | Ingress                |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | COST               | $18-25/service     | $18-25 total           |  |
-|  |                    | (expensive!)       | (one LB for all)       |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Layer              | L4 (TCP/UDP)       | L7 (HTTP/HTTPS)        |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Path routing       | X NOT possible     | Y /api, /admin, /web  |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Host routing       | X NOT possible     | Y api.com, web.com    |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | SSL/TLS            | Per LB             | Centralized            |  |
-|  |                    | (manage many)      | (manage once)          |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | IP addresses       | One per service    | One for all            |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Protocol support   | Any TCP/UDP        | HTTP/HTTPS only        |  |
-|  |                    | (database, etc)    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | URL rewriting      | X NO               | Y YES                  |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Rate limiting      | X NO               | Y YES (annotations)    |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Authentication     | X NO               | Y YES (basic auth,    |  |
-|  |                    |                    |   OAuth, etc)          |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Header manipulation| X NO               | Y YES                  |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
-|  | Canary/Blue-Green  | X NO               | Y YES (traffic split)  |  |
-|  |                    |                    |                        |  |
-|  +--------------------+--------------------+------------------------+  |
+|  One Ingress Controller = One Load Balancer = Routes ALL traffic        |
+|                                                                         |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |        INTERNET                                                 |    |
+|  |            |                                                    |    |
+|  |            v                                                    |    |
+|  |      +----------+                                              |     |
+|  |      |   ELB    |  < Only ONE LoadBalancer ($18/month)        |      |
+|  |      |   $18    |                                              |     |
+|  |      +----+-----+                                              |     |
+|  |           |                                                     |    |
+|  |           v                                                     |    |
+|  |  +--------------------------------------------------------+    |     |
+|  |  |              INGRESS CONTROLLER                         |    |    |
+|  |  |                  (NGINX/Traefik)                        |    |    |
+|  |  |                                                         |    |    |
+|  |  |  Reads Ingress rules and routes traffic:               |    |     |
+|  |  |                                                         |    |    |
+|  |  |  api.example.com     -------> api-service              |    |     |
+|  |  |  web.example.com     -------> web-service              |    |     |
+|  |  |  example.com/admin   -------> admin-service            |    |     |
+|  |  |  example.com/auth    -------> auth-service             |    |     |
+|  |  |                                                         |    |    |
+|  |  +--------------------------------------------------------+    |     |
+|  |           |        |        |        |                          |    |
+|  |           v        v        v        v                          |    |
+|  |       +------+ +------+ +------+ +------+                      |     |
+|  |       | API  | | Web  | |Admin | | Auth |                      |     |
+|  |       | Svc  | | Svc  | | Svc  | | Svc  |                      |     |
+|  |       +------+ +------+ +------+ +------+                      |     |
+|  |                                                                 |    |
+|  |  50 services = Still just $18/month!                          |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-L4 vs L7 - WHAT DOES IT MEAN?
------------------------------
+DETAILED COMPARISON TABLE:                                                 
+--------------------------                                                 
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  L4 (LoadBalancer) - TRANSPORT LAYER                                  |
-|  ===================================                                   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Feature            | LoadBalancer       | Ingress                |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | COST               | $18-25/service     | $18-25 total           |   |
+|  |                    | (expensive!)       | (one LB for all)       |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Layer              | L4 (TCP/UDP)       | L7 (HTTP/HTTPS)        |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Path routing       | X NOT possible     | Y /api, /admin, /web  |    |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Host routing       | X NOT possible     | Y api.com, web.com    |    |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | SSL/TLS            | Per LB             | Centralized            |   |
+|  |                    | (manage many)      | (manage once)          |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | IP addresses       | One per service    | One for all            |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Protocol support   | Any TCP/UDP        | HTTP/HTTPS only        |   |
+|  |                    | (database, etc)    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | URL rewriting      | X NO               | Y YES                  |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Rate limiting      | X NO               | Y YES (annotations)    |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Authentication     | X NO               | Y YES (basic auth,    |    |
+|  |                    |                    |   OAuth, etc)          |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Header manipulation| X NO               | Y YES                  |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
+|  | Canary/Blue-Green  | X NO               | Y YES (traffic split)  |   |
+|  |                    |                    |                        |   |
+|  +--------------------+--------------------+------------------------+   |
 |                                                                         |
-|  Only sees: IP address + Port                                         |
-|  Cannot see: URL path, Host header, HTTP headers                      |
++-------------------------------------------------------------------------+
+```
+
+```
+L4 vs L7 - WHAT DOES IT MEAN?                                              
+-----------------------------                                              
+
++-------------------------------------------------------------------------+
 |                                                                         |
-|  Packet arrives: 192.168.1.10:443                                     |
-|  L4 thinks: "Port 443? Send to backend pool"                         |
+|  L4 (LoadBalancer) - TRANSPORT LAYER                                    |
+|  ===================================                                    |
 |                                                                         |
-|  +----------------------------------------------------------------+   |
-|  |                                                                |   |
-|  |  Request: GET https://api.example.com/users/123               |   |
-|  |                                                                |   |
-|  |  L4 LoadBalancer sees:                                        |   |
-|  |  +----------------------------------------------------------+ |   |
-|  |  |  Source IP: 203.0.113.50                                  | |   |
-|  |  |  Dest IP:   52.14.xxx.xxx                                | |   |
-|  |  |  Dest Port: 443                                          | |   |
-|  |  |                                                           | |   |
-|  |  |  That's ALL it knows! < Can't read URL or headers        | |   |
-|  |  +----------------------------------------------------------+ |   |
-|  |                                                                |   |
-|  +----------------------------------------------------------------+   |
+|  Only sees: IP address + Port                                           |
+|  Cannot see: URL path, Host header, HTTP headers                        |
+|                                                                         |
+|  Packet arrives: 192.168.1.10:443                                       |
+|  L4 thinks: "Port 443? Send to backend pool"                            |
+|                                                                         |
+|  +----------------------------------------------------------------+     |
+|  |                                                                |     |
+|  |  Request: GET https://api.example.com/users/123               |      |
+|  |                                                                |     |
+|  |  L4 LoadBalancer sees:                                        |      |
+|  |  +----------------------------------------------------------+ |      |
+|  |  |  Source IP: 203.0.113.50                                  | |     |
+|  |  |  Dest IP:   52.14.xxx.xxx                                | |      |
+|  |  |  Dest Port: 443                                          | |      |
+|  |  |                                                           | |     |
+|  |  |  That's ALL it knows! < Can't read URL or headers        | |      |
+|  |  +----------------------------------------------------------+ |      |
+|  |                                                                |     |
+|  +----------------------------------------------------------------+     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  L7 (Ingress) - APPLICATION LAYER                                     |
-|  ================================                                      |
+|  L7 (Ingress) - APPLICATION LAYER                                       |
+|  ================================                                       |
 |                                                                         |
-|  Sees: Everything! URL, headers, cookies, body                        |
-|  Can make smart routing decisions                                     |
+|  Sees: Everything! URL, headers, cookies, body                          |
+|  Can make smart routing decisions                                       |
 |                                                                         |
-|  +----------------------------------------------------------------+   |
-|  |                                                                |   |
-|  |  Request: GET https://api.example.com/users/123               |   |
-|  |                                                                |   |
-|  |  L7 Ingress sees:                                             |   |
-|  |  +----------------------------------------------------------+ |   |
-|  |  |  Host: api.example.com         < Can route by domain!   | |   |
-|  |  |  Path: /users/123              < Can route by path!     | |   |
-|  |  |  Method: GET                   < Can check HTTP method   | |   |
-|  |  |  Headers: Authorization: Bearer xxx                      | |   |
-|  |  |  Cookies: session=abc123                                 | |   |
-|  |  |                                                           | |   |
-|  |  |  Decision: "api.example.com + /users > api-service"      | |   |
-|  |  +----------------------------------------------------------+ |   |
-|  |                                                                |   |
-|  +----------------------------------------------------------------+   |
+|  +----------------------------------------------------------------+     |
+|  |                                                                |     |
+|  |  Request: GET https://api.example.com/users/123               |      |
+|  |                                                                |     |
+|  |  L7 Ingress sees:                                             |      |
+|  |  +----------------------------------------------------------+ |      |
+|  |  |  Host: api.example.com         < Can route by domain!   | |       |
+|  |  |  Path: /users/123              < Can route by path!     | |       |
+|  |  |  Method: GET                   < Can check HTTP method   | |      |
+|  |  |  Headers: Authorization: Bearer xxx                      | |      |
+|  |  |  Cookies: session=abc123                                 | |      |
+|  |  |                                                           | |     |
+|  |  |  Decision: "api.example.com + /users > api-service"      | |      |
+|  |  +----------------------------------------------------------+ |      |
+|  |                                                                |     |
+|  +----------------------------------------------------------------+     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-WHEN TO USE LOADBALANCER (not Ingress):
----------------------------------------
+WHEN TO USE LOADBALANCER (not Ingress):                                    
+---------------------------------------                                    
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  USE LOADBALANCER WHEN:                                                |
+|  USE LOADBALANCER WHEN:                                                 |
 |                                                                         |
-|  1. NON-HTTP TRAFFIC                                                   |
-|     * Database (MySQL: 3306, PostgreSQL: 5432)                        |
-|     * Message queues (RabbitMQ, Kafka)                                |
-|     * gRPC (if not using HTTP/2 gateway)                              |
-|     * Gaming servers (UDP)                                             |
-|     * Any TCP/UDP protocol                                            |
+|  1. NON-HTTP TRAFFIC                                                    |
+|     * Database (MySQL: 3306, PostgreSQL: 5432)                          |
+|     * Message queues (RabbitMQ, Kafka)                                  |
+|     * gRPC (if not using HTTP/2 gateway)                                |
+|     * Gaming servers (UDP)                                              |
+|     * Any TCP/UDP protocol                                              |
 |                                                                         |
-|  2. SINGLE SERVICE EXPOSED                                             |
-|     * Only one service needs external access                          |
-|     * No path/host routing needed                                     |
+|  2. SINGLE SERVICE EXPOSED                                              |
+|     * Only one service needs external access                            |
+|     * No path/host routing needed                                       |
 |                                                                         |
-|  3. PERFORMANCE CRITICAL                                               |
-|     * L4 is slightly faster (no HTTP parsing)                        |
-|     * Direct connection to backend                                    |
+|  3. PERFORMANCE CRITICAL                                                |
+|     * L4 is slightly faster (no HTTP parsing)                           |
+|     * Direct connection to backend                                      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  EXAMPLE: Database needs external access                              |
+|  EXAMPLE: Database needs external access                                |
 |                                                                         |
-|  apiVersion: v1                                                        |
-|  kind: Service                                                         |
-|  metadata:                                                             |
-|    name: postgres-external                                            |
-|  spec:                                                                 |
-|    type: LoadBalancer              # Can't use Ingress for TCP!       |
-|    selector:                                                           |
-|      app: postgres                                                    |
-|    ports:                                                              |
-|      - port: 5432                                                     |
-|        targetPort: 5432                                               |
-|                                                                         |
-+-------------------------------------------------------------------------+
-```
-
-```
-WHEN TO USE INGRESS:
---------------------
-
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  USE INGRESS WHEN:                                                     |
-|                                                                         |
-|  1. HTTP/HTTPS TRAFFIC (web apps, APIs, REST)                         |
-|                                                                         |
-|  2. MULTIPLE SERVICES need external access                            |
-|                                                                         |
-|  3. NEED PATH ROUTING                                                  |
-|     * /api > backend                                                   |
-|     * /   > frontend                                                   |
-|                                                                         |
-|  4. NEED HOST ROUTING                                                  |
-|     * api.example.com > api-service                                   |
-|     * www.example.com > web-service                                   |
-|                                                                         |
-|  5. CENTRALIZED SSL                                                    |
-|     * One place to manage certificates                                |
-|     * Let's Encrypt integration (cert-manager)                        |
-|                                                                         |
-|  6. ADVANCED FEATURES                                                  |
-|     * Rate limiting                                                    |
-|     * Authentication                                                   |
-|     * URL rewriting                                                    |
-|     * Canary deployments                                              |
+|  apiVersion: v1                                                         |
+|  kind: Service                                                          |
+|  metadata:                                                              |
+|    name: postgres-external                                              |
+|  spec:                                                                  |
+|    type: LoadBalancer              # Can't use Ingress for TCP!         |
+|    selector:                                                            |
+|      app: postgres                                                      |
+|    ports:                                                               |
+|      - port: 5432                                                       |
+|        targetPort: 5432                                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-REAL-WORLD ARCHITECTURE:
-------------------------
+WHEN TO USE INGRESS:                                                       
+--------------------                                                       
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  TYPICAL PRODUCTION SETUP                                              |
+|  USE INGRESS WHEN:                                                      |
 |                                                                         |
-|                        INTERNET                                        |
+|  1. HTTP/HTTPS TRAFFIC (web apps, APIs, REST)                           |
+|                                                                         |
+|  2. MULTIPLE SERVICES need external access                              |
+|                                                                         |
+|  3. NEED PATH ROUTING                                                   |
+|     * /api > backend                                                    |
+|     * /   > frontend                                                    |
+|                                                                         |
+|  4. NEED HOST ROUTING                                                   |
+|     * api.example.com > api-service                                     |
+|     * www.example.com > web-service                                     |
+|                                                                         |
+|  5. CENTRALIZED SSL                                                     |
+|     * One place to manage certificates                                  |
+|     * Let's Encrypt integration (cert-manager)                          |
+|                                                                         |
+|  6. ADVANCED FEATURES                                                   |
+|     * Rate limiting                                                     |
+|     * Authentication                                                    |
+|     * URL rewriting                                                     |
+|     * Canary deployments                                                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
+REAL-WORLD ARCHITECTURE:                                                   
+------------------------                                                   
+
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TYPICAL PRODUCTION SETUP                                               |
+|                                                                         |
+|                        INTERNET                                         |
 |                            |                                            |
-|            +---------------+---------------+                           |
-|            |                               |                           |
-|            v                               v                           |
-|    +--------------+              +--------------+                     |
-|    | LoadBalancer |              | LoadBalancer |                     |
-|    | (Ingress)    |              | (Database)   |                     |
-|    +------+-------+              +------+-------+                     |
-|           |                             |                              |
-|           v                             v                              |
-|    +--------------+              +--------------+                     |
-|    |   INGRESS    |              |   Postgres   |                     |
-|    |  CONTROLLER  |              |   Service    |                     |
-|    |              |              |  (TCP:5432)  |                     |
-|    |  HTTP/HTTPS  |              +--------------+                     |
-|    |  traffic     |                                                    |
-|    +------+-------+                                                    |
-|           |                                                            |
-|     +-----+-----+---------+                                           |
-|     |     |     |         |                                           |
-|     v     v     v         v                                           |
-|  +-----++-----++-----++-----+                                        |
-|  | API || Web ||Admin||Auth |  < ClusterIP services (internal)       |
-|  | Svc || Svc || Svc || Svc |                                        |
-|  +-----++-----++-----++-----+                                        |
+|            +---------------+---------------+                            |
+|            |                               |                            |
+|            v                               v                            |
+|    +--------------+              +--------------+                       |
+|    | LoadBalancer |              | LoadBalancer |                       |
+|    | (Ingress)    |              | (Database)   |                       |
+|    +------+-------+              +------+-------+                       |
+|           |                             |                               |
+|           v                             v                               |
+|    +--------------+              +--------------+                       |
+|    |   INGRESS    |              |   Postgres   |                       |
+|    |  CONTROLLER  |              |   Service    |                       |
+|    |              |              |  (TCP:5432)  |                       |
+|    |  HTTP/HTTPS  |              +--------------+                       |
+|    |  traffic     |                                                     |
+|    +------+-------+                                                     |
+|           |                                                             |
+|     +-----+-----+---------+                                             |
+|     |     |     |         |                                             |
+|     v     v     v         v                                             |
+|  +-----++-----++-----++-----+                                           |
+|  | API || Web ||Admin||Auth |  < ClusterIP services (internal)          |
+|  | Svc || Svc || Svc || Svc |                                           |
+|  +-----++-----++-----++-----+                                           |
 |                                                                         |
-|  HTTP traffic  > 1 LoadBalancer > Ingress > Many services            |
-|  Database      > 1 LoadBalancer > Direct to Postgres                 |
+|  HTTP traffic  > 1 LoadBalancer > Ingress > Many services               |
+|  Database      > 1 LoadBalancer > Direct to Postgres                    |
 |                                                                         |
-|  Cost: $36/month instead of $90+ (5 LoadBalancers)                   |
+|  Cost: $36/month instead of $90+ (5 LoadBalancers)                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-COST COMPARISON (AWS):
-----------------------
+COST COMPARISON (AWS):                                                     
+----------------------                                                     
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  10 MICROSERVICES SCENARIO                                             |
+|  10 MICROSERVICES SCENARIO                                              |
 |                                                                         |
-|  WITHOUT INGRESS:                                                      |
-|  -----------------                                                     |
-|  10 LoadBalancer services x $18/month = $180/month                    |
-|                                         = $2,160/year                  |
+|  WITHOUT INGRESS:                                                       |
+|  -----------------                                                      |
+|  10 LoadBalancer services x $18/month = $180/month                      |
+|                                         = $2,160/year                   |
 |                                                                         |
-|  WITH INGRESS:                                                         |
-|  --------------                                                        |
-|  1 LoadBalancer (for Ingress) = $18/month                             |
-|                                = $216/year                             |
+|  WITH INGRESS:                                                          |
+|  --------------                                                         |
+|  1 LoadBalancer (for Ingress) = $18/month                               |
+|                                = $216/year                              |
 |                                                                         |
-|  SAVINGS: $1,944/year (90% reduction!)                                |
+|  SAVINGS: $1,944/year (90% reduction!)                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  50 MICROSERVICES SCENARIO                                             |
+|  50 MICROSERVICES SCENARIO                                              |
 |                                                                         |
-|  WITHOUT INGRESS: 50 x $18 = $900/month = $10,800/year               |
-|  WITH INGRESS:    1 x $18 = $18/month  = $216/year                   |
+|  WITHOUT INGRESS: 50 x $18 = $900/month = $10,800/year                  |
+|  WITH INGRESS:    1 x $18 = $18/month  = $216/year                      |
 |                                                                         |
-|  SAVINGS: $10,584/year!                                             |
+|  SAVINGS: $10,584/year!                                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-SUMMARY - DECISION FLOWCHART:
------------------------------
+SUMMARY - DECISION FLOWCHART:                                              
+-----------------------------                                              
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  Is it HTTP/HTTPS traffic?                                            |
-|       |                                                                |
-|       +-- NO  ---> Use LoadBalancer (TCP/UDP needs L4)               |
-|       |            Examples: Database, Message Queue, gRPC            |
-|       |                                                                |
-|       +-- YES                                                          |
-|            |                                                           |
-|            Need path or host routing?                                 |
-|            |                                                           |
-|            +-- YES ---> Use Ingress Y                                 |
-|            |                                                           |
-|            +-- NO                                                      |
-|                 |                                                      |
-|                 Multiple services?                                    |
-|                 |                                                      |
-|                 +-- YES ---> Use Ingress (saves cost) Y              |
-|                 |                                                      |
-|                 +-- NO ---> LoadBalancer is OK                        |
-|                             (but Ingress still works)                 |
+|  Is it HTTP/HTTPS traffic?                                              |
+|       |                                                                 |
+|       +-- NO  ---> Use LoadBalancer (TCP/UDP needs L4)                  |
+|       |            Examples: Database, Message Queue, gRPC              |
+|       |                                                                 |
+|       +-- YES                                                           |
+|            |                                                            |
+|            Need path or host routing?                                   |
+|            |                                                            |
+|            +-- YES ---> Use Ingress Y                                   |
+|            |                                                            |
+|            +-- NO                                                       |
+|                 |                                                       |
+|                 Multiple services?                                      |
+|                 |                                                       |
+|                 +-- YES ---> Use Ingress (saves cost) Y                 |
+|                 |                                                       |
+|                 +-- NO ---> LoadBalancer is OK                          |
+|                             (but Ingress still works)                   |
 |                                                                         |
-|  DEFAULT RECOMMENDATION: Use Ingress for HTTP/HTTPS traffic!         |
+|  DEFAULT RECOMMENDATION: Use Ingress for HTTP/HTTPS traffic!            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -425,15 +425,15 @@ SUMMARY - DECISION FLOWCHART:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THREE WAYS TO ROUTE TRAFFIC IN INGRESS                                |
+|  THREE WAYS TO ROUTE TRAFFIC IN INGRESS                                 |
 |                                                                         |
-|  +---------------+-------------------------------------------------+   |
-|  | Routing Type  | What It Checks                                  |   |
-|  +---------------+-------------------------------------------------+   |
-|  | Host-based    | Domain name (api.example.com vs web.example.com)|   |
-|  | Path-based    | URL path (/api vs /admin vs /users)            |   |
-|  | Combined      | Both host AND path together                    |   |
-|  +---------------+-------------------------------------------------+   |
+|  +---------------+-------------------------------------------------+    |
+|  | Routing Type  | What It Checks                                  |    |
+|  +---------------+-------------------------------------------------+    |
+|  | Host-based    | Domain name (api.example.com vs web.example.com)|    |
+|  | Path-based    | URL path (/api vs /admin vs /users)            |     |
+|  | Combined      | Both host AND path together                    |     |
+|  +---------------+-------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -441,173 +441,173 @@ SUMMARY - DECISION FLOWCHART:
 ### ROUTING TYPE 1: HOST-BASED ROUTING (Virtual Hosting)
 
 ```
-CONCEPT: Route based on the DOMAIN NAME in the request
+CONCEPT: Route based on the DOMAIN NAME in the request                     
 
-Same IP, different domains > different services
+Same IP, different domains > different services                            
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  HOW HOST-BASED ROUTING WORKS                                          |
+|  HOW HOST-BASED ROUTING WORKS                                           |
 |                                                                         |
 |       User Request                          Where It Goes               |
 |       ------------                          -------------               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | api.example.com     |----------------> api-service                |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | api.example.com     |----------------> api-service                  |
+|   +---------------------+                                               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | web.example.com     |----------------> web-service                |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | web.example.com     |----------------> web-service                  |
+|   +---------------------+                                               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | admin.example.com   |----------------> admin-service              |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | admin.example.com   |----------------> admin-service                |
+|   +---------------------+                                               |
 |                                                                         |
-|   All three domains point to SAME Ingress Controller IP!              |
-|   Ingress reads "Host" header to decide routing.                      |
-|                                                                         |
-+-------------------------------------------------------------------------+
-
-HOW IT WORKS INTERNALLY:
-
-+-------------------------------------------------------------------------+
-|                                                                         |
-|   1. User types: https://api.example.com/users                        |
-|                                                                         |
-|   2. DNS resolves api.example.com > 52.14.xxx.xxx (Ingress IP)       |
-|                                                                         |
-|   3. HTTP request arrives at Ingress Controller with header:          |
-|      Host: api.example.com                                            |
-|                                                                         |
-|   4. Ingress Controller checks rules:                                 |
-|      "Host: api.example.com? > Route to api-service"                 |
-|                                                                         |
-|   5. Request forwarded to api-service                                 |
+|   All three domains point to SAME Ingress Controller IP!                |
+|   Ingress reads "Host" header to decide routing.                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
-YAML EXAMPLE:
+HOW IT WORKS INTERNALLY:                                                   
 
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: host-based-ingress
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: api.example.com          # Rule 1: API domain
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: api-service
-                port:
-                  number: 80
++-------------------------------------------------------------------------+
+|                                                                         |
+|   1. User types: https://api.example.com/users                          |
+|                                                                         |
+|   2. DNS resolves api.example.com > 52.14.xxx.xxx (Ingress IP)          |
+|                                                                         |
+|   3. HTTP request arrives at Ingress Controller with header:            |
+|      Host: api.example.com                                              |
+|                                                                         |
+|   4. Ingress Controller checks rules:                                   |
+|      "Host: api.example.com? > Route to api-service"                    |
+|                                                                         |
+|   5. Request forwarded to api-service                                   |
+|                                                                         |
++-------------------------------------------------------------------------+
 
-    - host: web.example.com          # Rule 2: Web domain
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: web-service
-                port:
-                  number: 80
+YAML EXAMPLE:                                                              
 
-    - host: admin.example.com        # Rule 3: Admin domain
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: admin-service
-                port:
-                  number: 80
+apiVersion: networking.k8s.io/v1                                           
+kind: Ingress                                                              
+metadata:                                                                  
+  name: host-based-ingress                                                 
+spec:                                                                      
+  ingressClassName: nginx                                                  
+  rules:                                                                   
+    - host: api.example.com          # Rule 1: API domain                  
+      http:                                                                
+        paths:                                                             
+          - path: /                                                        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: api-service                                          
+                port:                                                      
+                  number: 80                                               
 
-USE WHEN:
-* Different teams/services need their own subdomain
-* You want api.company.com and www.company.com
-* Multi-tenant applications
+    - host: web.example.com          # Rule 2: Web domain                  
+      http:                                                                
+        paths:                                                             
+          - path: /                                                        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: web-service                                          
+                port:                                                      
+                  number: 80                                               
+
+    - host: admin.example.com        # Rule 3: Admin domain                
+      http:                                                                
+        paths:                                                             
+          - path: /                                                        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: admin-service                                        
+                port:                                                      
+                  number: 80                                               
+
+USE WHEN:                                                                  
+* Different teams/services need their own subdomain                        
+* You want api.company.com and www.company.com                             
+* Multi-tenant applications                                                
 ```
 
 ### ROUTING TYPE 2: PATH-BASED ROUTING
 
 ```
-CONCEPT: Route based on the URL PATH in the request
+CONCEPT: Route based on the URL PATH in the request                        
 
-Same domain, different paths > different services
+Same domain, different paths > different services                          
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  HOW PATH-BASED ROUTING WORKS                                          |
+|  HOW PATH-BASED ROUTING WORKS                                           |
 |                                                                         |
 |       User Request                          Where It Goes               |
 |       ------------                          -------------               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | example.com/api     |----------------> api-service                |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | example.com/api     |----------------> api-service                  |
+|   +---------------------+                                               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | example.com/admin   |----------------> admin-service              |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | example.com/admin   |----------------> admin-service                |
+|   +---------------------+                                               |
 |                                                                         |
-|   +---------------------+                                              |
-|   | example.com/        |----------------> web-service (frontend)     |
-|   +---------------------+                                              |
+|   +---------------------+                                               |
+|   | example.com/        |----------------> web-service (frontend)       |
+|   +---------------------+                                               |
 |                                                                         |
-|   Single domain, Ingress routes by PATH!                              |
+|   Single domain, Ingress routes by PATH!                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
-YAML EXAMPLE:
+YAML EXAMPLE:                                                              
 
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: path-based-ingress
-spec:
-  ingressClassName: nginx
-  rules:
-    - host: example.com
-      http:
-        paths:
-          - path: /api                # /api/* goes to api-service
-            pathType: Prefix
-            backend:
-              service:
-                name: api-service
-                port:
-                  number: 8080
+apiVersion: networking.k8s.io/v1                                           
+kind: Ingress                                                              
+metadata:                                                                  
+  name: path-based-ingress                                                 
+spec:                                                                      
+  ingressClassName: nginx                                                  
+  rules:                                                                   
+    - host: example.com                                                    
+      http:                                                                
+        paths:                                                             
+          - path: /api                # /api/* goes to api-service         
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: api-service                                          
+                port:                                                      
+                  number: 8080                                             
 
-          - path: /admin              # /admin/* goes to admin-service
-            pathType: Prefix
-            backend:
-              service:
-                name: admin-service
-                port:
-                  number: 80
+          - path: /admin              # /admin/* goes to admin-service     
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: admin-service                                        
+                port:                                                      
+                  number: 80                                               
 
-          - path: /                   # Everything else goes to web
-            pathType: Prefix
-            backend:
-              service:
-                name: web-service
-                port:
-                  number: 80
+          - path: /                   # Everything else goes to web        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: web-service                                          
+                port:                                                      
+                  number: 80                                               
 
-  ORDER MATTERS! Most specific paths should come FIRST.
-    /api matches before / because it's more specific.
+  ORDER MATTERS! Most specific paths should come FIRST.                    
+    /api matches before / because it's more specific.                      
 
-USE WHEN:
-* Monolithic frontend with microservice backend
-* Single domain for entire application
-* Don't want to manage multiple DNS entries
+USE WHEN:                                                                  
+* Monolithic frontend with microservice backend                            
+* Single domain for entire application                                     
+* Don't want to manage multiple DNS entries                                
 ```
 
 ### PATH TYPES: Prefix vs Exact vs ImplementationSpecific
@@ -615,74 +615,74 @@ USE WHEN:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  pathType: Prefix                                                      |
+|  pathType: Prefix                                                       |
 |  ================                                                       |
 |                                                                         |
-|  Matches the path AND everything under it                             |
+|  Matches the path AND everything under it                               |
 |                                                                         |
-|  path: /api                                                            |
-|  ---------------------------------------------                         |
-|  /api        > MATCHES Y                                              |
-|  /api/       > MATCHES Y                                              |
-|  /api/users  > MATCHES Y                                              |
-|  /api/v1/orders > MATCHES Y                                           |
-|  /apikeys    > NO MATCH X (no / after api)                           |
-|  /api-docs   > NO MATCH X (no / after api)                           |
+|  path: /api                                                             |
+|  ---------------------------------------------                          |
+|  /api        > MATCHES Y                                                |
+|  /api/       > MATCHES Y                                                |
+|  /api/users  > MATCHES Y                                                |
+|  /api/v1/orders > MATCHES Y                                             |
+|  /apikeys    > NO MATCH X (no / after api)                              |
+|  /api-docs   > NO MATCH X (no / after api)                              |
 |                                                                         |
-|  NOTE: Prefix matching is based on / separated path elements         |
+|  NOTE: Prefix matching is based on / separated path elements            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  pathType: Exact                                                       |
+|  pathType: Exact                                                        |
 |  ===============                                                        |
 |                                                                         |
-|  Matches ONLY the exact path, nothing else                            |
+|  Matches ONLY the exact path, nothing else                              |
 |                                                                         |
-|  path: /api                                                            |
-|  ---------------------------------------------                         |
-|  /api        > MATCHES Y                                              |
-|  /api/       > NO MATCH X                                             |
-|  /api/users  > NO MATCH X                                             |
+|  path: /api                                                             |
+|  ---------------------------------------------                          |
+|  /api        > MATCHES Y                                                |
+|  /api/       > NO MATCH X                                               |
+|  /api/users  > NO MATCH X                                               |
 |                                                                         |
-|  USE WHEN: You want a specific endpoint only                          |
-|  Example: /health or /ready endpoints                                 |
+|  USE WHEN: You want a specific endpoint only                            |
+|  Example: /health or /ready endpoints                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  pathType: ImplementationSpecific                                      |
+|  pathType: ImplementationSpecific                                       |
 |  ================================                                       |
 |                                                                         |
-|  Matching depends on the IngressClass/Controller                      |
-|  NGINX, Traefik, HAProxy may behave differently                       |
+|  Matching depends on the IngressClass/Controller                        |
+|  NGINX, Traefik, HAProxy may behave differently                         |
 |                                                                         |
-|  AVOID this unless you need controller-specific features              |
+|  AVOID this unless you need controller-specific features                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```
-COMPARISON EXAMPLE:
+COMPARISON EXAMPLE:                                                        
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  Request URL: /api/users/123                                          |
+|  Request URL: /api/users/123                                            |
 |                                                                         |
-|  +-------------------+---------------+----------------+               |
-|  | Rule Path         | pathType      | Matches?       |               |
-|  +-------------------+---------------+----------------+               |
-|  | /api              | Prefix        | YES Y          |               |
-|  | /api              | Exact         | NO X           |               |
-|  | /api/users        | Prefix        | YES Y          |               |
-|  | /api/users        | Exact         | NO X           |               |
-|  | /api/users/123    | Exact         | YES Y          |               |
-|  | /                 | Prefix        | YES Y          |               |
-|  +-------------------+---------------+----------------+               |
+|  +-------------------+---------------+----------------+                 |
+|  | Rule Path         | pathType      | Matches?       |                 |
+|  +-------------------+---------------+----------------+                 |
+|  | /api              | Prefix        | YES Y          |                 |
+|  | /api              | Exact         | NO X           |                 |
+|  | /api/users        | Prefix        | YES Y          |                 |
+|  | /api/users        | Exact         | NO X           |                 |
+|  | /api/users/123    | Exact         | YES Y          |                 |
+|  | /                 | Prefix        | YES Y          |                 |
+|  +-------------------+---------------+----------------+                 |
 |                                                                         |
-|  Multiple rules match? > Most specific (longest) path wins!           |
+|  Multiple rules match? > Most specific (longest) path wins!             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -690,117 +690,117 @@ COMPARISON EXAMPLE:
 ### ROUTING TYPE 3: COMBINED (Host + Path)
 
 ```
-CONCEPT: Use BOTH host AND path for routing
+CONCEPT: Use BOTH host AND path for routing                                
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  COMBINED ROUTING EXAMPLE                                              |
+|  COMBINED ROUTING EXAMPLE                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |  api.example.com/v1/users  ---->  api-v1-service              |   |
-|  |  api.example.com/v2/users  ---->  api-v2-service              |   |
-|  |                                                                 |   |
-|  |  web.example.com/          ---->  frontend-service            |   |
-|  |  web.example.com/static    ---->  cdn-service                 |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  api.example.com/v1/users  ---->  api-v1-service              |      |
+|  |  api.example.com/v2/users  ---->  api-v2-service              |      |
+|  |                                                                 |    |
+|  |  web.example.com/          ---->  frontend-service            |      |
+|  |  web.example.com/static    ---->  cdn-service                 |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
-YAML EXAMPLE:
+YAML EXAMPLE:                                                              
 
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: combined-routing-ingress
-spec:
-  ingressClassName: nginx
-  rules:
-    # API domain with version paths
-    - host: api.example.com
-      http:
-        paths:
-          - path: /v1
-            pathType: Prefix
-            backend:
-              service:
-                name: api-v1-service
-                port:
-                  number: 80
-          - path: /v2
-            pathType: Prefix
-            backend:
-              service:
-                name: api-v2-service
-                port:
-                  number: 80
+apiVersion: networking.k8s.io/v1                                           
+kind: Ingress                                                              
+metadata:                                                                  
+  name: combined-routing-ingress                                           
+spec:                                                                      
+  ingressClassName: nginx                                                  
+  rules:                                                                   
+    # API domain with version paths                                        
+    - host: api.example.com                                                
+      http:                                                                
+        paths:                                                             
+          - path: /v1                                                      
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: api-v1-service                                       
+                port:                                                      
+                  number: 80                                               
+          - path: /v2                                                      
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: api-v2-service                                       
+                port:                                                      
+                  number: 80                                               
 
-    # Web domain with different paths
-    - host: web.example.com
-      http:
-        paths:
-          - path: /static
-            pathType: Prefix
-            backend:
-              service:
-                name: cdn-service
-                port:
-                  number: 80
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: frontend-service
-                port:
-                  number: 80
+    # Web domain with different paths                                      
+    - host: web.example.com                                                
+      http:                                                                
+        paths:                                                             
+          - path: /static                                                  
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: cdn-service                                          
+                port:                                                      
+                  number: 80                                               
+          - path: /                                                        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: frontend-service                                     
+                port:                                                      
+                  number: 80                                               
 
-USE WHEN:
-* API versioning (v1, v2) on same domain
-* Complex microservice architectures
-* Need fine-grained control
+USE WHEN:                                                                  
+* API versioning (v1, v2) on same domain                                   
+* Complex microservice architectures                                       
+* Need fine-grained control                                                
 ```
 
 ### DEFAULT BACKEND (Catch-All)
 
 ```
-CONCEPT: Handle requests that don't match any rule
+CONCEPT: Handle requests that don't match any rule                         
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  If NO host and NO path matches > defaultBackend handles it           |
+|  If NO host and NO path matches > defaultBackend handles it             |
 |                                                                         |
-|  Useful for:                                                           |
-|  * Custom 404 pages                                                    |
-|  * Catch-all service                                                   |
-|  * Health checks                                                       |
+|  Useful for:                                                            |
+|  * Custom 404 pages                                                     |
+|  * Catch-all service                                                    |
+|  * Health checks                                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
-YAML:
+YAML:                                                                      
 
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: ingress-with-default
-spec:
-  ingressClassName: nginx
-  defaultBackend:                    # Catch-all
-    service:
-      name: default-service
-      port:
-        number: 80
-  rules:
-    - host: api.example.com
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: api-service
-                port:
-                  number: 80
+apiVersion: networking.k8s.io/v1                                           
+kind: Ingress                                                              
+metadata:                                                                  
+  name: ingress-with-default                                               
+spec:                                                                      
+  ingressClassName: nginx                                                  
+  defaultBackend:                    # Catch-all                           
+    service:                                                               
+      name: default-service                                                
+      port:                                                                
+        number: 80                                                         
+  rules:                                                                   
+    - host: api.example.com                                                
+      http:                                                                
+        paths:                                                             
+          - path: /                                                        
+            pathType: Prefix                                               
+            backend:                                                       
+              service:                                                     
+                name: api-service                                          
+                port:                                                      
+                  number: 80                                               
 ```
 
 ### ROUTING COMPARISON SUMMARY
@@ -808,47 +808,47 @@ spec:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHEN TO USE WHAT                                                      |
+|  WHEN TO USE WHAT                                                       |
 |                                                                         |
-|  +--------------+---------------------------------------------------+  |
-|  | Scenario     | Routing Type                                      |  |
-|  +--------------+---------------------------------------------------+  |
-|  | Different    | HOST-BASED                                        |  |
-|  | subdomains   | api.example.com, web.example.com                 |  |
-|  | for services |                                                   |  |
-|  +--------------+---------------------------------------------------+  |
-|  | Single domain| PATH-BASED                                        |  |
-|  | multiple     | example.com/api, example.com/admin               |  |
-|  | services     |                                                   |  |
-|  +--------------+---------------------------------------------------+  |
-|  | API version- | COMBINED                                          |  |
-|  | ing + multiple| api.example.com/v1, api.example.com/v2          |  |
-|  | services     |                                                   |  |
-|  +--------------+---------------------------------------------------+  |
-|  | Exact        | pathType: Exact                                   |  |
-|  | endpoints    | /health, /ready, /metrics                        |  |
-|  +--------------+---------------------------------------------------+  |
-|  | Wildcard     | pathType: Prefix                                  |  |
-|  | paths        | /api/* matches /api/users, /api/orders           |  |
-|  +--------------+---------------------------------------------------+  |
+|  +--------------+---------------------------------------------------+   |
+|  | Scenario     | Routing Type                                      |   |
+|  +--------------+---------------------------------------------------+   |
+|  | Different    | HOST-BASED                                        |   |
+|  | subdomains   | api.example.com, web.example.com                 |    |
+|  | for services |                                                   |   |
+|  +--------------+---------------------------------------------------+   |
+|  | Single domain| PATH-BASED                                        |   |
+|  | multiple     | example.com/api, example.com/admin               |    |
+|  | services     |                                                   |   |
+|  +--------------+---------------------------------------------------+   |
+|  | API version- | COMBINED                                          |   |
+|  | ing + multiple| api.example.com/v1, api.example.com/v2          |    |
+|  | services     |                                                   |   |
+|  +--------------+---------------------------------------------------+   |
+|  | Exact        | pathType: Exact                                   |   |
+|  | endpoints    | /health, /ready, /metrics                        |    |
+|  +--------------+---------------------------------------------------+   |
+|  | Wildcard     | pathType: Prefix                                  |   |
+|  | paths        | /api/* matches /api/users, /api/orders           |    |
+|  +--------------+---------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```bash
-QUICK COMMANDS:
----------------
+QUICK COMMANDS:                                                        
+---------------                                                        
 
-# List all ingress
-kubectl get ingress
+# List all ingress                                                     
+kubectl get ingress                                                    
 
-# Describe ingress (see rules)
-kubectl describe ingress <name>
+# Describe ingress (see rules)                                         
+kubectl describe ingress <name>                                        
 
-# Get ingress with details
-kubectl get ingress -o wide
+# Get ingress with details                                             
+kubectl get ingress -o wide                                            
 
-# Test routing (from inside cluster)
+# Test routing (from inside cluster)                                   
 kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 ```
 
@@ -857,79 +857,79 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  BASIC INGRESS                                                         |
+|  BASIC INGRESS                                                          |
 |  =============                                                          |
 |                                                                         |
-|  apiVersion: networking.k8s.io/v1                                     |
+|  apiVersion: networking.k8s.io/v1                                       |
 |  kind: Ingress                                                          |
 |  metadata:                                                              |
-|    name: my-ingress                                                    |
+|    name: my-ingress                                                     |
 |  spec:                                                                  |
-|    ingressClassName: nginx                                             |
+|    ingressClassName: nginx                                              |
 |    rules:                                                               |
-|      - host: myapp.example.com                                        |
+|      - host: myapp.example.com                                          |
 |        http:                                                            |
 |          paths:                                                         |
-|            - path: /                                                   |
-|              pathType: Prefix                                          |
+|            - path: /                                                    |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: web-service                                     |
+|                  name: web-service                                      |
 |                  port:                                                  |
-|                    number: 80                                          |
+|                    number: 80                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  PATH-BASED ROUTING                                                    |
+|  PATH-BASED ROUTING                                                     |
 |  ===================                                                    |
 |                                                                         |
 |  spec:                                                                  |
 |    rules:                                                               |
-|      - host: myapp.example.com                                        |
+|      - host: myapp.example.com                                          |
 |        http:                                                            |
 |          paths:                                                         |
-|            - path: /api                                               |
-|              pathType: Prefix                                          |
+|            - path: /api                                                 |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: api-service                                     |
+|                  name: api-service                                      |
 |                  port:                                                  |
-|                    number: 8080                                        |
-|            - path: /                                                   |
-|              pathType: Prefix                                          |
+|                    number: 8080                                         |
+|            - path: /                                                    |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: web-service                                     |
+|                  name: web-service                                      |
 |                  port:                                                  |
-|                    number: 80                                          |
+|                    number: 80                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  HOST-BASED ROUTING                                                    |
+|  HOST-BASED ROUTING                                                     |
 |  ===================                                                    |
 |                                                                         |
 |  spec:                                                                  |
 |    rules:                                                               |
-|      - host: api.example.com                                          |
+|      - host: api.example.com                                            |
 |        http:                                                            |
 |          paths:                                                         |
-|            - path: /                                                   |
-|              pathType: Prefix                                          |
+|            - path: /                                                    |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: api-service                                     |
+|                  name: api-service                                      |
 |                  port:                                                  |
-|                    number: 80                                          |
-|      - host: web.example.com                                          |
+|                    number: 80                                           |
+|      - host: web.example.com                                            |
 |        http:                                                            |
 |          paths:                                                         |
-|            - path: /                                                   |
-|              pathType: Prefix                                          |
+|            - path: /                                                    |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: web-service                                     |
+|                  name: web-service                                      |
 |                  port:                                                  |
-|                    number: 80                                          |
+|                    number: 80                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -939,34 +939,34 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  TLS TERMINATION                                                       |
+|  TLS TERMINATION                                                        |
 |  ===============                                                        |
 |                                                                         |
-|  # Create TLS secret                                                   |
-|  kubectl create secret tls my-tls \                                   |
-|    --cert=tls.crt --key=tls.key                                       |
+|  # Create TLS secret                                                    |
+|  kubectl create secret tls my-tls \                                     |
+|    --cert=tls.crt --key=tls.key                                         |
 |                                                                         |
-|  # Ingress with TLS                                                    |
-|  apiVersion: networking.k8s.io/v1                                     |
+|  # Ingress with TLS                                                     |
+|  apiVersion: networking.k8s.io/v1                                       |
 |  kind: Ingress                                                          |
 |  metadata:                                                              |
-|    name: tls-ingress                                                   |
+|    name: tls-ingress                                                    |
 |  spec:                                                                  |
 |    tls:                                                                 |
 |      - hosts:                                                           |
-|          - myapp.example.com                                          |
-|        secretName: my-tls                                              |
+|          - myapp.example.com                                            |
+|        secretName: my-tls                                               |
 |    rules:                                                               |
-|      - host: myapp.example.com                                        |
+|      - host: myapp.example.com                                          |
 |        http:                                                            |
 |          paths:                                                         |
-|            - path: /                                                   |
-|              pathType: Prefix                                          |
+|            - path: /                                                    |
+|              pathType: Prefix                                           |
 |              backend:                                                   |
 |                service:                                                 |
-|                  name: web-service                                     |
+|                  name: web-service                                      |
 |                  port:                                                  |
-|                    number: 80                                          |
+|                    number: 80                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -976,26 +976,26 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  POPULAR CONTROLLERS                                                   |
+|  POPULAR CONTROLLERS                                                    |
 |                                                                         |
-|  * NGINX Ingress Controller (most common)                            |
-|  * Traefik                                                            |
-|  * HAProxy                                                            |
-|  * AWS ALB Ingress Controller                                        |
-|  * GKE Ingress Controller                                            |
+|  * NGINX Ingress Controller (most common)                               |
+|  * Traefik                                                              |
+|  * HAProxy                                                              |
+|  * AWS ALB Ingress Controller                                           |
+|  * GKE Ingress Controller                                               |
 |                                                                         |
-|  INSTALL NGINX INGRESS                                                |
-|  ======================                                                |
+|  INSTALL NGINX INGRESS                                                  |
+|  ======================                                                 |
 |                                                                         |
-|  # Using Helm                                                          |
-|  helm repo add ingress-nginx \                                        |
-|    https://kubernetes.github.io/ingress-nginx                         |
-|  helm install ingress-nginx ingress-nginx/ingress-nginx              |
+|  # Using Helm                                                           |
+|  helm repo add ingress-nginx \                                          |
+|    https://kubernetes.github.io/ingress-nginx                           |
+|  helm install ingress-nginx ingress-nginx/ingress-nginx                 |
 |                                                                         |
-|  # Or kubectl                                                          |
+|  # Or kubectl                                                           |
 |  kubectl apply -f \                                                     |
-|    https://raw.githubusercontent.com/kubernetes/ingress-nginx/\       |
-|    controller-v1.8.0/deploy/static/provider/cloud/deploy.yaml        |
+|    https://raw.githubusercontent.com/kubernetes/ingress-nginx/\         |
+|    controller-v1.8.0/deploy/static/provider/cloud/deploy.yaml           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1005,22 +1005,22 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  INGRESS - KEY TAKEAWAYS                                              |
+|  INGRESS - KEY TAKEAWAYS                                                |
 |                                                                         |
-|  COMPONENTS                                                            |
-|  ----------                                                            |
-|  * Ingress Resource: Routing rules                                   |
-|  * Ingress Controller: Implements rules                              |
+|  COMPONENTS                                                             |
+|  ----------                                                             |
+|  * Ingress Resource: Routing rules                                      |
+|  * Ingress Controller: Implements rules                                 |
 |                                                                         |
-|  ROUTING                                                               |
-|  -------                                                               |
-|  * Path-based: /api > api-service                                   |
-|  * Host-based: api.example.com > api-service                        |
+|  ROUTING                                                                |
+|  -------                                                                |
+|  * Path-based: /api > api-service                                       |
+|  * Host-based: api.example.com > api-service                            |
 |                                                                         |
-|  TLS                                                                   |
-|  ---                                                                   |
-|  * Create TLS secret with cert/key                                   |
-|  * Reference in spec.tls                                             |
+|  TLS                                                                    |
+|  ---                                                                    |
+|  * Create TLS secret with cert/key                                      |
+|  * Reference in spec.tls                                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

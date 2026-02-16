@@ -14,16 +14,16 @@ A Dockerfile is a recipe for creating Docker images:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKERFILE > docker build > IMAGE > docker run > CONTAINER           |
+|  DOCKERFILE > docker build > IMAGE > docker run > CONTAINER             |
 |                                                                         |
-|  +----------------+      +----------------+      +----------------+   |
-|  |   Dockerfile   |      |     Image      |      |   Container    |   |
-|  |                |      |                |      |                |   |
-|  |  FROM node:16  |----->|   my-app:v1   |----->|   Running app  |   |
-|  |  COPY . .      |      |                |      |                |   |
-|  |  RUN npm i     |      |    (layers)    |      |   (process)    |   |
-|  |  CMD npm start |      |                |      |                |   |
-|  +----------------+      +----------------+      +----------------+   |
+|  +----------------+      +----------------+      +----------------+     |
+|  |   Dockerfile   |      |     Image      |      |   Container    |     |
+|  |                |      |                |      |                |     |
+|  |  FROM node:16  |----->|   my-app:v1   |----->|   Running app  |      |
+|  |  COPY . .      |      |                |      |                |     |
+|  |  RUN npm i     |      |    (layers)    |      |   (process)    |     |
+|  |  CMD npm start |      |                |      |                |     |
+|  +----------------+      +----------------+      +----------------+     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -31,17 +31,17 @@ A Dockerfile is a recipe for creating Docker images:
 ### DOCKERFILE STRUCTURE
 
 ```bash
-# Comment
+# Comment            
 INSTRUCTION arguments
 
-# Example Dockerfile
-FROM node:16-alpine
-WORKDIR /app
+# Example Dockerfile 
+FROM node:16-alpine  
+WORKDIR /app         
 COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
+RUN npm install      
+COPY . .             
+EXPOSE 3000          
+CMD ["npm", "start"] 
 ```
 
 **KEY RULES:**
@@ -57,37 +57,37 @@ CMD ["npm", "start"]
 Every Dockerfile must start with FROM (except ARG before it):
 
 ```
-FROM image:tag
+FROM image:tag                                                             
 
-EXAMPLES:
-FROM ubuntu:20.04           # Specific version
-FROM python:3.9-slim        # Slim variant (smaller)
-FROM node:16-alpine         # Alpine-based (smallest)
-FROM scratch                # Empty base (for static binaries)
+EXAMPLES:                                                                  
+FROM ubuntu:20.04           # Specific version                             
+FROM python:3.9-slim        # Slim variant (smaller)                       
+FROM node:16-alpine         # Alpine-based (smallest)                      
+FROM scratch                # Empty base (for static binaries)             
 
-MULTI-STAGE (multiple FROM):
-FROM node:16 AS builder
-# ... build steps
-FROM nginx:alpine
-# ... copy from builder
+MULTI-STAGE (multiple FROM):                                               
+FROM node:16 AS builder                                                    
+# ... build steps                                                          
+FROM nginx:alpine                                                          
+# ... copy from builder                                                    
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CHOOSING BASE IMAGES                                                  |
+|  CHOOSING BASE IMAGES                                                   |
 |                                                                         |
-|  IMAGE TYPE          SIZE        USE CASE                              |
-|  ---------------------------------------------------------             |
-|  ubuntu:20.04        ~72MB       Full OS, debugging                   |
-|  python:3.9          ~900MB      Full Python with build tools         |
-|  python:3.9-slim     ~120MB      Python without extras                |
-|  python:3.9-alpine   ~50MB       Smallest, musl libc (compatibility?) |
-|  node:16             ~900MB      Full Node.js                         |
-|  node:16-slim        ~200MB      Node.js without extras               |
-|  node:16-alpine      ~110MB      Smallest Node.js                     |
-|  alpine              ~5MB        Minimal Linux                        |
-|  scratch             0MB         Empty (for Go/Rust static binaries)  |
+|  IMAGE TYPE          SIZE        USE CASE                               |
+|  ---------------------------------------------------------              |
+|  ubuntu:20.04        ~72MB       Full OS, debugging                     |
+|  python:3.9          ~900MB      Full Python with build tools           |
+|  python:3.9-slim     ~120MB      Python without extras                  |
+|  python:3.9-alpine   ~50MB       Smallest, musl libc (compatibility?)   |
+|  node:16             ~900MB      Full Node.js                           |
+|  node:16-slim        ~200MB      Node.js without extras                 |
+|  node:16-alpine      ~110MB      Smallest Node.js                       |
+|  alpine              ~5MB        Minimal Linux                          |
+|  scratch             0MB         Empty (for Go/Rust static binaries)    |
 |                                                                         |
-|  TIP: Start with -slim or -alpine variants for production             |
+|  TIP: Start with -slim or -alpine variants for production               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -97,40 +97,40 @@ FROM nginx:alpine
 RUN executes commands and creates a new layer:
 
 ```
-# Shell form (runs in /bin/sh -c)
-RUN apt-get update && apt-get install -y nginx
+# Shell form (runs in /bin/sh -c)                                          
+RUN apt-get update && apt-get install -y nginx                             
 
-# Exec form (runs directly)
-RUN ["apt-get", "update"]
+# Exec form (runs directly)                                                
+RUN ["apt-get", "update"]                                                  
 
-BEST PRACTICES:
+BEST PRACTICES:                                                            
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  COMBINE COMMANDS (fewer layers):                                      |
+|  COMBINE COMMANDS (fewer layers):                                       |
 |                                                                         |
-|  BAD (3 layers):                                                       |
-|  RUN apt-get update                                                   |
-|  RUN apt-get install -y nginx                                         |
-|  RUN apt-get clean                                                    |
+|  BAD (3 layers):                                                        |
+|  RUN apt-get update                                                     |
+|  RUN apt-get install -y nginx                                           |
+|  RUN apt-get clean                                                      |
 |                                                                         |
-|  GOOD (1 layer):                                                       |
-|  RUN apt-get update && \                                              |
-|      apt-get install -y nginx && \                                    |
-|      apt-get clean && \                                               |
-|      rm -rf /var/lib/apt/lists/*                                      |
+|  GOOD (1 layer):                                                        |
+|  RUN apt-get update && \                                                |
+|      apt-get install -y nginx && \                                      |
+|      apt-get clean && \                                                 |
+|      rm -rf /var/lib/apt/lists/*                                        |
 |                                                                         |
-|  --------------------------------------------------------------------  |
+|  --------------------------------------------------------------------   |
 |                                                                         |
-|  CLEAN UP IN SAME LAYER:                                               |
+|  CLEAN UP IN SAME LAYER:                                                |
 |                                                                         |
-|  BAD (downloaded packages remain in layer):                           |
-|  RUN apt-get update && apt-get install -y nginx                       |
-|  RUN rm -rf /var/lib/apt/lists/*   # Still in previous layer!        |
+|  BAD (downloaded packages remain in layer):                             |
+|  RUN apt-get update && apt-get install -y nginx                         |
+|  RUN rm -rf /var/lib/apt/lists/*   # Still in previous layer!           |
 |                                                                         |
-|  GOOD (no bloat):                                                      |
-|  RUN apt-get update && \                                              |
-|      apt-get install -y nginx && \                                    |
-|      rm -rf /var/lib/apt/lists/*                                      |
+|  GOOD (no bloat):                                                       |
+|  RUN apt-get update && \                                                |
+|      apt-get install -y nginx && \                                      |
+|      rm -rf /var/lib/apt/lists/*                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -140,32 +140,32 @@ BEST PRACTICES:
 COPY copies files from build context to image:
 
 ```dockerfile
-COPY source destination
-COPY file.txt /app/
-COPY . /app/
+COPY source destination               
+COPY file.txt /app/                   
+COPY . /app/                          
 COPY --chown=user:group file.txt /app/
 ```
 
 ADD has extra features (usually avoid):
 
 ```
-ADD source destination
-ADD https://example.com/file.tar.gz /tmp/   # Downloads from URL
-ADD archive.tar.gz /app/                     # Auto-extracts archives
+ADD source destination                                                     
+ADD https://example.com/file.tar.gz /tmp/   # Downloads from URL           
+ADD archive.tar.gz /app/                     # Auto-extracts archives      
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  COPY vs ADD                                                           |
+|  COPY vs ADD                                                            |
 |                                                                         |
-|  COPY:                                                                 |
-|  * Simple file/directory copy                                         |
-|  * Predictable behavior                                               |
-|  * RECOMMENDED for most cases                                         |
+|  COPY:                                                                  |
+|  * Simple file/directory copy                                           |
+|  * Predictable behavior                                                 |
+|  * RECOMMENDED for most cases                                           |
 |                                                                         |
-|  ADD:                                                                  |
-|  * Can download from URLs (but better to use curl/wget)               |
-|  * Auto-extracts tar archives (can be surprising)                    |
-|  * Use ONLY when you need auto-extraction                            |
+|  ADD:                                                                   |
+|  * Can download from URLs (but better to use curl/wget)                 |
+|  * Auto-extracts tar archives (can be surprising)                       |
+|  * Use ONLY when you need auto-extraction                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -175,18 +175,18 @@ ADD archive.tar.gz /app/                     # Auto-extracts archives
 WORKDIR sets the working directory for subsequent instructions:
 
 ```dockerfile
-WORKDIR /app
+WORKDIR /app                                    
 
-# All subsequent commands run in /app
-RUN pwd           # Outputs /app
-COPY . .          # Copies to /app
-CMD ["./start"]   # Runs /app/start
+# All subsequent commands run in /app           
+RUN pwd           # Outputs /app                
+COPY . .          # Copies to /app              
+CMD ["./start"]   # Runs /app/start             
 
-# Can use multiple times
-WORKDIR /app
-WORKDIR src       # Now in /app/src
+# Can use multiple times                        
+WORKDIR /app                                    
+WORKDIR src       # Now in /app/src             
 
-# Creates directory if it doesn't exist
+# Creates directory if it doesn't exist         
 WORKDIR /new/directory   # Created automatically
 ```
 
@@ -195,16 +195,16 @@ WORKDIR /new/directory   # Created automatically
 ENV sets environment variables:
 
 ```dockerfile
-ENV KEY=value
-ENV KEY1=value1 KEY2=value2
-ENV NODE_ENV=production
+ENV KEY=value                                   
+ENV KEY1=value1 KEY2=value2                     
+ENV NODE_ENV=production                         
 
-# Variables persist in running container
+# Variables persist in running container        
 # Variables available in subsequent instructions
 
-FROM node:16
-ENV NODE_ENV=production
-RUN echo $NODE_ENV           # production
+FROM node:16                                    
+ENV NODE_ENV=production                         
+RUN echo $NODE_ENV           # production       
 ```
 
 ### ARG - BUILD-TIME VARIABLES
@@ -212,35 +212,35 @@ RUN echo $NODE_ENV           # production
 ARG defines variables only available during build:
 
 ```
-ARG VERSION=latest
-ARG BUILD_DATE
+ARG VERSION=latest                                                         
+ARG BUILD_DATE                                                             
 
-FROM ubuntu:20.04
-ARG VERSION
-RUN echo "Building version $VERSION"
+FROM ubuntu:20.04                                                          
+ARG VERSION                                                                
+RUN echo "Building version $VERSION"                                       
 
-# Usage:
-# docker build --build-arg VERSION=1.0 .
+# Usage:                                                                   
+# docker build --build-arg VERSION=1.0 .                                   
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ARG vs ENV                                                            |
+|  ARG vs ENV                                                             |
 |                                                                         |
-|  ARG:                                                                  |
-|  * Only available during build                                        |
-|  * NOT in running container                                           |
-|  * Set with --build-arg                                               |
-|  * Can be before FROM                                                 |
+|  ARG:                                                                   |
+|  * Only available during build                                          |
+|  * NOT in running container                                             |
+|  * Set with --build-arg                                                 |
+|  * Can be before FROM                                                   |
 |                                                                         |
-|  ENV:                                                                  |
-|  * Available during build AND in container                           |
-|  * Persists in image                                                  |
-|  * Can override with docker run -e                                   |
+|  ENV:                                                                   |
+|  * Available during build AND in container                              |
+|  * Persists in image                                                    |
+|  * Can override with docker run -e                                      |
 |                                                                         |
-|  PATTERN - Use both:                                                   |
-|  ARG NODE_VERSION=16                                                  |
-|  FROM node:${NODE_VERSION}                                            |
-|  ENV NODE_ENV=production                                              |
+|  PATTERN - Use both:                                                    |
+|  ARG NODE_VERSION=16                                                    |
+|  FROM node:${NODE_VERSION}                                              |
+|  ENV NODE_ENV=production                                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -250,18 +250,18 @@ RUN echo "Building version $VERSION"
 EXPOSE documents which ports the container listens on:
 
 ```dockerfile
-EXPOSE 80
-EXPOSE 80/tcp
-EXPOSE 443
-EXPOSE 80 443
+EXPOSE 80                          
+EXPOSE 80/tcp                      
+EXPOSE 443                         
+EXPOSE 80 443                      
 
-IMPORTANT:
+IMPORTANT:                         
 * EXPOSE does NOT publish the port!
-* It's documentation only
+* It's documentation only          
 * Still need -p to actually publish
 
-# To publish:
-docker run -p 8080:80 myimage
+# To publish:                      
+docker run -p 8080:80 myimage      
 ```
 
 ### CMD and ENTRYPOINT - CONTAINER STARTUP
@@ -269,45 +269,45 @@ docker run -p 8080:80 myimage
 CMD specifies the default command:
 
 ```bash
-# Exec form (preferred)
-CMD ["python", "app.py"]
+# Exec form (preferred)     
+CMD ["python", "app.py"]    
 
 # Shell form (runs in shell)
-CMD python app.py
+CMD python app.py           
 ```
 
 ENTRYPOINT specifies the executable:
 
 ```
-ENTRYPOINT ["python"]
-CMD ["app.py"]       # Default argument
+ENTRYPOINT ["python"]                                                      
+CMD ["app.py"]       # Default argument                                    
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CMD vs ENTRYPOINT                                                     |
+|  CMD vs ENTRYPOINT                                                      |
 |                                                                         |
-|  CMD ALONE:                                                            |
-|  ------------                                                          |
-|  CMD ["python", "app.py"]                                             |
+|  CMD ALONE:                                                             |
+|  ------------                                                           |
+|  CMD ["python", "app.py"]                                               |
 |                                                                         |
-|  docker run myimage              > python app.py                      |
-|  docker run myimage bash         > bash (CMD replaced)                |
+|  docker run myimage              > python app.py                        |
+|  docker run myimage bash         > bash (CMD replaced)                  |
 |                                                                         |
-|  ENTRYPOINT ALONE:                                                     |
-|  ------------------                                                    |
-|  ENTRYPOINT ["python"]                                                |
+|  ENTRYPOINT ALONE:                                                      |
+|  ------------------                                                     |
+|  ENTRYPOINT ["python"]                                                  |
 |                                                                         |
-|  docker run myimage              > python                             |
-|  docker run myimage app.py       > python app.py                     |
+|  docker run myimage              > python                               |
+|  docker run myimage app.py       > python app.py                        |
 |                                                                         |
-|  ENTRYPOINT + CMD (recommended):                                       |
-|  -------------------------------                                       |
-|  ENTRYPOINT ["python"]                                                |
-|  CMD ["app.py"]                                                       |
+|  ENTRYPOINT + CMD (recommended):                                        |
+|  -------------------------------                                        |
+|  ENTRYPOINT ["python"]                                                  |
+|  CMD ["app.py"]                                                         |
 |                                                                         |
-|  docker run myimage              > python app.py                      |
-|  docker run myimage other.py     > python other.py                   |
-|  docker run --entrypoint bash myimage  > bash (override EP)          |
+|  docker run myimage              > python app.py                        |
+|  docker run myimage other.py     > python other.py                      |
+|  docker run --entrypoint bash myimage  > bash (override EP)             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -317,13 +317,13 @@ CMD ["app.py"]       # Default argument
 USER sets the user for RUN, CMD, ENTRYPOINT:
 
 ```bash
-USER username
-USER uid
-USER uid:gid
+USER username                                    
+USER uid                                         
+USER uid:gid                                     
 
-# Create and switch to non-root user
-RUN useradd -m appuser
-USER appuser
+# Create and switch to non-root user             
+RUN useradd -m appuser                           
+USER appuser                                     
 
 # SECURITY: Always run as non-root in production!
 ```
@@ -333,11 +333,11 @@ USER appuser
 VOLUME declares that a path should be a volume:
 
 ```dockerfile
-VOLUME /data
-VOLUME ["/var/log", "/var/db"]
+VOLUME /data                                         
+VOLUME ["/var/log", "/var/db"]                       
 
 # At runtime, creates anonymous volume if not mounted
-# Data persists even if container removed
+# Data persists even if container removed            
 ```
 
 ### HEALTHCHECK - CONTAINER HEALTH
@@ -346,13 +346,13 @@ HEALTHCHECK defines how to check if container is healthy:
 
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
-  CMD curl -f http://localhost/ || exit 1
+  CMD curl -f http://localhost/ || exit 1             
 
-# Options:
-# --interval=DURATION (default 30s)
-# --timeout=DURATION (default 30s)
-# --start-period=DURATION (default 0s)
-# --retries=N (default 3)
+# Options:                                            
+# --interval=DURATION (default 30s)                   
+# --timeout=DURATION (default 30s)                    
+# --start-period=DURATION (default 0s)                
+# --retries=N (default 3)                             
 ```
 
 ## SECTION 3.3: BUILD CONTEXT AND .dockerignore
@@ -362,25 +362,25 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 When you run docker build, the entire directory is sent to the daemon:
 
 ```
-docker build -t myapp .
-                     ^
-                     This is the build context
+docker build -t myapp .                                                    
+                     ^                                                     
+                     This is the build context                             
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  BUILD PROCESS                                                         |
+|  BUILD PROCESS                                                          |
 |                                                                         |
-|  Your Directory                      Docker Daemon                     |
-|  +------------------+               +----------------------+          |
-|  | myproject/       |               |                      |          |
-|  | +-- src/         |               |  Receives all files  |          |
-|  | +-- node_modules/|-------------->|  in build context    |          |
-|  | +-- .git/        |    network    |                      |          |
-|  | +-- Dockerfile   |               |  Then builds image   |          |
-|  | +-- package.json |               |                      |          |
-|  +------------------+               +----------------------+          |
+|  Your Directory                      Docker Daemon                      |
+|  +------------------+               +----------------------+            |
+|  | myproject/       |               |                      |            |
+|  | +-- src/         |               |  Receives all files  |            |
+|  | +-- node_modules/|-------------->|  in build context    |            |
+|  | +-- .git/        |    network    |                      |            |
+|  | +-- Dockerfile   |               |  Then builds image   |            |
+|  | +-- package.json |               |                      |            |
+|  +------------------+               +----------------------+            |
 |                                                                         |
-|  PROBLEM: Sending huge directories (node_modules, .git) is SLOW!     |
+|  PROBLEM: Sending huge directories (node_modules, .git) is SLOW!        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -390,37 +390,37 @@ docker build -t myapp .
 .dockerignore excludes files from build context (like .gitignore):
 
 ```bash
-# .dockerignore file
+# .dockerignore file                          
 
-# Dependencies (install fresh in container)
-node_modules
-vendor
+# Dependencies (install fresh in container)   
+node_modules                                  
+vendor                                        
 
-# Git
-.git
-.gitignore
+# Git                                         
+.git                                          
+.gitignore                                    
 
-# IDE
-.idea
-.vscode
+# IDE                                         
+.idea                                         
+.vscode                                       
 
-# Build artifacts
-dist
-build
-*.log
+# Build artifacts                             
+dist                                          
+build                                         
+*.log                                         
 
-# Tests
-test
-__tests__
-*.test.js
+# Tests                                       
+test                                          
+__tests__                                     
+*.test.js                                     
 
-# Docker
-Dockerfile*
-docker-compose*
+# Docker                                      
+Dockerfile*                                   
+docker-compose*                               
 
-BENEFITS:
-* Faster builds (less to transfer)
-* Smaller build context
+BENEFITS:                                     
+* Faster builds (less to transfer)            
+* Smaller build context                       
 * Avoid accidentally including sensitive files
 ```
 
@@ -433,23 +433,23 @@ Put instructions that change rarely first (better caching):
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  BAD ORDER (cache invalidated often):                                  |
+|  BAD ORDER (cache invalidated often):                                   |
 |                                                                         |
-|  FROM node:16                                                          |
-|  COPY . .                    <-- Changes every time code changes      |
-|  RUN npm install             <-- Must reinstall every time!           |
-|  CMD ["npm", "start"]                                                 |
+|  FROM node:16                                                           |
+|  COPY . .                    <-- Changes every time code changes        |
+|  RUN npm install             <-- Must reinstall every time!             |
+|  CMD ["npm", "start"]                                                   |
 |                                                                         |
-|  --------------------------------------------------------------------  |
+|  --------------------------------------------------------------------   |
 |                                                                         |
-|  GOOD ORDER (maximize cache):                                          |
+|  GOOD ORDER (maximize cache):                                           |
 |                                                                         |
-|  FROM node:16                                                          |
-|  WORKDIR /app                                                          |
-|  COPY package*.json ./       <-- Only changes when deps change        |
-|  RUN npm install             <-- Cached unless package.json changes   |
-|  COPY . .                    <-- Code changes don't affect npm install|
-|  CMD ["npm", "start"]                                                 |
+|  FROM node:16                                                           |
+|  WORKDIR /app                                                           |
+|  COPY package*.json ./       <-- Only changes when deps change          |
+|  RUN npm install             <-- Cached unless package.json changes     |
+|  COPY . .                    <-- Code changes don't affect npm install  |
+|  CMD ["npm", "start"]                                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -457,65 +457,65 @@ Put instructions that change rarely first (better caching):
 ### 2. USE SPECIFIC TAGS
 
 ```dockerfile
-BAD:
-FROM node:latest    # Could change anytime!
+BAD:                                             
+FROM node:latest    # Could change anytime!      
 
-GOOD:
+GOOD:                                            
 FROM node:16.17.0   # Exact version, reproducible
 ```
 
 ### 3. MINIMIZE LAYERS
 
 ```dockerfile
-BAD (5 layers):
-RUN apt-get update
-RUN apt-get install -y curl
-RUN apt-get install -y wget
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/*
+BAD (5 layers):                      
+RUN apt-get update                   
+RUN apt-get install -y curl          
+RUN apt-get install -y wget          
+RUN apt-get clean                    
+RUN rm -rf /var/lib/apt/lists/*      
 
-GOOD (1 layer):
-RUN apt-get update && \
+GOOD (1 layer):                      
+RUN apt-get update && \              
     apt-get install -y curl wget && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get clean && \               
+    rm -rf /var/lib/apt/lists/*      
 ```
 
 ### 4. RUN AS NON-ROOT USER
 
 ```dockerfile
-FROM node:16-alpine
-WORKDIR /app
+FROM node:16-alpine                                       
+WORKDIR /app                                              
 
-# Create non-root user
+# Create non-root user                                    
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --chown=appuser:appgroup . .
-RUN npm install
+COPY --chown=appuser:appgroup . .                         
+RUN npm install                                           
 
-USER appuser
-CMD ["npm", "start"]
+USER appuser                                              
+CMD ["npm", "start"]                                      
 ```
 
 ### 5. USE MULTI-STAGE BUILDS
 
 ```bash
-# Build stage
-FROM node:16 AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
+# Build stage                       
+FROM node:16 AS builder             
+WORKDIR /app                        
+COPY package*.json ./               
+RUN npm install                     
+COPY . .                            
+RUN npm run build                   
 
-# Production stage
-FROM node:16-alpine
-WORKDIR /app
+# Production stage                  
+FROM node:16-alpine                 
+WORKDIR /app                        
 COPY --from=builder /app/dist ./dist
-COPY package*.json ./
-RUN npm install --production
-USER node
-CMD ["node", "dist/main.js"]
+COPY package*.json ./               
+RUN npm install --production        
+USER node                           
+CMD ["node", "dist/main.js"]        
 ```
 
 ## SECTION 3.5: COMPLETE DOCKERFILE EXAMPLES
@@ -523,98 +523,98 @@ CMD ["node", "dist/main.js"]
 ### NODE.JS APPLICATION
 
 ```dockerfile
-FROM node:18-alpine AS builder
-WORKDIR /app
+FROM node:18-alpine AS builder                                              
+WORKDIR /app                                                                
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci
+# Install dependencies                                                      
+COPY package*.json ./                                                       
+RUN npm ci                                                                  
 
-# Build application
-COPY . .
-RUN npm run build
+# Build application                                                         
+COPY . .                                                                    
+RUN npm run build                                                           
 
-# Production image
-FROM node:18-alpine
-WORKDIR /app
-ENV NODE_ENV=production
+# Production image                                                          
+FROM node:18-alpine                                                         
+WORKDIR /app                                                                
+ENV NODE_ENV=production                                                     
 
-# Create non-root user
-RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
+# Create non-root user                                                      
+RUN addgroup -S nodejs && adduser -S nodejs -G nodejs                       
 
-# Copy built files
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
+# Copy built files                                                          
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist                  
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules  
 
-USER nodejs
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=3s \
+USER nodejs                                                                 
+EXPOSE 3000                                                                 
+HEALTHCHECK --interval=30s --timeout=3s \                                   
   CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/main.js"]                                                
 ```
 
 ### PYTHON APPLICATION
 
 ```dockerfile
-FROM python:3.10-slim AS builder
-WORKDIR /app
+FROM python:3.10-slim AS builder                                    
+WORKDIR /app                                                        
 
-# Install build dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
+# Install build dependencies                                        
+RUN apt-get update && \                                             
+    apt-get install -y --no-install-recommends gcc libpq-dev && \   
+    rm -rf /var/lib/apt/lists/*                                     
 
-# Install Python dependencies
-COPY requirements.txt .
+# Install Python dependencies                                       
+COPY requirements.txt .                                             
 RUN pip wheel --no-cache-dir --wheel-dir /wheels -r requirements.txt
 
-# Production image
-FROM python:3.10-slim
-WORKDIR /app
+# Production image                                                  
+FROM python:3.10-slim                                               
+WORKDIR /app                                                        
 
-# Install runtime dependencies only
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 && \
-    rm -rf /var/lib/apt/lists/*
+# Install runtime dependencies only                                 
+RUN apt-get update && \                                             
+    apt-get install -y --no-install-recommends libpq5 && \          
+    rm -rf /var/lib/apt/lists/*                                     
 
-# Copy wheels and install
-COPY --from=builder /wheels /wheels
-RUN pip install --no-cache /wheels/* && rm -rf /wheels
+# Copy wheels and install                                           
+COPY --from=builder /wheels /wheels                                 
+RUN pip install --no-cache /wheels/* && rm -rf /wheels              
 
-# Create non-root user
-RUN useradd -m appuser
-USER appuser
+# Create non-root user                                              
+RUN useradd -m appuser                                              
+USER appuser                                                        
 
-# Copy application
-COPY --chown=appuser:appuser . .
+# Copy application                                                  
+COPY --chown=appuser:appuser . .                                    
 
-EXPOSE 8000
-CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]
+EXPOSE 8000                                                         
+CMD ["gunicorn", "-b", "0.0.0.0:8000", "app:app"]                   
 ```
 
 ### GO APPLICATION
 
 ```bash
-# Build stage
-FROM golang:1.19-alpine AS builder
-WORKDIR /app
+# Build stage                                                         
+FROM golang:1.19-alpine AS builder                                    
+WORKDIR /app                                                          
 
-# Download dependencies
-COPY go.mod go.sum ./
-RUN go mod download
+# Download dependencies                                               
+COPY go.mod go.sum ./                                                 
+RUN go mod download                                                   
 
-# Build binary
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+# Build binary                                                        
+COPY . .                                                              
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main . 
 
-# Final stage - scratch for minimal image
-FROM scratch
-COPY --from=builder /app/main /main
+# Final stage - scratch for minimal image                             
+FROM scratch                                                          
+COPY --from=builder /app/main /main                                   
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-EXPOSE 8080
-ENTRYPOINT ["/main"]
+EXPOSE 8080                                                           
+ENTRYPOINT ["/main"]                                                  
 ```
 
 ## CHAPTER SUMMARY
@@ -622,29 +622,29 @@ ENTRYPOINT ["/main"]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKERFILE - KEY TAKEAWAYS                                            |
+|  DOCKERFILE - KEY TAKEAWAYS                                             |
 |                                                                         |
-|  ESSENTIAL INSTRUCTIONS                                                |
-|  ----------------------                                                |
-|  FROM        Base image                                               |
-|  RUN         Execute commands                                         |
-|  COPY        Copy files                                               |
-|  WORKDIR     Set working directory                                    |
-|  ENV         Set environment variables                                |
-|  EXPOSE      Document ports                                           |
-|  CMD         Default command                                          |
-|  ENTRYPOINT  Container executable                                     |
-|  USER        Run as user                                              |
+|  ESSENTIAL INSTRUCTIONS                                                 |
+|  ----------------------                                                 |
+|  FROM        Base image                                                 |
+|  RUN         Execute commands                                           |
+|  COPY        Copy files                                                 |
+|  WORKDIR     Set working directory                                      |
+|  ENV         Set environment variables                                  |
+|  EXPOSE      Document ports                                             |
+|  CMD         Default command                                            |
+|  ENTRYPOINT  Container executable                                       |
+|  USER        Run as user                                                |
 |                                                                         |
-|  BEST PRACTICES                                                        |
-|  --------------                                                        |
-|  * Use specific base image tags                                       |
-|  * Order by change frequency (cache!)                                 |
-|  * Minimize layers                                                    |
-|  * Use multi-stage builds                                             |
-|  * Run as non-root                                                    |
-|  * Use .dockerignore                                                  |
-|  * Clean up in same layer                                             |
+|  BEST PRACTICES                                                         |
+|  --------------                                                         |
+|  * Use specific base image tags                                         |
+|  * Order by change frequency (cache!)                                   |
+|  * Minimize layers                                                      |
+|  * Use multi-stage builds                                               |
+|  * Run as non-root                                                      |
+|  * Use .dockerignore                                                    |
+|  * Clean up in same layer                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

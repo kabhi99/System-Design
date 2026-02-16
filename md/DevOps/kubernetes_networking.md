@@ -74,31 +74,31 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    KUBERNETES NETWORKING PHILOSOPHY                     |
 |                                                                         |
-|  Kubernetes networking is designed to be FLAT and SIMPLE.              |
-|  Every Pod gets its own IP address.                                    |
-|  No NAT between Pods.                                                  |
+|  Kubernetes networking is designed to be FLAT and SIMPLE.               |
+|  Every Pod gets its own IP address.                                     |
+|  No NAT between Pods.                                                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  FUNDAMENTAL REQUIREMENTS:                                              |
 |                                                                         |
-|  1. All Pods can communicate with all other Pods without NAT          |
+|  1. All Pods can communicate with all other Pods without NAT            |
 |                                                                         |
-|  2. All Nodes can communicate with all Pods without NAT               |
+|  2. All Nodes can communicate with all Pods without NAT                 |
 |                                                                         |
-|  3. The IP a Pod sees itself as is the same IP others see it as       |
+|  3. The IP a Pod sees itself as is the same IP others see it as         |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  WHY FLAT NETWORK?                                                      |
 |                                                                         |
-|  In Docker (default):                                                  |
-|    Container A (172.17.0.2) > NAT > Host IP > NAT > Container B       |
-|    Complex! Port mappings, NAT traversal issues.                       |
+|  In Docker (default):                                                   |
+|    Container A (172.17.0.2) > NAT > Host IP > NAT > Container B         |
+|    Complex! Port mappings, NAT traversal issues.                        |
 |                                                                         |
 |  In Kubernetes:                                                         |
-|    Pod A (10.244.1.5) > directly > Pod B (10.244.2.10)                |
-|    Simple! Just like VMs on same network.                              |
+|    Pod A (10.244.1.5) > directly > Pod B (10.244.2.10)                  |
+|    Simple! Just like VMs on same network.                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -109,69 +109,69 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    KUBERNETES COMMUNICATION TYPES                       |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |  1. CONTAINER-TO-CONTAINER (Same Pod)                          |   |
-|  |     ---------------------------------                          |   |
-|  |     * Share same network namespace                             |   |
-|  |     * Communicate via localhost                                |   |
-|  |     * Share same IP address                                    |   |
-|  |                                                                 |   |
-|  |     +-----------------------------+                            |   |
-|  |     |          POD                |                            |   |
-|  |     |  +-----+    +-----+        |                            |   |
-|  |     |  |App A|<-->|App B|        |  localhost:8080            |   |
-|  |     |  |:8080|    |:9090|        |                            |   |
-|  |     |  +-----+    +-----+        |                            |   |
-|  |     |        Same Network NS     |                            |   |
-|  |     +-----------------------------+                            |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  1. CONTAINER-TO-CONTAINER (Same Pod)                          |     |
+|  |     ---------------------------------                          |     |
+|  |     * Share same network namespace                             |     |
+|  |     * Communicate via localhost                                |     |
+|  |     * Share same IP address                                    |     |
+|  |                                                                 |    |
+|  |     +-----------------------------+                            |     |
+|  |     |          POD                |                            |     |
+|  |     |  +-----+    +-----+        |                            |      |
+|  |     |  |App A|<-->|App B|        |  localhost:8080            |      |
+|  |     |  |:8080|    |:9090|        |                            |      |
+|  |     |  +-----+    +-----+        |                            |      |
+|  |     |        Same Network NS     |                            |      |
+|  |     +-----------------------------+                            |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |  2. POD-TO-POD (Same or Different Node)                        |   |
-|  |     -------------------------------------                      |   |
-|  |     * Direct IP communication                                  |   |
-|  |     * No NAT required                                          |   |
-|  |     * Handled by CNI plugin                                    |   |
-|  |                                                                 |   |
-|  |     +------------+          +------------+                     |   |
-|  |     |   Pod A    |          |   Pod B    |                     |   |
-|  |     | 10.244.1.5 |--------> | 10.244.2.3 |                     |   |
-|  |     +------------+          +------------+                     |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  2. POD-TO-POD (Same or Different Node)                        |     |
+|  |     -------------------------------------                      |     |
+|  |     * Direct IP communication                                  |     |
+|  |     * No NAT required                                          |     |
+|  |     * Handled by CNI plugin                                    |     |
+|  |                                                                 |    |
+|  |     +------------+          +------------+                     |     |
+|  |     |   Pod A    |          |   Pod B    |                     |     |
+|  |     | 10.244.1.5 |--------> | 10.244.2.3 |                     |     |
+|  |     +------------+          +------------+                     |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |  3. POD-TO-SERVICE                                              |   |
-|  |     -----------------                                           |   |
-|  |     * Service provides stable IP and DNS name                  |   |
-|  |     * Load balances across Pod replicas                        |   |
-|  |     * Implemented by kube-proxy (iptables/IPVS)                |   |
-|  |                                                                 |   |
-|  |     +------------+          +--------------------+             |   |
-|  |     |   Pod A    |          |      Service       |             |   |
-|  |     |            |--------> |   my-service       | --> Pods    |   |
-|  |     +------------+          |   10.96.10.5       |             |   |
-|  |                             +--------------------+             |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  3. POD-TO-SERVICE                                              |    |
+|  |     -----------------                                           |    |
+|  |     * Service provides stable IP and DNS name                  |     |
+|  |     * Load balances across Pod replicas                        |     |
+|  |     * Implemented by kube-proxy (iptables/IPVS)                |     |
+|  |                                                                 |    |
+|  |     +------------+          +--------------------+             |     |
+|  |     |   Pod A    |          |      Service       |             |     |
+|  |     |            |--------> |   my-service       | --> Pods    |     |
+|  |     +------------+          |   10.96.10.5       |             |     |
+|  |                             +--------------------+             |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |  4. EXTERNAL-TO-SERVICE                                         |   |
-|  |     ---------------------                                       |   |
-|  |     * External traffic reaching cluster                        |   |
-|  |     * Ingress, LoadBalancer, NodePort                          |   |
-|  |                                                                 |   |
-|  |     +------------+          +--------------------+             |   |
-|  |     |  Internet  |          |      Ingress       |             |   |
-|  |     |   Client   |--------> |   my-app.com       | --> Pods    |   |
-|  |     +------------+          +--------------------+             |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  4. EXTERNAL-TO-SERVICE                                         |    |
+|  |     ---------------------                                       |    |
+|  |     * External traffic reaching cluster                        |     |
+|  |     * Ingress, LoadBalancer, NodePort                          |     |
+|  |                                                                 |    |
+|  |     +------------+          +--------------------+             |     |
+|  |     |  Internet  |          |      Ingress       |             |     |
+|  |     |   Client   |--------> |   my-app.com       | --> Pods    |     |
+|  |     +------------+          +--------------------+             |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -184,29 +184,29 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    POD = SHARED NETWORK NAMESPACE                       |
 |                                                                         |
-|  All containers in a Pod share the same network namespace.             |
-|  This is achieved using a "pause" container.                           |
+|  All containers in a Pod share the same network namespace.              |
+|  This is achieved using a "pause" container.                            |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  +------------------------------------------------------------------+  |
+|  +------------------------------------------------------------------+   |
 |  |                           POD                                     |  |
 |  |                                                                   |  |
-|  |  +-----------------------------------------------------------+   |  |
+|  |  +-----------------------------------------------------------+   |   |
 |  |  |              Shared Network Namespace                      |   |  |
 |  |  |                                                            |   |  |
-|  |  |   +---------+  +---------+  +---------+                   |   |  |
-|  |  |   | pause   |  | App     |  | Sidecar |                   |   |  |
-|  |  |   |container|  |container|  |container|                   |   |  |
-|  |  |   |         |  |  :8080  |  |  :9090  |                   |   |  |
-|  |  |   +---------+  +---------+  +---------+                   |   |  |
+|  |  |   +---------+  +---------+  +---------+                   |   |   |
+|  |  |   | pause   |  | App     |  | Sidecar |                   |   |   |
+|  |  |   |container|  |container|  |container|                   |   |   |
+|  |  |   |         |  |  :8080  |  |  :9090  |                   |   |   |
+|  |  |   +---------+  +---------+  +---------+                   |   |   |
 |  |  |        |                                                   |   |  |
-|  |  |   Holds the    App uses      Sidecar can                  |   |  |
-|  |  |   network NS   localhost     reach App                    |   |  |
-|  |  |                :8080         on localhost:8080            |   |  |
+|  |  |   Holds the    App uses      Sidecar can                  |   |   |
+|  |  |   network NS   localhost     reach App                    |   |   |
+|  |  |                :8080         on localhost:8080            |   |   |
 |  |  |                                                            |   |  |
 |  |  |                    +---------+                             |   |  |
-|  |  |                    |  eth0   |  Pod IP: 10.244.1.5        |   |  |
+|  |  |                    |  eth0   |  Pod IP: 10.244.1.5        |   |   |
 |  |  |                    +----+----+                             |   |  |
 |  |  |                         |                                  |   |  |
 |  |  +-------------------------+----------------------------------+   |  |
@@ -219,12 +219,12 @@ Part 10: CNI Deep Dives
 |                        | Node Network|                                  |
 |                        +-------------+                                  |
 |                                                                         |
-|  THE "PAUSE" CONTAINER:                                                |
-|  * First container created in the Pod                                  |
-|  * Creates and holds the network namespace                             |
-|  * Does nothing (just sleeps)                                          |
-|  * Other containers join its network namespace                         |
-|  * If pause dies, Pod's network is lost                               |
+|  THE "PAUSE" CONTAINER:                                                 |
+|  * First container created in the Pod                                   |
+|  * Creates and holds the network namespace                              |
+|  * Does nothing (just sleeps)                                           |
+|  * Other containers join its network namespace                          |
+|  * If pause dies, Pod's network is lost                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -235,34 +235,34 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    SAME NODE POD COMMUNICATION                          |
 |                                                                         |
-|  +------------------------------------------------------------------+  |
+|  +------------------------------------------------------------------+   |
 |  |                         NODE 1                                    |  |
 |  |                                                                   |  |
-|  |   +-----------------+          +-----------------+               |  |
-|  |   |      Pod A      |          |      Pod B      |               |  |
-|  |   |   10.244.1.5    |          |   10.244.1.6    |               |  |
-|  |   |                 |          |                 |               |  |
-|  |   |   +---------+   |          |   +---------+   |               |  |
-|  |   |   |  eth0   |   |          |   |  eth0   |   |               |  |
-|  |   |   +----+----+   |          |   +----+----+   |               |  |
-|  |   +--------+--------+          +--------+--------+               |  |
+|  |   +-----------------+          +-----------------+               |   |
+|  |   |      Pod A      |          |      Pod B      |               |   |
+|  |   |   10.244.1.5    |          |   10.244.1.6    |               |   |
+|  |   |                 |          |                 |               |   |
+|  |   |   +---------+   |          |   +---------+   |               |   |
+|  |   |   |  eth0   |   |          |   |  eth0   |   |               |   |
+|  |   |   +----+----+   |          |   +----+----+   |               |   |
+|  |   +--------+--------+          +--------+--------+               |   |
 |  |            | veth                       | veth                    |  |
 |  |            |                            |                         |  |
-|  |   +--------+----------------------------+--------+               |  |
-|  |   |                  cbr0 (bridge)               |               |  |
-|  |   |                  10.244.1.1                  |               |  |
-|  |   +----------------------------------------------+               |  |
+|  |   +--------+----------------------------+--------+               |   |
+|  |   |                  cbr0 (bridge)               |               |   |
+|  |   |                  10.244.1.1                  |               |   |
+|  |   +----------------------------------------------+               |   |
 |  |                                                                   |  |
 |  |   Pod A > Pod B:                                                  |  |
-|  |   1. Packet leaves Pod A's eth0                                  |  |
-|  |   2. Goes through veth to bridge                                 |  |
-|  |   3. Bridge sees dest 10.244.1.6 is local                       |  |
-|  |   4. Forwards to Pod B's veth                                    |  |
-|  |   5. Arrives at Pod B's eth0                                     |  |
+|  |   1. Packet leaves Pod A's eth0                                  |   |
+|  |   2. Goes through veth to bridge                                 |   |
+|  |   3. Bridge sees dest 10.244.1.6 is local                       |    |
+|  |   4. Forwards to Pod B's veth                                    |   |
+|  |   5. Arrives at Pod B's eth0                                     |   |
 |  |                                                                   |  |
-|  |   Just like two VMs on same network switch!                      |  |
+|  |   Just like two VMs on same network switch!                      |   |
 |  |                                                                   |  |
-|  +------------------------------------------------------------------+  |
+|  +------------------------------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -273,26 +273,26 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    CROSS-NODE POD COMMUNICATION                         |
 |                                                                         |
-|  +---------------------------+      +---------------------------+      |
-|  |         NODE 1            |      |         NODE 2            |      |
-|  |    (192.168.1.10)         |      |    (192.168.1.11)         |      |
-|  |                           |      |                           |      |
-|  |   +-----------------+     |      |     +-----------------+   |      |
-|  |   |      Pod A      |     |      |     |      Pod B      |   |      |
-|  |   |   10.244.1.5    |     |      |     |   10.244.2.10   |   |      |
-|  |   +--------+--------+     |      |     +--------+--------+   |      |
-|  |            |              |      |              |            |      |
-|  |   +--------+--------+     |      |     +--------+--------+   |      |
-|  |   |   cbr0 bridge   |     |      |     |   cbr0 bridge   |   |      |
-|  |   |   10.244.1.1    |     |      |     |   10.244.2.1    |   |      |
-|  |   +--------+--------+     |      |     +--------+--------+   |      |
-|  |            |              |      |              |            |      |
-|  |            |              |      |              |            |      |
-|  |       +----+----+         |      |         +----+----+       |      |
-|  |       |  eth0   |         |      |         |  eth0   |       |      |
-|  |       +----+----+         |      |         +----+----+       |      |
-|  |            |              |      |              |            |      |
-|  +------------+--------------+      +--------------+------------+      |
+|  +---------------------------+      +---------------------------+       |
+|  |         NODE 1            |      |         NODE 2            |       |
+|  |    (192.168.1.10)         |      |    (192.168.1.11)         |       |
+|  |                           |      |                           |       |
+|  |   +-----------------+     |      |     +-----------------+   |       |
+|  |   |      Pod A      |     |      |     |      Pod B      |   |       |
+|  |   |   10.244.1.5    |     |      |     |   10.244.2.10   |   |       |
+|  |   +--------+--------+     |      |     +--------+--------+   |       |
+|  |            |              |      |              |            |       |
+|  |   +--------+--------+     |      |     +--------+--------+   |       |
+|  |   |   cbr0 bridge   |     |      |     |   cbr0 bridge   |   |       |
+|  |   |   10.244.1.1    |     |      |     |   10.244.2.1    |   |       |
+|  |   +--------+--------+     |      |     +--------+--------+   |       |
+|  |            |              |      |              |            |       |
+|  |            |              |      |              |            |       |
+|  |       +----+----+         |      |         +----+----+       |       |
+|  |       |  eth0   |         |      |         |  eth0   |       |       |
+|  |       +----+----+         |      |         +----+----+       |       |
+|  |            |              |      |              |            |       |
+|  +------------+--------------+      +--------------+------------+       |
 |               |                                    |                    |
 |               +----------+-------------------------+                    |
 |                          |                                              |
@@ -301,15 +301,15 @@ Part 10: CNI Deep Dives
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  ROUTING REQUIRED:                                                      |
-|  Node 1 needs to know: "10.244.2.0/24 is via 192.168.1.11"            |
-|  Node 2 needs to know: "10.244.1.0/24 is via 192.168.1.10"            |
+|  Node 1 needs to know: "10.244.2.0/24 is via 192.168.1.11"              |
+|  Node 2 needs to know: "10.244.1.0/24 is via 192.168.1.10"              |
 |                                                                         |
-|  This is what CNI plugins handle!                                      |
+|  This is what CNI plugins handle!                                       |
 |                                                                         |
 |  OPTIONS:                                                               |
-|  1. L3 Routing (BGP) - Calico                                         |
-|  2. Overlay Network (VXLAN) - Flannel, Calico                         |
-|  3. Cloud Provider Routes - AWS VPC CNI, GKE                          |
+|  1. L3 Routing (BGP) - Calico                                           |
+|  2. Overlay Network (VXLAN) - Flannel, Calico                           |
+|  3. Cloud Provider Routes - AWS VPC CNI, GKE                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -322,48 +322,48 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    CONTAINER NETWORK INTERFACE (CNI)                    |
 |                                                                         |
-|  CNI is a SPECIFICATION for configuring network interfaces in          |
-|  Linux containers.                                                     |
+|  CNI is a SPECIFICATION for configuring network interfaces in           |
+|  Linux containers.                                                      |
 |                                                                         |
-|  Kubernetes doesn't implement networking itself.                       |
-|  It delegates to CNI plugins.                                          |
+|  Kubernetes doesn't implement networking itself.                        |
+|  It delegates to CNI plugins.                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  HOW CNI WORKS:                                                         |
 |                                                                         |
-|  +----------------+                                                    |
-|  |    kubelet     |                                                    |
-|  |                |                                                    |
-|  |  "Create Pod"  |                                                    |
-|  +-------+--------+                                                    |
-|          |                                                             |
-|          | 1. Create pause container                                  |
-|          | 2. Call CNI plugin                                         |
-|          v                                                             |
-|  +----------------+                                                    |
-|  |   CNI Plugin   |                                                    |
-|  |   (Calico,     |                                                    |
-|  |    Flannel)    |                                                    |
-|  +-------+--------+                                                    |
-|          |                                                             |
-|          | 3. Create veth pair                                        |
-|          | 4. Attach to Pod namespace                                 |
-|          | 5. Assign IP address                                       |
-|          | 6. Set up routes                                           |
-|          v                                                             |
-|  +----------------+                                                    |
-|  |   Pod Ready    |                                                    |
-|  |   with IP      |                                                    |
-|  +----------------+                                                    |
+|  +----------------+                                                     |
+|  |    kubelet     |                                                     |
+|  |                |                                                     |
+|  |  "Create Pod"  |                                                     |
+|  +-------+--------+                                                     |
+|          |                                                              |
+|          | 1. Create pause container                                    |
+|          | 2. Call CNI plugin                                           |
+|          v                                                              |
+|  +----------------+                                                     |
+|  |   CNI Plugin   |                                                     |
+|  |   (Calico,     |                                                     |
+|  |    Flannel)    |                                                     |
+|  +-------+--------+                                                     |
+|          |                                                              |
+|          | 3. Create veth pair                                          |
+|          | 4. Attach to Pod namespace                                   |
+|          | 5. Assign IP address                                         |
+|          | 6. Set up routes                                             |
+|          v                                                              |
+|  +----------------+                                                     |
+|  |   Pod Ready    |                                                     |
+|  |   with IP      |                                                     |
+|  +----------------+                                                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  CNI PLUGIN OPERATIONS:                                                 |
-|  * ADD: Configure network for new container                           |
-|  * DEL: Clean up network when container deleted                       |
-|  * CHECK: Verify configuration                                        |
-|  * VERSION: Report supported versions                                 |
+|  * ADD: Configure network for new container                             |
+|  * DEL: Clean up network when container deleted                         |
+|  * CHECK: Verify configuration                                          |
+|  * VERSION: Report supported versions                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -374,40 +374,40 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    CNI PLUGIN COMPARISON                                |
 |                                                                         |
-|  +---------------+------------------------------------------------+    |
-|  | Plugin        | Description                                    |    |
-|  +---------------+------------------------------------------------+    |
-|  | Calico        | L3 networking with BGP. Network policies.     |    |
-|  |               | Most popular. Production-ready.               |    |
-|  +---------------+------------------------------------------------+    |
-|  | Flannel       | Simple overlay (VXLAN). Easy setup.           |    |
-|  |               | No network policies. Good for learning.       |    |
-|  +---------------+------------------------------------------------+    |
-|  | Cilium        | eBPF-based. Advanced security & observability.|    |
-|  |               | L7 network policies. High performance.        |    |
-|  +---------------+------------------------------------------------+    |
-|  | Weave Net     | Encrypted overlay. Easy multi-cloud.          |    |
-|  |               | Built-in network policies.                    |    |
-|  +---------------+------------------------------------------------+    |
-|  | AWS VPC CNI   | Native AWS VPC networking.                    |    |
-|  |               | Pods get VPC IPs. Best for EKS.              |    |
-|  +---------------+------------------------------------------------+    |
-|  | Azure CNI     | Native Azure VNet. Pods get VNet IPs.        |    |
-|  |               | Best for AKS.                                 |    |
-|  +---------------+------------------------------------------------+    |
-|  | GKE (native)  | Google's built-in. Dataplane V2 uses Cilium. |    |
-|  +---------------+------------------------------------------------+    |
+|  +---------------+------------------------------------------------+     |
+|  | Plugin        | Description                                    |     |
+|  +---------------+------------------------------------------------+     |
+|  | Calico        | L3 networking with BGP. Network policies.     |      |
+|  |               | Most popular. Production-ready.               |      |
+|  +---------------+------------------------------------------------+     |
+|  | Flannel       | Simple overlay (VXLAN). Easy setup.           |      |
+|  |               | No network policies. Good for learning.       |      |
+|  +---------------+------------------------------------------------+     |
+|  | Cilium        | eBPF-based. Advanced security & observability.|      |
+|  |               | L7 network policies. High performance.        |      |
+|  +---------------+------------------------------------------------+     |
+|  | Weave Net     | Encrypted overlay. Easy multi-cloud.          |      |
+|  |               | Built-in network policies.                    |      |
+|  +---------------+------------------------------------------------+     |
+|  | AWS VPC CNI   | Native AWS VPC networking.                    |      |
+|  |               | Pods get VPC IPs. Best for EKS.              |       |
+|  +---------------+------------------------------------------------+     |
+|  | Azure CNI     | Native Azure VNet. Pods get VNet IPs.        |       |
+|  |               | Best for AKS.                                 |      |
+|  +---------------+------------------------------------------------+     |
+|  | GKE (native)  | Google's built-in. Dataplane V2 uses Cilium. |       |
+|  +---------------+------------------------------------------------+     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  CHOOSING A CNI:                                                        |
 |                                                                         |
-|  * Learning/Dev: Flannel (simple)                                      |
-|  * Production (on-prem): Calico or Cilium                             |
-|  * AWS EKS: AWS VPC CNI                                                |
-|  * Azure AKS: Azure CNI                                                |
-|  * Need L7 policies: Cilium                                            |
-|  * Need encryption: Weave or Cilium                                    |
+|  * Learning/Dev: Flannel (simple)                                       |
+|  * Production (on-prem): Calico or Cilium                               |
+|  * AWS EKS: AWS VPC CNI                                                 |
+|  * Azure AKS: Azure CNI                                                 |
+|  * Need L7 policies: Cilium                                             |
+|  * Need encryption: Weave or Cilium                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -418,77 +418,77 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    OVERLAY NETWORKING (VXLAN)                           |
 |                                                                         |
-|  Encapsulates Pod traffic inside Node-to-Node packets.                 |
+|  Encapsulates Pod traffic inside Node-to-Node packets.                  |
 |                                                                         |
-|  +---------------------------+      +---------------------------+      |
-|  |         NODE 1            |      |         NODE 2            |      |
-|  |                           |      |                           |      |
-|  |   Pod A > Pod B packet:   |      |                           |      |
-|  |   Src: 10.244.1.5         |      |                           |      |
-|  |   Dst: 10.244.2.10        |      |                           |      |
-|  |           |               |      |                           |      |
-|  |           v               |      |                           |      |
-|  |   +---------------+       |      |                           |      |
-|  |   | VXLAN Encap   |       |      |                           |      |
-|  |   |               |       |      |       +---------------+   |      |
-|  |   | Outer:        |-------+------+------>| VXLAN Decap   |   |      |
-|  |   | Src: 192.168.1.10     |      |       |               |   |      |
-|  |   | Dst: 192.168.1.11     |      |       | Extract inner |   |      |
-|  |   |               |       |      |       | packet        |   |      |
-|  |   | Inner:        |       |      |       +-------+-------+   |      |
-|  |   | Src: 10.244.1.5       |      |               |           |      |
-|  |   | Dst: 10.244.2.10      |      |               v           |      |
-|  |   +---------------+       |      |           Pod B           |      |
-|  |                           |      |                           |      |
-|  +---------------------------+      +---------------------------+      |
+|  +---------------------------+      +---------------------------+       |
+|  |         NODE 1            |      |         NODE 2            |       |
+|  |                           |      |                           |       |
+|  |   Pod A > Pod B packet:   |      |                           |       |
+|  |   Src: 10.244.1.5         |      |                           |       |
+|  |   Dst: 10.244.2.10        |      |                           |       |
+|  |           |               |      |                           |       |
+|  |           v               |      |                           |       |
+|  |   +---------------+       |      |                           |       |
+|  |   | VXLAN Encap   |       |      |                           |       |
+|  |   |               |       |      |       +---------------+   |       |
+|  |   | Outer:        |-------+------+------>| VXLAN Decap   |   |       |
+|  |   | Src: 192.168.1.10     |      |       |               |   |       |
+|  |   | Dst: 192.168.1.11     |      |       | Extract inner |   |       |
+|  |   |               |       |      |       | packet        |   |       |
+|  |   | Inner:        |       |      |       +-------+-------+   |       |
+|  |   | Src: 10.244.1.5       |      |               |           |       |
+|  |   | Dst: 10.244.2.10      |      |               v           |       |
+|  |   +---------------+       |      |           Pod B           |       |
+|  |                           |      |                           |       |
+|  +---------------------------+      +---------------------------+       |
 |                                                                         |
 |  PROS:                                                                  |
-|  * Works anywhere (no special network setup)                           |
-|  * Easy to set up                                                      |
+|  * Works anywhere (no special network setup)                            |
+|  * Easy to set up                                                       |
 |                                                                         |
 |  CONS:                                                                  |
-|  * Encapsulation overhead (~50 bytes per packet)                      |
-|  * Slightly higher latency                                            |
-|  * MTU issues (need to account for encap header)                      |
+|  * Encapsulation overhead (~50 bytes per packet)                        |
+|  * Slightly higher latency                                              |
+|  * MTU issues (need to account for encap header)                        |
 |                                                                         |
-|  USED BY: Flannel (VXLAN mode), Calico (VXLAN mode), Weave            |
+|  USED BY: Flannel (VXLAN mode), Calico (VXLAN mode), Weave              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                    ROUTED NETWORKING (BGP/L3)                           |
 |                                                                         |
-|  No encapsulation. Pod IPs are directly routable.                      |
+|  No encapsulation. Pod IPs are directly routable.                       |
 |                                                                         |
-|  +---------------------------+      +---------------------------+      |
-|  |         NODE 1            |      |         NODE 2            |      |
-|  |     10.244.1.0/24         |      |     10.244.2.0/24         |      |
-|  |                           |      |                           |      |
-|  |   Pod A > Pod B packet:   |      |                           |      |
-|  |   Src: 10.244.1.5         |      |                           |      |
-|  |   Dst: 10.244.2.10        |      |                           |      |
-|  |           |               |      |                           |      |
-|  |           v               |      |                           |      |
-|  |   Routing table:          |      |                           |      |
-|  |   10.244.2.0/24 via       |      |                           |      |
-|  |   192.168.1.11    --------+------+------>  Pod B             |      |
-|  |                           |      |                           |      |
-|  +---------------------------+      +---------------------------+      |
+|  +---------------------------+      +---------------------------+       |
+|  |         NODE 1            |      |         NODE 2            |       |
+|  |     10.244.1.0/24         |      |     10.244.2.0/24         |       |
+|  |                           |      |                           |       |
+|  |   Pod A > Pod B packet:   |      |                           |       |
+|  |   Src: 10.244.1.5         |      |                           |       |
+|  |   Dst: 10.244.2.10        |      |                           |       |
+|  |           |               |      |                           |       |
+|  |           v               |      |                           |       |
+|  |   Routing table:          |      |                           |       |
+|  |   10.244.2.0/24 via       |      |                           |       |
+|  |   192.168.1.11    --------+------+------>  Pod B             |       |
+|  |                           |      |                           |       |
+|  +---------------------------+      +---------------------------+       |
 |                                                                         |
-|  HOW ROUTES ARE DISTRIBUTED:                                           |
-|  * BGP: Nodes peer with each other or with router                     |
-|  * Cloud routes: AWS/GCP/Azure route tables                           |
+|  HOW ROUTES ARE DISTRIBUTED:                                            |
+|  * BGP: Nodes peer with each other or with router                       |
+|  * Cloud routes: AWS/GCP/Azure route tables                             |
 |                                                                         |
 |  PROS:                                                                  |
-|  * No encapsulation overhead                                          |
-|  * Better performance                                                  |
-|  * Easier debugging (standard IP routing)                             |
+|  * No encapsulation overhead                                            |
+|  * Better performance                                                   |
+|  * Easier debugging (standard IP routing)                               |
 |                                                                         |
 |  CONS:                                                                  |
-|  * Requires BGP or cloud-specific integration                         |
-|  * May need router configuration                                       |
+|  * Requires BGP or cloud-specific integration                           |
+|  * May need router configuration                                        |
 |                                                                         |
-|  USED BY: Calico (BGP mode), AWS VPC CNI, GKE                         |
+|  USED BY: Calico (BGP mode), AWS VPC CNI, GKE                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -501,42 +501,42 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    THE PROBLEM WITH POD IPS                             |
 |                                                                         |
-|  Pods are EPHEMERAL. They come and go.                                 |
-|  Pod IPs change when Pods restart or reschedule.                       |
+|  Pods are EPHEMERAL. They come and go.                                  |
+|  Pod IPs change when Pods restart or reschedule.                        |
 |                                                                         |
 |  PROBLEM:                                                               |
 |  ---------                                                              |
-|  How does Frontend find Backend if Backend's IP keeps changing?        |
+|  How does Frontend find Backend if Backend's IP keeps changing?         |
 |                                                                         |
-|  +-------------+          +-------------+                              |
-|  |  Frontend   |----?---->|  Backend    |                              |
-|  |             |          | 10.244.1.5  |                              |
-|  +-------------+          +-------------+                              |
+|  +-------------+          +-------------+                               |
+|  |  Frontend   |----?---->|  Backend    |                               |
+|  |             |          | 10.244.1.5  |                               |
+|  +-------------+          +-------------+                               |
 |                                  |                                      |
 |                           Pod crashes!                                  |
 |                           Rescheduled!                                  |
 |                                  |                                      |
 |                                  v                                      |
-|                           +-------------+                              |
-|                           |  Backend    |                              |
-|                           | 10.244.2.8  |  < NEW IP!                   |
-|                           +-------------+                              |
+|                           +-------------+                               |
+|                           |  Backend    |                               |
+|                           | 10.244.2.8  |  < NEW IP!                    |
+|                           +-------------+                               |
 |                                                                         |
 |  SOLUTION: SERVICES                                                     |
 |  ------------------                                                     |
 |  Service provides:                                                      |
-|  * Stable IP (doesn't change)                                         |
-|  * Stable DNS name                                                     |
-|  * Load balancing across Pods                                         |
+|  * Stable IP (doesn't change)                                           |
+|  * Stable DNS name                                                      |
+|  * Load balancing across Pods                                           |
 |                                                                         |
-|  +-------------+          +-------------+          +-------------+    |
-|  |  Frontend   |-------->|   Service   |-------->|  Backend    |    |
-|  |             |          | backend-svc |          | (any IP)    |    |
-|  |             |          | 10.96.10.5  |          |             |    |
-|  +-------------+          +-------------+          +-------------+    |
+|  +-------------+          +-------------+          +-------------+      |
+|  |  Frontend   |-------->|   Service   |-------->|  Backend    |        |
+|  |             |          | backend-svc |          | (any IP)    |      |
+|  |             |          | 10.96.10.5  |          |             |      |
+|  +-------------+          +-------------+          +-------------+      |
 |                                                                         |
-|  Frontend connects to "backend-svc" or 10.96.10.5                     |
-|  Service routes to healthy Backend Pods                                |
+|  Frontend connects to "backend-svc" or 10.96.10.5                       |
+|  Service routes to healthy Backend Pods                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -547,40 +547,40 @@ Part 10: CNI Deep Dives
 +-------------------------------------------------------------------------+
 |                    CLUSTERIP SERVICE                                    |
 |                                                                         |
-|  * Internal-only IP address                                            |
-|  * Only accessible from INSIDE the cluster                             |
-|  * Default Service type                                                |
+|  * Internal-only IP address                                             |
+|  * Only accessible from INSIDE the cluster                              |
+|  * Default Service type                                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                    KUBERNETES CLUSTER                           |   |
+|  +-----------------------------------------------------------------+    |
+|  |                    KUBERNETES CLUSTER                           |    |
 |  |                                                                  |   |
-|  |  +-------------+                                                |   |
-|  |  |  Client Pod |                                                |   |
-|  |  +------+------+                                                |   |
-|  |         |                                                       |   |
-|  |         | request to 10.96.10.5:80                             |   |
-|  |         v                                                       |   |
-|  |  +----------------------------------+                          |   |
-|  |  |     Service: my-service          |                          |   |
-|  |  |     Type: ClusterIP              |                          |   |
-|  |  |     ClusterIP: 10.96.10.5        |                          |   |
-|  |  |     Port: 80                     |                          |   |
-|  |  |     Selector: app=backend        |                          |   |
-|  |  +--------------+-------------------+                          |   |
-|  |                 |                                               |   |
-|  |       +---------+---------+                                    |   |
-|  |       v         v         v                                    |   |
-|  |  +--------++--------++--------+                               |   |
-|  |  | Pod 1  || Pod 2  || Pod 3  |                               |   |
-|  |  | :8080  || :8080  || :8080  |                               |   |
-|  |  |app=back||app=back||app=back|                               |   |
-|  |  +--------++--------++--------+                               |   |
+|  |  +-------------+                                                |    |
+|  |  |  Client Pod |                                                |    |
+|  |  +------+------+                                                |    |
+|  |         |                                                       |    |
+|  |         | request to 10.96.10.5:80                             |     |
+|  |         v                                                       |    |
+|  |  +----------------------------------+                          |     |
+|  |  |     Service: my-service          |                          |     |
+|  |  |     Type: ClusterIP              |                          |     |
+|  |  |     ClusterIP: 10.96.10.5        |                          |     |
+|  |  |     Port: 80                     |                          |     |
+|  |  |     Selector: app=backend        |                          |     |
+|  |  +--------------+-------------------+                          |     |
+|  |                 |                                               |    |
+|  |       +---------+---------+                                    |     |
+|  |       v         v         v                                    |     |
+|  |  +--------++--------++--------+                               |      |
+|  |  | Pod 1  || Pod 2  || Pod 3  |                               |      |
+|  |  | :8080  || :8080  || :8080  |                               |      |
+|  |  |app=back||app=back||app=back|                               |      |
+|  |  +--------++--------++--------+                               |      |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
-|  NOT accessible from outside cluster!                                  |
+|  NOT accessible from outside cluster!                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -588,17 +588,17 @@ Part 10: CNI Deep Dives
 **YAML EXAMPLE:**
 
 ```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: my-service
-spec:
+apiVersion: v1                                    
+kind: Service                                     
+metadata:                                         
+  name: my-service                                
+spec:                                             
   type: ClusterIP        # Default, can be omitted
-  selector:
-    app: backend         # Pods with this label
-  ports:
-    - port: 80           # Service port
-      targetPort: 8080   # Pod port
+  selector:                                       
+    app: backend         # Pods with this label   
+  ports:                                          
+    - port: 80           # Service port           
+      targetPort: 8080   # Pod port               
 ```
 
 ### 4.3 NODEPORT SERVICE
@@ -607,48 +607,48 @@ spec:
 +-------------------------------------------------------------------------+
 |                    NODEPORT SERVICE                                     |
 |                                                                         |
-|  * Opens a port (30000-32767) on EVERY node                           |
-|  * External traffic can reach service via NodeIP:NodePort             |
-|  * Also creates ClusterIP automatically                               |
+|  * Opens a port (30000-32767) on EVERY node                             |
+|  * External traffic can reach service via NodeIP:NodePort               |
+|  * Also creates ClusterIP automatically                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|              External Client                                           |
-|                    |                                                   |
-|                    | http://192.168.1.10:30080                        |
-|                    | (or any node IP)                                  |
-|                    v                                                   |
-|  +-----------------------------------------------------------------+   |
-|  |                    KUBERNETES CLUSTER                           |   |
+|              External Client                                            |
+|                    |                                                    |
+|                    | http://192.168.1.10:30080                          |
+|                    | (or any node IP)                                   |
+|                    v                                                    |
+|  +-----------------------------------------------------------------+    |
+|  |                    KUBERNETES CLUSTER                           |    |
 |  |                                                                  |   |
-|  |  +-----------------+  +-----------------+  +-----------------+  |   |
-|  |  |     Node 1      |  |     Node 2      |  |     Node 3      |  |   |
-|  |  | 192.168.1.10    |  | 192.168.1.11    |  | 192.168.1.12    |  |   |
-|  |  |                 |  |                 |  |                 |  |   |
-|  |  |    :30080  -----+--+-----:30080 -----+--+-----:30080      |  |   |
-|  |  |       |         |  |       |         |  |       |         |  |   |
-|  |  +-------+---------+  +-------+---------+  +-------+---------+  |   |
-|  |          |                    |                    |            |   |
-|  |          +--------------------+--------------------+            |   |
+|  |  +-----------------+  +-----------------+  +-----------------+  |    |
+|  |  |     Node 1      |  |     Node 2      |  |     Node 3      |  |    |
+|  |  | 192.168.1.10    |  | 192.168.1.11    |  | 192.168.1.12    |  |    |
+|  |  |                 |  |                 |  |                 |  |    |
+|  |  |    :30080  -----+--+-----:30080 -----+--+-----:30080      |  |    |
+|  |  |       |         |  |       |         |  |       |         |  |    |
+|  |  +-------+---------+  +-------+---------+  +-------+---------+  |    |
+|  |          |                    |                    |            |    |
+|  |          +--------------------+--------------------+            |    |
 |  |                               |                                  |   |
 |  |                               v                                  |   |
-|  |                 +--------------------------+                    |   |
-|  |                 |   Service: my-service    |                    |   |
-|  |                 |   Type: NodePort         |                    |   |
-|  |                 |   ClusterIP: 10.96.10.5  |                    |   |
-|  |                 |   NodePort: 30080        |                    |   |
-|  |                 +------------+-------------+                    |   |
+|  |                 +--------------------------+                    |    |
+|  |                 |   Service: my-service    |                    |    |
+|  |                 |   Type: NodePort         |                    |    |
+|  |                 |   ClusterIP: 10.96.10.5  |                    |    |
+|  |                 |   NodePort: 30080        |                    |    |
+|  |                 +------------+-------------+                    |    |
 |  |                              |                                   |   |
-|  |                    +---------+---------+                        |   |
-|  |                    v         v         v                        |   |
-|  |               +--------++--------++--------+                   |   |
-|  |               | Pod 1  || Pod 2  || Pod 3  |                   |   |
-|  |               +--------++--------++--------+                   |   |
+|  |                    +---------+---------+                        |    |
+|  |                    v         v         v                        |    |
+|  |               +--------++--------++--------+                   |     |
+|  |               | Pod 1  || Pod 2  || Pod 3  |                   |     |
+|  |               +--------++--------++--------+                   |     |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
-|  NOTE: Traffic can enter any node, even if Pod isn't on that node     |
-|        kube-proxy routes to correct Pod                               |
+|  NOTE: Traffic can enter any node, even if Pod isn't on that node       |
+|        kube-proxy routes to correct Pod                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -656,17 +656,17 @@ spec:
 **YAML EXAMPLE:**
 
 ```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: my-service
-spec:
-  type: NodePort
-  selector:
-    app: backend
-  ports:
-    - port: 80           # ClusterIP port
-      targetPort: 8080   # Pod port
+apiVersion: v1                                                               
+kind: Service                                                                
+metadata:                                                                    
+  name: my-service                                                           
+spec:                                                                        
+  type: NodePort                                                             
+  selector:                                                                  
+    app: backend                                                             
+  ports:                                                                     
+    - port: 80           # ClusterIP port                                    
+      targetPort: 8080   # Pod port                                          
       nodePort: 30080    # External port (optional, auto-assigned if omitted)
 ```
 
@@ -676,48 +676,48 @@ spec:
 +-------------------------------------------------------------------------+
 |                    LOADBALANCER SERVICE                                 |
 |                                                                         |
-|  * Provisions external load balancer (cloud provider)                  |
-|  * Gets external IP from cloud (AWS ELB, GCP LB, Azure LB)            |
-|  * Also creates NodePort and ClusterIP                                |
+|  * Provisions external load balancer (cloud provider)                   |
+|  * Gets external IP from cloud (AWS ELB, GCP LB, Azure LB)              |
+|  * Also creates NodePort and ClusterIP                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|              External Client                                           |
-|                    |                                                   |
-|                    | http://52.23.181.42                              |
-|                    v                                                   |
-|  +--------------------------------------------+                       |
-|  |        Cloud Load Balancer                  |                       |
-|  |        (AWS ELB / GCP LB)                   |                       |
-|  |        External IP: 52.23.181.42            |                       |
-|  +-------------------+------------------------+                       |
-|                      |                                                 |
-|                      v                                                 |
-|  +-----------------------------------------------------------------+   |
-|  |                    KUBERNETES CLUSTER                           |   |
+|              External Client                                            |
+|                    |                                                    |
+|                    | http://52.23.181.42                                |
+|                    v                                                    |
+|  +--------------------------------------------+                         |
+|  |        Cloud Load Balancer                  |                        |
+|  |        (AWS ELB / GCP LB)                   |                        |
+|  |        External IP: 52.23.181.42            |                        |
+|  +-------------------+------------------------+                         |
+|                      |                                                  |
+|                      v                                                  |
+|  +-----------------------------------------------------------------+    |
+|  |                    KUBERNETES CLUSTER                           |    |
 |  |                                                                  |   |
-|  |  +-------------+  +-------------+  +-------------+              |   |
-|  |  |   Node 1    |  |   Node 2    |  |   Node 3    |              |   |
-|  |  |   :30080    |  |   :30080    |  |   :30080    |              |   |
-|  |  +------+------+  +------+------+  +------+------+              |   |
+|  |  +-------------+  +-------------+  +-------------+              |    |
+|  |  |   Node 1    |  |   Node 2    |  |   Node 3    |              |    |
+|  |  |   :30080    |  |   :30080    |  |   :30080    |              |    |
+|  |  +------+------+  +------+------+  +------+------+              |    |
 |  |         |                |                |                      |   |
 |  |         +----------------+----------------+                      |   |
 |  |                          |                                       |   |
 |  |                          v                                       |   |
-|  |            +--------------------------+                         |   |
-|  |            |   Service: my-service    |                         |   |
-|  |            |   Type: LoadBalancer     |                         |   |
-|  |            |   External: 52.23.181.42 |                         |   |
-|  |            +------------+-------------+                         |   |
+|  |            +--------------------------+                         |    |
+|  |            |   Service: my-service    |                         |    |
+|  |            |   Type: LoadBalancer     |                         |    |
+|  |            |   External: 52.23.181.42 |                         |    |
+|  |            +------------+-------------+                         |    |
 |  |                         |                                        |   |
 |  |                         v                                        |   |
 |  |                    Backend Pods                                  |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
-|  NOTE: Each LoadBalancer Service gets its own external IP              |
-|        Can be expensive with many services!                            |
-|        Use Ingress for HTTP(S) traffic instead.                       |
+|  NOTE: Each LoadBalancer Service gets its own external IP               |
+|        Can be expensive with many services!                             |
+|        Use Ingress for HTTP(S) traffic instead.                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -725,16 +725,16 @@ spec:
 **YAML EXAMPLE:**
 
 ```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: my-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: backend
-  ports:
-    - port: 80
+apiVersion: v1        
+kind: Service         
+metadata:             
+  name: my-service    
+spec:                 
+  type: LoadBalancer  
+  selector:           
+    app: backend      
+  ports:              
+    - port: 80        
       targetPort: 8080
 ```
 
@@ -744,34 +744,34 @@ spec:
 +-------------------------------------------------------------------------+
 |                    HEADLESS SERVICE                                     |
 |                                                                         |
-|  * No ClusterIP (clusterIP: None)                                      |
-|  * DNS returns Pod IPs directly                                        |
-|  * Used for stateful applications (databases, etc.)                   |
+|  * No ClusterIP (clusterIP: None)                                       |
+|  * DNS returns Pod IPs directly                                         |
+|  * Used for stateful applications (databases, etc.)                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  REGULAR SERVICE:                                                       |
 |                                                                         |
-|  DNS query: my-service.default.svc.cluster.local                       |
-|  Returns:   10.96.10.5 (Service ClusterIP)                            |
+|  DNS query: my-service.default.svc.cluster.local                        |
+|  Returns:   10.96.10.5 (Service ClusterIP)                              |
 |                                                                         |
 |  HEADLESS SERVICE:                                                      |
 |                                                                         |
-|  DNS query: my-service.default.svc.cluster.local                       |
-|  Returns:   10.244.1.5, 10.244.2.3, 10.244.3.8 (Pod IPs directly!)    |
+|  DNS query: my-service.default.svc.cluster.local                        |
+|  Returns:   10.244.1.5, 10.244.2.3, 10.244.3.8 (Pod IPs directly!)      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  USE CASES:                                                             |
 |                                                                         |
-|  * StatefulSets (each Pod needs to be addressable)                    |
-|    - mysql-0.mysql.default.svc.cluster.local                          |
-|    - mysql-1.mysql.default.svc.cluster.local                          |
+|  * StatefulSets (each Pod needs to be addressable)                      |
+|    - mysql-0.mysql.default.svc.cluster.local                            |
+|    - mysql-1.mysql.default.svc.cluster.local                            |
 |                                                                         |
-|  * Client-side load balancing                                         |
-|    - Client gets all Pod IPs, decides which to use                    |
+|  * Client-side load balancing                                           |
+|    - Client gets all Pod IPs, decides which to use                      |
 |                                                                         |
-|  * Service discovery without load balancing                           |
+|  * Service discovery without load balancing                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -779,16 +779,16 @@ spec:
 **YAML EXAMPLE:**
 
 ```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: mysql
-spec:
+apiVersion: v1                                   
+kind: Service                                    
+metadata:                                        
+  name: mysql                                    
+spec:                                            
   clusterIP: None        # This makes it headless
-  selector:
-    app: mysql
-  ports:
-    - port: 3306
+  selector:                                      
+    app: mysql                                   
+  ports:                                         
+    - port: 3306                                 
 ```
 
 ## PART 5: SERVICE DISCOVERY & DNS
@@ -799,48 +799,48 @@ spec:
 +-------------------------------------------------------------------------+
 |                    KUBERNETES DNS                                       |
 |                                                                         |
-|  Kubernetes runs a DNS server (CoreDNS) in the cluster.                |
-|  Every Service and Pod gets a DNS name.                                |
+|  Kubernetes runs a DNS server (CoreDNS) in the cluster.                 |
+|  Every Service and Pod gets a DNS name.                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  SERVICE DNS NAMES:                                                     |
 |                                                                         |
 |  Full name:                                                             |
-|  <service-name>.<namespace>.svc.cluster.local                          |
+|  <service-name>.<namespace>.svc.cluster.local                           |
 |                                                                         |
 |  Examples:                                                              |
-|  * my-service.default.svc.cluster.local                               |
-|  * backend.production.svc.cluster.local                               |
+|  * my-service.default.svc.cluster.local                                 |
+|  * backend.production.svc.cluster.local                                 |
 |                                                                         |
-|  Short names (from same namespace):                                    |
-|  * my-service (resolves to my-service.default.svc.cluster.local)      |
+|  Short names (from same namespace):                                     |
+|  * my-service (resolves to my-service.default.svc.cluster.local)        |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  POD DNS NAMES (with hostname/subdomain):                              |
+|  POD DNS NAMES (with hostname/subdomain):                               |
 |                                                                         |
-|  <hostname>.<subdomain>.<namespace>.svc.cluster.local                  |
+|  <hostname>.<subdomain>.<namespace>.svc.cluster.local                   |
 |                                                                         |
 |  StatefulSet Pods:                                                      |
-|  <pod-name>.<service-name>.<namespace>.svc.cluster.local              |
-|  * mysql-0.mysql.default.svc.cluster.local                            |
-|  * mysql-1.mysql.default.svc.cluster.local                            |
+|  <pod-name>.<service-name>.<namespace>.svc.cluster.local                |
+|  * mysql-0.mysql.default.svc.cluster.local                              |
+|  * mysql-1.mysql.default.svc.cluster.local                              |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  DNS RESOLUTION FLOW:                                                   |
 |                                                                         |
-|  +---------+                     +---------+                           |
-|  |   Pod   |--DNS query-------->| CoreDNS |                           |
-|  |         |  "my-service"       | (kube-  |                           |
-|  |         |                     |  dns)   |                           |
-|  |         |<--10.96.10.5--------|         |                           |
-|  +---------+                     +---------+                           |
+|  +---------+                     +---------+                            |
+|  |   Pod   |--DNS query-------->| CoreDNS |                             |
+|  |         |  "my-service"       | (kube-  |                            |
+|  |         |                     |  dns)   |                            |
+|  |         |<--10.96.10.5--------|         |                            |
+|  +---------+                     +---------+                            |
 |                                                                         |
-|  Pod's /etc/resolv.conf:                                               |
-|  nameserver 10.96.0.10  (CoreDNS ClusterIP)                           |
-|  search default.svc.cluster.local svc.cluster.local cluster.local     |
+|  Pod's /etc/resolv.conf:                                                |
+|  nameserver 10.96.0.10  (CoreDNS ClusterIP)                             |
+|  search default.svc.cluster.local svc.cluster.local cluster.local       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -853,22 +853,22 @@ spec:
 |                                                                         |
 |  A RECORD (Service):                                                    |
 |  --------------------                                                   |
-|  my-service.default.svc.cluster.local > 10.96.10.5                    |
+|  my-service.default.svc.cluster.local > 10.96.10.5                      |
 |                                                                         |
-|  A RECORD (Headless Service):                                          |
+|  A RECORD (Headless Service):                                           |
 |  ----------------------------                                           |
-|  my-service.default.svc.cluster.local > 10.244.1.5, 10.244.2.3       |
-|  (Returns all Pod IPs)                                                 |
+|  my-service.default.svc.cluster.local > 10.244.1.5, 10.244.2.3          |
+|  (Returns all Pod IPs)                                                  |
 |                                                                         |
-|  A RECORD (StatefulSet Pods):                                          |
+|  A RECORD (StatefulSet Pods):                                           |
 |  -----------------------------                                          |
-|  mysql-0.mysql.default.svc.cluster.local > 10.244.1.5                 |
-|  mysql-1.mysql.default.svc.cluster.local > 10.244.2.3                 |
+|  mysql-0.mysql.default.svc.cluster.local > 10.244.1.5                   |
+|  mysql-1.mysql.default.svc.cluster.local > 10.244.2.3                   |
 |                                                                         |
-|  SRV RECORD (Named Ports):                                             |
+|  SRV RECORD (Named Ports):                                              |
 |  --------------------------                                             |
-|  _http._tcp.my-service.default.svc.cluster.local                      |
-|  > 0 0 80 my-service.default.svc.cluster.local                        |
+|  _http._tcp.my-service.default.svc.cluster.local                        |
+|  > 0 0 80 my-service.default.svc.cluster.local                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -881,38 +881,38 @@ spec:
 +-------------------------------------------------------------------------+
 |                    KUBE-PROXY                                           |
 |                                                                         |
-|  kube-proxy runs on every node.                                        |
-|  It implements Services by programming network rules.                  |
+|  kube-proxy runs on every node.                                         |
+|  It implements Services by programming network rules.                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  HOW IT WORKS:                                                          |
 |                                                                         |
-|  1. Watches Kubernetes API for Services and Endpoints                  |
-|  2. When Service created/updated:                                      |
-|     - Programs iptables rules (or IPVS)                               |
-|     - Rules redirect Service IP > Pod IPs                             |
+|  1. Watches Kubernetes API for Services and Endpoints                   |
+|  2. When Service created/updated:                                       |
+|     - Programs iptables rules (or IPVS)                                 |
+|     - Rules redirect Service IP > Pod IPs                               |
 |                                                                         |
-|  +---------------------------------------------------------------+     |
+|  +---------------------------------------------------------------+      |
 |  |                         NODE                                   |     |
 |  |                                                                |     |
-|  |   +-------------+                                             |     |
-|  |   | kube-proxy  |<-------- Watch API Server                   |     |
-|  |   +------+------+                                             |     |
-|  |          |                                                    |     |
-|  |          | Programs rules                                     |     |
-|  |          v                                                    |     |
-|  |   +-------------+                                             |     |
-|  |   |  iptables   |                                             |     |
-|  |   |  (or IPVS)  |                                             |     |
-|  |   +-------------+                                             |     |
+|  |   +-------------+                                             |      |
+|  |   | kube-proxy  |<-------- Watch API Server                   |      |
+|  |   +------+------+                                             |      |
+|  |          |                                                    |      |
+|  |          | Programs rules                                     |      |
+|  |          v                                                    |      |
+|  |   +-------------+                                             |      |
+|  |   |  iptables   |                                             |      |
+|  |   |  (or IPVS)  |                                             |      |
+|  |   +-------------+                                             |      |
 |  |                                                                |     |
-|  |   Traffic to 10.96.10.5 (Service)                            |     |
-|  |          |                                                    |     |
-|  |          v (iptables DNAT)                                   |     |
-|  |   Redirected to 10.244.1.5 (Pod)                             |     |
+|  |   Traffic to 10.96.10.5 (Service)                            |       |
+|  |          |                                                    |      |
+|  |          v (iptables DNAT)                                   |       |
+|  |   Redirected to 10.244.1.5 (Pod)                             |       |
 |  |                                                                |     |
-|  +---------------------------------------------------------------+     |
+|  +---------------------------------------------------------------+      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -923,42 +923,42 @@ spec:
 +-------------------------------------------------------------------------+
 |                    IPTABLES MODE (Default)                              |
 |                                                                         |
-|  kube-proxy creates iptables rules for each Service.                   |
+|  kube-proxy creates iptables rules for each Service.                    |
 |                                                                         |
-|  EXAMPLE: Service with 3 backend Pods                                  |
+|  EXAMPLE: Service with 3 backend Pods                                   |
 |                                                                         |
-|  Traffic to 10.96.10.5:80                                              |
-|        |                                                               |
-|        v                                                               |
-|  +-----------------------------------------------------------------+   |
-|  |  KUBE-SERVICES chain                                            |   |
+|  Traffic to 10.96.10.5:80                                               |
+|        |                                                                |
+|        v                                                                |
+|  +-----------------------------------------------------------------+    |
+|  |  KUBE-SERVICES chain                                            |    |
 |  |                                                                  |   |
-|  |  -A KUBE-SERVICES -d 10.96.10.5/32 -p tcp --dport 80           |   |
-|  |     -j KUBE-SVC-XXXXX                                           |   |
-|  +--------------------------+--------------------------------------+   |
-|                             |                                          |
-|                             v                                          |
-|  +-----------------------------------------------------------------+   |
-|  |  KUBE-SVC-XXXXX chain (Load Balancing)                          |   |
+|  |  -A KUBE-SERVICES -d 10.96.10.5/32 -p tcp --dport 80           |     |
+|  |     -j KUBE-SVC-XXXXX                                           |    |
+|  +--------------------------+--------------------------------------+    |
+|                             |                                           |
+|                             v                                           |
+|  +-----------------------------------------------------------------+    |
+|  |  KUBE-SVC-XXXXX chain (Load Balancing)                          |    |
 |  |                                                                  |   |
-|  |  -A KUBE-SVC-XXXXX -m statistic --probability 0.33             |   |
-|  |     -j KUBE-SEP-AAAA                                            |   |
-|  |  -A KUBE-SVC-XXXXX -m statistic --probability 0.50             |   |
-|  |     -j KUBE-SEP-BBBB                                            |   |
-|  |  -A KUBE-SVC-XXXXX                                              |   |
-|  |     -j KUBE-SEP-CCCC                                            |   |
-|  +--------------------------+--------------------------------------+   |
-|           |                 |                 |                        |
-|           v                 v                 v                        |
-|  +--------------+  +--------------+  +--------------+                 |
-|  |KUBE-SEP-AAAA |  |KUBE-SEP-BBBB |  |KUBE-SEP-CCCC |                 |
-|  |              |  |              |  |              |                 |
-|  | DNAT to      |  | DNAT to      |  | DNAT to      |                 |
-|  | 10.244.1.5   |  | 10.244.2.3   |  | 10.244.3.8   |                 |
-|  +--------------+  +--------------+  +--------------+                 |
+|  |  -A KUBE-SVC-XXXXX -m statistic --probability 0.33             |     |
+|  |     -j KUBE-SEP-AAAA                                            |    |
+|  |  -A KUBE-SVC-XXXXX -m statistic --probability 0.50             |     |
+|  |     -j KUBE-SEP-BBBB                                            |    |
+|  |  -A KUBE-SVC-XXXXX                                              |    |
+|  |     -j KUBE-SEP-CCCC                                            |    |
+|  +--------------------------+--------------------------------------+    |
+|           |                 |                 |                         |
+|           v                 v                 v                         |
+|  +--------------+  +--------------+  +--------------+                   |
+|  |KUBE-SEP-AAAA |  |KUBE-SEP-BBBB |  |KUBE-SEP-CCCC |                   |
+|  |              |  |              |  |              |                   |
+|  | DNAT to      |  | DNAT to      |  | DNAT to      |                   |
+|  | 10.244.1.5   |  | 10.244.2.3   |  | 10.244.3.8   |                   |
+|  +--------------+  +--------------+  +--------------+                   |
 |                                                                         |
-|  NOTE: With many Services/Pods, iptables rules can get huge            |
-|        (linear lookup time)                                            |
+|  NOTE: With many Services/Pods, iptables rules can get huge             |
+|        (linear lookup time)                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -969,35 +969,35 @@ spec:
 +-------------------------------------------------------------------------+
 |                    IPVS MODE (Better for Large Clusters)                |
 |                                                                         |
-|  IPVS (IP Virtual Server) is a Linux kernel load balancer.            |
-|  Uses hash tables instead of linear chain (O(1) vs O(n)).             |
+|  IPVS (IP Virtual Server) is a Linux kernel load balancer.              |
+|  Uses hash tables instead of linear chain (O(1) vs O(n)).               |
 |                                                                         |
 |  ADVANTAGES OVER IPTABLES:                                              |
-|  * Better performance at scale (1000s of Services)                    |
-|  * More load balancing algorithms:                                     |
-|    - Round Robin (rr)                                                 |
-|    - Least Connections (lc)                                           |
-|    - Destination Hashing (dh)                                         |
-|    - Source Hashing (sh)                                              |
-|    - Shortest Expected Delay (sed)                                    |
-|    - Never Queue (nq)                                                 |
+|  * Better performance at scale (1000s of Services)                      |
+|  * More load balancing algorithms:                                      |
+|    - Round Robin (rr)                                                   |
+|    - Least Connections (lc)                                             |
+|    - Destination Hashing (dh)                                           |
+|    - Source Hashing (sh)                                                |
+|    - Shortest Expected Delay (sed)                                      |
+|    - Never Queue (nq)                                                   |
 |                                                                         |
 |  ENABLE IPVS:                                                           |
 |  -------------                                                          |
-|  # In kube-proxy ConfigMap                                            |
-|  mode: ipvs                                                            |
+|  # In kube-proxy ConfigMap                                              |
+|  mode: ipvs                                                             |
 |  ipvs:                                                                  |
-|    scheduler: rr                                                       |
+|    scheduler: rr                                                        |
 |                                                                         |
 |  VIEW IPVS RULES:                                                       |
 |  ----------------                                                       |
-|  ipvsadm -Ln                                                           |
+|  ipvsadm -Ln                                                            |
 |                                                                         |
 |  OUTPUT:                                                                |
-|  TCP  10.96.10.5:80 rr                                                |
-|    -> 10.244.1.5:8080    Masq    1      0      0                      |
-|    -> 10.244.2.3:8080    Masq    1      0      0                      |
-|    -> 10.244.3.8:8080    Masq    1      0      0                      |
+|  TCP  10.96.10.5:80 rr                                                  |
+|    -> 10.244.1.5:8080    Masq    1      0      0                        |
+|    -> 10.244.2.3:8080    Masq    1      0      0                        |
+|    -> 10.244.3.8:8080    Masq    1      0      0                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1010,37 +1010,37 @@ spec:
 +-------------------------------------------------------------------------+
 |                    INGRESS                                              |
 |                                                                         |
-|  Ingress manages external HTTP(S) access to Services.                  |
-|  Like a reverse proxy (Nginx) with Kubernetes integration.             |
+|  Ingress manages external HTTP(S) access to Services.                   |
+|  Like a reverse proxy (Nginx) with Kubernetes integration.              |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  WITHOUT INGRESS (Multiple LoadBalancers):                             |
+|  WITHOUT INGRESS (Multiple LoadBalancers):                              |
 |                                                                         |
-|  app1.com --> LoadBalancer ($) --> Service A                          |
-|  app2.com --> LoadBalancer ($) --> Service B                          |
-|  app3.com --> LoadBalancer ($) --> Service C                          |
+|  app1.com --> LoadBalancer ($) --> Service A                            |
+|  app2.com --> LoadBalancer ($) --> Service B                            |
+|  app3.com --> LoadBalancer ($) --> Service C                            |
 |                                                                         |
-|  3 external IPs, 3x the cost!                                          |
+|  3 external IPs, 3x the cost!                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  WITH INGRESS (Single Entry Point):                                    |
+|  WITH INGRESS (Single Entry Point):                                     |
 |                                                                         |
-|  app1.com -+                    +--> Service A                         |
-|  app2.com -+--> Ingress --------+--> Service B                         |
-|  app3.com -+   (1 LB)          +--> Service C                         |
+|  app1.com -+                    +--> Service A                          |
+|  app2.com -+--> Ingress --------+--> Service B                          |
+|  app3.com -+   (1 LB)          +--> Service C                           |
 |                                                                         |
-|  1 external IP, routes based on hostname/path!                         |
+|  1 external IP, routes based on hostname/path!                          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  INGRESS FEATURES:                                                      |
-|  * Host-based routing (app1.com > Service A)                          |
-|  * Path-based routing (/api > API Service, /web > Web Service)        |
-|  * TLS termination (HTTPS)                                             |
-|  * Load balancing                                                      |
-|  * SSL certificate management                                          |
+|  * Host-based routing (app1.com > Service A)                            |
+|  * Path-based routing (/api > API Service, /web > Web Service)          |
+|  * TLS termination (HTTPS)                                              |
+|  * Load balancing                                                       |
+|  * SSL certificate management                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -1050,31 +1050,31 @@ spec:
 |                      Internet                                           |
 |                          |                                              |
 |                          v                                              |
-|              +-----------------------+                                 |
-|              |  Cloud Load Balancer  |                                 |
-|              |     (External IP)     |                                 |
-|              +-----------+-----------+                                 |
+|              +-----------------------+                                  |
+|              |  Cloud Load Balancer  |                                  |
+|              |     (External IP)     |                                  |
+|              +-----------+-----------+                                  |
 |                          |                                              |
-|  +-----------------------+---------------------------------------+     |
-|  |                       |                CLUSTER                |     |
-|  |                       v                                       |     |
-|  |           +-----------------------+                          |     |
-|  |           |   Ingress Controller  |                          |     |
-|  |           |   (Nginx Pod)         |                          |     |
-|  |           |                       |                          |     |
-|  |           | Reads Ingress rules   |                          |     |
-|  |           | Configures proxy      |                          |     |
-|  |           +-----------+-----------+                          |     |
-|  |                       |                                       |     |
-|  |         +-------------+-------------+                        |     |
-|  |         |             |             |                        |     |
-|  |         v             v             v                        |     |
-|  |    +---------+   +---------+   +---------+                  |     |
-|  |    |Service A|   |Service B|   |Service C|                  |     |
-|  |    |(app1)   |   |(app2)   |   |(app3)   |                  |     |
-|  |    +---------+   +---------+   +---------+                  |     |
-|  |                                                               |     |
-|  +---------------------------------------------------------------+     |
+|  +-----------------------+---------------------------------------+      |
+|  |                       |                CLUSTER                |      |
+|  |                       v                                       |      |
+|  |           +-----------------------+                          |       |
+|  |           |   Ingress Controller  |                          |       |
+|  |           |   (Nginx Pod)         |                          |       |
+|  |           |                       |                          |       |
+|  |           | Reads Ingress rules   |                          |       |
+|  |           | Configures proxy      |                          |       |
+|  |           +-----------+-----------+                          |       |
+|  |                       |                                       |      |
+|  |         +-------------+-------------+                        |       |
+|  |         |             |             |                        |       |
+|  |         v             v             v                        |       |
+|  |    +---------+   +---------+   +---------+                  |        |
+|  |    |Service A|   |Service B|   |Service C|                  |        |
+|  |    |(app1)   |   |(app2)   |   |(app3)   |                  |        |
+|  |    +---------+   +---------+   +---------+                  |        |
+|  |                                                               |      |
+|  +---------------------------------------------------------------+      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1085,84 +1085,84 @@ spec:
 
 ```yaml
 apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: multi-host-ingress
-spec:
-  rules:
-  - host: app1.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: app1-service
-            port:
-              number: 80
-  - host: app2.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: app2-service
-            port:
-              number: 80
+kind: Ingress                   
+metadata:                       
+  name: multi-host-ingress      
+spec:                           
+  rules:                        
+  - host: app1.example.com      
+    http:                       
+      paths:                    
+      - path: /                 
+        pathType: Prefix        
+        backend:                
+          service:              
+            name: app1-service  
+            port:               
+              number: 80        
+  - host: app2.example.com      
+    http:                       
+      paths:                    
+      - path: /                 
+        pathType: Prefix        
+        backend:                
+          service:              
+            name: app2-service  
+            port:               
+              number: 80        
 ```
 
 **PATH-BASED ROUTING:**
 
 ```yaml
 apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: path-based-ingress
-spec:
-  rules:
-  - host: myapp.example.com
-    http:
-      paths:
-      - path: /api
-        pathType: Prefix
-        backend:
-          service:
-            name: api-service
-            port:
-              number: 80
-      - path: /web
-        pathType: Prefix
-        backend:
-          service:
-            name: web-service
-            port:
-              number: 80
+kind: Ingress                   
+metadata:                       
+  name: path-based-ingress      
+spec:                           
+  rules:                        
+  - host: myapp.example.com     
+    http:                       
+      paths:                    
+      - path: /api              
+        pathType: Prefix        
+        backend:                
+          service:              
+            name: api-service   
+            port:               
+              number: 80        
+      - path: /web              
+        pathType: Prefix        
+        backend:                
+          service:              
+            name: web-service   
+            port:               
+              number: 80        
 ```
 
 **TLS/HTTPS:**
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: tls-ingress
-spec:
-  tls:
-  - hosts:
-    - myapp.example.com
+apiVersion: networking.k8s.io/v1                               
+kind: Ingress                                                  
+metadata:                                                      
+  name: tls-ingress                                            
+spec:                                                          
+  tls:                                                         
+  - hosts:                                                     
+    - myapp.example.com                                        
     secretName: myapp-tls-secret    # Contains TLS cert and key
-  rules:
-  - host: myapp.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: myapp-service
-            port:
-              number: 80
+  rules:                                                       
+  - host: myapp.example.com                                    
+    http:                                                      
+      paths:                                                   
+      - path: /                                                
+        pathType: Prefix                                       
+        backend:                                               
+          service:                                             
+            name: myapp-service                                
+            port:                                              
+              number: 80                                       
 ```
 
 ### 7.3 POPULAR INGRESS CONTROLLERS
@@ -1171,28 +1171,28 @@ spec:
 +-------------------------------------------------------------------------+
 |                    INGRESS CONTROLLERS                                  |
 |                                                                         |
-|  Kubernetes doesn't include an Ingress controller.                     |
-|  You must install one.                                                 |
+|  Kubernetes doesn't include an Ingress controller.                      |
+|  You must install one.                                                  |
 |                                                                         |
-|  +--------------------+---------------------------------------------+  |
-|  | Controller         | Notes                                       |  |
-|  +--------------------+---------------------------------------------+  |
-|  | NGINX Ingress      | Most popular. Community & commercial.      |  |
-|  |                    | Good default choice.                        |  |
-|  +--------------------+---------------------------------------------+  |
-|  | Traefik            | Cloud-native, auto-discovery.              |  |
-|  |                    | Good for dynamic environments.             |  |
-|  +--------------------+---------------------------------------------+  |
-|  | HAProxy            | High performance, battle-tested.           |  |
-|  +--------------------+---------------------------------------------+  |
-|  | AWS ALB Ingress    | Uses AWS Application Load Balancer.        |  |
-|  |                    | Best for EKS.                               |  |
-|  +--------------------+---------------------------------------------+  |
-|  | GKE Ingress        | Uses Google Cloud Load Balancer.           |  |
-|  +--------------------+---------------------------------------------+  |
-|  | Istio Gateway      | Part of Istio service mesh.                |  |
-|  |                    | Advanced traffic management.               |  |
-|  +--------------------+---------------------------------------------+  |
+|  +--------------------+---------------------------------------------+   |
+|  | Controller         | Notes                                       |   |
+|  +--------------------+---------------------------------------------+   |
+|  | NGINX Ingress      | Most popular. Community & commercial.      |    |
+|  |                    | Good default choice.                        |   |
+|  +--------------------+---------------------------------------------+   |
+|  | Traefik            | Cloud-native, auto-discovery.              |    |
+|  |                    | Good for dynamic environments.             |    |
+|  +--------------------+---------------------------------------------+   |
+|  | HAProxy            | High performance, battle-tested.           |    |
+|  +--------------------+---------------------------------------------+   |
+|  | AWS ALB Ingress    | Uses AWS Application Load Balancer.        |    |
+|  |                    | Best for EKS.                               |   |
+|  +--------------------+---------------------------------------------+   |
+|  | GKE Ingress        | Uses Google Cloud Load Balancer.           |    |
+|  +--------------------+---------------------------------------------+   |
+|  | Istio Gateway      | Part of Istio service mesh.                |    |
+|  |                    | Advanced traffic management.               |    |
+|  +--------------------+---------------------------------------------+   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1205,29 +1205,29 @@ spec:
 +-------------------------------------------------------------------------+
 |                    NETWORK POLICIES                                     |
 |                                                                         |
-|  Network Policies are like firewall rules for Pods.                    |
-|  Control which Pods can talk to which.                                 |
+|  Network Policies are like firewall rules for Pods.                     |
+|  Control which Pods can talk to which.                                  |
 |                                                                         |
 |  DEFAULT BEHAVIOR:                                                      |
 |  ------------------                                                     |
-|  Without Network Policies: ALL Pods can talk to ALL Pods               |
-|  (Fully open network)                                                  |
+|  Without Network Policies: ALL Pods can talk to ALL Pods                |
+|  (Fully open network)                                                   |
 |                                                                         |
-|  With Network Policies: Only explicitly allowed traffic passes         |
+|  With Network Policies: Only explicitly allowed traffic passes          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  REQUIREMENTS:                                                          |
-|  * CNI plugin must support Network Policies                           |
-|  * Supported: Calico, Cilium, Weave Net                               |
-|  * NOT supported: Flannel (basic)                                     |
+|  * CNI plugin must support Network Policies                             |
+|  * Supported: Calico, Cilium, Weave Net                                 |
+|  * NOT supported: Flannel (basic)                                       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  POLICY TYPES:                                                          |
 |                                                                         |
-|  Ingress: Control incoming traffic TO Pods                             |
-|  Egress:  Control outgoing traffic FROM Pods                           |
+|  Ingress: Control incoming traffic TO Pods                              |
+|  Egress:  Control outgoing traffic FROM Pods                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1237,92 +1237,92 @@ spec:
 DENY ALL INGRESS (Default Deny):
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: deny-all-ingress
-  namespace: production
-spec:
+apiVersion: networking.k8s.io/v1                             
+kind: NetworkPolicy                                          
+metadata:                                                    
+  name: deny-all-ingress                                     
+  namespace: production                                      
+spec:                                                        
   podSelector: {}          # Applies to all Pods in namespace
-  policyTypes:
-  - Ingress                # Only affects ingress
-  # No ingress rules = deny all incoming traffic
+  policyTypes:                                               
+  - Ingress                # Only affects ingress            
+  # No ingress rules = deny all incoming traffic             
 ```
 
 **ALLOW SPECIFIC PODS:**
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-frontend-to-backend
-spec:
-  podSelector:
-    matchLabels:
-      app: backend         # Apply to backend Pods
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - podSelector:
-        matchLabels:
+apiVersion: networking.k8s.io/v1                          
+kind: NetworkPolicy                                       
+metadata:                                                 
+  name: allow-frontend-to-backend                         
+spec:                                                     
+  podSelector:                                            
+    matchLabels:                                          
+      app: backend         # Apply to backend Pods        
+  policyTypes:                                            
+  - Ingress                                               
+  ingress:                                                
+  - from:                                                 
+    - podSelector:                                        
+        matchLabels:                                      
           app: frontend    # Only allow from frontend Pods
-    ports:
-    - protocol: TCP
-      port: 8080
+    ports:                                                
+    - protocol: TCP                                       
+      port: 8080                                          
 ```
 
 **ALLOW FROM SPECIFIC NAMESPACE:**
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: allow-from-monitoring
-  namespace: production
-spec:
-  podSelector: {}
-  policyTypes:
-  - Ingress
-  ingress:
-  - from:
-    - namespaceSelector:
-        matchLabels:
+apiVersion: networking.k8s.io/v1                               
+kind: NetworkPolicy                                            
+metadata:                                                      
+  name: allow-from-monitoring                                  
+  namespace: production                                        
+spec:                                                          
+  podSelector: {}                                              
+  policyTypes:                                                 
+  - Ingress                                                    
+  ingress:                                                     
+  - from:                                                      
+    - namespaceSelector:                                       
+        matchLabels:                                           
           name: monitoring    # Allow from monitoring namespace
-    ports:
-    - protocol: TCP
-      port: 9090
+    ports:                                                     
+    - protocol: TCP                                            
+      port: 9090                                               
 ```
 
 EGRESS POLICY (Restrict Outbound):
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: backend-egress
-spec:
-  podSelector:
-    matchLabels:
-      app: backend
-  policyTypes:
-  - Egress
-  egress:
-  - to:
-    - podSelector:
-        matchLabels:
-          app: database
-    ports:
-    - protocol: TCP
-      port: 5432
+apiVersion: networking.k8s.io/v1      
+kind: NetworkPolicy                   
+metadata:                             
+  name: backend-egress                
+spec:                                 
+  podSelector:                        
+    matchLabels:                      
+      app: backend                    
+  policyTypes:                        
+  - Egress                            
+  egress:                             
+  - to:                               
+    - podSelector:                    
+        matchLabels:                  
+          app: database               
+    ports:                            
+    - protocol: TCP                   
+      port: 5432                      
   - to:                    # Allow DNS
-    - namespaceSelector: {}
-      podSelector:
-        matchLabels:
-          k8s-app: kube-dns
-    ports:
-    - protocol: UDP
-      port: 53
+    - namespaceSelector: {}           
+      podSelector:                    
+        matchLabels:                  
+          k8s-app: kube-dns           
+    ports:                            
+    - protocol: UDP                   
+      port: 53                        
 ```
 
 ## PART 9: TROUBLESHOOTING
@@ -1331,58 +1331,58 @@ spec:
 
 ```
 +-------------------------------------------------------------------------+
-| Problem                          | Solution                            |
-+----------------------------------+-------------------------------------+
-| Pod can't reach Service          | Check Service selector matches      |
-|                                  | Pod labels. Check Endpoints.        |
-+----------------------------------+-------------------------------------+
-| DNS not resolving                | Check CoreDNS is running.           |
-|                                  | Check /etc/resolv.conf in Pod.      |
-+----------------------------------+-------------------------------------+
-| Can't reach external services    | Check egress Network Policies.      |
-|                                  | Check node's internet connectivity. |
-+----------------------------------+-------------------------------------+
-| NodePort not accessible          | Check firewall on nodes.            |
-|                                  | Check kube-proxy is running.        |
-+----------------------------------+-------------------------------------+
-| Pod-to-Pod fails across nodes    | Check CNI plugin. Check node        |
-|                                  | routes. Check overlay network.      |
-+----------------------------------+-------------------------------------+
+| Problem                          | Solution                             |
++----------------------------------+--------------------------------------+
+| Pod can't reach Service          | Check Service selector matches       |
+|                                  | Pod labels. Check Endpoints.         |
++----------------------------------+--------------------------------------+
+| DNS not resolving                | Check CoreDNS is running.            |
+|                                  | Check /etc/resolv.conf in Pod.       |
++----------------------------------+--------------------------------------+
+| Can't reach external services    | Check egress Network Policies.       |
+|                                  | Check node's internet connectivity.  |
++----------------------------------+--------------------------------------+
+| NodePort not accessible          | Check firewall on nodes.             |
+|                                  | Check kube-proxy is running.         |
++----------------------------------+--------------------------------------+
+| Pod-to-Pod fails across nodes    | Check CNI plugin. Check node         |
+|                                  | routes. Check overlay network.       |
++----------------------------------+--------------------------------------+
 ```
 
 ### 9.2 DEBUGGING COMMANDS
 
 ```bash
-# Check Service and Endpoints
-kubectl get svc my-service
-kubectl get endpoints my-service
-kubectl describe svc my-service
+# Check Service and Endpoints                                    
+kubectl get svc my-service                                       
+kubectl get endpoints my-service                                 
+kubectl describe svc my-service                                  
 
-# Check DNS from Pod
-kubectl exec -it my-pod -- nslookup my-service
-kubectl exec -it my-pod -- cat /etc/resolv.conf
+# Check DNS from Pod                                             
+kubectl exec -it my-pod -- nslookup my-service                   
+kubectl exec -it my-pod -- cat /etc/resolv.conf                  
 
-# Check Pod connectivity
-kubectl exec -it my-pod -- ping other-pod-ip
-kubectl exec -it my-pod -- curl http://my-service:80
+# Check Pod connectivity                                         
+kubectl exec -it my-pod -- ping other-pod-ip                     
+kubectl exec -it my-pod -- curl http://my-service:80             
 
-# Check kube-proxy
-kubectl get pods -n kube-system | grep kube-proxy
-kubectl logs -n kube-system kube-proxy-xxxxx
+# Check kube-proxy                                               
+kubectl get pods -n kube-system | grep kube-proxy                
+kubectl logs -n kube-system kube-proxy-xxxxx                     
 
-# Check CoreDNS
-kubectl get pods -n kube-system | grep coredns
-kubectl logs -n kube-system coredns-xxxxx
+# Check CoreDNS                                                  
+kubectl get pods -n kube-system | grep coredns                   
+kubectl logs -n kube-system coredns-xxxxx                        
 
-# Check iptables rules (on node)
-iptables -t nat -L | grep my-service
-ipvsadm -Ln  # If using IPVS mode
+# Check iptables rules (on node)                                 
+iptables -t nat -L | grep my-service                             
+ipvsadm -Ln  # If using IPVS mode                                
 
-# Check CNI
-ls /etc/cni/net.d/
-cat /etc/cni/net.d/10-calico.conflist
+# Check CNI                                                      
+ls /etc/cni/net.d/                                               
+cat /etc/cni/net.d/10-calico.conflist                            
 
-# Network debugging Pod
+# Network debugging Pod                                          
 kubectl run debug --image=nicolaka/netshoot -it --rm -- /bin/bash
 ```
 
@@ -1393,41 +1393,41 @@ kubectl run debug --image=nicolaka/netshoot -it --rm -- /bin/bash
 |                    KUBERNETES NETWORKING CHEAT SHEET                    |
 |                                                                         |
 |  POD NETWORKING:                                                        |
-|  * Each Pod gets unique IP                                             |
-|  * Containers in Pod share network namespace (localhost)              |
-|  * Pod-to-Pod: Direct IP routing, no NAT                              |
+|  * Each Pod gets unique IP                                              |
+|  * Containers in Pod share network namespace (localhost)                |
+|  * Pod-to-Pod: Direct IP routing, no NAT                                |
 |                                                                         |
 |  SERVICES:                                                              |
-|  * ClusterIP: Internal only (default)                                 |
-|  * NodePort: External via node ports (30000-32767)                    |
-|  * LoadBalancer: External via cloud LB                                |
-|  * Headless: Direct Pod IPs (clusterIP: None)                        |
+|  * ClusterIP: Internal only (default)                                   |
+|  * NodePort: External via node ports (30000-32767)                      |
+|  * LoadBalancer: External via cloud LB                                  |
+|  * Headless: Direct Pod IPs (clusterIP: None)                           |
 |                                                                         |
 |  DNS:                                                                   |
-|  * <service>.<namespace>.svc.cluster.local                            |
-|  * Short: <service> (same namespace)                                  |
-|  * StatefulSet: <pod>.<service>.<namespace>.svc.cluster.local        |
+|  * <service>.<namespace>.svc.cluster.local                              |
+|  * Short: <service> (same namespace)                                    |
+|  * StatefulSet: <pod>.<service>.<namespace>.svc.cluster.local           |
 |                                                                         |
 |  INGRESS:                                                               |
-|  * L7 routing (HTTP/HTTPS)                                            |
-|  * Host-based and path-based routing                                  |
-|  * TLS termination                                                    |
-|  * Requires Ingress Controller                                        |
+|  * L7 routing (HTTP/HTTPS)                                              |
+|  * Host-based and path-based routing                                    |
+|  * TLS termination                                                      |
+|  * Requires Ingress Controller                                          |
 |                                                                         |
 |  NETWORK POLICIES:                                                      |
-|  * Firewall rules for Pods                                            |
-|  * Default: Allow all (no policies)                                   |
-|  * Requires supporting CNI (Calico, Cilium)                          |
+|  * Firewall rules for Pods                                              |
+|  * Default: Allow all (no policies)                                     |
+|  * Requires supporting CNI (Calico, Cilium)                             |
 |                                                                         |
 |  CNI PLUGINS:                                                           |
-|  * Calico: BGP/VXLAN, Network Policies                               |
-|  * Flannel: Simple overlay                                            |
-|  * Cilium: eBPF, L7 policies                                         |
-|  * AWS VPC CNI: Native VPC IPs                                       |
+|  * Calico: BGP/VXLAN, Network Policies                                  |
+|  * Flannel: Simple overlay                                              |
+|  * Cilium: eBPF, L7 policies                                            |
+|  * AWS VPC CNI: Native VPC IPs                                          |
 |                                                                         |
 |  KUBE-PROXY MODES:                                                      |
-|  * iptables: Default, linear lookup                                   |
-|  * IPVS: Better for large clusters, O(1) lookup                      |
+|  * iptables: Default, linear lookup                                     |
+|  * IPVS: Better for large clusters, O(1) lookup                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

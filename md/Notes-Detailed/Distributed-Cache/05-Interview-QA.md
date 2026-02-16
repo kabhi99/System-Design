@@ -11,51 +11,51 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  REQUIREMENTS (Clarify first)                                         |
-|  * Read-heavy or write-heavy?                                        |
-|  * Consistency requirements?                                          |
-|  * Data size? (determines if single node or distributed)            |
-|  * Latency requirements? (sub-millisecond typical)                  |
+|  REQUIREMENTS (Clarify first)                                           |
+|  * Read-heavy or write-heavy?                                           |
+|  * Consistency requirements?                                            |
+|  * Data size? (determines if single node or distributed)                |
+|  * Latency requirements? (sub-millisecond typical)                      |
 |                                                                         |
-|  HIGH-LEVEL DESIGN                                                     |
+|  HIGH-LEVEL DESIGN                                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |  Clients (App Servers)                                         |  |
-|  |       |                                                         |  |
-|  |       | GET/SET                                                |  |
-|  |       v                                                         |  |
-|  |  +----------------------------------------------------------+  |  |
-|  |  |                Cache Client Library                      |  |  |
-|  |  |  - Consistent hashing                                    |  |  |
-|  |  |  - Connection pooling                                    |  |  |
-|  |  |  - Retry logic                                          |  |  |
-|  |  +----------------------------------------------------------+  |  |
-|  |       |                                                         |  |
-|  |       | Route to correct node                                  |  |
-|  |       v                                                         |  |
-|  |  +----------+  +----------+  +----------+                      |  |
-|  |  | Cache    |  | Cache    |  | Cache    |                      |  |
-|  |  | Node 1   |  | Node 2   |  | Node 3   |                      |  |
-|  |  |          |  |          |  |          |                      |  |
-|  |  | Replica  |  | Replica  |  | Replica  |                      |  |
-|  |  +----------+  +----------+  +----------+                      |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  Clients (App Servers)                                         |     |
+|  |       |                                                         |    |
+|  |       | GET/SET                                                |     |
+|  |       v                                                         |    |
+|  |  +----------------------------------------------------------+  |     |
+|  |  |                Cache Client Library                      |  |     |
+|  |  |  - Consistent hashing                                    |  |     |
+|  |  |  - Connection pooling                                    |  |     |
+|  |  |  - Retry logic                                          |  |      |
+|  |  +----------------------------------------------------------+  |     |
+|  |       |                                                         |    |
+|  |       | Route to correct node                                  |     |
+|  |       v                                                         |    |
+|  |  +----------+  +----------+  +----------+                      |     |
+|  |  | Cache    |  | Cache    |  | Cache    |                      |     |
+|  |  | Node 1   |  | Node 2   |  | Node 3   |                      |     |
+|  |  |          |  |          |  |          |                      |     |
+|  |  | Replica  |  | Replica  |  | Replica  |                      |     |
+|  |  +----------+  +----------+  +----------+                      |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  KEY COMPONENTS                                                        |
-|  --------------                                                        |
-|  1. Data Distribution: Consistent hashing with virtual nodes        |
-|  2. Replication: Leader-follower for HA                             |
-|  3. Eviction: LRU with memory limits                                |
-|  4. Persistence: RDB + AOF for durability                          |
-|  5. Failover: Automatic master election (Sentinel/Cluster)         |
+|  KEY COMPONENTS                                                         |
+|  --------------                                                         |
+|  1. Data Distribution: Consistent hashing with virtual nodes            |
+|  2. Replication: Leader-follower for HA                                 |
+|  3. Eviction: LRU with memory limits                                    |
+|  4. Persistence: RDB + AOF for durability                               |
+|  5. Failover: Automatic master election (Sentinel/Cluster)              |
 |                                                                         |
-|  TRADE-OFFS TO DISCUSS                                                |
+|  TRADE-OFFS TO DISCUSS                                                  |
 |  ----------------------                                                 |
-|  * Consistency vs Availability (async replication = eventual)       |
-|  * Memory vs Disk (in-memory fast, but limited/expensive)          |
-|  * Single node vs Cluster (complexity vs scale)                     |
+|  * Consistency vs Availability (async replication = eventual)           |
+|  * Memory vs Disk (in-memory fast, but limited/expensive)               |
+|  * Single node vs Cluster (complexity vs scale)                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -65,37 +65,37 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  PROBLEM WITH MODULO HASHING                                          |
+|  PROBLEM WITH MODULO HASHING                                            |
 |  ----------------------------                                           |
-|  node = hash(key) % N                                                  |
+|  node = hash(key) % N                                                   |
 |                                                                         |
-|  If N changes (add/remove node), almost all keys remap.              |
-|  Massive cache invalidation. Bad!                                     |
+|  If N changes (add/remove node), almost all keys remap.                 |
+|  Massive cache invalidation. Bad!                                       |
 |                                                                         |
-|  CONSISTENT HASHING SOLUTION                                          |
+|  CONSISTENT HASHING SOLUTION                                            |
 |  ----------------------------                                           |
 |                                                                         |
-|  1. Imagine a circular ring (0 to 2^32)                              |
-|  2. Hash nodes onto the ring                                         |
-|  3. Hash keys onto the ring                                          |
-|  4. Key belongs to first node clockwise                              |
+|  1. Imagine a circular ring (0 to 2^32)                                 |
+|  2. Hash nodes onto the ring                                            |
+|  3. Hash keys onto the ring                                             |
+|  4. Key belongs to first node clockwise                                 |
 |                                                                         |
-|  When node added/removed:                                             |
-|  * Only keys between affected nodes move                            |
-|  * On average, only 1/N keys move                                   |
+|  When node added/removed:                                               |
+|  * Only keys between affected nodes move                                |
+|  * On average, only 1/N keys move                                       |
 |                                                                         |
-|  VIRTUAL NODES                                                         |
-|  -------------                                                         |
-|  Each physical node gets multiple positions on ring.                 |
-|  Ensures even distribution even with few nodes.                      |
-|  Typical: 100-200 virtual nodes per physical node.                   |
+|  VIRTUAL NODES                                                          |
+|  -------------                                                          |
+|  Each physical node gets multiple positions on ring.                    |
+|  Ensures even distribution even with few nodes.                         |
+|  Typical: 100-200 virtual nodes per physical node.                      |
 |                                                                         |
-|  COMPLEXITY                                                            |
-|  ----------                                                            |
-|  * Add/remove node: O(K/N) keys move (K=total keys, N=nodes)       |
-|  * Lookup: O(log N) with binary search                              |
+|  COMPLEXITY                                                             |
+|  ----------                                                             |
+|  * Add/remove node: O(K/N) keys move (K=total keys, N=nodes)            |
+|  * Lookup: O(log N) with binary search                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -105,44 +105,44 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  THE PROBLEM                                                           |
-|  -----------                                                           |
-|  Popular cache key expires.                                          |
-|  Many requests see cache miss.                                        |
-|  All query database simultaneously.                                   |
-|  Database overloaded.                                               |
+|  THE PROBLEM                                                            |
+|  -----------                                                            |
+|  Popular cache key expires.                                             |
+|  Many requests see cache miss.                                          |
+|  All query database simultaneously.                                     |
+|  Database overloaded.                                                   |
 |                                                                         |
-|  SOLUTIONS                                                             |
-|  ---------                                                             |
+|  SOLUTIONS                                                              |
+|  ---------                                                              |
 |                                                                         |
-|  1. LOCKING                                                            |
-|     * First request acquires lock                                    |
-|     * Others wait for cache to populate                              |
-|     * Only one DB query                                              |
+|  1. LOCKING                                                             |
+|     * First request acquires lock                                       |
+|     * Others wait for cache to populate                                 |
+|     * Only one DB query                                                 |
 |                                                                         |
-|     if cache.setnx("lock:key", 1, ttl=10):                           |
-|         value = db.get(key)                                           |
-|         cache.set(key, value)                                         |
-|         cache.delete("lock:key")                                      |
-|     else:                                                              |
-|         wait_and_retry()                                              |
+|     if cache.setnx("lock:key", 1, ttl=10):                              |
+|         value = db.get(key)                                             |
+|         cache.set(key, value)                                           |
+|         cache.delete("lock:key")                                        |
+|     else:                                                               |
+|         wait_and_retry()                                                |
 |                                                                         |
-|  2. EARLY/PROBABILISTIC REFRESH                                       |
-|     * Refresh cache BEFORE expiration                                |
-|     * Random chance to refresh as TTL approaches                    |
-|     * Only one request likely to refresh                            |
+|  2. EARLY/PROBABILISTIC REFRESH                                         |
+|     * Refresh cache BEFORE expiration                                   |
+|     * Random chance to refresh as TTL approaches                        |
+|     * Only one request likely to refresh                                |
 |                                                                         |
-|  3. STALE-WHILE-REVALIDATE                                            |
-|     * Return stale data immediately                                  |
-|     * Refresh in background                                          |
-|     * Fast response, eventually consistent                          |
+|  3. STALE-WHILE-REVALIDATE                                              |
+|     * Return stale data immediately                                     |
+|     * Refresh in background                                             |
+|     * Fast response, eventually consistent                              |
 |                                                                         |
-|  RECOMMENDATION                                                        |
-|  --------------                                                        |
-|  Use locking for critical data.                                       |
-|  Use stale-while-revalidate for less critical data.                  |
+|  RECOMMENDATION                                                         |
+|  --------------                                                         |
+|  Use locking for critical data.                                         |
+|  Use stale-while-revalidate for less critical data.                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -154,41 +154,41 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  Redis IS single-threaded for command execution.                     |
-|  But it's NOT slow because:                                           |
+|  Redis IS single-threaded for command execution.                        |
+|  But it's NOT slow because:                                             |
 |                                                                         |
-|  1. MEMORY IS FAST                                                     |
-|     * RAM access: ~100 nanoseconds                                   |
-|     * No disk I/O for normal operations                              |
-|     * CPU is rarely the bottleneck                                   |
+|  1. MEMORY IS FAST                                                      |
+|     * RAM access: ~100 nanoseconds                                      |
+|     * No disk I/O for normal operations                                 |
+|     * CPU is rarely the bottleneck                                      |
 |                                                                         |
-|  2. NETWORK IS THE BOTTLENECK                                         |
-|     * Network round-trip: ~0.5 milliseconds                         |
-|     * 10,000x slower than memory                                     |
-|     * Adding threads doesn't help network                           |
+|  2. NETWORK IS THE BOTTLENECK                                           |
+|     * Network round-trip: ~0.5 milliseconds                             |
+|     * 10,000x slower than memory                                        |
+|     * Adding threads doesn't help network                               |
 |                                                                         |
-|  3. NO CONTEXT SWITCHING                                               |
-|     * Multi-threaded = locks, contention, overhead                  |
-|     * Single-threaded = simple, predictable                          |
+|  3. NO CONTEXT SWITCHING                                                |
+|     * Multi-threaded = locks, contention, overhead                      |
+|     * Single-threaded = simple, predictable                             |
 |                                                                         |
-|  4. ATOMIC OPERATIONS                                                  |
-|     * All commands atomic by default                                 |
-|     * No need for complex locking                                    |
+|  4. ATOMIC OPERATIONS                                                   |
+|     * All commands atomic by default                                    |
+|     * No need for complex locking                                       |
 |                                                                         |
-|  PERFORMANCE                                                           |
-|  -----------                                                           |
-|  Single Redis instance: ~100,000 ops/sec                             |
-|  That's usually enough! If not:                                       |
-|  * Use pipelining (batch commands)                                  |
-|  * Use Redis Cluster (multiple nodes)                               |
+|  PERFORMANCE                                                            |
+|  -----------                                                            |
+|  Single Redis instance: ~100,000 ops/sec                                |
+|  That's usually enough! If not:                                         |
+|  * Use pipelining (batch commands)                                      |
+|  * Use Redis Cluster (multiple nodes)                                   |
 |                                                                         |
-|  REDIS 6.0+ THREADING                                                  |
+|  REDIS 6.0+ THREADING                                                   |
 |  ---------------------                                                  |
-|  * I/O threads for network read/write                               |
-|  * Command execution still single-threaded                          |
-|  * Helps with large values                                           |
+|  * I/O threads for network read/write                                   |
+|  * Command execution still single-threaded                              |
+|  * Helps with large values                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -198,38 +198,38 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  RDB (Snapshots)                                                       |
+|  RDB (Snapshots)                                                        |
 |  ================                                                       |
-|  * Point-in-time snapshots                                           |
-|  * Compact binary format                                              |
-|  * Fast restart (load entire dataset)                               |
-|  * Potential data loss (between snapshots)                          |
+|  * Point-in-time snapshots                                              |
+|  * Compact binary format                                                |
+|  * Fast restart (load entire dataset)                                   |
+|  * Potential data loss (between snapshots)                              |
 |                                                                         |
-|  USE WHEN:                                                             |
-|  * Data loss is acceptable                                           |
-|  * Want fast backups                                                 |
-|  * Need fast restarts                                                |
+|  USE WHEN:                                                              |
+|  * Data loss is acceptable                                              |
+|  * Want fast backups                                                    |
+|  * Need fast restarts                                                   |
 |                                                                         |
-|  AOF (Append-Only File)                                                |
+|  AOF (Append-Only File)                                                 |
 |  ========================                                               |
-|  * Logs every write operation                                        |
-|  * Text format (human readable)                                      |
-|  * Slower restart (replay all commands)                             |
-|  * Minimal data loss (1 sec with fsync everysec)                   |
+|  * Logs every write operation                                           |
+|  * Text format (human readable)                                         |
+|  * Slower restart (replay all commands)                                 |
+|  * Minimal data loss (1 sec with fsync everysec)                        |
 |                                                                         |
-|  USE WHEN:                                                             |
-|  * Durability is critical                                            |
-|  * Can't afford data loss                                            |
+|  USE WHEN:                                                              |
+|  * Durability is critical                                               |
+|  * Can't afford data loss                                               |
 |                                                                         |
-|  RECOMMENDATION                                                        |
-|  --------------                                                        |
-|  Use BOTH for production:                                             |
-|  * RDB for backups and fast restarts                                |
-|  * AOF for durability                                                |
+|  RECOMMENDATION                                                         |
+|  --------------                                                         |
+|  Use BOTH for production:                                               |
+|  * RDB for backups and fast restarts                                    |
+|  * AOF for durability                                                   |
 |                                                                         |
-|  If just caching (data can be regenerated), RDB alone is fine.      |
+|  If just caching (data can be regenerated), RDB alone is fine.          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -239,45 +239,45 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  REDIS SENTINEL                                                        |
+|  REDIS SENTINEL                                                         |
 |  ================                                                       |
-|  * High availability WITHOUT sharding                                |
-|  * One master, multiple replicas                                    |
-|  * Sentinel processes monitor and failover                          |
-|  * All data on single master (limited by one node's memory)        |
-|  * Supports all Redis commands                                      |
+|  * High availability WITHOUT sharding                                   |
+|  * One master, multiple replicas                                        |
+|  * Sentinel processes monitor and failover                              |
+|  * All data on single master (limited by one node's memory)             |
+|  * Supports all Redis commands                                          |
 |                                                                         |
-|  USE WHEN:                                                             |
-|  * Data fits on single node (<100GB typical)                        |
-|  * Need simple HA                                                    |
-|  * Use multi-key operations frequently                              |
+|  USE WHEN:                                                              |
+|  * Data fits on single node (<100GB typical)                            |
+|  * Need simple HA                                                       |
+|  * Use multi-key operations frequently                                  |
 |                                                                         |
-|  REDIS CLUSTER                                                         |
+|  REDIS CLUSTER                                                          |
 |  ===============                                                        |
-|  * Sharding + high availability                                     |
-|  * Data distributed across multiple masters                         |
-|  * Each master has replicas                                         |
-|  * Built-in routing (MOVED redirects)                              |
-|  * Multi-key ops only with hash tags                               |
+|  * Sharding + high availability                                         |
+|  * Data distributed across multiple masters                             |
+|  * Each master has replicas                                             |
+|  * Built-in routing (MOVED redirects)                                   |
+|  * Multi-key ops only with hash tags                                    |
 |                                                                         |
-|  USE WHEN:                                                             |
-|  * Data exceeds single node capacity                                |
-|  * Need high throughput (multiple masters)                         |
-|  * Can work around multi-key limitations                           |
+|  USE WHEN:                                                              |
+|  * Data exceeds single node capacity                                    |
+|  * Need high throughput (multiple masters)                              |
+|  * Can work around multi-key limitations                                |
 |                                                                         |
-|  COMPARISON TABLE                                                      |
+|  COMPARISON TABLE                                                       |
 |  -----------------                                                      |
-|  +----------------+----------------+----------------+                 |
-|  | Feature        | Sentinel       | Cluster        |                 |
-|  +----------------+----------------+----------------+                 |
-|  | Sharding       | No             | Yes            |                 |
-|  | Max data       | 1 node limit   | Unlimited      |                 |
-|  | Multi-key ops  | Full support   | Hash tags only |                 |
-|  | Complexity     | Lower          | Higher         |                 |
-|  | Min nodes      | 3 (sentinels)  | 6 (3M + 3R)   |                 |
-|  +----------------+----------------+----------------+                 |
+|  +----------------+----------------+----------------+                   |
+|  | Feature        | Sentinel       | Cluster        |                   |
+|  +----------------+----------------+----------------+                   |
+|  | Sharding       | No             | Yes            |                   |
+|  | Max data       | 1 node limit   | Unlimited      |                   |
+|  | Multi-key ops  | Full support   | Hash tags only |                   |
+|  | Complexity     | Lower          | Higher         |                   |
+|  | Min nodes      | 3 (sentinels)  | 6 (3M + 3R)   |                    |
+|  +----------------+----------------+----------------+                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -289,74 +289,74 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  APPROACH 1: FIXED WINDOW                                              |
+|  APPROACH 1: FIXED WINDOW                                               |
 |  =========================                                              |
 |                                                                         |
-|  def is_allowed(user_id, limit=100, window=60):                      |
-|      key = f"rate:{user_id}:{int(time.time() / window)}"            |
+|  def is_allowed(user_id, limit=100, window=60):                         |
+|      key = f"rate:{user_id}:{int(time.time() / window)}"                |
 |                                                                         |
-|      current = redis.incr(key)                                        |
-|      if current == 1:                                                  |
-|          redis.expire(key, window)                                    |
+|      current = redis.incr(key)                                          |
+|      if current == 1:                                                   |
+|          redis.expire(key, window)                                      |
 |                                                                         |
-|      return current <= limit                                          |
+|      return current <= limit                                            |
 |                                                                         |
-|  PROS: Simple, memory efficient                                       |
-|  CONS: Burst at window boundary (can do 2x limit)                   |
+|  PROS: Simple, memory efficient                                         |
+|  CONS: Burst at window boundary (can do 2x limit)                       |
 |                                                                         |
-|  APPROACH 2: SLIDING WINDOW (Sorted Set)                              |
+|  APPROACH 2: SLIDING WINDOW (Sorted Set)                                |
 |  =========================================                              |
 |                                                                         |
-|  def is_allowed(user_id, limit=100, window=60):                      |
-|      key = f"rate:{user_id}"                                          |
-|      now = time.time()                                                 |
-|      cutoff = now - window                                            |
+|  def is_allowed(user_id, limit=100, window=60):                         |
+|      key = f"rate:{user_id}"                                            |
+|      now = time.time()                                                  |
+|      cutoff = now - window                                              |
 |                                                                         |
-|      # Remove old entries                                             |
-|      redis.zremrangebyscore(key, 0, cutoff)                          |
+|      # Remove old entries                                               |
+|      redis.zremrangebyscore(key, 0, cutoff)                             |
 |                                                                         |
-|      # Count current entries                                          |
-|      count = redis.zcard(key)                                         |
+|      # Count current entries                                            |
+|      count = redis.zcard(key)                                           |
 |                                                                         |
-|      if count < limit:                                                 |
-|          # Add this request                                           |
-|          redis.zadd(key, {str(uuid.uuid4()): now})                   |
-|          redis.expire(key, window)                                    |
-|          return True                                                   |
+|      if count < limit:                                                  |
+|          # Add this request                                             |
+|          redis.zadd(key, {str(uuid.uuid4()): now})                      |
+|          redis.expire(key, window)                                      |
+|          return True                                                    |
 |                                                                         |
-|      return False                                                      |
+|      return False                                                       |
 |                                                                         |
-|  PROS: Accurate, no burst at boundary                                |
-|  CONS: More memory, more operations                                  |
+|  PROS: Accurate, no burst at boundary                                   |
+|  CONS: More memory, more operations                                     |
 |                                                                         |
-|  APPROACH 3: TOKEN BUCKET (Lua Script)                                |
+|  APPROACH 3: TOKEN BUCKET (Lua Script)                                  |
 |  =====================================                                  |
 |                                                                         |
-|  -- Lua script for atomic token bucket                               |
-|  local key = KEYS[1]                                                   |
-|  local rate = tonumber(ARGV[1])  -- tokens per second               |
-|  local capacity = tonumber(ARGV[2])                                  |
-|  local now = tonumber(ARGV[3])                                        |
-|  local requested = tonumber(ARGV[4])                                 |
+|  -- Lua script for atomic token bucket                                  |
+|  local key = KEYS[1]                                                    |
+|  local rate = tonumber(ARGV[1])  -- tokens per second                   |
+|  local capacity = tonumber(ARGV[2])                                     |
+|  local now = tonumber(ARGV[3])                                          |
+|  local requested = tonumber(ARGV[4])                                    |
 |                                                                         |
-|  local data = redis.call('HMGET', key, 'tokens', 'last_time')       |
-|  local tokens = tonumber(data[1]) or capacity                        |
-|  local last_time = tonumber(data[2]) or now                          |
+|  local data = redis.call('HMGET', key, 'tokens', 'last_time')           |
+|  local tokens = tonumber(data[1]) or capacity                           |
+|  local last_time = tonumber(data[2]) or now                             |
 |                                                                         |
-|  -- Add tokens based on time elapsed                                 |
-|  local elapsed = now - last_time                                      |
-|  tokens = math.min(capacity, tokens + elapsed * rate)               |
+|  -- Add tokens based on time elapsed                                    |
+|  local elapsed = now - last_time                                        |
+|  tokens = math.min(capacity, tokens + elapsed * rate)                   |
 |                                                                         |
-|  if tokens >= requested then                                          |
-|      tokens = tokens - requested                                      |
-|      redis.call('HMSET', key, 'tokens', tokens, 'last_time', now)   |
-|      redis.call('EXPIRE', key, capacity / rate * 2)                  |
-|      return 1  -- Allowed                                             |
-|  end                                                                   |
+|  if tokens >= requested then                                            |
+|      tokens = tokens - requested                                        |
+|      redis.call('HMSET', key, 'tokens', tokens, 'last_time', now)       |
+|      redis.call('EXPIRE', key, capacity / rate * 2)                     |
+|      return 1  -- Allowed                                               |
+|  end                                                                    |
 |                                                                         |
-|  return 0  -- Denied                                                   |
+|  return 0  -- Denied                                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -366,51 +366,51 @@ about distributed caching and Redis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ANSWER                                                                |
+|  ANSWER                                                                 |
 |                                                                         |
-|  BASIC LOCK                                                            |
-|  ==========                                                            |
+|  BASIC LOCK                                                             |
+|  ==========                                                             |
 |                                                                         |
-|  def acquire_lock(lock_name, timeout=10):                            |
-|      lock_value = str(uuid.uuid4())  # Unique per lock holder       |
+|  def acquire_lock(lock_name, timeout=10):                               |
+|      lock_value = str(uuid.uuid4())  # Unique per lock holder           |
 |                                                                         |
-|      if redis.set(lock_name, lock_value, nx=True, ex=timeout):      |
-|          return lock_value  # Got the lock                           |
-|      return None  # Lock held by someone else                        |
+|      if redis.set(lock_name, lock_value, nx=True, ex=timeout):          |
+|          return lock_value  # Got the lock                              |
+|      return None  # Lock held by someone else                           |
 |                                                                         |
-|  def release_lock(lock_name, lock_value):                            |
-|      # MUST check value before deleting (Lua script for atomicity)  |
-|      script = """                                                     |
-|      if redis.call('GET', KEYS[1]) == ARGV[1] then                   |
-|          return redis.call('DEL', KEYS[1])                           |
-|      end                                                               |
-|      return 0                                                          |
-|      """                                                               |
-|      return redis.eval(script, 1, lock_name, lock_value)             |
+|  def release_lock(lock_name, lock_value):                               |
+|      # MUST check value before deleting (Lua script for atomicity)      |
+|      script = """                                                       |
+|      if redis.call('GET', KEYS[1]) == ARGV[1] then                      |
+|          return redis.call('DEL', KEYS[1])                              |
+|      end                                                                |
+|      return 0                                                           |
+|      """                                                                |
+|      return redis.eval(script, 1, lock_name, lock_value)                |
 |                                                                         |
-|  WHY CHECK VALUE?                                                      |
+|  WHY CHECK VALUE?                                                       |
 |  -----------------                                                      |
-|  Without check:                                                        |
-|  1. Client A acquires lock                                           |
-|  2. Client A takes too long, lock expires                           |
-|  3. Client B acquires lock                                           |
-|  4. Client A finishes, deletes lock (B's lock!)                     |
-|  5. Client C acquires lock (B and C both think they have it!)       |
+|  Without check:                                                         |
+|  1. Client A acquires lock                                              |
+|  2. Client A takes too long, lock expires                               |
+|  3. Client B acquires lock                                              |
+|  4. Client A finishes, deletes lock (B's lock!)                         |
+|  5. Client C acquires lock (B and C both think they have it!)           |
 |                                                                         |
-|  REDLOCK (Multiple Redis instances)                                   |
+|  REDLOCK (Multiple Redis instances)                                     |
 |  ===================================                                    |
 |                                                                         |
-|  For critical sections, use Redlock:                                 |
-|  1. Get current time                                                 |
-|  2. Try to acquire lock on N/2+1 instances                          |
-|  3. If majority acquired AND time elapsed < TTL, lock acquired     |
-|  4. If not, release all locks                                       |
+|  For critical sections, use Redlock:                                    |
+|  1. Get current time                                                    |
+|  2. Try to acquire lock on N/2+1 instances                              |
+|  3. If majority acquired AND time elapsed < TTL, lock acquired          |
+|  4. If not, release all locks                                           |
 |                                                                         |
-|  CAVEATS                                                               |
-|  -------                                                               |
-|  * Redis locks are advisory (not foolproof)                         |
-|  * Clock skew can cause issues                                       |
-|  * For critical sections, use database locks as backup              |
+|  CAVEATS                                                                |
+|  -------                                                                |
+|  * Redis locks are advisory (not foolproof)                             |
+|  * Clock skew can cause issues                                          |
+|  * For critical sections, use database locks as backup                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -452,35 +452,35 @@ A: Use Sentinel-aware client, handle connection errors, implement retry logic.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  45-MINUTE CACHE DESIGN INTERVIEW                                     |
+|  45-MINUTE CACHE DESIGN INTERVIEW                                       |
 |                                                                         |
-|  1. REQUIREMENTS (5 min)                                               |
-|     o Data size (fits on one node or needs sharding?)               |
-|     o Read/write ratio                                               |
-|     o Consistency needs (eventual OK or strict?)                    |
-|     o Durability (can regenerate data or need persistence?)        |
-|     o Latency requirements                                           |
+|  1. REQUIREMENTS (5 min)                                                |
+|     o Data size (fits on one node or needs sharding?)                   |
+|     o Read/write ratio                                                  |
+|     o Consistency needs (eventual OK or strict?)                        |
+|     o Durability (can regenerate data or need persistence?)             |
+|     o Latency requirements                                              |
 |                                                                         |
-|  2. HIGH-LEVEL DESIGN (10 min)                                         |
-|     o Cache-aside pattern (most common)                              |
-|     o Consistent hashing for distribution                           |
-|     o Leader-follower replication for HA                            |
+|  2. HIGH-LEVEL DESIGN (10 min)                                          |
+|     o Cache-aside pattern (most common)                                 |
+|     o Consistent hashing for distribution                               |
+|     o Leader-follower replication for HA                                |
 |                                                                         |
-|  3. DEEP DIVE (20 min)                                                 |
-|     o Eviction policy (LRU, LFU, TTL)                               |
-|     o Cache invalidation strategy                                    |
-|     o Handling stampede/hot keys                                     |
-|     o Persistence (RDB/AOF trade-offs)                              |
+|  3. DEEP DIVE (20 min)                                                  |
+|     o Eviction policy (LRU, LFU, TTL)                                   |
+|     o Cache invalidation strategy                                       |
+|     o Handling stampede/hot keys                                        |
+|     o Persistence (RDB/AOF trade-offs)                                  |
 |                                                                         |
-|  4. SCALING (5 min)                                                    |
-|     o How to add more nodes?                                         |
-|     o How to handle hot keys?                                        |
-|     o Redis Cluster vs Sentinel                                      |
+|  4. SCALING (5 min)                                                     |
+|     o How to add more nodes?                                            |
+|     o How to handle hot keys?                                           |
+|     o Redis Cluster vs Sentinel                                         |
 |                                                                         |
-|  5. WRAP UP (5 min)                                                    |
-|     o Trade-offs discussed                                            |
-|     o Monitoring and operations                                       |
-|     o Questions for interviewer                                       |
+|  5. WRAP UP (5 min)                                                     |
+|     o Trade-offs discussed                                              |
+|     o Monitoring and operations                                         |
+|     o Questions for interviewer                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

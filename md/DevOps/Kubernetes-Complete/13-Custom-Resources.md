@@ -9,16 +9,16 @@ your own resource types.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  EXTENDING KUBERNETES                                                 |
+|  EXTENDING KUBERNETES                                                   |
 |                                                                         |
-|  Built-in resources: Pod, Service, Deployment, etc.                  |
-|  Custom resources: Anything you define!                              |
+|  Built-in resources: Pod, Service, Deployment, etc.                     |
+|  Custom resources: Anything you define!                                 |
 |                                                                         |
-|  EXAMPLES:                                                             |
-|  * Certificate (cert-manager)                                        |
-|  * VirtualService (Istio)                                            |
-|  * PostgresCluster (database operators)                              |
-|  * Application (ArgoCD)                                               |
+|  EXAMPLES:                                                              |
+|  * Certificate (cert-manager)                                           |
+|  * VirtualService (Istio)                                               |
+|  * PostgresCluster (database operators)                                 |
+|  * Application (ArgoCD)                                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -28,64 +28,64 @@ your own resource types.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CRD DEFINITION                                                        |
-|  ==============                                                        |
+|  CRD DEFINITION                                                         |
+|  ==============                                                         |
 |                                                                         |
-|  apiVersion: apiextensions.k8s.io/v1                                  |
-|  kind: CustomResourceDefinition                                        |
+|  apiVersion: apiextensions.k8s.io/v1                                    |
+|  kind: CustomResourceDefinition                                         |
 |  metadata:                                                              |
-|    name: databases.mycompany.com                                      |
+|    name: databases.mycompany.com                                        |
 |  spec:                                                                  |
-|    group: mycompany.com                                                |
+|    group: mycompany.com                                                 |
 |    versions:                                                            |
-|      - name: v1                                                        |
-|        served: true                                                    |
-|        storage: true                                                   |
+|      - name: v1                                                         |
+|        served: true                                                     |
+|        storage: true                                                    |
 |        schema:                                                          |
-|          openAPIV3Schema:                                              |
-|            type: object                                                |
+|          openAPIV3Schema:                                               |
+|            type: object                                                 |
 |            properties:                                                  |
 |              spec:                                                      |
-|                type: object                                            |
+|                type: object                                             |
 |                properties:                                              |
-|                  engine:                                               |
-|                    type: string                                        |
-|                    enum: ["postgres", "mysql"]                        |
-|                  size:                                                 |
-|                    type: string                                        |
-|                  replicas:                                             |
-|                    type: integer                                       |
+|                  engine:                                                |
+|                    type: string                                         |
+|                    enum: ["postgres", "mysql"]                          |
+|                  size:                                                  |
+|                    type: string                                         |
+|                  replicas:                                              |
+|                    type: integer                                        |
 |    scope: Namespaced                                                    |
 |    names:                                                               |
-|      plural: databases                                                 |
-|      singular: database                                                |
+|      plural: databases                                                  |
+|      singular: database                                                 |
 |      kind: Database                                                     |
 |      shortNames:                                                        |
-|        - db                                                            |
+|        - db                                                             |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  USING THE CUSTOM RESOURCE                                            |
-|  ==========================                                            |
+|  USING THE CUSTOM RESOURCE                                              |
+|  ==========================                                             |
 |                                                                         |
-|  apiVersion: mycompany.com/v1                                         |
+|  apiVersion: mycompany.com/v1                                           |
 |  kind: Database                                                         |
 |  metadata:                                                              |
-|    name: my-postgres                                                   |
+|    name: my-postgres                                                    |
 |  spec:                                                                  |
-|    engine: postgres                                                    |
-|    size: "100Gi"                                                       |
-|    replicas: 3                                                         |
+|    engine: postgres                                                     |
+|    size: "100Gi"                                                        |
+|    replicas: 3                                                          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  COMMANDS                                                              |
+|  COMMANDS                                                               |
 |                                                                         |
-|  kubectl apply -f crd.yaml                                            |
-|  kubectl get crd                                                       |
-|  kubectl get databases                                                 |
-|  kubectl get db                  # Using shortName                    |
-|  kubectl describe db my-postgres                                      |
+|  kubectl apply -f crd.yaml                                              |
+|  kubectl get crd                                                        |
+|  kubectl get databases                                                  |
+|  kubectl get db                  # Using shortName                      |
+|  kubectl describe db my-postgres                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -95,41 +95,41 @@ your own resource types.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  VALIDATION                                                            |
-|  ==========                                                            |
+|  VALIDATION                                                             |
+|  ==========                                                             |
 |                                                                         |
 |  schema:                                                                |
-|    openAPIV3Schema:                                                    |
+|    openAPIV3Schema:                                                     |
 |      properties:                                                        |
 |        spec:                                                            |
 |          properties:                                                    |
-|            replicas:                                                   |
-|              type: integer                                             |
-|              minimum: 1                                                |
-|              maximum: 10                                               |
-|          required: ["engine", "size"]                                 |
+|            replicas:                                                    |
+|              type: integer                                              |
+|              minimum: 1                                                 |
+|              maximum: 10                                                |
+|          required: ["engine", "size"]                                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  ADDITIONAL PRINTER COLUMNS                                           |
+|  ADDITIONAL PRINTER COLUMNS                                             |
 |  ===========================                                            |
 |                                                                         |
 |  versions:                                                              |
-|    - name: v1                                                          |
-|      additionalPrinterColumns:                                        |
-|        - name: Engine                                                 |
-|          type: string                                                  |
-|          jsonPath: .spec.engine                                       |
-|        - name: Size                                                   |
-|          type: string                                                  |
-|          jsonPath: .spec.size                                         |
-|        - name: Age                                                    |
-|          type: date                                                    |
-|          jsonPath: .metadata.creationTimestamp                       |
+|    - name: v1                                                           |
+|      additionalPrinterColumns:                                          |
+|        - name: Engine                                                   |
+|          type: string                                                   |
+|          jsonPath: .spec.engine                                         |
+|        - name: Size                                                     |
+|          type: string                                                   |
+|          jsonPath: .spec.size                                           |
+|        - name: Age                                                      |
+|          type: date                                                     |
+|          jsonPath: .metadata.creationTimestamp                          |
 |                                                                         |
-|  # kubectl get databases                                               |
-|  # NAME          ENGINE    SIZE    AGE                                |
-|  # my-postgres   postgres  100Gi   5m                                 |
+|  # kubectl get databases                                                |
+|  # NAME          ENGINE    SIZE    AGE                                  |
+|  # my-postgres   postgres  100Gi   5m                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -139,24 +139,24 @@ your own resource types.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CRDS - KEY TAKEAWAYS                                                 |
+|  CRDS - KEY TAKEAWAYS                                                   |
 |                                                                         |
-|  PURPOSE                                                               |
-|  -------                                                               |
-|  * Extend Kubernetes API                                             |
-|  * Define custom resource types                                      |
-|  * Used by operators                                                 |
+|  PURPOSE                                                                |
+|  -------                                                                |
+|  * Extend Kubernetes API                                                |
+|  * Define custom resource types                                         |
+|  * Used by operators                                                    |
 |                                                                         |
-|  COMPONENTS                                                            |
-|  ----------                                                            |
-|  * group: API group                                                  |
-|  * names: Resource naming                                            |
-|  * schema: Validation rules                                          |
+|  COMPONENTS                                                             |
+|  ----------                                                             |
+|  * group: API group                                                     |
+|  * names: Resource naming                                               |
+|  * schema: Validation rules                                             |
 |                                                                         |
-|  NOTE                                                                  |
-|  ----                                                                  |
-|  CRDs define the schema.                                             |
-|  Operators implement the logic.                                      |
+|  NOTE                                                                   |
+|  ----                                                                   |
+|  CRDs define the schema.                                                |
+|  Operators implement the logic.                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

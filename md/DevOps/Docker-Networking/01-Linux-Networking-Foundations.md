@@ -64,17 +64,17 @@ exist.
 Consider an apartment building:
 
 ```sql
-WITHOUT NAMESPACES (Shared House):
-* Everyone shares the same living room, kitchen, bathroom
+WITHOUT NAMESPACES (Shared House):                                     
+* Everyone shares the same living room, kitchen, bathroom              
 * If one person is using the TV, others can't watch something different
-* Everyone hears everyone else's conversations
-* No privacy, constant conflicts
+* Everyone hears everyone else's conversations                         
+* No privacy, constant conflicts                                       
 
-WITH NAMESPACES (Separate Apartments):
-* Each apartment has its own living room, kitchen, bathroom
-* Each resident has complete privacy
-* No conflicts over shared resources
-* Each apartment operates independently
+WITH NAMESPACES (Separate Apartments):                                 
+* Each apartment has its own living room, kitchen, bathroom            
+* Each resident has complete privacy                                   
+* No conflicts over shared resources                                   
+* Each apartment operates independently                                
 ```
 
 Network namespaces give each container its own "apartment" in terms of networking.
@@ -84,18 +84,18 @@ Network namespaces give each container its own "apartment" in terms of networkin
 Let's create a network namespace and explore it:
 
 ```bash
-# Step 1: Create a new network namespace called "red"
-sudo ip netns add red
+# Step 1: Create a new network namespace called "red"           
+sudo ip netns add red                                           
 
-# Step 2: List all network namespaces
-ip netns list
-# Output: red
+# Step 2: List all network namespaces                           
+ip netns list                                                   
+# Output: red                                                   
 
-# Step 3: See what's inside the namespace
-sudo ip netns exec red ip link
-# Output:
+# Step 3: See what's inside the namespace                       
+sudo ip netns exec red ip link                                  
+# Output:                                                       
 # 1: lo: <LOOPBACK> mtu 65536 qdisc noop state DOWN mode DEFAULT
-#    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+#    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00      
 ```
 
 Notice that the new namespace only has a loopback interface (lo), and it's DOWN.
@@ -103,8 +103,8 @@ This namespace is completely isolated-it has no connection to the outside world.
 
 ```bash
 # Step 4: Try to reach the internet from inside the namespace
-sudo ip netns exec red ping 8.8.8.8
-# Output: connect: Network is unreachable
+sudo ip netns exec red ping 8.8.8.8                          
+# Output: connect: Network is unreachable                    
 ```
 
 The ping fails because:
@@ -145,16 +145,16 @@ one end comes out the other end, and vice versa. The two ends are called "peers.
 |                                                                         |
 |                        VETH PAIR                                        |
 |                                                                         |
-|    +-------------+                              +-------------+        |
-|    |   veth-A    |<============================>|   veth-B    |        |
-|    |   (peer 0)  |       Virtual Cable          |   (peer 1)  |        |
-|    +-------------+                              +-------------+        |
+|    +-------------+                              +-------------+         |
+|    |   veth-A    |<============================>|   veth-B    |         |
+|    |   (peer 0)  |       Virtual Cable          |   (peer 1)  |         |
+|    +-------------+                              +-------------+         |
 |                                                                         |
-|    Any packet sent         --------------->    Appears here            |
-|    into veth-A                                                         |
+|    Any packet sent         --------------->    Appears here             |
+|    into veth-A                                                          |
 |                                                                         |
-|    Appears here            <---------------    Any packet sent         |
-|                                                 into veth-B            |
+|    Appears here            <---------------    Any packet sent          |
+|                                                 into veth-B             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -195,52 +195,52 @@ A veth pair works the same way:
 Let's create two namespaces and connect them with a veth pair:
 
 ```bash
-# Step 1: Create two namespaces
-sudo ip netns add red
-sudo ip netns add blue
+# Step 1: Create two namespaces                                 
+sudo ip netns add red                                           
+sudo ip netns add blue                                          
 
-# Step 2: Create a veth pair
-# This creates veth-red and veth-blue, connected to each other
-sudo ip link add veth-red type veth peer name veth-blue
+# Step 2: Create a veth pair                                    
+# This creates veth-red and veth-blue, connected to each other  
+sudo ip link add veth-red type veth peer name veth-blue         
 
-# At this point, both ends exist in the ROOT (host) namespace
-ip link | grep veth
-# veth-blue@veth-red: ...
-# veth-red@veth-blue: ...
+# At this point, both ends exist in the ROOT (host) namespace   
+ip link | grep veth                                             
+# veth-blue@veth-red: ...                                       
+# veth-red@veth-blue: ...                                       
 
-# Step 3: Move each end to its respective namespace
-sudo ip link set veth-red netns red
-sudo ip link set veth-blue netns blue
+# Step 3: Move each end to its respective namespace             
+sudo ip link set veth-red netns red                             
+sudo ip link set veth-blue netns blue                           
 
-# Now if you check the host, the veth interfaces are gone
-ip link | grep veth
-# (nothing - they've moved to the namespaces)
+# Now if you check the host, the veth interfaces are gone       
+ip link | grep veth                                             
+# (nothing - they've moved to the namespaces)                   
 
-# Verify they're in the namespaces
-sudo ip netns exec red ip link
-# Shows veth-red
+# Verify they're in the namespaces                              
+sudo ip netns exec red ip link                                  
+# Shows veth-red                                                
 
-sudo ip netns exec blue ip link
-# Shows veth-blue
+sudo ip netns exec blue ip link                                 
+# Shows veth-blue                                               
 
-# Step 4: Assign IP addresses
-sudo ip netns exec red ip addr add 192.168.1.1/24 dev veth-red
+# Step 4: Assign IP addresses                                   
+sudo ip netns exec red ip addr add 192.168.1.1/24 dev veth-red  
 sudo ip netns exec blue ip addr add 192.168.1.2/24 dev veth-blue
 
-# Step 5: Bring the interfaces UP
-sudo ip netns exec red ip link set veth-red up
-sudo ip netns exec blue ip link set veth-blue up
+# Step 5: Bring the interfaces UP                               
+sudo ip netns exec red ip link set veth-red up                  
+sudo ip netns exec blue ip link set veth-blue up                
 
-# Don't forget the loopback!
-sudo ip netns exec red ip link set lo up
-sudo ip netns exec blue ip link set lo up
+# Don't forget the loopback!                                    
+sudo ip netns exec red ip link set lo up                        
+sudo ip netns exec blue ip link set lo up                       
 
-# Step 6: Test connectivity!
-sudo ip netns exec red ping 192.168.1.2
-# PING 192.168.1.2 (192.168.1.2) 56(84) bytes of data.
-# 64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.050 ms
+# Step 6: Test connectivity!                                    
+sudo ip netns exec red ping 192.168.1.2                         
+# PING 192.168.1.2 (192.168.1.2) 56(84) bytes of data.          
+# 64 bytes from 192.168.1.2: icmp_seq=1 ttl=64 time=0.050 ms    
 
-SUCCESS! The two namespaces can now communicate!
+SUCCESS! The two namespaces can now communicate!                
 ```
 
 ### WHAT DID WE JUST BUILD?
@@ -294,22 +294,22 @@ This requires 10 veth pairs! And adding a 6th container means creating
 5 more veth pairs. This is O(n2) complexity-it doesn't scale.
 
 ```
-WITH A BRIDGE (Star topology):
+WITH A BRIDGE (Star topology):                                   
 
-     Container 1
-          |
-          |
-C2 -------+------- C3
-          |
-     +----+----+
-     |  BRIDGE |
-     +----+----+
-          |
-C4 -------+------- C5
+     Container 1                                                 
+                                                                |
+                                                                |
+C2 -------+------- C3                                            
+                                                                |
+     +----+-----------------------------------------------------+
+     |  BRIDGE                                                  |
+     +----+-----------------------------------------------------+
+                                                                |
+C4 -------+------- C5                                            
 
 Each container needs only ONE veth pair to connect to the bridge.
-Adding a 6th container means creating just 1 more veth pair.
-This is O(n) complexity-much better!
+Adding a 6th container means creating just 1 more veth pair.     
+This is O(n) complexity-much better!                             
 ```
 
 ### WHAT IS A LINUX BRIDGE?
@@ -350,17 +350,17 @@ the switching logic in software.
 When you install Docker, it automatically creates a bridge called "docker0":
 
 ```bash
-# Check for docker0
-ip link show docker0
-# docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 ...
+# Check for docker0                                                 
+ip link show docker0                                                
+# docker0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 ...           
 
-ip addr show docker0
-# inet 172.17.0.1/16 ...
+ip addr show docker0                                                
+# inet 172.17.0.1/16 ...                                            
 
-# See what's attached to docker0
-brctl show docker0
+# See what's attached to docker0                                    
+brctl show docker0                                                  
 # bridge name     bridge id               STP enabled     interfaces
-# docker0         8000.024216a6c4e2       no
+# docker0         8000.024216a6c4e2       no                        
 ```
 
 The docker0 bridge:
@@ -373,47 +373,47 @@ The docker0 bridge:
 Let's build a network identical to Docker's default bridge:
 
 ```bash
-# Step 1: Create a bridge
-sudo ip link add br0 type bridge
-sudo ip link set br0 up
+# Step 1: Create a bridge                                          
+sudo ip link add br0 type bridge                                   
+sudo ip link set br0 up                                            
 
-# Step 2: Assign an IP address (this becomes the gateway)
-sudo ip addr add 192.168.15.1/24 dev br0
+# Step 2: Assign an IP address (this becomes the gateway)          
+sudo ip addr add 192.168.15.1/24 dev br0                           
 
-# Step 3: Create two namespaces (simulating containers)
-sudo ip netns add container1
-sudo ip netns add container2
+# Step 3: Create two namespaces (simulating containers)            
+sudo ip netns add container1                                       
+sudo ip netns add container2                                       
 
-# Step 4: Create veth pairs for each container
-sudo ip link add veth1 type veth peer name veth1-br
-sudo ip link add veth2 type veth peer name veth2-br
+# Step 4: Create veth pairs for each container                     
+sudo ip link add veth1 type veth peer name veth1-br                
+sudo ip link add veth2 type veth peer name veth2-br                
 
-# Step 5: Move container end to namespace, bridge end to bridge
-sudo ip link set veth1 netns container1
-sudo ip link set veth1-br master br0
+# Step 5: Move container end to namespace, bridge end to bridge    
+sudo ip link set veth1 netns container1                            
+sudo ip link set veth1-br master br0                               
 
-sudo ip link set veth2 netns container2
-sudo ip link set veth2-br master br0
+sudo ip link set veth2 netns container2                            
+sudo ip link set veth2-br master br0                               
 
-# Step 6: Configure IPs inside namespaces
+# Step 6: Configure IPs inside namespaces                          
 sudo ip netns exec container1 ip addr add 192.168.15.2/24 dev veth1
 sudo ip netns exec container2 ip addr add 192.168.15.3/24 dev veth2
 
-# Step 7: Set default gateway (the bridge IP)
+# Step 7: Set default gateway (the bridge IP)                      
 sudo ip netns exec container1 ip route add default via 192.168.15.1
 sudo ip netns exec container2 ip route add default via 192.168.15.1
 
-# Step 8: Bring everything up
-sudo ip link set veth1-br up
-sudo ip link set veth2-br up
-sudo ip netns exec container1 ip link set veth1 up
-sudo ip netns exec container2 ip link set veth2 up
-sudo ip netns exec container1 ip link set lo up
-sudo ip netns exec container2 ip link set lo up
+# Step 8: Bring everything up                                      
+sudo ip link set veth1-br up                                       
+sudo ip link set veth2-br up                                       
+sudo ip netns exec container1 ip link set veth1 up                 
+sudo ip netns exec container2 ip link set veth2 up                 
+sudo ip netns exec container1 ip link set lo up                    
+sudo ip netns exec container2 ip link set lo up                    
 
-# Step 9: Test container-to-container communication
-sudo ip netns exec container1 ping 192.168.15.3
-# SUCCESS! Packets flow through the bridge.
+# Step 9: Test container-to-container communication                
+sudo ip netns exec container1 ping 192.168.15.3                    
+# SUCCESS! Packets flow through the bridge.                        
 ```
 
 ### THE ARCHITECTURE WE BUILT
@@ -422,23 +422,23 @@ sudo ip netns exec container1 ping 192.168.15.3
 +-------------------------------------------------------------------------+
 |                              HOST                                       |
 |                                                                         |
-|    +------------------+              +------------------+              |
-|    |    container1    |              |    container2    |              |
-|    |   192.168.15.2   |              |   192.168.15.3   |              |
-|    |                  |              |                  |              |
-|    |   +----------+   |              |   +----------+   |              |
-|    |   |  veth1   |   |              |   |  veth2   |   |              |
-|    |   +----+-----+   |              |   +----+-----+   |              |
-|    |        |         |              |        |         |              |
-|    +--------+---------+              +--------+---------+              |
-|             |                                 |                        |
-|             | veth1-br                        | veth2-br               |
-|             |                                 |                        |
-|    +--------+---------------------------------+--------+              |
-|    |                    br0 (bridge)                    |              |
-|    |                   192.168.15.1                     |              |
-|    |              (gateway for containers)              |              |
-|    +----------------------------------------------------+              |
+|    +------------------+              +------------------+               |
+|    |    container1    |              |    container2    |               |
+|    |   192.168.15.2   |              |   192.168.15.3   |               |
+|    |                  |              |                  |               |
+|    |   +----------+   |              |   +----------+   |               |
+|    |   |  veth1   |   |              |   |  veth2   |   |               |
+|    |   +----+-----+   |              |   +----+-----+   |               |
+|    |        |         |              |        |         |               |
+|    +--------+---------+              +--------+---------+               |
+|             |                                 |                         |
+|             | veth1-br                        | veth2-br                |
+|             |                                 |                         |
+|    +--------+---------------------------------+--------+                |
+|    |                    br0 (bridge)                    |               |
+|    |                   192.168.15.1                     |               |
+|    |              (gateway for containers)              |               |
+|    +----------------------------------------------------+               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -451,7 +451,7 @@ bridge network! The only difference is Docker automates all these steps.
 Try this:
 
 ```bash
-sudo ip netns exec container1 ping 8.8.8.8
+sudo ip netns exec container1 ping 8.8.8.8    
 # Network is unreachable (or no route to host)
 ```
 
@@ -481,50 +481,50 @@ When a packet enters or leaves a Linux system, it passes through several
 "hooks" or checkpoints where Netfilter can inspect and modify it:
 
 ```
-INCOMING PACKET (from network):
+INCOMING PACKET (from network):                                            
 
 +-------------------------------------------------------------------------+
 |                                                                         |
 |     Network                                                             |
 |        |                                                                |
 |        v                                                                |
-|   +-------------+                                                      |
-|   | PREROUTING  | < First stop for all incoming packets                |
-|   +------+------+   NAT/DNAT happens here                              |
+|   +-------------+                                                       |
+|   | PREROUTING  | < First stop for all incoming packets                 |
+|   +------+------+   NAT/DNAT happens here                               |
 |          |                                                              |
 |          v                                                              |
-|   +-------------+                                                      |
-|   |  ROUTING    | < Kernel decides: Is this for me or should I forward?|
-|   |  DECISION   |                                                      |
-|   +------+------+                                                      |
+|   +-------------+                                                       |
+|   |  ROUTING    | < Kernel decides: Is this for me or should I forward? |
+|   |  DECISION   |                                                       |
+|   +------+------+                                                       |
 |          |                                                              |
-|     +----+----+                                                        |
-|     |         |                                                        |
-|     v         v                                                        |
-|  (For me)   (Forward)                                                  |
-|     |         |                                                        |
-|     v         v                                                        |
-| +-------+  +---------+                                                |
-| | INPUT |  | FORWARD | < Packets being routed through this host       |
-| +---+---+  +----+----+                                                |
-|     |           |                                                      |
-|     v           |                                                      |
-| Local Process   |                                                      |
-|     |           |                                                      |
-|     v           |                                                      |
-| +--------+      |                                                      |
-| | OUTPUT |      |  < Packets generated locally                        |
-| +---+----+      |                                                      |
-|     |           |                                                      |
-|     +-----+-----+                                                      |
-|           |                                                            |
-|           v                                                            |
-|   +--------------+                                                     |
-|   | POSTROUTING  | < Last stop before leaving                         |
-|   +------+-------+   SNAT/MASQUERADE happens here                     |
+|     +----+----+                                                         |
+|     |         |                                                         |
+|     v         v                                                         |
+|  (For me)   (Forward)                                                   |
+|     |         |                                                         |
+|     v         v                                                         |
+| +-------+  +---------+                                                  |
+| | INPUT |  | FORWARD | < Packets being routed through this host         |
+| +---+---+  +----+----+                                                  |
+|     |           |                                                       |
+|     v           |                                                       |
+| Local Process   |                                                       |
+|     |           |                                                       |
+|     v           |                                                       |
+| +--------+      |                                                       |
+| | OUTPUT |      |  < Packets generated locally                          |
+| +---+----+      |                                                       |
+|     |           |                                                       |
+|     +-----+-----+                                                       |
+|           |                                                             |
+|           v                                                             |
+|   +--------------+                                                      |
+|   | POSTROUTING  | < Last stop before leaving                           |
+|   +------+-------+   SNAT/MASQUERADE happens here                       |
 |          |                                                              |
 |          v                                                              |
-|      Network                                                           |
+|      Network                                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -588,40 +588,40 @@ NAT solves this by translating private addresses to public addresses.
 When a container wants to reach the internet:
 
 ```
-BEFORE NAT (packet leaves container):
+BEFORE NAT (packet leaves container):                          
 +-------------------------------------------------------------+
 |  Source IP:        172.17.0.2  (container)                  |
-|  Destination IP:   8.8.8.8     (Google DNS)                |
+|  Destination IP:   8.8.8.8     (Google DNS)                 |
 |  Source Port:      54321                                    |
 |  Destination Port: 53                                       |
 +-------------------------------------------------------------+
 
-The internet has no idea how to route back to 172.17.0.2!
+The internet has no idea how to route back to 172.17.0.2!      
 
-AFTER NAT (packet leaves host):
+AFTER NAT (packet leaves host):                                
 +-------------------------------------------------------------+
-|  Source IP:        203.0.113.5  (host's public IP)         |
-|  Destination IP:   8.8.8.8      (Google DNS)               |
-|  Source Port:      34567        (mapped port)              |
+|  Source IP:        203.0.113.5  (host's public IP)          |
+|  Destination IP:   8.8.8.8      (Google DNS)                |
+|  Source Port:      34567        (mapped port)               |
 |  Destination Port: 53                                       |
 +-------------------------------------------------------------+
 
-Now the reply can come back to the host!
+Now the reply can come back to the host!                       
 
-RETURN PACKET (response from internet):
+RETURN PACKET (response from internet):                        
 +-------------------------------------------------------------+
 |  Source IP:        8.8.8.8                                  |
-|  Destination IP:   203.0.113.5  (host)                     |
+|  Destination IP:   203.0.113.5  (host)                      |
 |  Source Port:      53                                       |
 |  Destination Port: 34567                                    |
 +-------------------------------------------------------------+
 
-AFTER REVERSE NAT (host forwards to container):
+AFTER REVERSE NAT (host forwards to container):                
 +-------------------------------------------------------------+
 |  Source IP:        8.8.8.8                                  |
-|  Destination IP:   172.17.0.2   (container)                |
+|  Destination IP:   172.17.0.2   (container)                 |
 |  Source Port:      53                                       |
-|  Destination Port: 54321        (original port)            |
+|  Destination Port: 54321        (original port)             |
 +-------------------------------------------------------------+
 ```
 
@@ -650,24 +650,24 @@ This single rule allows ALL containers to reach the internet!
 When someone wants to reach a container from outside:
 
 ```
-docker run -p 8080:80 nginx
+docker run -p 8080:80 nginx                                    
 
-This creates a DNAT rule:
+This creates a DNAT rule:                                      
 
-INCOMING PACKET (to host:8080):
+INCOMING PACKET (to host:8080):                                
 +-------------------------------------------------------------+
-|  Source IP:        203.0.113.100  (client on internet)     |
-|  Destination IP:   203.0.113.5    (host)                   |
+|  Source IP:        203.0.113.100  (client on internet)      |
+|  Destination IP:   203.0.113.5    (host)                    |
 |  Source Port:      45678                                    |
 |  Destination Port: 8080                                     |
 +-------------------------------------------------------------+
 
-AFTER DNAT (forwarded to container):
+AFTER DNAT (forwarded to container):                           
 +-------------------------------------------------------------+
-|  Source IP:        203.0.113.100                           |
-|  Destination IP:   172.17.0.2     (container)              |
+|  Source IP:        203.0.113.100                            |
+|  Destination IP:   172.17.0.2     (container)               |
 |  Source Port:      45678                                    |
-|  Destination Port: 80             (container's nginx port) |
+|  Destination Port: 80             (container's nginx port)  |
 +-------------------------------------------------------------+
 ```
 
@@ -691,32 +691,32 @@ Remember our bridge network from earlier? Let's enable internet access:
 
 ```bash
 # Step 1: Enable IP forwarding (allows the host to route packets)
-sudo sysctl -w net.ipv4.ip_forward=1
+sudo sysctl -w net.ipv4.ip_forward=1                             
 
-# Step 2: Add MASQUERADE rule for our container subnet
-sudo iptables -t nat -A POSTROUTING \
-    -s 192.168.15.0/24 \
-    -o eth0 \
-    -j MASQUERADE
+# Step 2: Add MASQUERADE rule for our container subnet           
+sudo iptables -t nat -A POSTROUTING \                            
+    -s 192.168.15.0/24 \                                         
+    -o eth0 \                                                    
+    -j MASQUERADE                                                
 
-# Step 3: Allow forwarding through the bridge
-sudo iptables -A FORWARD \
-    -i br0 \
-    -o eth0 \
-    -j ACCEPT
+# Step 3: Allow forwarding through the bridge                    
+sudo iptables -A FORWARD \                                       
+    -i br0 \                                                     
+    -o eth0 \                                                    
+    -j ACCEPT                                                    
 
-sudo iptables -A FORWARD \
-    -i eth0 \
-    -o br0 \
-    -m state --state ESTABLISHED,RELATED \
-    -j ACCEPT
+sudo iptables -A FORWARD \                                       
+    -i eth0 \                                                    
+    -o br0 \                                                     
+    -m state --state ESTABLISHED,RELATED \                       
+    -j ACCEPT                                                    
 
-# Step 4: Test internet access from container!
-sudo ip netns exec container1 ping 8.8.8.8
-# PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
-# 64 bytes from 8.8.8.8: icmp_seq=1 ttl=116 time=12.3 ms
+# Step 4: Test internet access from container!                   
+sudo ip netns exec container1 ping 8.8.8.8                       
+# PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.                   
+# 64 bytes from 8.8.8.8: icmp_seq=1 ttl=116 time=12.3 ms         
 
-SUCCESS! Our container can now reach the internet!
+SUCCESS! Our container can now reach the internet!               
 ```
 
 ## SECTION 1.6: PUTTING IT ALL TOGETHER
@@ -762,41 +762,41 @@ All the complexity we explored manually-Docker handles it in milliseconds!
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LINUX NETWORKING BUILDING BLOCKS FOR CONTAINERS                       |
+|  LINUX NETWORKING BUILDING BLOCKS FOR CONTAINERS                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   NETWORK NAMESPACE                                             |   |
-|  |   * Isolated network stack                                     |   |
-|  |   * Own interfaces, routes, iptables                           |   |
-|  |   * Foundation of container isolation                          |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   VETH PAIR                                                     |   |
-|  |   * Virtual cable with two ends                                |   |
-|  |   * Connects namespaces                                        |   |
-|  |   * Always created in pairs                                    |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   LINUX BRIDGE                                                  |   |
-|  |   * Virtual Layer 2 switch                                     |   |
-|  |   * Connects multiple containers                               |   |
-|  |   * docker0 is Docker's default bridge                         |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   IPTABLES/NAT                                                  |   |
-|  |   * MASQUERADE: Containers reach internet                      |   |
-|  |   * DNAT: Port forwarding (host:port > container:port)        |   |
-|  |   * Firewall rules for isolation                              |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   NETWORK NAMESPACE                                             |    |
+|  |   * Isolated network stack                                     |     |
+|  |   * Own interfaces, routes, iptables                           |     |
+|  |   * Foundation of container isolation                          |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   VETH PAIR                                                     |    |
+|  |   * Virtual cable with two ends                                |     |
+|  |   * Connects namespaces                                        |     |
+|  |   * Always created in pairs                                    |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   LINUX BRIDGE                                                  |    |
+|  |   * Virtual Layer 2 switch                                     |     |
+|  |   * Connects multiple containers                               |     |
+|  |   * docker0 is Docker's default bridge                         |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   IPTABLES/NAT                                                  |    |
+|  |   * MASQUERADE: Containers reach internet                      |     |
+|  |   * DNAT: Port forwarding (host:port > container:port)        |      |
+|  |   * Firewall rules for isolation                              |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  These four concepts form the foundation of ALL container networking.  |
-|  Docker, Kubernetes, and other container platforms all build on top   |
-|  of these Linux kernel features.                                       |
+|  These four concepts form the foundation of ALL container networking.   |
+|  Docker, Kubernetes, and other container platforms all build on top     |
+|  of these Linux kernel features.                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

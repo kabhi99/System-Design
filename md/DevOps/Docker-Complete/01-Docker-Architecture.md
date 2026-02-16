@@ -13,41 +13,41 @@ Docker uses a client-server architecture:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  HIGH-LEVEL DOCKER ARCHITECTURE                                        |
+|  HIGH-LEVEL DOCKER ARCHITECTURE                                         |
 |                                                                         |
-|  +-----------------+          +-------------------------------------+  |
-|  |                 |          |                                     |  |
-|  |  DOCKER CLIENT  |          |          DOCKER HOST                |  |
-|  |  (docker CLI)   |          |                                     |  |
-|  |                 |          |  +-------------------------------+  |  |
-|  |  Commands:      |   REST   |  |       DOCKER DAEMON           |  |  |
-|  |  * docker run   |   API    |  |       (dockerd)               |  |  |
-|  |  * docker build | ------>  |  |                               |  |  |
-|  |  * docker pull  |          |  |  * Manages containers        |  |  |
-|  |  * docker push  |          |  |  * Manages images            |  |  |
-|  |                 |          |  |  * Manages networks          |  |  |
-|  +-----------------+          |  |  * Manages volumes           |  |  |
-|                               |  |                               |  |  |
-|                               |  +-------------------------------+  |  |
-|                               |                |                    |  |
-|                               |                v                    |  |
-|                               |  +-------------------------------+  |  |
-|                               |  |        CONTAINERD            |  |  |
-|                               |  |  (container runtime)          |  |  |
-|                               |  +-------------------------------+  |  |
-|                               |                |                    |  |
-|                               |                v                    |  |
-|                               |  +-------------------------------+  |  |
-|                               |  |           runc               |  |  |
-|                               |  |  (creates containers)         |  |  |
-|                               |  +-------------------------------+  |  |
-|                               |                                     |  |
-|                               +-------------------------------------+  |
+|  +-----------------+          +-------------------------------------+   |
+|  |                 |          |                                     |   |
+|  |  DOCKER CLIENT  |          |          DOCKER HOST                |   |
+|  |  (docker CLI)   |          |                                     |   |
+|  |                 |          |  +-------------------------------+  |   |
+|  |  Commands:      |   REST   |  |       DOCKER DAEMON           |  |   |
+|  |  * docker run   |   API    |  |       (dockerd)               |  |   |
+|  |  * docker build | ------>  |  |                               |  |   |
+|  |  * docker pull  |          |  |  * Manages containers        |  |    |
+|  |  * docker push  |          |  |  * Manages images            |  |    |
+|  |                 |          |  |  * Manages networks          |  |    |
+|  +-----------------+          |  |  * Manages volumes           |  |    |
+|                               |  |                               |  |   |
+|                               |  +-------------------------------+  |   |
+|                               |                |                    |   |
+|                               |                v                    |   |
+|                               |  +-------------------------------+  |   |
+|                               |  |        CONTAINERD            |  |    |
+|                               |  |  (container runtime)          |  |   |
+|                               |  +-------------------------------+  |   |
+|                               |                |                    |   |
+|                               |                v                    |   |
+|                               |  +-------------------------------+  |   |
+|                               |  |           runc               |  |    |
+|                               |  |  (creates containers)         |  |   |
+|                               |  +-------------------------------+  |   |
+|                               |                                     |   |
+|                               +-------------------------------------+   |
 |                                                                         |
-|  +-----------------+                                                   |
-|  | DOCKER REGISTRY | <---- Docker Host pulls/pushes images           |
-|  | (Docker Hub)    |                                                   |
-|  +-----------------+                                                   |
+|  +-----------------+                                                    |
+|  | DOCKER REGISTRY | <---- Docker Host pulls/pushes images              |
+|  | (Docker Hub)    |                                                    |
+|  +-----------------+                                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -93,25 +93,25 @@ you understand why it's structured the way it is.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  MONOLITHIC DOCKER (OLD)                                               |
+|  MONOLITHIC DOCKER (OLD)                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
 |  |                       Docker Daemon                              |   |
 |  |                                                                  |   |
-|  |  Everything in ONE process:                                     |   |
-|  |  * API server                                                   |   |
-|  |  * Image management                                             |   |
-|  |  * Container runtime                                            |   |
-|  |  * Networking                                                   |   |
-|  |  * Volumes                                                      |   |
+|  |  Everything in ONE process:                                     |    |
+|  |  * API server                                                   |    |
+|  |  * Image management                                             |    |
+|  |  * Container runtime                                            |    |
+|  |  * Networking                                                   |    |
+|  |  * Volumes                                                      |    |
 |  |                                                                  |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  PROBLEMS:                                                             |
-|  * Daemon restart = ALL containers restart                            |
-|  * Tightly coupled components                                         |
-|  * Difficult to innovate on specific parts                           |
-|  * Not suitable for Kubernetes (needed alternative runtimes)         |
+|  PROBLEMS:                                                              |
+|  * Daemon restart = ALL containers restart                              |
+|  * Tightly coupled components                                           |
+|  * Difficult to innovate on specific parts                              |
+|  * Not suitable for Kubernetes (needed alternative runtimes)            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -121,43 +121,43 @@ you understand why it's structured the way it is.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  MODULAR DOCKER (CURRENT)                                              |
+|  MODULAR DOCKER (CURRENT)                                               |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |  Docker Daemon (dockerd)                                        |   |
-|  |  * API server                                                   |   |
-|  |  * Image management (build, push, pull)                        |   |
-|  |  * High-level orchestration                                    |   |
-|  +--------------------------+--------------------------------------+   |
-|                             | gRPC                                     |
-|                             v                                          |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |  Docker Daemon (dockerd)                                        |    |
+|  |  * API server                                                   |    |
+|  |  * Image management (build, push, pull)                        |     |
+|  |  * High-level orchestration                                    |     |
+|  +--------------------------+--------------------------------------+    |
+|                             | gRPC                                      |
+|                             v                                           |
+|  +-----------------------------------------------------------------+    |
 |  |  containerd                                                      |   |
-|  |  * Container lifecycle (create, start, stop, delete)           |   |
-|  |  * Image pulling and pushing                                   |   |
-|  |  * Network and storage management                              |   |
-|  +--------------------------+--------------------------------------+   |
-|                             |                                          |
-|                             v                                          |
-|  +-----------------------------------------------------------------+   |
-|  |  containerd-shim                                                |   |
-|  |  * Decouples container from containerd                         |   |
-|  |  * Keeps STDIO and fds open                                    |   |
-|  |  * Reports exit status to containerd                           |   |
-|  +--------------------------+--------------------------------------+   |
-|                             |                                          |
-|                             v                                          |
-|  +-----------------------------------------------------------------+   |
+|  |  * Container lifecycle (create, start, stop, delete)           |     |
+|  |  * Image pulling and pushing                                   |     |
+|  |  * Network and storage management                              |     |
+|  +--------------------------+--------------------------------------+    |
+|                             |                                           |
+|                             v                                           |
+|  +-----------------------------------------------------------------+    |
+|  |  containerd-shim                                                |    |
+|  |  * Decouples container from containerd                         |     |
+|  |  * Keeps STDIO and fds open                                    |     |
+|  |  * Reports exit status to containerd                           |     |
+|  +--------------------------+--------------------------------------+    |
+|                             |                                           |
+|                             v                                           |
+|  +-----------------------------------------------------------------+    |
 |  |  runc                                                            |   |
-|  |  * Creates container                                            |   |
-|  |  * Exits after container starts (daemonless)                   |   |
-|  +-----------------------------------------------------------------+   |
+|  |  * Creates container                                            |    |
+|  |  * Exits after container starts (daemonless)                   |     |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  BENEFITS:                                                             |
-|  Y Daemon restart doesn't affect running containers                   |
-|  Y Components can be upgraded independently                           |
-|  Y containerd can be used without Docker (Kubernetes)                |
-|  Y Follows Unix philosophy (do one thing well)                       |
+|  BENEFITS:                                                              |
+|  Y Daemon restart doesn't affect running containers                     |
+|  Y Components can be upgraded independently                             |
+|  Y containerd can be used without Docker (Kubernetes)                   |
+|  Y Follows Unix philosophy (do one thing well)                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -169,8 +169,8 @@ you understand why it's structured the way it is.
 The docker client is what you interact with:
 
 ```bash
-$ docker run nginx
-$ docker build -t myapp .
+$ docker run nginx        
+$ docker build -t myapp . 
 $ docker push myapp:latest
 ```
 
@@ -179,35 +179,35 @@ $ docker push myapp:latest
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKER CLIENT COMMUNICATION                                           |
+|  DOCKER CLIENT COMMUNICATION                                            |
 |                                                                         |
-|  LOCAL COMMUNICATION (Default):                                        |
-|  --------------------------------                                      |
-|  Client --> Unix Socket --> Daemon                                    |
-|            /var/run/docker.sock                                        |
+|  LOCAL COMMUNICATION (Default):                                         |
+|  --------------------------------                                       |
+|  Client --> Unix Socket --> Daemon                                      |
+|            /var/run/docker.sock                                         |
 |                                                                         |
-|  REMOTE COMMUNICATION:                                                 |
-|  ----------------------                                                |
-|  Client --> TCP/TLS --> Remote Daemon                                 |
-|            tcp://192.168.1.100:2376                                    |
+|  REMOTE COMMUNICATION:                                                  |
+|  ----------------------                                                 |
+|  Client --> TCP/TLS --> Remote Daemon                                   |
+|            tcp://192.168.1.100:2376                                     |
 |                                                                         |
-|  ENVIRONMENT VARIABLE:                                                 |
-|  export DOCKER_HOST=tcp://192.168.1.100:2376                          |
+|  ENVIRONMENT VARIABLE:                                                  |
+|  export DOCKER_HOST=tcp://192.168.1.100:2376                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
 ```bash
-When you run a command:
+When you run a command:                  
 
-$ docker run nginx
+$ docker run nginx                       
 
-1. Client parses command
-2. Client creates REST API request
+1. Client parses command                 
+2. Client creates REST API request       
 3. Client sends to daemon via Unix socket
-4. Daemon processes request
-5. Daemon returns response
-6. Client displays output
+4. Daemon processes request              
+5. Daemon returns response               
+6. Client displays output                
 ```
 
 ### THE DOCKER DAEMON (dockerd)
@@ -217,32 +217,32 @@ The daemon is responsible for:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKER DAEMON RESPONSIBILITIES                                        |
+|  DOCKER DAEMON RESPONSIBILITIES                                         |
 |                                                                         |
 |  IMAGE OPERATIONS                                                       |
-|  * Building images from Dockerfile                                     |
-|  * Pulling images from registries                                      |
-|  * Pushing images to registries                                        |
-|  * Managing local image cache                                          |
+|  * Building images from Dockerfile                                      |
+|  * Pulling images from registries                                       |
+|  * Pushing images to registries                                         |
+|  * Managing local image cache                                           |
 |                                                                         |
-|  CONTAINER OPERATIONS (via containerd)                                 |
-|  * Creating containers                                                 |
-|  * Starting/stopping containers                                        |
-|  * Attaching to containers                                            |
-|  * Executing commands in containers                                    |
+|  CONTAINER OPERATIONS (via containerd)                                  |
+|  * Creating containers                                                  |
+|  * Starting/stopping containers                                         |
+|  * Attaching to containers                                              |
+|  * Executing commands in containers                                     |
 |                                                                         |
-|  NETWORKING                                                            |
-|  * Creating Docker networks                                            |
-|  * Managing bridge, overlay networks                                   |
-|  * DNS for service discovery                                          |
+|  NETWORKING                                                             |
+|  * Creating Docker networks                                             |
+|  * Managing bridge, overlay networks                                    |
+|  * DNS for service discovery                                            |
 |                                                                         |
-|  STORAGE                                                               |
-|  * Managing volumes                                                    |
-|  * Managing bind mounts                                                |
+|  STORAGE                                                                |
+|  * Managing volumes                                                     |
+|  * Managing bind mounts                                                 |
 |                                                                         |
-|  API SERVER                                                            |
-|  * Listening on Unix socket                                           |
-|  * Handling REST API requests                                         |
+|  API SERVER                                                             |
+|  * Listening on Unix socket                                             |
+|  * Handling REST API requests                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -254,28 +254,28 @@ containerd is an industry-standard container runtime:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CONTAINERD FEATURES                                                   |
+|  CONTAINERD FEATURES                                                    |
 |                                                                         |
-|  * CAN BE USED WITHOUT DOCKER!                                        |
-|    Kubernetes can use containerd directly                             |
+|  * CAN BE USED WITHOUT DOCKER!                                          |
+|    Kubernetes can use containerd directly                               |
 |                                                                         |
-|  * Container lifecycle management                                      |
-|    create, start, stop, pause, resume, delete                         |
+|  * Container lifecycle management                                       |
+|    create, start, stop, pause, resume, delete                           |
 |                                                                         |
-|  * Image management                                                    |
-|    pull, push, image storage                                          |
+|  * Image management                                                     |
+|    pull, push, image storage                                            |
 |                                                                         |
-|  * Snapshot management                                                 |
-|    Container filesystem layers                                        |
+|  * Snapshot management                                                  |
+|    Container filesystem layers                                          |
 |                                                                         |
-|  * Task execution                                                      |
-|    Running processes in containers                                    |
+|  * Task execution                                                       |
+|    Running processes in containers                                      |
 |                                                                         |
-|  USED BY:                                                              |
-|  * Docker                                                              |
-|  * Kubernetes (CRI plugin)                                            |
-|  * AWS Fargate                                                         |
-|  * Google Cloud Run                                                   |
+|  USED BY:                                                               |
+|  * Docker                                                               |
+|  * Kubernetes (CRI plugin)                                              |
+|  * AWS Fargate                                                          |
+|  * Google Cloud Run                                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -287,30 +287,30 @@ The shim is a small process that acts as a parent for the container:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHY THE SHIM EXISTS                                                   |
+|  WHY THE SHIM EXISTS                                                    |
 |                                                                         |
-|  WITHOUT SHIM:                                                         |
+|  WITHOUT SHIM:                                                          |
 |                                                                         |
-|    containerd                                                          |
+|    containerd                                                           |
 |        |                                                                |
-|        +-- container process                                           |
+|        +-- container process                                            |
 |                                                                         |
-|    Problem: If containerd restarts, container becomes orphan!         |
+|    Problem: If containerd restarts, container becomes orphan!           |
 |                                                                         |
-|  WITH SHIM:                                                            |
+|  WITH SHIM:                                                             |
 |                                                                         |
-|    containerd                                                          |
+|    containerd                                                           |
 |        |                                                                |
-|        +-- containerd-shim (persistent)                               |
+|        +-- containerd-shim (persistent)                                 |
 |                |                                                        |
-|                +-- container process                                   |
+|                +-- container process                                    |
 |                                                                         |
-|    Solution: Shim keeps container alive even if containerd restarts   |
+|    Solution: Shim keeps container alive even if containerd restarts     |
 |                                                                         |
-|  SHIM RESPONSIBILITIES:                                                |
-|  * Keeps STDIN/STDOUT/STDERR open                                     |
-|  * Reports container exit status                                      |
-|  * Allows containerd to be upgraded without killing containers       |
+|  SHIM RESPONSIBILITIES:                                                 |
+|  * Keeps STDIN/STDOUT/STDERR open                                       |
+|  * Reports container exit status                                        |
+|  * Allows containerd to be upgraded without killing containers          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -323,27 +323,27 @@ runc is the low-level container runtime:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  RUNC: THE CONTAINER CREATOR                                           |
+|  RUNC: THE CONTAINER CREATOR                                            |
 |                                                                         |
-|  runc is a CLI tool for spawning and running containers               |
-|  according to the OCI (Open Container Initiative) specification.      |
+|  runc is a CLI tool for spawning and running containers                 |
+|  according to the OCI (Open Container Initiative) specification.        |
 |                                                                         |
-|  WHAT RUNC DOES:                                                       |
-|  1. Creates namespaces (process isolation)                            |
-|  2. Sets up cgroups (resource limits)                                 |
-|  3. Sets up filesystem (root fs, mounts)                              |
-|  4. Applies security settings (capabilities, seccomp, AppArmor)      |
-|  5. Starts the container process                                      |
-|  6. EXITS (daemonless design)                                         |
+|  WHAT RUNC DOES:                                                        |
+|  1. Creates namespaces (process isolation)                              |
+|  2. Sets up cgroups (resource limits)                                   |
+|  3. Sets up filesystem (root fs, mounts)                                |
+|  4. Applies security settings (capabilities, seccomp, AppArmor)         |
+|  5. Starts the container process                                        |
+|  6. EXITS (daemonless design)                                           |
 |                                                                         |
-|  PROCESS FLOW:                                                         |
+|  PROCESS FLOW:                                                          |
 |                                                                         |
-|  containerd-shim -----> runc create -----> container running         |
-|                              |                                         |
-|                              +-- runc exits!                          |
-|                                  (not a daemon)                        |
+|  containerd-shim -----> runc create -----> container running            |
+|                              |                                          |
+|                              +-- runc exits!                            |
+|                                  (not a daemon)                         |
 |                                                                         |
-|  The container process is now child of containerd-shim, not runc.    |
+|  The container process is now child of containerd-shim, not runc.       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -355,57 +355,57 @@ runc is the low-level container runtime:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  $ docker run -d nginx                                                 |
+|  $ docker run -d nginx                                                  |
 |                                                                         |
-|  STEP 1: Docker Client                                                 |
-|  -------------------------                                             |
-|  * Parses command                                                      |
-|  * Creates API request: POST /containers/create                       |
-|  * Sends to daemon via /var/run/docker.sock                          |
+|  STEP 1: Docker Client                                                  |
+|  -------------------------                                              |
+|  * Parses command                                                       |
+|  * Creates API request: POST /containers/create                         |
+|  * Sends to daemon via /var/run/docker.sock                             |
 |                                                                         |
-|  STEP 2: Docker Daemon                                                 |
-|  ---------------------                                                 |
-|  * Receives API request                                                |
-|  * Checks if nginx image exists locally                               |
-|  * If not: pulls from Docker Hub                                      |
-|  * Creates container config                                           |
-|  * Calls containerd via gRPC                                          |
+|  STEP 2: Docker Daemon                                                  |
+|  ---------------------                                                  |
+|  * Receives API request                                                 |
+|  * Checks if nginx image exists locally                                 |
+|  * If not: pulls from Docker Hub                                        |
+|  * Creates container config                                             |
+|  * Calls containerd via gRPC                                            |
 |                                                                         |
-|  STEP 3: containerd                                                    |
-|  ------------------                                                    |
-|  * Receives create request                                             |
-|  * Prepares container bundle (config + filesystem)                    |
-|  * Starts containerd-shim                                             |
+|  STEP 3: containerd                                                     |
+|  ------------------                                                     |
+|  * Receives create request                                              |
+|  * Prepares container bundle (config + filesystem)                      |
+|  * Starts containerd-shim                                               |
 |                                                                         |
-|  STEP 4: containerd-shim                                               |
-|  -----------------------                                               |
-|  * Forks itself (to become independent)                               |
-|  * Calls runc to create container                                     |
+|  STEP 4: containerd-shim                                                |
+|  -----------------------                                                |
+|  * Forks itself (to become independent)                                 |
+|  * Calls runc to create container                                       |
 |                                                                         |
-|  STEP 5: runc                                                          |
-|  -----------                                                           |
-|  * Creates namespaces (pid, net, mnt, uts, ipc)                       |
-|  * Sets up cgroups                                                     |
-|  * Changes root filesystem to container's rootfs                      |
-|  * Executes nginx process                                             |
-|  * EXITS (runc is not a daemon!)                                      |
+|  STEP 5: runc                                                           |
+|  -----------                                                            |
+|  * Creates namespaces (pid, net, mnt, uts, ipc)                         |
+|  * Sets up cgroups                                                      |
+|  * Changes root filesystem to container's rootfs                        |
+|  * Executes nginx process                                               |
+|  * EXITS (runc is not a daemon!)                                        |
 |                                                                         |
-|  STEP 6: Container Running                                             |
-|  -------------------------                                             |
-|  * nginx is now running                                               |
-|  * containerd-shim is parent process                                  |
-|  * shim keeps STDIO open                                              |
-|  * shim reports status to containerd                                  |
+|  STEP 6: Container Running                                              |
+|  -------------------------                                              |
+|  * nginx is now running                                                 |
+|  * containerd-shim is parent process                                    |
+|  * shim keeps STDIO open                                                |
+|  * shim reports status to containerd                                    |
 |                                                                         |
-|  FINAL STATE:                                                          |
+|  FINAL STATE:                                                           |
 |                                                                         |
-|  dockerd                                                               |
+|  dockerd                                                                |
 |     |                                                                   |
-|     +-- containerd                                                     |
+|     +-- containerd                                                      |
 |            |                                                            |
-|            +-- containerd-shim (PID 1234)                             |
+|            +-- containerd-shim (PID 1234)                               |
 |                    |                                                    |
-|                    +-- nginx (PID 5678)                                |
+|                    +-- nginx (PID 5678)                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -419,40 +419,40 @@ Namespaces provide isolation for system resources:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LINUX NAMESPACES USED BY DOCKER                                       |
+|  LINUX NAMESPACES USED BY DOCKER                                        |
 |                                                                         |
-|  PID Namespace                                                         |
-|  -------------                                                         |
-|  * Isolates process IDs                                               |
-|  * Container sees its own PID 1                                       |
-|  * Can't see host or other container processes                       |
+|  PID Namespace                                                          |
+|  -------------                                                          |
+|  * Isolates process IDs                                                 |
+|  * Container sees its own PID 1                                         |
+|  * Can't see host or other container processes                          |
 |                                                                         |
-|  Network Namespace                                                     |
-|  -----------------                                                     |
-|  * Isolates network interfaces, IPs, ports                           |
-|  * Container has own eth0, localhost                                  |
-|  * Can bind to port 80 without conflicts                             |
+|  Network Namespace                                                      |
+|  -----------------                                                      |
+|  * Isolates network interfaces, IPs, ports                              |
+|  * Container has own eth0, localhost                                    |
+|  * Can bind to port 80 without conflicts                                |
 |                                                                         |
-|  Mount Namespace                                                       |
-|  ---------------                                                       |
-|  * Isolates filesystem mounts                                         |
-|  * Container has own view of filesystem                              |
-|  * Can have different /etc, /var, etc.                               |
+|  Mount Namespace                                                        |
+|  ---------------                                                        |
+|  * Isolates filesystem mounts                                           |
+|  * Container has own view of filesystem                                 |
+|  * Can have different /etc, /var, etc.                                  |
 |                                                                         |
-|  UTS Namespace                                                         |
-|  -------------                                                         |
-|  * Isolates hostname and domain name                                  |
-|  * Container can have own hostname                                    |
+|  UTS Namespace                                                          |
+|  -------------                                                          |
+|  * Isolates hostname and domain name                                    |
+|  * Container can have own hostname                                      |
 |                                                                         |
-|  IPC Namespace                                                         |
-|  -------------                                                         |
-|  * Isolates inter-process communication                              |
-|  * Message queues, semaphores, shared memory                         |
+|  IPC Namespace                                                          |
+|  -------------                                                          |
+|  * Isolates inter-process communication                                 |
+|  * Message queues, semaphores, shared memory                            |
 |                                                                         |
-|  User Namespace                                                        |
-|  --------------                                                        |
-|  * Isolates user and group IDs                                       |
-|  * Root in container can be non-root on host                         |
+|  User Namespace                                                         |
+|  --------------                                                         |
+|  * Isolates user and group IDs                                          |
+|  * Root in container can be non-root on host                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -464,30 +464,30 @@ Control groups limit and account for resource usage:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CGROUPS RESOURCES CONTROLLED                                          |
+|  CGROUPS RESOURCES CONTROLLED                                           |
 |                                                                         |
 |  CPU                                                                    |
 |  ---                                                                    |
-|  docker run --cpus=2 nginx          # Max 2 CPU cores                 |
-|  docker run --cpu-shares=512 nginx  # Relative weight                 |
+|  docker run --cpus=2 nginx          # Max 2 CPU cores                   |
+|  docker run --cpu-shares=512 nginx  # Relative weight                   |
 |                                                                         |
 |  Memory                                                                 |
-|  ------                                                                |
-|  docker run --memory=1g nginx       # Max 1GB RAM                     |
-|  docker run --memory-swap=2g nginx  # Max 2GB RAM+swap               |
+|  ------                                                                 |
+|  docker run --memory=1g nginx       # Max 1GB RAM                       |
+|  docker run --memory-swap=2g nginx  # Max 2GB RAM+swap                  |
 |                                                                         |
-|  Block I/O                                                             |
-|  ---------                                                             |
-|  docker run --device-read-bps=/dev/sda:1mb nginx                      |
-|  docker run --device-write-bps=/dev/sda:1mb nginx                     |
+|  Block I/O                                                              |
+|  ---------                                                              |
+|  docker run --device-read-bps=/dev/sda:1mb nginx                        |
+|  docker run --device-write-bps=/dev/sda:1mb nginx                       |
 |                                                                         |
-|  Network (via iptables, not cgroups directly)                         |
-|  ---------                                                             |
-|  Can limit bandwidth through external tools                           |
+|  Network (via iptables, not cgroups directly)                           |
+|  ---------                                                              |
+|  Can limit bandwidth through external tools                             |
 |                                                                         |
 |  PIDs                                                                   |
 |  ----                                                                   |
-|  docker run --pids-limit=100 nginx  # Max 100 processes              |
+|  docker run --pids-limit=100 nginx  # Max 100 processes                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -499,43 +499,43 @@ Control groups limit and account for resource usage:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKER IMAGE LAYERS                                                   |
+|  DOCKER IMAGE LAYERS                                                    |
 |                                                                         |
-|  Images are built in layers. Each layer is read-only.                 |
+|  Images are built in layers. Each layer is read-only.                   |
 |                                                                         |
-|  Dockerfile:                     Image Layers:                        |
+|  Dockerfile:                     Image Layers:                          |
 |                                                                         |
-|  FROM ubuntu:20.04    ----->    +-------------------+  Layer 1       |
-|                                 |    Ubuntu base    |  (read-only)   |
-|                                 +-------------------+                 |
-|                                          |                            |
-|  RUN apt-get update   ----->    +-------+-----------+  Layer 2       |
-|                                 |  apt cache update |  (read-only)   |
-|                                 +-------------------+                 |
-|                                          |                            |
-|  RUN apt-get install  ----->    +-------+-----------+  Layer 3       |
-|      -y nginx                   |   nginx package   |  (read-only)   |
-|                                 +-------------------+                 |
-|                                          |                            |
-|  COPY index.html /var ----->    +-------+-----------+  Layer 4       |
-|                                 |   Your HTML file  |  (read-only)   |
-|                                 +-------------------+                 |
+|  FROM ubuntu:20.04    ----->    +-------------------+  Layer 1          |
+|                                 |    Ubuntu base    |  (read-only)      |
+|                                 +-------------------+                   |
+|                                          |                              |
+|  RUN apt-get update   ----->    +-------+-----------+  Layer 2          |
+|                                 |  apt cache update |  (read-only)      |
+|                                 +-------------------+                   |
+|                                          |                              |
+|  RUN apt-get install  ----->    +-------+-----------+  Layer 3          |
+|      -y nginx                   |   nginx package   |  (read-only)      |
+|                                 +-------------------+                   |
+|                                          |                              |
+|  COPY index.html /var ----->    +-------+-----------+  Layer 4          |
+|                                 |   Your HTML file  |  (read-only)      |
+|                                 +-------------------+                   |
 |                                                                         |
-|  When container runs:                                                  |
+|  When container runs:                                                   |
 |                                                                         |
-|                                 +-------------------+  Writable      |
-|                                 |  Container Layer  |  (read-write)  |
-|                                 |  (your changes)   |                 |
-|                                 +-------------------+                 |
-|                                          |                            |
-|                                 +-------------------+                 |
-|                                 |   Image Layers    |  (read-only)   |
-|                                 +-------------------+                 |
+|                                 +-------------------+  Writable         |
+|                                 |  Container Layer  |  (read-write)     |
+|                                 |  (your changes)   |                   |
+|                                 +-------------------+                   |
+|                                          |                              |
+|                                 +-------------------+                   |
+|                                 |   Image Layers    |  (read-only)      |
+|                                 +-------------------+                   |
 |                                                                         |
-|  BENEFITS:                                                             |
-|  * Layers are shared between images (saves disk space)               |
-|  * Layers are cached (speeds up builds)                              |
-|  * Only differences are stored                                        |
+|  BENEFITS:                                                              |
+|  * Layers are shared between images (saves disk space)                  |
+|  * Layers are cached (speeds up builds)                                 |
+|  * Only differences are stored                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -547,32 +547,32 @@ Docker supports multiple storage drivers for the Union filesystem:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  STORAGE DRIVERS                                                       |
+|  STORAGE DRIVERS                                                        |
 |                                                                         |
-|  overlay2 (Recommended)                                                |
-|  ----------------------                                                |
-|  * Default for modern Linux                                           |
-|  * Best performance and stability                                     |
-|  * Requires Linux kernel 4.0+                                        |
+|  overlay2 (Recommended)                                                 |
+|  ----------------------                                                 |
+|  * Default for modern Linux                                             |
+|  * Best performance and stability                                       |
+|  * Requires Linux kernel 4.0+                                           |
 |                                                                         |
-|  devicemapper                                                          |
-|  ------------                                                          |
-|  * Block-level storage                                                |
-|  * Good for CentOS/RHEL older versions                               |
-|  * More complex configuration                                         |
+|  devicemapper                                                           |
+|  ------------                                                           |
+|  * Block-level storage                                                  |
+|  * Good for CentOS/RHEL older versions                                  |
+|  * More complex configuration                                           |
 |                                                                         |
-|  btrfs                                                                 |
-|  -----                                                                 |
-|  * Requires btrfs filesystem                                          |
-|  * Native snapshot support                                            |
+|  btrfs                                                                  |
+|  -----                                                                  |
+|  * Requires btrfs filesystem                                            |
+|  * Native snapshot support                                              |
 |                                                                         |
-|  zfs                                                                   |
-|  ---                                                                   |
-|  * Requires ZFS filesystem                                            |
-|  * Enterprise features                                                |
+|  zfs                                                                    |
+|  ---                                                                    |
+|  * Requires ZFS filesystem                                              |
+|  * Enterprise features                                                  |
 |                                                                         |
-|  CHECK YOUR DRIVER:                                                    |
-|  docker info | grep "Storage Driver"                                  |
+|  CHECK YOUR DRIVER:                                                     |
+|  docker info | grep "Storage Driver"                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -582,28 +582,28 @@ Docker supports multiple storage drivers for the Union filesystem:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKER ARCHITECTURE - KEY TAKEAWAYS                                   |
+|  DOCKER ARCHITECTURE - KEY TAKEAWAYS                                    |
 |                                                                         |
-|  COMPONENTS                                                            |
-|  ----------                                                            |
-|  * Docker Client: CLI tool, sends commands via REST API               |
-|  * Docker Daemon: Manages images, containers, networks, volumes       |
-|  * containerd: Container lifecycle management                         |
-|  * containerd-shim: Keeps containers running independently           |
-|  * runc: Actually creates and runs containers                        |
+|  COMPONENTS                                                             |
+|  ----------                                                             |
+|  * Docker Client: CLI tool, sends commands via REST API                 |
+|  * Docker Daemon: Manages images, containers, networks, volumes         |
+|  * containerd: Container lifecycle management                           |
+|  * containerd-shim: Keeps containers running independently              |
+|  * runc: Actually creates and runs containers                           |
 |                                                                         |
-|  LINUX FEATURES                                                        |
-|  --------------                                                        |
-|  * Namespaces: Process isolation (PID, network, mount, etc.)         |
-|  * Cgroups: Resource limits (CPU, memory, I/O)                       |
-|  * Union FS: Layered filesystem for images                           |
+|  LINUX FEATURES                                                         |
+|  --------------                                                         |
+|  * Namespaces: Process isolation (PID, network, mount, etc.)            |
+|  * Cgroups: Resource limits (CPU, memory, I/O)                          |
+|  * Union FS: Layered filesystem for images                              |
 |                                                                         |
-|  KEY INSIGHTS                                                          |
-|  ------------                                                          |
-|  * Docker daemon restart doesn't kill containers (thanks to shim)    |
-|  * runc exits after creating container (daemonless)                  |
-|  * Image layers are shared and cached                                |
-|  * Containers share the host kernel (not VMs!)                       |
+|  KEY INSIGHTS                                                           |
+|  ------------                                                           |
+|  * Docker daemon restart doesn't kill containers (thanks to shim)       |
+|  * runc exits after creating container (daemonless)                     |
+|  * Image layers are shared and cached                                   |
+|  * Containers share the host kernel (not VMs!)                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

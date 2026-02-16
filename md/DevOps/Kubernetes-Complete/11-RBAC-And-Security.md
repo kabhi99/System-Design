@@ -8,129 +8,129 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE PROBLEM: UNRESTRICTED ACCESS                                     |
+|  THE PROBLEM: UNRESTRICTED ACCESS                                       |
 |  =================================                                      |
 |                                                                         |
-|  Without RBAC, anyone with kubectl access can:                        |
+|  Without RBAC, anyone with kubectl access can:                          |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   Junior Developer with kubectl:                               |   |
-|  |                                                                 |   |
-|  |   kubectl delete deployment production-api     < Oops!        |   |
-|  |   kubectl delete pvc database-storage          < Data gone!   |   |
-|  |   kubectl exec -it prod-db -- mysql            < Sees secrets |   |
-|  |   kubectl get secrets --all-namespaces         < All passwords|   |
-|  |   kubectl create deployment bitcoin-miner...   < Crypto mining|   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Junior Developer with kubectl:                               |     |
+|  |                                                                 |    |
+|  |   kubectl delete deployment production-api     < Oops!        |      |
+|  |   kubectl delete pvc database-storage          < Data gone!   |      |
+|  |   kubectl exec -it prod-db -- mysql            < Sees secrets |      |
+|  |   kubectl get secrets --all-namespaces         < All passwords|      |
+|  |   kubectl create deployment bitcoin-miner...   < Crypto mining|      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  PROBLEMS:                                                             |
+|  PROBLEMS:                                                              |
 |                                                                         |
-|  1. ACCIDENTAL DAMAGE                                                  |
-|     * Dev deletes production resources by mistake                    |
-|     * Wrong namespace, wrong context                                 |
+|  1. ACCIDENTAL DAMAGE                                                   |
+|     * Dev deletes production resources by mistake                       |
+|     * Wrong namespace, wrong context                                    |
 |                                                                         |
-|  2. SECURITY BREACH                                                    |
-|     * Everyone can read all secrets                                  |
-|     * Database passwords visible to all                              |
+|  2. SECURITY BREACH                                                     |
+|     * Everyone can read all secrets                                     |
+|     * Database passwords visible to all                                 |
 |                                                                         |
-|  3. COMPLIANCE VIOLATIONS                                             |
-|     * No audit trail of who did what                                 |
-|     * Can't prove separation of duties                               |
+|  3. COMPLIANCE VIOLATIONS                                               |
+|     * No audit trail of who did what                                    |
+|     * Can't prove separation of duties                                  |
 |                                                                         |
-|  4. RESOURCE ABUSE                                                     |
-|     * Anyone can create unlimited resources                          |
-|     * No control over cluster usage                                  |
+|  4. RESOURCE ABUSE                                                      |
+|     * Anyone can create unlimited resources                             |
+|     * No control over cluster usage                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE SOLUTION: RBAC (Role-Based Access Control)                       |
+|  THE SOLUTION: RBAC (Role-Based Access Control)                         |
 |  ===============================================                        |
 |                                                                         |
-|  Define WHO can do WHAT on WHICH resources:                           |
+|  Define WHO can do WHAT on WHICH resources:                             |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   Junior Developer:                                            |   |
-|  |   Y Can view pods in dev namespace                            |   |
-|  |   Y Can view logs                                              |   |
-|  |   X Cannot delete anything                                     |   |
-|  |   X Cannot access prod namespace                               |   |
-|  |   X Cannot read secrets                                        |   |
-|  |                                                                 |   |
-|  |   Senior Developer:                                            |   |
-|  |   Y Can create/delete in dev namespace                        |   |
-|  |   Y Can view prod (read-only)                                  |   |
-|  |   X Cannot delete in prod                                      |   |
-|  |                                                                 |   |
-|  |   Ops Team:                                                    |   |
-|  |   Y Full access to prod                                       |   |
-|  |   Y Can manage nodes                                           |   |
-|  |   Y Can read secrets                                           |   |
-|  |                                                                 |   |
-|  |   CI/CD Pipeline (ServiceAccount):                            |   |
-|  |   Y Can create/update deployments                             |   |
-|  |   X Cannot delete PVCs                                         |   |
-|  |   X Cannot access other namespaces                            |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Junior Developer:                                            |     |
+|  |   Y Can view pods in dev namespace                            |      |
+|  |   Y Can view logs                                              |     |
+|  |   X Cannot delete anything                                     |     |
+|  |   X Cannot access prod namespace                               |     |
+|  |   X Cannot read secrets                                        |     |
+|  |                                                                 |    |
+|  |   Senior Developer:                                            |     |
+|  |   Y Can create/delete in dev namespace                        |      |
+|  |   Y Can view prod (read-only)                                  |     |
+|  |   X Cannot delete in prod                                      |     |
+|  |                                                                 |    |
+|  |   Ops Team:                                                    |     |
+|  |   Y Full access to prod                                       |      |
+|  |   Y Can manage nodes                                           |     |
+|  |   Y Can read secrets                                           |     |
+|  |                                                                 |    |
+|  |   CI/CD Pipeline (ServiceAccount):                            |      |
+|  |   Y Can create/update deployments                             |      |
+|  |   X Cannot delete PVCs                                         |     |
+|  |   X Cannot access other namespaces                            |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  REAL-WORLD RBAC SCENARIOS                                            |
+|  REAL-WORLD RBAC SCENARIOS                                              |
 |  ==========================                                             |
 |                                                                         |
-|  SCENARIO 1: Multi-Team Cluster                                       |
-|  -------------------------------                                       |
-|  * Team A: Full access to namespace team-a                           |
-|  * Team B: Full access to namespace team-b                           |
-|  * Neither team can see each other's resources                       |
+|  SCENARIO 1: Multi-Team Cluster                                         |
+|  -------------------------------                                        |
+|  * Team A: Full access to namespace team-a                              |
+|  * Team B: Full access to namespace team-b                              |
+|  * Neither team can see each other's resources                          |
 |                                                                         |
-|  SCENARIO 2: Dev/Staging/Prod Environments                            |
-|  -----------------------------------------                             |
-|  * Developers: Full access to dev, read-only to staging/prod        |
-|  * QA: Full access to staging, read-only to prod                    |
-|  * Ops: Full access everywhere                                       |
+|  SCENARIO 2: Dev/Staging/Prod Environments                              |
+|  -----------------------------------------                              |
+|  * Developers: Full access to dev, read-only to staging/prod            |
+|  * QA: Full access to staging, read-only to prod                        |
+|  * Ops: Full access everywhere                                          |
 |                                                                         |
-|  SCENARIO 3: CI/CD Pipeline                                           |
-|  ---------------------------                                           |
-|  * ServiceAccount for Jenkins/GitHub Actions                         |
-|  * Can deploy apps (create/update deployments)                       |
-|  * Cannot delete persistent volumes (protect data)                  |
-|  * Cannot modify RBAC (can't escalate privileges)                   |
+|  SCENARIO 3: CI/CD Pipeline                                             |
+|  ---------------------------                                            |
+|  * ServiceAccount for Jenkins/GitHub Actions                            |
+|  * Can deploy apps (create/update deployments)                          |
+|  * Cannot delete persistent volumes (protect data)                      |
+|  * Cannot modify RBAC (can't escalate privileges)                       |
 |                                                                         |
-|  SCENARIO 4: Monitoring Tools                                         |
-|  -----------------------------                                         |
-|  * Prometheus ServiceAccount                                          |
-|  * Read-only access to pods, nodes, services                        |
-|  * Cannot modify anything                                            |
+|  SCENARIO 4: Monitoring Tools                                           |
+|  -----------------------------                                          |
+|  * Prometheus ServiceAccount                                            |
+|  * Read-only access to pods, nodes, services                            |
+|  * Cannot modify anything                                               |
 |                                                                         |
-|  SCENARIO 5: Application Pods                                         |
-|  -----------------------------                                         |
-|  * Pod needs to read ConfigMaps                                      |
-|  * Pod needs to list other pods (service discovery)                 |
-|  * Minimal permissions - only what app needs                        |
+|  SCENARIO 5: Application Pods                                           |
+|  -----------------------------                                          |
+|  * Pod needs to read ConfigMaps                                         |
+|  * Pod needs to list other pods (service discovery)                     |
+|  * Minimal permissions - only what app needs                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PRINCIPLE OF LEAST PRIVILEGE                                         |
+|  PRINCIPLE OF LEAST PRIVILEGE                                           |
 |  =============================                                          |
 |                                                                         |
-|  Give each user/service ONLY the permissions they NEED.              |
-|  Nothing more.                                                        |
+|  Give each user/service ONLY the permissions they NEED.                 |
+|  Nothing more.                                                          |
 |                                                                         |
-|  BAD:  "Give developers admin access, it's easier"                   |
-|  GOOD: "Developers can view logs and exec into dev pods only"       |
+|  BAD:  "Give developers admin access, it's easier"                      |
+|  GOOD: "Developers can view logs and exec into dev pods only"           |
 |                                                                         |
-|  BAD:  "CI/CD pipeline has cluster-admin"                            |
-|  GOOD: "CI/CD can only update deployments in specific namespace"    |
+|  BAD:  "CI/CD pipeline has cluster-admin"                               |
+|  GOOD: "CI/CD can only update deployments in specific namespace"        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -140,28 +140,28 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  RBAC COMPONENTS                                                       |
+|  RBAC COMPONENTS                                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   WHO              WHAT                    WHERE               |  |
-|  |   (Subject)        (Role)                  (Binding)           |  |
-|  |                                                                 |  |
-|  |   +---------+      +-----------------+     +----------------+  |  |
-|  |   |  User   |      |  Role           |     | RoleBinding    |  |  |
-|  |   |  Group  | <----|  (namespace)    |<----| (namespace)    |  |  |
-|  |   | Service |      |                 |     |                |  |  |
-|  |   | Account |      |  ClusterRole    |     | ClusterRole    |  |  |
-|  |   +---------+      |  (cluster-wide) |<----| Binding        |  |  |
-|  |                    +-----------------+     | (cluster-wide) |  |  |
-|  |                                            +----------------+  |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   WHO              WHAT                    WHERE               |     |
+|  |   (Subject)        (Role)                  (Binding)           |     |
+|  |                                                                 |    |
+|  |   +---------+      +-----------------+     +----------------+  |     |
+|  |   |  User   |      |  Role           |     | RoleBinding    |  |     |
+|  |   |  Group  | <----|  (namespace)    |<----| (namespace)    |  |     |
+|  |   | Service |      |                 |     |                |  |     |
+|  |   | Account |      |  ClusterRole    |     | ClusterRole    |  |     |
+|  |   +---------+      |  (cluster-wide) |<----| Binding        |  |     |
+|  |                    +-----------------+     | (cluster-wide) |  |     |
+|  |                                            +----------------+  |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  * Role: What actions are allowed on what resources                  |
-|  * RoleBinding: Links Role to Subject                                |
-|  * ClusterRole: Cluster-wide permissions                             |
-|  * ClusterRoleBinding: Cluster-wide binding                          |
+|  * Role: What actions are allowed on what resources                     |
+|  * RoleBinding: Links Role to Subject                                   |
+|  * ClusterRole: Cluster-wide permissions                                |
+|  * ClusterRoleBinding: Cluster-wide binding                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -171,51 +171,51 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ROLE (Namespace-scoped)                                              |
+|  ROLE (Namespace-scoped)                                                |
 |  ========================                                               |
 |                                                                         |
-|  apiVersion: rbac.authorization.k8s.io/v1                             |
+|  apiVersion: rbac.authorization.k8s.io/v1                               |
 |  kind: Role                                                             |
 |  metadata:                                                              |
-|    name: pod-reader                                                    |
-|    namespace: dev                                                      |
+|    name: pod-reader                                                     |
+|    namespace: dev                                                       |
 |  rules:                                                                 |
-|    - apiGroups: [""]        # "" = core API                          |
-|      resources: ["pods"]                                               |
-|      verbs: ["get", "list", "watch"]                                  |
-|    - apiGroups: [""]                                                   |
-|      resources: ["pods/log"]                                          |
-|      verbs: ["get"]                                                    |
+|    - apiGroups: [""]        # "" = core API                             |
+|      resources: ["pods"]                                                |
+|      verbs: ["get", "list", "watch"]                                    |
+|    - apiGroups: [""]                                                    |
+|      resources: ["pods/log"]                                            |
+|      verbs: ["get"]                                                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  ROLEBINDING                                                           |
+|  ROLEBINDING                                                            |
 |  ===========                                                            |
 |                                                                         |
-|  apiVersion: rbac.authorization.k8s.io/v1                             |
+|  apiVersion: rbac.authorization.k8s.io/v1                               |
 |  kind: RoleBinding                                                      |
 |  metadata:                                                              |
-|    name: read-pods                                                     |
-|    namespace: dev                                                      |
+|    name: read-pods                                                      |
+|    namespace: dev                                                       |
 |  subjects:                                                              |
-|    - kind: User                                                        |
-|      name: jane                                                        |
-|      apiGroup: rbac.authorization.k8s.io                              |
-|    - kind: ServiceAccount                                              |
-|      name: my-app                                                      |
-|      namespace: dev                                                    |
+|    - kind: User                                                         |
+|      name: jane                                                         |
+|      apiGroup: rbac.authorization.k8s.io                                |
+|    - kind: ServiceAccount                                               |
+|      name: my-app                                                       |
+|      namespace: dev                                                     |
 |  roleRef:                                                               |
 |    kind: Role                                                           |
-|    name: pod-reader                                                    |
-|    apiGroup: rbac.authorization.k8s.io                                |
+|    name: pod-reader                                                     |
+|    apiGroup: rbac.authorization.k8s.io                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  COMMON VERBS                                                          |
+|  COMMON VERBS                                                           |
 |                                                                         |
-|  * get, list, watch (read)                                            |
-|  * create, update, patch, delete (write)                             |
-|  * * (all verbs)                                                      |
+|  * get, list, watch (read)                                              |
+|  * create, update, patch, delete (write)                                |
+|  * * (all verbs)                                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -225,44 +225,44 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CLUSTERROLE (Cluster-wide)                                           |
+|  CLUSTERROLE (Cluster-wide)                                             |
 |  ===========================                                            |
 |                                                                         |
-|  apiVersion: rbac.authorization.k8s.io/v1                             |
+|  apiVersion: rbac.authorization.k8s.io/v1                               |
 |  kind: ClusterRole                                                      |
 |  metadata:                                                              |
-|    name: secret-reader                                                 |
+|    name: secret-reader                                                  |
 |  rules:                                                                 |
-|    - apiGroups: [""]                                                   |
-|      resources: ["secrets"]                                            |
-|      verbs: ["get", "list"]                                           |
+|    - apiGroups: [""]                                                    |
+|      resources: ["secrets"]                                             |
+|      verbs: ["get", "list"]                                             |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  CLUSTERROLEBINDING                                                    |
+|  CLUSTERROLEBINDING                                                     |
 |  ===================                                                    |
 |                                                                         |
-|  apiVersion: rbac.authorization.k8s.io/v1                             |
+|  apiVersion: rbac.authorization.k8s.io/v1                               |
 |  kind: ClusterRoleBinding                                               |
 |  metadata:                                                              |
-|    name: read-secrets-global                                          |
+|    name: read-secrets-global                                            |
 |  subjects:                                                              |
-|    - kind: Group                                                       |
-|      name: security-team                                               |
-|      apiGroup: rbac.authorization.k8s.io                              |
+|    - kind: Group                                                        |
+|      name: security-team                                                |
+|      apiGroup: rbac.authorization.k8s.io                                |
 |  roleRef:                                                               |
 |    kind: ClusterRole                                                    |
-|    name: secret-reader                                                 |
-|    apiGroup: rbac.authorization.k8s.io                                |
+|    name: secret-reader                                                  |
+|    apiGroup: rbac.authorization.k8s.io                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  BUILT-IN CLUSTERROLES                                                 |
+|  BUILT-IN CLUSTERROLES                                                  |
 |                                                                         |
-|  * cluster-admin: Full access to everything                          |
-|  * admin: Full access within namespace                               |
-|  * edit: Read/write to most resources                                |
-|  * view: Read-only access                                            |
+|  * cluster-admin: Full access to everything                             |
+|  * admin: Full access within namespace                                  |
+|  * edit: Read/write to most resources                                   |
+|  * view: Read-only access                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -272,26 +272,26 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  SERVICE ACCOUNTS                                                      |
+|  SERVICE ACCOUNTS                                                       |
 |  ================                                                       |
 |                                                                         |
-|  Identity for pods to access Kubernetes API.                         |
+|  Identity for pods to access Kubernetes API.                            |
 |                                                                         |
-|  # Create ServiceAccount                                               |
-|  apiVersion: v1                                                        |
+|  # Create ServiceAccount                                                |
+|  apiVersion: v1                                                         |
 |  kind: ServiceAccount                                                   |
 |  metadata:                                                              |
-|    name: my-app                                                        |
-|    namespace: dev                                                      |
+|    name: my-app                                                         |
+|    namespace: dev                                                       |
 |                                                                         |
-|  # Use in Pod                                                          |
+|  # Use in Pod                                                           |
 |  spec:                                                                  |
-|    serviceAccountName: my-app                                         |
+|    serviceAccountName: my-app                                           |
 |    containers:                                                          |
-|      - name: app                                                       |
-|        image: myapp                                                    |
+|      - name: app                                                        |
+|        image: myapp                                                     |
 |                                                                         |
-|  # Token mounted at /var/run/secrets/kubernetes.io/serviceaccount    |
+|  # Token mounted at /var/run/secrets/kubernetes.io/serviceaccount       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -301,22 +301,22 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  POD SECURITY CONTEXT                                                  |
+|  POD SECURITY CONTEXT                                                   |
 |  =====================                                                  |
 |                                                                         |
 |  spec:                                                                  |
 |    securityContext:                                                     |
-|      runAsNonRoot: true                                                |
-|      runAsUser: 1000                                                   |
-|      fsGroup: 2000                                                     |
+|      runAsNonRoot: true                                                 |
+|      runAsUser: 1000                                                    |
+|      fsGroup: 2000                                                      |
 |    containers:                                                          |
-|      - name: app                                                       |
-|        image: myapp                                                    |
-|        securityContext:                                                |
-|          allowPrivilegeEscalation: false                              |
-|          readOnlyRootFilesystem: true                                 |
+|      - name: app                                                        |
+|        image: myapp                                                     |
+|        securityContext:                                                 |
+|          allowPrivilegeEscalation: false                                |
+|          readOnlyRootFilesystem: true                                   |
 |          capabilities:                                                  |
-|            drop: ["ALL"]                                               |
+|            drop: ["ALL"]                                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -326,24 +326,24 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  RBAC - KEY TAKEAWAYS                                                 |
+|  RBAC - KEY TAKEAWAYS                                                   |
 |                                                                         |
-|  COMPONENTS                                                            |
-|  ----------                                                            |
-|  * Role/ClusterRole: Define permissions                              |
-|  * RoleBinding/ClusterRoleBinding: Assign to users                  |
-|  * ServiceAccount: Pod identity                                      |
+|  COMPONENTS                                                             |
+|  ----------                                                             |
+|  * Role/ClusterRole: Define permissions                                 |
+|  * RoleBinding/ClusterRoleBinding: Assign to users                      |
+|  * ServiceAccount: Pod identity                                         |
 |                                                                         |
-|  PRINCIPLE OF LEAST PRIVILEGE                                         |
-|  ----------------------------                                          |
-|  * Grant minimum required permissions                                |
-|  * Use namespace-scoped roles when possible                         |
-|  * Avoid cluster-admin                                               |
+|  PRINCIPLE OF LEAST PRIVILEGE                                           |
+|  ----------------------------                                           |
+|  * Grant minimum required permissions                                   |
+|  * Use namespace-scoped roles when possible                             |
+|  * Avoid cluster-admin                                                  |
 |                                                                         |
-|  COMMANDS                                                              |
-|  --------                                                              |
-|  kubectl auth can-i <verb> <resource>                                |
-|  kubectl auth can-i --list                                            |
+|  COMMANDS                                                               |
+|  --------                                                               |
+|  kubectl auth can-i <verb> <resource>                                   |
+|  kubectl auth can-i --list                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

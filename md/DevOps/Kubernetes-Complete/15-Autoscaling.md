@@ -9,79 +9,79 @@ vertical scaling.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHAT IS HPA?                                                          |
+|  WHAT IS HPA?                                                           |
 |                                                                         |
-|  Automatically scales pod replicas based on metrics.                  |
+|  Automatically scales pod replicas based on metrics.                    |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   CPU Usage 80%                  CPU Usage 40%                 |  |
-|  |                                                                 |  |
-|  |   +---++---++---+               +---++---++---++---++---+     |  |
-|  |   |Pod||Pod||Pod|   ------>     |Pod||Pod||Pod||Pod||Pod|     |  |
-|  |   +---++---++---+               +---++---++---++---++---+     |  |
-|  |                                                                 |  |
-|  |   3 replicas > HPA scales to > 5 replicas                     |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   CPU Usage 80%                  CPU Usage 40%                 |     |
+|  |                                                                 |    |
+|  |   +---++---++---+               +---++---++---++---++---+     |      |
+|  |   |Pod||Pod||Pod|   ------>     |Pod||Pod||Pod||Pod||Pod|     |      |
+|  |   +---++---++---+               +---++---++---++---++---+     |      |
+|  |                                                                 |    |
+|  |   3 replicas > HPA scales to > 5 replicas                     |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  BASIC HPA                                                             |
+|  BASIC HPA                                                              |
 |  =========                                                              |
 |                                                                         |
 |  # Command                                                              |
-|  kubectl autoscale deployment myapp \                                 |
+|  kubectl autoscale deployment myapp \                                   |
 |    --cpu-percent=50 \                                                   |
 |    --min=2 \                                                            |
 |    --max=10                                                             |
 |                                                                         |
-|  # YAML                                                                |
-|  apiVersion: autoscaling/v2                                           |
-|  kind: HorizontalPodAutoscaler                                        |
+|  # YAML                                                                 |
+|  apiVersion: autoscaling/v2                                             |
+|  kind: HorizontalPodAutoscaler                                          |
 |  metadata:                                                              |
-|    name: myapp-hpa                                                     |
+|    name: myapp-hpa                                                      |
 |  spec:                                                                  |
 |    scaleTargetRef:                                                      |
-|      apiVersion: apps/v1                                               |
+|      apiVersion: apps/v1                                                |
 |      kind: Deployment                                                   |
-|      name: myapp                                                       |
-|    minReplicas: 2                                                      |
-|    maxReplicas: 10                                                     |
+|      name: myapp                                                        |
+|    minReplicas: 2                                                       |
+|    maxReplicas: 10                                                      |
 |    metrics:                                                             |
-|      - type: Resource                                                  |
+|      - type: Resource                                                   |
 |        resource:                                                        |
-|          name: cpu                                                     |
+|          name: cpu                                                      |
 |          target:                                                        |
-|            type: Utilization                                           |
-|            averageUtilization: 50                                     |
+|            type: Utilization                                            |
+|            averageUtilization: 50                                       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  MULTIPLE METRICS                                                      |
+|  MULTIPLE METRICS                                                       |
 |  =================                                                      |
 |                                                                         |
 |  spec:                                                                  |
 |    metrics:                                                             |
-|      - type: Resource                                                  |
+|      - type: Resource                                                   |
 |        resource:                                                        |
-|          name: cpu                                                     |
+|          name: cpu                                                      |
 |          target:                                                        |
-|            type: Utilization                                           |
-|            averageUtilization: 50                                     |
-|      - type: Resource                                                  |
+|            type: Utilization                                            |
+|            averageUtilization: 50                                       |
+|      - type: Resource                                                   |
 |        resource:                                                        |
-|          name: memory                                                  |
+|          name: memory                                                   |
 |          target:                                                        |
-|            type: Utilization                                           |
-|            averageUtilization: 70                                     |
-|      - type: Pods                                                      |
+|            type: Utilization                                            |
+|            averageUtilization: 70                                       |
+|      - type: Pods                                                       |
 |        pods:                                                            |
 |          metric:                                                        |
-|            name: packets-per-second                                   |
+|            name: packets-per-second                                     |
 |          target:                                                        |
-|            type: AverageValue                                          |
-|            averageValue: 1k                                            |
+|            type: AverageValue                                           |
+|            averageValue: 1k                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -91,32 +91,32 @@ vertical scaling.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHAT IS VPA?                                                          |
+|  WHAT IS VPA?                                                           |
 |                                                                         |
-|  Automatically adjusts CPU/memory requests and limits.               |
+|  Automatically adjusts CPU/memory requests and limits.                  |
 |                                                                         |
-|  apiVersion: autoscaling.k8s.io/v1                                    |
-|  kind: VerticalPodAutoscaler                                           |
+|  apiVersion: autoscaling.k8s.io/v1                                      |
+|  kind: VerticalPodAutoscaler                                            |
 |  metadata:                                                              |
-|    name: myapp-vpa                                                     |
+|    name: myapp-vpa                                                      |
 |  spec:                                                                  |
 |    targetRef:                                                           |
-|      apiVersion: apps/v1                                               |
+|      apiVersion: apps/v1                                                |
 |      kind: Deployment                                                   |
-|      name: myapp                                                       |
+|      name: myapp                                                        |
 |    updatePolicy:                                                        |
-|      updateMode: "Auto"       # Off, Initial, Recreate, Auto         |
+|      updateMode: "Auto"       # Off, Initial, Recreate, Auto            |
 |    resourcePolicy:                                                      |
-|      containerPolicies:                                                |
-|        - containerName: "*"                                            |
+|      containerPolicies:                                                 |
+|        - containerName: "*"                                             |
 |          minAllowed:                                                    |
-|            cpu: 100m                                                   |
-|            memory: 50Mi                                                |
+|            cpu: 100m                                                    |
+|            memory: 50Mi                                                 |
 |          maxAllowed:                                                    |
-|            cpu: 2                                                      |
-|            memory: 2Gi                                                 |
+|            cpu: 2                                                       |
+|            memory: 2Gi                                                  |
 |                                                                         |
-|  NOTE: VPA requires installation (not built-in)                       |
+|  NOTE: VPA requires installation (not built-in)                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -126,27 +126,27 @@ vertical scaling.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHAT IS CLUSTER AUTOSCALER?                                          |
+|  WHAT IS CLUSTER AUTOSCALER?                                            |
 |                                                                         |
-|  Automatically adjusts cluster size (nodes).                          |
+|  Automatically adjusts cluster size (nodes).                            |
 |                                                                         |
-|  SCALE UP when:                                                        |
-|  * Pods can't be scheduled due to insufficient resources             |
+|  SCALE UP when:                                                         |
+|  * Pods can't be scheduled due to insufficient resources                |
 |                                                                         |
-|  SCALE DOWN when:                                                      |
-|  * Nodes are underutilized                                            |
-|  * Pods can be moved to other nodes                                   |
+|  SCALE DOWN when:                                                       |
+|  * Nodes are underutilized                                              |
+|  * Pods can be moved to other nodes                                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  CLOUD PROVIDER SETUP                                                  |
+|  CLOUD PROVIDER SETUP                                                   |
 |                                                                         |
-|  # AWS EKS                                                             |
-|  eksctl create cluster --nodes-min=2 --nodes-max=10                  |
+|  # AWS EKS                                                              |
+|  eksctl create cluster --nodes-min=2 --nodes-max=10                     |
 |                                                                         |
-|  # GKE                                                                 |
-|  gcloud container clusters create mycluster \                         |
-|    --enable-autoscaling \                                              |
+|  # GKE                                                                  |
+|  gcloud container clusters create mycluster \                           |
+|    --enable-autoscaling \                                               |
 |    --min-nodes=2 \                                                      |
 |    --max-nodes=10                                                       |
 |                                                                         |
@@ -158,26 +158,26 @@ vertical scaling.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  HPA REQUIRES RESOURCE REQUESTS                                       |
+|  HPA REQUIRES RESOURCE REQUESTS                                         |
 |                                                                         |
-|  # Deployment must specify resources                                  |
+|  # Deployment must specify resources                                    |
 |  spec:                                                                  |
 |    containers:                                                          |
-|      - name: app                                                       |
+|      - name: app                                                        |
 |        resources:                                                       |
 |          requests:                                                      |
-|            cpu: 100m          # Required for HPA!                     |
-|            memory: 128Mi                                               |
+|            cpu: 100m          # Required for HPA!                       |
+|            memory: 128Mi                                                |
 |          limits:                                                        |
-|            cpu: 500m                                                   |
-|            memory: 512Mi                                               |
+|            cpu: 500m                                                    |
+|            memory: 512Mi                                                |
 |                                                                         |
-|  # Metrics Server must be installed                                   |
+|  # Metrics Server must be installed                                     |
 |  kubectl apply -f \                                                     |
-|    https://github.com/kubernetes-sigs/metrics-server/releases/\       |
-|    latest/download/components.yaml                                    |
+|    https://github.com/kubernetes-sigs/metrics-server/releases/\         |
+|    latest/download/components.yaml                                      |
 |                                                                         |
-|  # Check metrics                                                       |
+|  # Check metrics                                                        |
 |  kubectl top pods                                                       |
 |  kubectl top nodes                                                      |
 |                                                                         |
@@ -189,24 +189,24 @@ vertical scaling.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  AUTOSCALING - KEY TAKEAWAYS                                          |
+|  AUTOSCALING - KEY TAKEAWAYS                                            |
 |                                                                         |
-|  THREE TYPES                                                           |
-|  -----------                                                           |
-|  * HPA: Scale pod replicas (horizontal)                              |
-|  * VPA: Scale pod resources (vertical)                               |
-|  * Cluster Autoscaler: Scale nodes                                   |
+|  THREE TYPES                                                            |
+|  -----------                                                            |
+|  * HPA: Scale pod replicas (horizontal)                                 |
+|  * VPA: Scale pod resources (vertical)                                  |
+|  * Cluster Autoscaler: Scale nodes                                      |
 |                                                                         |
-|  HPA REQUIREMENTS                                                      |
-|  -----------------                                                     |
-|  * Metrics Server installed                                          |
-|  * Resource requests defined on pods                                 |
+|  HPA REQUIREMENTS                                                       |
+|  -----------------                                                      |
+|  * Metrics Server installed                                             |
+|  * Resource requests defined on pods                                    |
 |                                                                         |
-|  COMMANDS                                                              |
-|  --------                                                              |
-|  kubectl autoscale deployment <name> --cpu-percent=50 --min=2 --max=10|
-|  kubectl get hpa                                                       |
-|  kubectl top pods/nodes                                               |
+|  COMMANDS                                                               |
+|  --------                                                               |
+|  kubectl autoscale deployment <name> --cpu-percent=50 --min=2 --max=10  |
+|  kubectl get hpa                                                        |
+|  kubectl top pods/nodes                                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

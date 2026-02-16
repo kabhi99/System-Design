@@ -9,31 +9,31 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ALWAYS SET RESOURCE REQUESTS AND LIMITS                              |
+|  ALWAYS SET RESOURCE REQUESTS AND LIMITS                                |
 |  ========================================                               |
 |                                                                         |
 |  spec:                                                                  |
 |    containers:                                                          |
-|      - name: app                                                       |
+|      - name: app                                                        |
 |        resources:                                                       |
-|          requests:           # Scheduling guarantee                   |
-|            cpu: 100m                                                   |
-|            memory: 128Mi                                               |
-|          limits:             # Maximum allowed                        |
-|            cpu: 500m                                                   |
-|            memory: 512Mi                                               |
+|          requests:           # Scheduling guarantee                     |
+|            cpu: 100m                                                    |
+|            memory: 128Mi                                                |
+|          limits:             # Maximum allowed                          |
+|            cpu: 500m                                                    |
+|            memory: 512Mi                                                |
 |                                                                         |
 |  WHY?                                                                   |
-|  * Requests: Scheduler uses to place pods                            |
-|  * Limits: Prevents runaway resource consumption                     |
-|  * Without limits: One pod can starve others                        |
+|  * Requests: Scheduler uses to place pods                               |
+|  * Limits: Prevents runaway resource consumption                        |
+|  * Without limits: One pod can starve others                            |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  USE LIMITRANGE AND RESOURCEQUOTA                                     |
+|  USE LIMITRANGE AND RESOURCEQUOTA                                       |
 |  =================================                                      |
 |                                                                         |
-|  Set namespace-level defaults and limits.                            |
+|  Set namespace-level defaults and limits.                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -43,40 +43,40 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  REPLICAS AND ANTI-AFFINITY                                           |
+|  REPLICAS AND ANTI-AFFINITY                                             |
 |  ===========================                                            |
 |                                                                         |
 |  spec:                                                                  |
-|    replicas: 3                  # Multiple replicas                   |
+|    replicas: 3                  # Multiple replicas                     |
 |    template:                                                            |
 |      spec:                                                              |
 |        affinity:                                                        |
-|          podAntiAffinity:       # Spread across nodes                |
-|            preferredDuringSchedulingIgnoredDuringExecution:          |
-|              - weight: 100                                             |
-|                podAffinityTerm:                                        |
-|                  labelSelector:                                        |
-|                    matchLabels:                                        |
-|                      app: myapp                                        |
-|                  topologyKey: kubernetes.io/hostname                  |
+|          podAntiAffinity:       # Spread across nodes                   |
+|            preferredDuringSchedulingIgnoredDuringExecution:             |
+|              - weight: 100                                              |
+|                podAffinityTerm:                                         |
+|                  labelSelector:                                         |
+|                    matchLabels:                                         |
+|                      app: myapp                                         |
+|                  topologyKey: kubernetes.io/hostname                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  POD DISRUPTION BUDGET                                                |
-|  ======================                                                |
+|  POD DISRUPTION BUDGET                                                  |
+|  ======================                                                 |
 |                                                                         |
-|  Ensure minimum availability during maintenance.                      |
+|  Ensure minimum availability during maintenance.                        |
 |                                                                         |
-|  apiVersion: policy/v1                                                 |
-|  kind: PodDisruptionBudget                                             |
+|  apiVersion: policy/v1                                                  |
+|  kind: PodDisruptionBudget                                              |
 |  metadata:                                                              |
-|    name: myapp-pdb                                                     |
+|    name: myapp-pdb                                                      |
 |  spec:                                                                  |
-|    minAvailable: 2      # At least 2 must be running                 |
-|    # Or: maxUnavailable: 1                                            |
+|    minAvailable: 2      # At least 2 must be running                    |
+|    # Or: maxUnavailable: 1                                              |
 |    selector:                                                            |
 |      matchLabels:                                                       |
-|        app: myapp                                                      |
+|        app: myapp                                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -86,37 +86,37 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LIVENESS, READINESS, STARTUP PROBES                                  |
+|  LIVENESS, READINESS, STARTUP PROBES                                    |
 |  ===================================                                    |
 |                                                                         |
 |  spec:                                                                  |
 |    containers:                                                          |
-|      - name: app                                                       |
+|      - name: app                                                        |
 |                                                                         |
-|        # Restart if unhealthy                                         |
+|        # Restart if unhealthy                                           |
 |        livenessProbe:                                                   |
 |          httpGet:                                                       |
-|            path: /healthz                                             |
-|            port: 8080                                                  |
-|          initialDelaySeconds: 10                                      |
-|          periodSeconds: 10                                             |
-|          failureThreshold: 3                                          |
+|            path: /healthz                                               |
+|            port: 8080                                                   |
+|          initialDelaySeconds: 10                                        |
+|          periodSeconds: 10                                              |
+|          failureThreshold: 3                                            |
 |                                                                         |
-|        # Remove from service if not ready                             |
+|        # Remove from service if not ready                               |
 |        readinessProbe:                                                  |
 |          httpGet:                                                       |
-|            path: /ready                                                |
-|            port: 8080                                                  |
-|          initialDelaySeconds: 5                                       |
-|          periodSeconds: 5                                              |
+|            path: /ready                                                 |
+|            port: 8080                                                   |
+|          initialDelaySeconds: 5                                         |
+|          periodSeconds: 5                                               |
 |                                                                         |
-|        # For slow-starting apps                                       |
+|        # For slow-starting apps                                         |
 |        startupProbe:                                                    |
 |          httpGet:                                                       |
-|            path: /healthz                                             |
-|            port: 8080                                                  |
-|          failureThreshold: 30                                         |
-|          periodSeconds: 10                                             |
+|            path: /healthz                                               |
+|            port: 8080                                                   |
+|          failureThreshold: 30                                           |
+|          periodSeconds: 10                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -126,35 +126,35 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  SECURITY CHECKLIST                                                    |
+|  SECURITY CHECKLIST                                                     |
 |                                                                         |
-|  o Run as non-root                                                    |
-|    securityContext:                                                    |
-|      runAsNonRoot: true                                               |
-|      runAsUser: 1000                                                  |
+|  o Run as non-root                                                      |
+|    securityContext:                                                     |
+|      runAsNonRoot: true                                                 |
+|      runAsUser: 1000                                                    |
 |                                                                         |
-|  o Read-only filesystem                                               |
-|    securityContext:                                                    |
-|      readOnlyRootFilesystem: true                                    |
+|  o Read-only filesystem                                                 |
+|    securityContext:                                                     |
+|      readOnlyRootFilesystem: true                                       |
 |                                                                         |
-|  o Drop capabilities                                                  |
-|    securityContext:                                                    |
+|  o Drop capabilities                                                    |
+|    securityContext:                                                     |
 |      capabilities:                                                      |
-|        drop: ["ALL"]                                                   |
+|        drop: ["ALL"]                                                    |
 |                                                                         |
-|  o No privilege escalation                                            |
-|    securityContext:                                                    |
-|      allowPrivilegeEscalation: false                                 |
+|  o No privilege escalation                                              |
+|    securityContext:                                                     |
+|      allowPrivilegeEscalation: false                                    |
 |                                                                         |
-|  o Use NetworkPolicies                                                |
+|  o Use NetworkPolicies                                                  |
 |                                                                         |
-|  o Use RBAC with least privilege                                     |
+|  o Use RBAC with least privilege                                        |
 |                                                                         |
-|  o Scan images for vulnerabilities                                   |
+|  o Scan images for vulnerabilities                                      |
 |                                                                         |
-|  o Use specific image tags (not :latest)                             |
+|  o Use specific image tags (not :latest)                                |
 |                                                                         |
-|  o Store secrets in external secret manager                          |
+|  o Store secrets in external secret manager                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -164,44 +164,44 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LABELS AND ANNOTATIONS                                               |
+|  LABELS AND ANNOTATIONS                                                 |
 |  =======================                                                |
 |                                                                         |
 |  metadata:                                                              |
 |    labels:                                                              |
-|      app.kubernetes.io/name: myapp                                    |
-|      app.kubernetes.io/version: "1.0.0"                               |
-|      app.kubernetes.io/component: backend                             |
-|      app.kubernetes.io/part-of: myplatform                           |
-|      app.kubernetes.io/managed-by: helm                               |
+|      app.kubernetes.io/name: myapp                                      |
+|      app.kubernetes.io/version: "1.0.0"                                 |
+|      app.kubernetes.io/component: backend                               |
+|      app.kubernetes.io/part-of: myplatform                              |
+|      app.kubernetes.io/managed-by: helm                                 |
 |    annotations:                                                         |
-|      description: "Backend API service"                               |
-|      owner: "team-backend@company.com"                                |
+|      description: "Backend API service"                                 |
+|      owner: "team-backend@company.com"                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  GRACEFUL SHUTDOWN                                                     |
-|  ==================                                                    |
+|  GRACEFUL SHUTDOWN                                                      |
+|  ==================                                                     |
 |                                                                         |
 |  spec:                                                                  |
-|    terminationGracePeriodSeconds: 60   # Time to finish work         |
+|    terminationGracePeriodSeconds: 60   # Time to finish work            |
 |    containers:                                                          |
-|      - name: app                                                       |
+|      - name: app                                                        |
 |        lifecycle:                                                       |
 |          preStop:                                                       |
 |            exec:                                                        |
-|              command: ["/bin/sh", "-c", "sleep 10"]                   |
+|              command: ["/bin/sh", "-c", "sleep 10"]                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  BACKUP AND DISASTER RECOVERY                                         |
+|  BACKUP AND DISASTER RECOVERY                                           |
 |  =============================                                          |
 |                                                                         |
-|  * Use Velero for cluster backup                                     |
-|  * Backup etcd regularly                                             |
-|  * Store manifests in Git (GitOps)                                   |
-|  * Document recovery procedures                                       |
-|  * Test recovery regularly                                           |
+|  * Use Velero for cluster backup                                        |
+|  * Backup etcd regularly                                                |
+|  * Store manifests in Git (GitOps)                                      |
+|  * Document recovery procedures                                         |
+|  * Test recovery regularly                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -211,37 +211,37 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PRE-PRODUCTION CHECKLIST                                             |
+|  PRE-PRODUCTION CHECKLIST                                               |
 |                                                                         |
-|  RESOURCES                                                             |
-|  o Resource requests and limits set                                  |
-|  o HPA configured for scaling                                        |
-|  o ResourceQuotas per namespace                                      |
+|  RESOURCES                                                              |
+|  o Resource requests and limits set                                     |
+|  o HPA configured for scaling                                           |
+|  o ResourceQuotas per namespace                                         |
 |                                                                         |
-|  RELIABILITY                                                           |
-|  o Multiple replicas                                                  |
-|  o Pod anti-affinity configured                                      |
-|  o PodDisruptionBudget defined                                       |
-|  o All three probes configured                                       |
+|  RELIABILITY                                                            |
+|  o Multiple replicas                                                    |
+|  o Pod anti-affinity configured                                         |
+|  o PodDisruptionBudget defined                                          |
+|  o All three probes configured                                          |
 |                                                                         |
-|  SECURITY                                                              |
-|  o Non-root containers                                               |
-|  o Read-only filesystem                                              |
-|  o NetworkPolicies in place                                          |
-|  o RBAC configured                                                    |
-|  o Secrets encrypted at rest                                         |
+|  SECURITY                                                               |
+|  o Non-root containers                                                  |
+|  o Read-only filesystem                                                 |
+|  o NetworkPolicies in place                                             |
+|  o RBAC configured                                                      |
+|  o Secrets encrypted at rest                                            |
 |                                                                         |
-|  OBSERVABILITY                                                         |
-|  o Logging configured                                                 |
-|  o Metrics exposed                                                    |
-|  o Dashboards created                                                 |
-|  o Alerts defined                                                     |
+|  OBSERVABILITY                                                          |
+|  o Logging configured                                                   |
+|  o Metrics exposed                                                      |
+|  o Dashboards created                                                   |
+|  o Alerts defined                                                       |
 |                                                                         |
-|  OPERATIONS                                                            |
-|  o Standard labels applied                                           |
-|  o Graceful shutdown configured                                      |
-|  o Backup strategy defined                                           |
-|  o Runbooks documented                                               |
+|  OPERATIONS                                                             |
+|  o Standard labels applied                                              |
+|  o Graceful shutdown configured                                         |
+|  o Backup strategy defined                                              |
+|  o Runbooks documented                                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -251,33 +251,33 @@ secure, and maintainable Kubernetes clusters in production.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PRODUCTION BEST PRACTICES - KEY TAKEAWAYS                            |
+|  PRODUCTION BEST PRACTICES - KEY TAKEAWAYS                              |
 |                                                                         |
-|  RESOURCES                                                             |
-|  ---------                                                             |
-|  * Always set requests and limits                                    |
-|  * Use LimitRange and ResourceQuota                                  |
+|  RESOURCES                                                              |
+|  ---------                                                              |
+|  * Always set requests and limits                                       |
+|  * Use LimitRange and ResourceQuota                                     |
 |                                                                         |
-|  AVAILABILITY                                                          |
-|  ------------                                                          |
-|  * Multiple replicas                                                 |
-|  * Anti-affinity for spread                                          |
-|  * PodDisruptionBudget                                               |
+|  AVAILABILITY                                                           |
+|  ------------                                                           |
+|  * Multiple replicas                                                    |
+|  * Anti-affinity for spread                                             |
+|  * PodDisruptionBudget                                                  |
 |                                                                         |
-|  HEALTH                                                                |
-|  ------                                                                |
-|  * Liveness, Readiness, Startup probes                              |
+|  HEALTH                                                                 |
+|  ------                                                                 |
+|  * Liveness, Readiness, Startup probes                                  |
 |                                                                         |
-|  SECURITY                                                              |
-|  --------                                                              |
-|  * Non-root, read-only, drop capabilities                           |
-|  * NetworkPolicies, RBAC                                             |
+|  SECURITY                                                               |
+|  --------                                                               |
+|  * Non-root, read-only, drop capabilities                               |
+|  * NetworkPolicies, RBAC                                                |
 |                                                                         |
-|  OPERATIONS                                                            |
-|  ----------                                                            |
-|  * Standard labels                                                   |
-|  * Graceful shutdown                                                 |
-|  * Backup and recovery                                               |
+|  OPERATIONS                                                             |
+|  ----------                                                             |
+|  * Standard labels                                                      |
+|  * Graceful shutdown                                                    |
+|  * Backup and recovery                                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

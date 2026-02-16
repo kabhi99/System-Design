@@ -9,148 +9,148 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE PROBLEM: PODS ARE EPHEMERAL                                      |
+|  THE PROBLEM: PODS ARE EPHEMERAL                                        |
 |  ================================                                       |
 |                                                                         |
-|  Without persistent storage:                                           |
+|  Without persistent storage:                                            |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   MySQL Pod                                                    |   |
-|  |   +---------------------------------------------------------+  |   |
-|  |   |                                                         |  |   |
-|  |   |  Container filesystem                                  |  |   |
-|  |   |  /var/lib/mysql (data stored here)                    |  |   |
-|  |   |                                                         |  |   |
-|  |   |  users table: 10,000 records                          |  |   |
-|  |   |  orders table: 50,000 records                         |  |   |
-|  |   |                                                         |  |   |
-|  |   +---------------------------------------------------------+  |   |
-|  |                                                                 |   |
-|  |   Pod crashes or gets rescheduled...                          |   |
-|  |                                                                 |   |
-|  |                         POD DIES                             |   |
-|  |                                                                 |   |
-|  |   ALL DATA LOST! Container filesystem is GONE.                |   |
-|  |   New pod starts with EMPTY database!                         |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   MySQL Pod                                                    |     |
+|  |   +---------------------------------------------------------+  |     |
+|  |   |                                                         |  |     |
+|  |   |  Container filesystem                                  |  |      |
+|  |   |  /var/lib/mysql (data stored here)                    |  |       |
+|  |   |                                                         |  |     |
+|  |   |  users table: 10,000 records                          |  |       |
+|  |   |  orders table: 50,000 records                         |  |       |
+|  |   |                                                         |  |     |
+|  |   +---------------------------------------------------------+  |     |
+|  |                                                                 |    |
+|  |   Pod crashes or gets rescheduled...                          |      |
+|  |                                                                 |    |
+|  |                         POD DIES                             |       |
+|  |                                                                 |    |
+|  |   ALL DATA LOST! Container filesystem is GONE.                |      |
+|  |   New pod starts with EMPTY database!                         |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  PROBLEMS:                                                             |
+|  PROBLEMS:                                                              |
 |                                                                         |
-|  1. DATA LOSS ON RESTART                                              |
-|     * Container storage is temporary                                  |
-|     * When pod dies, data dies with it                               |
+|  1. DATA LOSS ON RESTART                                                |
+|     * Container storage is temporary                                    |
+|     * When pod dies, data dies with it                                  |
 |                                                                         |
-|  2. NO SHARING BETWEEN CONTAINERS                                     |
-|     * Each container has isolated filesystem                         |
-|     * Can't share data between containers in pod                     |
+|  2. NO SHARING BETWEEN CONTAINERS                                       |
+|     * Each container has isolated filesystem                            |
+|     * Can't share data between containers in pod                        |
 |                                                                         |
-|  3. NO DATA PERSISTENCE ACROSS RESCHEDULING                          |
-|     * Pod moves to different node > data stays on old node          |
-|     * New pod can't access the old data                              |
+|  3. NO DATA PERSISTENCE ACROSS RESCHEDULING                             |
+|     * Pod moves to different node > data stays on old node              |
+|     * New pod can't access the old data                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE SOLUTION: PERSISTENT VOLUMES                                      |
+|  THE SOLUTION: PERSISTENT VOLUMES                                       |
 |  =================================                                      |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   MySQL Pod                                                    |   |
-|  |   +---------------------------------------------------------+  |   |
-|  |   |                                                         |  |   |
-|  |   |  Container mounts external volume:                     |  |   |
-|  |   |  /var/lib/mysql > PersistentVolume                    |  |   |
-|  |   |                         |                              |  |   |
-|  |   +-------------------------+-------------------------------+  |   |
-|  |                             |                                  |   |
-|  |   Pod crashes...            |                                  |   |
-|  |                             |                                  |   |
-|  |                           |                                  |   |
-|  |                             |                                  |   |
-|  |   New pod created...        |                                  |   |
-|  |                             |                                  |   |
-|  |   +-------------------------+-------------------------------+  |   |
-|  |   |  Container remounts:    |                              |  |   |
-|  |   |  /var/lib/mysql > PersistentVolume                    |  |   |
-|  |   +-------------------------+-------------------------------+  |   |
-|  |                             |                                  |   |
-|  |                             v                                  |   |
-|  |   +---------------------------------------------------------+  |   |
-|  |   |           PERSISTENT VOLUME (AWS EBS)                  |  |   |
-|  |   |                                                         |  |   |
-|  |   |   Data SURVIVES pod restarts!                         |  |   |
-|  |   |   users: 10,000 records Y                            |  |   |
-|  |   |   orders: 50,000 records Y                           |  |   |
-|  |   |                                                         |  |   |
-|  |   +---------------------------------------------------------+  |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   MySQL Pod                                                    |     |
+|  |   +---------------------------------------------------------+  |     |
+|  |   |                                                         |  |     |
+|  |   |  Container mounts external volume:                     |  |      |
+|  |   |  /var/lib/mysql > PersistentVolume                    |  |       |
+|  |   |                         |                              |  |      |
+|  |   +-------------------------+-------------------------------+  |     |
+|  |                             |                                  |     |
+|  |   Pod crashes...            |                                  |     |
+|  |                             |                                  |     |
+|  |                           |                                  |       |
+|  |                             |                                  |     |
+|  |   New pod created...        |                                  |     |
+|  |                             |                                  |     |
+|  |   +-------------------------+-------------------------------+  |     |
+|  |   |  Container remounts:    |                              |  |      |
+|  |   |  /var/lib/mysql > PersistentVolume                    |  |       |
+|  |   +-------------------------+-------------------------------+  |     |
+|  |                             |                                  |     |
+|  |                             v                                  |     |
+|  |   +---------------------------------------------------------+  |     |
+|  |   |           PERSISTENT VOLUME (AWS EBS)                  |  |      |
+|  |   |                                                         |  |     |
+|  |   |   Data SURVIVES pod restarts!                         |  |       |
+|  |   |   users: 10,000 records Y                            |  |        |
+|  |   |   orders: 50,000 records Y                           |  |        |
+|  |   |                                                         |  |     |
+|  |   +---------------------------------------------------------+  |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHY PV + PVC SEPARATION? (Two-Layer Abstraction)                     |
+|  WHY PV + PVC SEPARATION? (Two-Layer Abstraction)                       |
 |  =================================================                      |
 |                                                                         |
-|  PROBLEM: Different roles, different concerns                         |
+|  PROBLEM: Different roles, different concerns                           |
 |                                                                         |
-|  +-----------------------------------------------------------------+   |
-|  |                                                                 |   |
-|  |   DEVELOPER (app team):              ADMIN (ops team):         |   |
-|  |   "I need 10Gi storage"              "I'll create AWS EBS      |   |
-|  |   "I don't care HOW"                  with encryption,         |   |
-|  |                                       IOPS, backup policy"     |   |
-|  |                                                                 |   |
-|  |   Creates: PVC                       Creates: PV               |   |
-|  |   (what I need)                      (how to provide it)       |   |
-|  |                                                                 |   |
-|  +-----------------------------------------------------------------+   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   DEVELOPER (app team):              ADMIN (ops team):         |     |
+|  |   "I need 10Gi storage"              "I'll create AWS EBS      |     |
+|  |   "I don't care HOW"                  with encryption,         |     |
+|  |                                       IOPS, backup policy"     |     |
+|  |                                                                 |    |
+|  |   Creates: PVC                       Creates: PV               |     |
+|  |   (what I need)                      (how to provide it)       |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  BENEFITS:                                                             |
+|  BENEFITS:                                                              |
 |                                                                         |
-|  1. SEPARATION OF CONCERNS                                            |
-|     * Dev doesn't need to know storage details                       |
-|     * Admin manages storage infrastructure                           |
+|  1. SEPARATION OF CONCERNS                                              |
+|     * Dev doesn't need to know storage details                          |
+|     * Admin manages storage infrastructure                              |
 |                                                                         |
-|  2. PORTABILITY                                                        |
-|     * Same PVC works on AWS, GCP, on-prem                            |
-|     * Admin provides different PVs per environment                   |
+|  2. PORTABILITY                                                         |
+|     * Same PVC works on AWS, GCP, on-prem                               |
+|     * Admin provides different PVs per environment                      |
 |                                                                         |
-|  3. REUSABILITY                                                        |
-|     * Admin creates storage once                                     |
-|     * Multiple apps can claim it                                     |
+|  3. REUSABILITY                                                         |
+|     * Admin creates storage once                                        |
+|     * Multiple apps can claim it                                        |
 |                                                                         |
-|  4. SECURITY                                                           |
-|     * Dev doesn't need AWS/cloud credentials                        |
-|     * Admin controls storage policies                                |
+|  4. SECURITY                                                            |
+|     * Dev doesn't need AWS/cloud credentials                            |
+|     * Admin controls storage policies                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHEN TO USE PERSISTENT STORAGE                                       |
+|  WHEN TO USE PERSISTENT STORAGE                                         |
 |  ===============================                                        |
 |                                                                         |
-|  USE PERSISTENT VOLUMES FOR:                                          |
-|  ----------------------------                                          |
-|  * Databases (MySQL, PostgreSQL, MongoDB)                            |
-|  * Message queues (Kafka, RabbitMQ)                                  |
-|  * File uploads (user content)                                       |
-|  * Application logs (if persisting to disk)                          |
-|  * Cache that needs to survive restarts (Redis with persistence)    |
-|  * Stateful applications (Elasticsearch, Cassandra)                  |
+|  USE PERSISTENT VOLUMES FOR:                                            |
+|  ----------------------------                                           |
+|  * Databases (MySQL, PostgreSQL, MongoDB)                               |
+|  * Message queues (Kafka, RabbitMQ)                                     |
+|  * File uploads (user content)                                          |
+|  * Application logs (if persisting to disk)                             |
+|  * Cache that needs to survive restarts (Redis with persistence)        |
+|  * Stateful applications (Elasticsearch, Cassandra)                     |
 |                                                                         |
-|  DON'T NEED PERSISTENT VOLUMES FOR:                                   |
-|  -----------------------------------                                   |
-|  * Stateless web servers                                              |
-|  * API services (state in external DB)                               |
-|  * Temporary processing (data discarded after)                       |
-|  * Cache that can be rebuilt (Redis as pure cache)                   |
+|  DON'T NEED PERSISTENT VOLUMES FOR:                                     |
+|  -----------------------------------                                    |
+|  * Stateless web servers                                                |
+|  * API services (state in external DB)                                  |
+|  * Temporary processing (data discarded after)                          |
+|  * Cache that can be rebuilt (Redis as pure cache)                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -160,29 +160,29 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE STORAGE ABSTRACTION                                              |
+|  THE STORAGE ABSTRACTION                                                |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   Pod                                                          |  |
-|  |    |                                                            |  |
-|  |    | "I need 10Gi of storage"                                  |  |
-|  |    v                                                            |  |
-|  |   PersistentVolumeClaim (PVC)  < Developer creates            |  |
-|  |    |                                                            |  |
-|  |    | Binds to                                                  |  |
-|  |    v                                                            |  |
-|  |   PersistentVolume (PV)        < Admin creates (or dynamic)   |  |
-|  |    |                                                            |  |
-|  |    | Backed by                                                 |  |
-|  |    v                                                            |  |
-|  |   Actual Storage (AWS EBS, GCE PD, NFS, etc.)                 |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Pod                                                          |     |
+|  |    |                                                            |    |
+|  |    | "I need 10Gi of storage"                                  |     |
+|  |    v                                                            |    |
+|  |   PersistentVolumeClaim (PVC)  < Developer creates            |      |
+|  |    |                                                            |    |
+|  |    | Binds to                                                  |     |
+|  |    v                                                            |    |
+|  |   PersistentVolume (PV)        < Admin creates (or dynamic)   |      |
+|  |    |                                                            |    |
+|  |    | Backed by                                                 |     |
+|  |    v                                                            |    |
+|  |   Actual Storage (AWS EBS, GCE PD, NFS, etc.)                 |      |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  PV: The actual storage resource (created by admin)                  |
-|  PVC: A request for storage (created by developer)                   |
-|  StorageClass: Template for DYNAMIC provisioning (auto-create PV)   |
+|  PV: The actual storage resource (created by admin)                     |
+|  PVC: A request for storage (created by developer)                      |
+|  StorageClass: Template for DYNAMIC provisioning (auto-create PV)       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -192,46 +192,46 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PERSISTENT VOLUME (Admin creates)                                    |
-|  ==================================                                    |
+|  PERSISTENT VOLUME (Admin creates)                                      |
+|  ==================================                                     |
 |                                                                         |
-|  apiVersion: v1                                                        |
-|  kind: PersistentVolume                                                |
+|  apiVersion: v1                                                         |
+|  kind: PersistentVolume                                                 |
 |  metadata:                                                              |
-|    name: my-pv                                                         |
+|    name: my-pv                                                          |
 |  spec:                                                                  |
 |    capacity:                                                            |
-|      storage: 10Gi                                                     |
+|      storage: 10Gi                                                      |
 |    accessModes:                                                         |
-|      - ReadWriteOnce                                                   |
-|    persistentVolumeReclaimPolicy: Retain                              |
-|    storageClassName: standard                                          |
-|    hostPath:                     # For testing only                   |
-|      path: /data/my-pv                                                 |
+|      - ReadWriteOnce                                                    |
+|    persistentVolumeReclaimPolicy: Retain                                |
+|    storageClassName: standard                                           |
+|    hostPath:                     # For testing only                     |
+|      path: /data/my-pv                                                  |
 |                                                                         |
-|  # Or with cloud storage                                               |
+|  # Or with cloud storage                                                |
 |  spec:                                                                  |
-|    awsElasticBlockStore:                                               |
-|      volumeID: vol-12345678                                           |
-|      fsType: ext4                                                      |
+|    awsElasticBlockStore:                                                |
+|      volumeID: vol-12345678                                             |
+|      fsType: ext4                                                       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  ACCESS MODES                                                          |
-|  ============                                                          |
+|  ACCESS MODES                                                           |
+|  ============                                                           |
 |                                                                         |
-|  * ReadWriteOnce (RWO): Single node read-write                       |
-|  * ReadOnlyMany (ROX): Multiple nodes read-only                      |
-|  * ReadWriteMany (RWX): Multiple nodes read-write                    |
+|  * ReadWriteOnce (RWO): Single node read-write                          |
+|  * ReadOnlyMany (ROX): Multiple nodes read-only                         |
+|  * ReadWriteMany (RWX): Multiple nodes read-write                       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  RECLAIM POLICIES                                                      |
-|  ================                                                      |
+|  RECLAIM POLICIES                                                       |
+|  ================                                                       |
 |                                                                         |
-|  * Retain: Keep data after PVC deleted (manual cleanup)             |
-|  * Delete: Delete storage when PVC deleted                          |
-|  * Recycle: Basic scrub (deprecated)                                 |
+|  * Retain: Keep data after PVC deleted (manual cleanup)                 |
+|  * Delete: Delete storage when PVC deleted                              |
+|  * Recycle: Basic scrub (deprecated)                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -241,41 +241,41 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PVC (User requests)                                                   |
+|  PVC (User requests)                                                    |
 |  ====================                                                   |
 |                                                                         |
-|  apiVersion: v1                                                        |
-|  kind: PersistentVolumeClaim                                           |
+|  apiVersion: v1                                                         |
+|  kind: PersistentVolumeClaim                                            |
 |  metadata:                                                              |
-|    name: my-pvc                                                        |
+|    name: my-pvc                                                         |
 |  spec:                                                                  |
 |    accessModes:                                                         |
-|      - ReadWriteOnce                                                   |
+|      - ReadWriteOnce                                                    |
 |    resources:                                                           |
 |      requests:                                                          |
-|        storage: 5Gi                                                    |
-|    storageClassName: standard                                          |
+|        storage: 5Gi                                                     |
+|    storageClassName: standard                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  USING PVC IN POD                                                      |
+|  USING PVC IN POD                                                       |
 |  =================                                                      |
 |                                                                         |
-|  apiVersion: v1                                                        |
+|  apiVersion: v1                                                         |
 |  kind: Pod                                                              |
 |  metadata:                                                              |
-|    name: my-pod                                                        |
+|    name: my-pod                                                         |
 |  spec:                                                                  |
 |    containers:                                                          |
-|      - name: app                                                       |
-|        image: nginx                                                    |
+|      - name: app                                                        |
+|        image: nginx                                                     |
 |        volumeMounts:                                                    |
-|          - mountPath: /data                                           |
-|            name: my-storage                                            |
+|          - mountPath: /data                                             |
+|            name: my-storage                                             |
 |    volumes:                                                             |
-|      - name: my-storage                                                |
-|        persistentVolumeClaim:                                          |
-|          claimName: my-pvc                                             |
+|      - name: my-storage                                                 |
+|        persistentVolumeClaim:                                           |
+|          claimName: my-pvc                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -285,49 +285,49 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DYNAMIC PROVISIONING                                                  |
+|  DYNAMIC PROVISIONING                                                   |
 |  =====================                                                  |
 |                                                                         |
-|  StorageClass lets Kubernetes create PVs automatically.              |
+|  StorageClass lets Kubernetes create PVs automatically.                 |
 |                                                                         |
-|  apiVersion: storage.k8s.io/v1                                        |
+|  apiVersion: storage.k8s.io/v1                                          |
 |  kind: StorageClass                                                     |
 |  metadata:                                                              |
-|    name: fast-ssd                                                      |
-|  provisioner: kubernetes.io/aws-ebs                                   |
+|    name: fast-ssd                                                       |
+|  provisioner: kubernetes.io/aws-ebs                                     |
 |  parameters:                                                            |
-|    type: gp3                                                           |
-|    iopsPerGB: "50"                                                     |
-|  reclaimPolicy: Delete                                                 |
-|  volumeBindingMode: WaitForFirstConsumer                              |
+|    type: gp3                                                            |
+|    iopsPerGB: "50"                                                      |
+|  reclaimPolicy: Delete                                                  |
+|  volumeBindingMode: WaitForFirstConsumer                                |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  PVC WITH STORAGECLASS                                                 |
-|  ======================                                                |
+|  PVC WITH STORAGECLASS                                                  |
+|  ======================                                                 |
 |                                                                         |
-|  apiVersion: v1                                                        |
-|  kind: PersistentVolumeClaim                                           |
+|  apiVersion: v1                                                         |
+|  kind: PersistentVolumeClaim                                            |
 |  metadata:                                                              |
-|    name: fast-storage                                                  |
+|    name: fast-storage                                                   |
 |  spec:                                                                  |
 |    accessModes:                                                         |
-|      - ReadWriteOnce                                                   |
-|    storageClassName: fast-ssd    # Use StorageClass                  |
+|      - ReadWriteOnce                                                    |
+|    storageClassName: fast-ssd    # Use StorageClass                     |
 |    resources:                                                           |
 |      requests:                                                          |
-|        storage: 100Gi                                                  |
+|        storage: 100Gi                                                   |
 |                                                                         |
-|  Kubernetes automatically provisions the volume!                      |
+|  Kubernetes automatically provisions the volume!                        |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  COMMON PROVISIONERS                                                   |
+|  COMMON PROVISIONERS                                                    |
 |                                                                         |
-|  * kubernetes.io/aws-ebs (AWS EBS)                                   |
-|  * kubernetes.io/gce-pd (GCP Persistent Disk)                        |
-|  * kubernetes.io/azure-disk (Azure Disk)                             |
-|  * rancher.io/local-path (Local path)                                |
+|  * kubernetes.io/aws-ebs (AWS EBS)                                      |
+|  * kubernetes.io/gce-pd (GCP Persistent Disk)                           |
+|  * kubernetes.io/azure-disk (Azure Disk)                                |
+|  * rancher.io/local-path (Local path)                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -337,23 +337,23 @@ storage provisioning from consumption.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  STORAGE - KEY TAKEAWAYS                                              |
+|  STORAGE - KEY TAKEAWAYS                                                |
 |                                                                         |
-|  COMPONENTS                                                            |
-|  ----------                                                            |
-|  * PV: Actual storage resource                                       |
-|  * PVC: Request for storage                                          |
-|  * StorageClass: Template for dynamic provisioning                  |
+|  COMPONENTS                                                             |
+|  ----------                                                             |
+|  * PV: Actual storage resource                                          |
+|  * PVC: Request for storage                                             |
+|  * StorageClass: Template for dynamic provisioning                      |
 |                                                                         |
-|  ACCESS MODES                                                          |
-|  ------------                                                          |
-|  * RWO: Single node read-write                                       |
-|  * ROX: Multiple nodes read-only                                     |
-|  * RWX: Multiple nodes read-write                                    |
+|  ACCESS MODES                                                           |
+|  ------------                                                           |
+|  * RWO: Single node read-write                                          |
+|  * ROX: Multiple nodes read-only                                        |
+|  * RWX: Multiple nodes read-write                                       |
 |                                                                         |
-|  DYNAMIC PROVISIONING                                                  |
+|  DYNAMIC PROVISIONING                                                   |
 |  ---------------------                                                  |
-|  StorageClass + PVC = automatic PV creation                          |
+|  StorageClass + PVC = automatic PV creation                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

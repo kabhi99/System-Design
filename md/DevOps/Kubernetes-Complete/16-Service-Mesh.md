@@ -9,40 +9,40 @@ management, security, and observability.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  SERVICE MESH ARCHITECTURE                                            |
+|  SERVICE MESH ARCHITECTURE                                              |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |                                                                 |  |
-|  |   Without Service Mesh:        With Service Mesh:              |  |
-|  |                                                                 |  |
-|  |   +---------+                  +---------------------+         |  |
-|  |   | Service |                  | Service             |         |  |
-|  |   |    A    |-------->         |    A    +---------+ |         |  |
-|  |   +---------+                  |         | Sidecar |-+-->      |  |
-|  |       |                        |         | (proxy) | |         |  |
-|  |       |                        |         +---------+ |         |  |
-|  |       v                        +---------------------+         |  |
-|  |   +---------+                           |                      |  |
-|  |   | Service |                           v                      |  |
-|  |   |    B    |                  +---------------------+         |  |
-|  |   +---------+                  | Service             |         |  |
-|  |                                |    B    +---------+ |         |  |
-|  |   Direct communication         |         | Sidecar | |         |  |
-|  |                                |         +---------+ |         |  |
-|  |                                +---------------------+         |  |
-|  |                                                                 |  |
-|  |                                Sidecar proxies handle all      |  |
-|  |                                traffic between services        |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |   Without Service Mesh:        With Service Mesh:              |     |
+|  |                                                                 |    |
+|  |   +---------+                  +---------------------+         |     |
+|  |   | Service |                  | Service             |         |     |
+|  |   |    A    |-------->         |    A    +---------+ |         |     |
+|  |   +---------+                  |         | Sidecar |-+-->      |     |
+|  |       |                        |         | (proxy) | |         |     |
+|  |       |                        |         +---------+ |         |     |
+|  |       v                        +---------------------+         |     |
+|  |   +---------+                           |                      |     |
+|  |   | Service |                           v                      |     |
+|  |   |    B    |                  +---------------------+         |     |
+|  |   +---------+                  | Service             |         |     |
+|  |                                |    B    +---------+ |         |     |
+|  |   Direct communication         |         | Sidecar | |         |     |
+|  |                                |         +---------+ |         |     |
+|  |                                +---------------------+         |     |
+|  |                                                                 |    |
+|  |                                Sidecar proxies handle all      |     |
+|  |                                traffic between services        |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  KEY FEATURES                                                          |
-|  ============                                                          |
+|  KEY FEATURES                                                           |
+|  ============                                                           |
 |                                                                         |
-|  * Traffic Management: Routing, load balancing, retries             |
-|  * Security: mTLS, authentication, authorization                    |
-|  * Observability: Metrics, tracing, logging                         |
-|  * Resilience: Circuit breakers, timeouts, fault injection         |
+|  * Traffic Management: Routing, load balancing, retries                 |
+|  * Security: mTLS, authentication, authorization                        |
+|  * Observability: Metrics, tracing, logging                             |
+|  * Resilience: Circuit breakers, timeouts, fault injection              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -52,57 +52,57 @@ management, security, and observability.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISTIO                                                                 |
-|  =====                                                                 |
+|  ISTIO                                                                  |
+|  =====                                                                  |
 |                                                                         |
-|  Most feature-rich, uses Envoy proxy.                                |
+|  Most feature-rich, uses Envoy proxy.                                   |
 |                                                                         |
-|  # Install                                                             |
-|  istioctl install --set profile=demo                                  |
-|  kubectl label namespace default istio-injection=enabled             |
+|  # Install                                                              |
+|  istioctl install --set profile=demo                                    |
+|  kubectl label namespace default istio-injection=enabled                |
 |                                                                         |
-|  # Traffic routing                                                     |
-|  apiVersion: networking.istio.io/v1beta1                              |
-|  kind: VirtualService                                                  |
+|  # Traffic routing                                                      |
+|  apiVersion: networking.istio.io/v1beta1                                |
+|  kind: VirtualService                                                   |
 |  metadata:                                                              |
-|    name: reviews-route                                                |
+|    name: reviews-route                                                  |
 |  spec:                                                                  |
 |    hosts:                                                               |
-|      - reviews                                                         |
+|      - reviews                                                          |
 |    http:                                                                |
-|      - match:                                                          |
-|          - headers:                                                    |
-|              end-user:                                                 |
-|                exact: jason                                           |
-|        route:                                                          |
-|          - destination:                                                |
-|              host: reviews                                             |
-|              subset: v2                                                |
-|      - route:                                                          |
-|          - destination:                                                |
-|              host: reviews                                             |
-|              subset: v1                                                |
+|      - match:                                                           |
+|          - headers:                                                     |
+|              end-user:                                                  |
+|                exact: jason                                             |
+|        route:                                                           |
+|          - destination:                                                 |
+|              host: reviews                                              |
+|              subset: v2                                                 |
+|      - route:                                                           |
+|          - destination:                                                 |
+|              host: reviews                                              |
+|              subset: v1                                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  LINKERD                                                               |
-|  =======                                                               |
+|  LINKERD                                                                |
+|  =======                                                                |
 |                                                                         |
-|  Lightweight, easy to use.                                            |
+|  Lightweight, easy to use.                                              |
 |                                                                         |
-|  # Install                                                             |
-|  linkerd install | kubectl apply -f -                                 |
-|  linkerd viz install | kubectl apply -f -                            |
+|  # Install                                                              |
+|  linkerd install | kubectl apply -f -                                   |
+|  linkerd viz install | kubectl apply -f -                               |
 |                                                                         |
-|  # Inject sidecar                                                      |
-|  kubectl get deploy -o yaml | linkerd inject - | kubectl apply -f - |
+|  # Inject sidecar                                                       |
+|  kubectl get deploy -o yaml | linkerd inject - | kubectl apply -f -     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  CILIUM                                                                |
-|  ======                                                                |
+|  CILIUM                                                                 |
+|  ======                                                                 |
 |                                                                         |
-|  eBPF-based, high performance, no sidecar needed.                    |
+|  eBPF-based, high performance, no sidecar needed.                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -112,60 +112,60 @@ management, security, and observability.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CANARY DEPLOYMENTS                                                    |
+|  CANARY DEPLOYMENTS                                                     |
 |  ====================                                                   |
 |                                                                         |
-|  Route 10% traffic to new version:                                    |
+|  Route 10% traffic to new version:                                      |
 |                                                                         |
 |  spec:                                                                  |
 |    http:                                                                |
-|      - route:                                                          |
-|          - destination:                                                |
-|              host: myapp                                               |
-|              subset: v1                                                |
-|            weight: 90                                                  |
-|          - destination:                                                |
-|              host: myapp                                               |
-|              subset: v2                                                |
-|            weight: 10                                                  |
+|      - route:                                                           |
+|          - destination:                                                 |
+|              host: myapp                                                |
+|              subset: v1                                                 |
+|            weight: 90                                                   |
+|          - destination:                                                 |
+|              host: myapp                                                |
+|              subset: v2                                                 |
+|            weight: 10                                                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  MUTUAL TLS (mTLS)                                                    |
-|  ==================                                                    |
+|  MUTUAL TLS (mTLS)                                                      |
+|  ==================                                                     |
 |                                                                         |
-|  Encrypt all service-to-service communication:                       |
+|  Encrypt all service-to-service communication:                          |
 |                                                                         |
-|  apiVersion: security.istio.io/v1beta1                                |
+|  apiVersion: security.istio.io/v1beta1                                  |
 |  kind: PeerAuthentication                                               |
 |  metadata:                                                              |
-|    name: default                                                       |
-|    namespace: default                                                  |
+|    name: default                                                        |
+|    namespace: default                                                   |
 |  spec:                                                                  |
 |    mtls:                                                                |
-|      mode: STRICT                                                      |
+|      mode: STRICT                                                       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  CIRCUIT BREAKER                                                       |
+|  CIRCUIT BREAKER                                                        |
 |  ===============                                                        |
 |                                                                         |
-|  Prevent cascade failures:                                            |
+|  Prevent cascade failures:                                              |
 |                                                                         |
-|  apiVersion: networking.istio.io/v1beta1                              |
-|  kind: DestinationRule                                                 |
+|  apiVersion: networking.istio.io/v1beta1                                |
+|  kind: DestinationRule                                                  |
 |  metadata:                                                              |
-|    name: myapp                                                         |
+|    name: myapp                                                          |
 |  spec:                                                                  |
-|    host: myapp                                                         |
+|    host: myapp                                                          |
 |    trafficPolicy:                                                       |
 |      connectionPool:                                                    |
 |        tcp:                                                             |
-|          maxConnections: 100                                          |
-|      outlierDetection:                                                 |
-|        consecutive5xxErrors: 5                                        |
-|        interval: 30s                                                   |
-|        baseEjectionTime: 30s                                          |
+|          maxConnections: 100                                            |
+|      outlierDetection:                                                  |
+|        consecutive5xxErrors: 5                                          |
+|        interval: 30s                                                    |
+|        baseEjectionTime: 30s                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -175,26 +175,26 @@ management, security, and observability.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  SERVICE MESH - KEY TAKEAWAYS                                         |
+|  SERVICE MESH - KEY TAKEAWAYS                                           |
 |                                                                         |
-|  WHAT                                                                  |
-|  ----                                                                  |
-|  * Sidecar proxies handle service communication                      |
-|  * Advanced traffic management                                       |
-|  * Automatic mTLS encryption                                         |
-|  * Observability built-in                                            |
+|  WHAT                                                                   |
+|  ----                                                                   |
+|  * Sidecar proxies handle service communication                         |
+|  * Advanced traffic management                                          |
+|  * Automatic mTLS encryption                                            |
+|  * Observability built-in                                               |
 |                                                                         |
-|  OPTIONS                                                               |
-|  -------                                                               |
-|  * Istio: Feature-rich                                               |
-|  * Linkerd: Lightweight                                              |
-|  * Cilium: eBPF-based                                                |
+|  OPTIONS                                                                |
+|  -------                                                                |
+|  * Istio: Feature-rich                                                  |
+|  * Linkerd: Lightweight                                                 |
+|  * Cilium: eBPF-based                                                   |
 |                                                                         |
-|  USE CASES                                                             |
-|  ---------                                                             |
-|  * Canary/blue-green deployments                                     |
-|  * Zero-trust security (mTLS)                                        |
-|  * Circuit breakers, retries                                         |
+|  USE CASES                                                              |
+|  ---------                                                              |
+|  * Canary/blue-green deployments                                        |
+|  * Zero-trust security (mTLS)                                           |
+|  * Circuit breakers, retries                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -12,26 +12,26 @@ and scale considerations for designing such a system.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  An e-commerce platform enables:                                       |
+|  An e-commerce platform enables:                                        |
 |                                                                         |
-|  BUYERS:                                                               |
-|  * Browse and search products                                         |
-|  * View product details, reviews, ratings                             |
-|  * Add items to cart                                                  |
-|  * Checkout and pay                                                   |
-|  * Track orders                                                       |
+|  BUYERS:                                                                |
+|  * Browse and search products                                           |
+|  * View product details, reviews, ratings                               |
+|  * Add items to cart                                                    |
+|  * Checkout and pay                                                     |
+|  * Track orders                                                         |
 |                                                                         |
-|  SELLERS:                                                              |
-|  * List products with descriptions, images, prices                   |
-|  * Manage inventory                                                   |
-|  * Process orders                                                     |
-|  * Handle returns                                                     |
+|  SELLERS:                                                               |
+|  * List products with descriptions, images, prices                      |
+|  * Manage inventory                                                     |
+|  * Process orders                                                       |
+|  * Handle returns                                                       |
 |                                                                         |
-|  PLATFORM:                                                             |
-|  * Facilitate transactions                                            |
-|  * Handle payments                                                    |
-|  * Manage logistics/shipping                                          |
-|  * Provide customer support                                           |
+|  PLATFORM:                                                              |
+|  * Facilitate transactions                                              |
+|  * Handle payments                                                      |
+|  * Manage logistics/shipping                                            |
+|  * Provide customer support                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -41,42 +41,42 @@ and scale considerations for designing such a system.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  WHY IS E-COMMERCE HARD?                                              |
+|  WHY IS E-COMMERCE HARD?                                                |
 |                                                                         |
-|  1. MASSIVE CATALOG                                                    |
+|  1. MASSIVE CATALOG                                                     |
 |  ------------------                                                     |
-|  Amazon has 350+ million products.                                    |
-|  Search must be fast and relevant.                                    |
-|  Catalog data comes from millions of sellers.                        |
+|  Amazon has 350+ million products.                                      |
+|  Search must be fast and relevant.                                      |
+|  Catalog data comes from millions of sellers.                           |
 |                                                                         |
-|  2. INVENTORY MANAGEMENT                                               |
+|  2. INVENTORY MANAGEMENT                                                |
 |  -------------------------                                              |
-|  Real-time inventory across warehouses.                               |
-|  Race conditions: 2 users buy last item.                             |
-|  Flash sales: 10,000 users want 100 items.                           |
+|  Real-time inventory across warehouses.                                 |
+|  Race conditions: 2 users buy last item.                                |
+|  Flash sales: 10,000 users want 100 items.                              |
 |                                                                         |
-|  3. TRAFFIC SPIKES                                                     |
+|  3. TRAFFIC SPIKES                                                      |
 |  ------------------                                                     |
-|  Black Friday: 10-50x normal traffic.                                 |
-|  Prime Day, Diwali sales.                                            |
-|  System must scale and stay responsive.                              |
+|  Black Friday: 10-50x normal traffic.                                   |
+|  Prime Day, Diwali sales.                                               |
+|  System must scale and stay responsive.                                 |
 |                                                                         |
-|  4. DISTRIBUTED TRANSACTIONS                                          |
+|  4. DISTRIBUTED TRANSACTIONS                                            |
 |  -----------------------------                                          |
-|  Order involves: Inventory, Payment, Shipping, Notification.         |
-|  Any step can fail.                                                   |
-|  Need consistency across services.                                    |
+|  Order involves: Inventory, Payment, Shipping, Notification.            |
+|  Any step can fail.                                                     |
+|  Need consistency across services.                                      |
 |                                                                         |
-|  5. PERSONALIZATION                                                    |
+|  5. PERSONALIZATION                                                     |
 |  -------------------                                                    |
-|  Recommendations based on user behavior.                              |
-|  Search results personalized.                                         |
-|  Requires ML pipelines at scale.                                     |
+|  Recommendations based on user behavior.                                |
+|  Search results personalized.                                           |
+|  Requires ML pipelines at scale.                                        |
 |                                                                         |
-|  6. FRAUD PREVENTION                                                   |
+|  6. FRAUD PREVENTION                                                    |
 |  --------------------                                                   |
-|  Payment fraud, fake reviews, seller fraud.                          |
-|  Real-time detection required.                                        |
+|  Payment fraud, fake reviews, seller fraud.                             |
+|  Real-time detection required.                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -86,56 +86,56 @@ and scale considerations for designing such a system.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  FUNCTIONAL REQUIREMENTS                                               |
+|  FUNCTIONAL REQUIREMENTS                                                |
 |                                                                         |
-|  1. USER MANAGEMENT                                                    |
+|  1. USER MANAGEMENT                                                     |
 |  ---------------------                                                  |
-|  * Registration, login (email, phone, social)                        |
-|  * Profile management                                                 |
-|  * Multiple shipping addresses                                        |
-|  * Order history                                                      |
+|  * Registration, login (email, phone, social)                           |
+|  * Profile management                                                   |
+|  * Multiple shipping addresses                                          |
+|  * Order history                                                        |
 |                                                                         |
-|  2. PRODUCT CATALOG                                                    |
+|  2. PRODUCT CATALOG                                                     |
 |  --------------------                                                   |
-|  * Browse by category                                                 |
-|  * Search with filters (price, brand, rating)                        |
-|  * Product details (description, images, specs)                      |
-|  * Reviews and ratings                                                |
-|  * Related products                                                   |
+|  * Browse by category                                                   |
+|  * Search with filters (price, brand, rating)                           |
+|  * Product details (description, images, specs)                         |
+|  * Reviews and ratings                                                  |
+|  * Related products                                                     |
 |                                                                         |
-|  3. SHOPPING CART                                                      |
+|  3. SHOPPING CART                                                       |
 |  -----------------                                                      |
-|  * Add/remove/update items                                            |
-|  * Persist across sessions                                            |
-|  * Price updates if product price changes                            |
-|  * Apply coupons/discounts                                            |
+|  * Add/remove/update items                                              |
+|  * Persist across sessions                                              |
+|  * Price updates if product price changes                               |
+|  * Apply coupons/discounts                                              |
 |                                                                         |
-|  4. CHECKOUT                                                           |
+|  4. CHECKOUT                                                            |
 |  -----------                                                            |
-|  * Shipping address selection                                         |
-|  * Delivery options and dates                                        |
-|  * Payment methods (cards, UPI, wallets, COD)                        |
-|  * Order confirmation                                                 |
+|  * Shipping address selection                                           |
+|  * Delivery options and dates                                           |
+|  * Payment methods (cards, UPI, wallets, COD)                           |
+|  * Order confirmation                                                   |
 |                                                                         |
-|  5. ORDER MANAGEMENT                                                   |
+|  5. ORDER MANAGEMENT                                                    |
 |  ---------------------                                                  |
-|  * Order tracking                                                     |
-|  * Order status updates                                               |
-|  * Cancellation                                                       |
-|  * Returns and refunds                                                |
+|  * Order tracking                                                       |
+|  * Order status updates                                                 |
+|  * Cancellation                                                         |
+|  * Returns and refunds                                                  |
 |                                                                         |
-|  6. INVENTORY (Seller side)                                           |
+|  6. INVENTORY (Seller side)                                             |
 |  ----------------------------                                           |
-|  * Stock management                                                   |
-|  * Low stock alerts                                                   |
-|  * Multi-warehouse inventory                                          |
+|  * Stock management                                                     |
+|  * Low stock alerts                                                     |
+|  * Multi-warehouse inventory                                            |
 |                                                                         |
-|  7. SELLER PORTAL                                                      |
+|  7. SELLER PORTAL                                                       |
 |  -----------------                                                      |
-|  * Product listing                                                    |
-|  * Order fulfillment                                                  |
-|  * Sales analytics                                                    |
-|  * Settlement and payouts                                             |
+|  * Product listing                                                      |
+|  * Order fulfillment                                                    |
+|  * Sales analytics                                                      |
+|  * Settlement and payouts                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -145,45 +145,45 @@ and scale considerations for designing such a system.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  NON-FUNCTIONAL REQUIREMENTS                                           |
+|  NON-FUNCTIONAL REQUIREMENTS                                            |
 |                                                                         |
-|  1. AVAILABILITY                                                       |
+|  1. AVAILABILITY                                                        |
 |  --------------                                                         |
-|  * 99.99% uptime                                                      |
-|  * Critical: Cart, Checkout, Payment must be highly available        |
-|  * Graceful degradation for non-critical features                    |
+|  * 99.99% uptime                                                        |
+|  * Critical: Cart, Checkout, Payment must be highly available           |
+|  * Graceful degradation for non-critical features                       |
 |                                                                         |
-|  2. LATENCY                                                            |
+|  2. LATENCY                                                             |
 |  ---------                                                              |
-|  * Homepage: < 500ms                                                  |
-|  * Search results: < 200ms                                           |
-|  * Add to cart: < 100ms                                              |
-|  * Checkout page: < 1s                                               |
-|  * Payment processing: < 5s                                          |
+|  * Homepage: < 500ms                                                    |
+|  * Search results: < 200ms                                              |
+|  * Add to cart: < 100ms                                                 |
+|  * Checkout page: < 1s                                                  |
+|  * Payment processing: < 5s                                             |
 |                                                                         |
-|  3. CONSISTENCY                                                        |
+|  3. CONSISTENCY                                                         |
 |  -------------                                                          |
-|  * Strong consistency for: Inventory, Payments, Orders               |
-|  * Eventual consistency OK for: Reviews, Recommendations             |
+|  * Strong consistency for: Inventory, Payments, Orders                  |
+|  * Eventual consistency OK for: Reviews, Recommendations                |
 |                                                                         |
-|  4. SCALABILITY                                                        |
+|  4. SCALABILITY                                                         |
 |  -------------                                                          |
-|  * Handle 10x traffic during sales                                   |
-|  * Scale to millions of products                                     |
-|  * Support thousands of concurrent checkouts                         |
+|  * Handle 10x traffic during sales                                      |
+|  * Scale to millions of products                                        |
+|  * Support thousands of concurrent checkouts                            |
 |                                                                         |
-|  5. DURABILITY                                                         |
+|  5. DURABILITY                                                          |
 |  -----------                                                            |
-|  * Never lose an order or payment                                    |
-|  * Replicated storage                                                 |
-|  * Regular backups                                                    |
+|  * Never lose an order or payment                                       |
+|  * Replicated storage                                                   |
+|  * Regular backups                                                      |
 |                                                                         |
-|  6. SECURITY                                                           |
+|  6. SECURITY                                                            |
 |  ----------                                                             |
-|  * PCI-DSS for payments                                              |
-|  * User data encryption                                               |
-|  * Fraud detection                                                    |
-|  * Rate limiting and DDoS protection                                 |
+|  * PCI-DSS for payments                                                 |
+|  * User data encryption                                                 |
+|  * Fraud detection                                                      |
+|  * Rate limiting and DDoS protection                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -195,27 +195,27 @@ Let's estimate the scale for a large e-commerce platform.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ASSUMPTIONS (Amazon-scale platform)                                   |
+|  ASSUMPTIONS (Amazon-scale platform)                                    |
 |                                                                         |
-|  USERS:                                                                |
-|  * 500 million registered users                                       |
-|  * 100 million monthly active users (MAU)                            |
-|  * 30 million daily active users (DAU)                               |
+|  USERS:                                                                 |
+|  * 500 million registered users                                         |
+|  * 100 million monthly active users (MAU)                               |
+|  * 30 million daily active users (DAU)                                  |
 |                                                                         |
-|  PRODUCTS:                                                             |
-|  * 500 million products                                               |
-|  * 5 million sellers                                                  |
-|  * 50 million categories/attributes                                  |
+|  PRODUCTS:                                                              |
+|  * 500 million products                                                 |
+|  * 5 million sellers                                                    |
+|  * 50 million categories/attributes                                     |
 |                                                                         |
-|  ORDERS:                                                               |
-|  * 5 million orders per day (normal)                                 |
-|  * 20 million orders per day (peak sale)                             |
-|  * 3 items per order average                                         |
+|  ORDERS:                                                                |
+|  * 5 million orders per day (normal)                                    |
+|  * 20 million orders per day (peak sale)                                |
+|  * 3 items per order average                                            |
 |                                                                         |
-|  TRAFFIC:                                                              |
-|  * 500 million page views per day                                    |
-|  * 100 million search queries per day                                |
-|  * 50 million cart operations per day                                |
+|  TRAFFIC:                                                               |
+|  * 500 million page views per day                                       |
+|  * 100 million search queries per day                                   |
+|  * 50 million cart operations per day                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -225,24 +225,24 @@ Let's estimate the scale for a large e-commerce platform.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  REQUESTS PER SECOND (RPS)                                            |
+|  REQUESTS PER SECOND (RPS)                                              |
 |                                                                         |
-|  PAGE VIEWS:                                                           |
-|  * 500 million / 86,400 = ~5,800 RPS average                         |
-|  * Peak (evening): 3x = ~17,000 RPS                                  |
-|  * Sale event: 10x = ~58,000 RPS                                     |
+|  PAGE VIEWS:                                                            |
+|  * 500 million / 86,400 = ~5,800 RPS average                            |
+|  * Peak (evening): 3x = ~17,000 RPS                                     |
+|  * Sale event: 10x = ~58,000 RPS                                        |
 |                                                                         |
-|  SEARCH:                                                               |
-|  * 100 million / 86,400 = ~1,160 RPS average                         |
-|  * Peak: ~3,500 RPS                                                  |
+|  SEARCH:                                                                |
+|  * 100 million / 86,400 = ~1,160 RPS average                            |
+|  * Peak: ~3,500 RPS                                                     |
 |                                                                         |
-|  ORDERS:                                                               |
-|  * 5 million / 86,400 = ~58 orders/sec average                       |
-|  * Peak: ~175 orders/sec                                             |
-|  * Flash sale: 1000+ orders/sec in bursts                           |
+|  ORDERS:                                                                |
+|  * 5 million / 86,400 = ~58 orders/sec average                          |
+|  * Peak: ~175 orders/sec                                                |
+|  * Flash sale: 1000+ orders/sec in bursts                               |
 |                                                                         |
-|  CART OPERATIONS:                                                      |
-|  * 50 million / 86,400 = ~580 RPS                                    |
+|  CART OPERATIONS:                                                       |
+|  * 50 million / 86,400 = ~580 RPS                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -252,29 +252,29 @@ Let's estimate the scale for a large e-commerce platform.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DATA STORAGE ESTIMATES                                                |
+|  DATA STORAGE ESTIMATES                                                 |
 |                                                                         |
-|  PRODUCTS:                                                             |
-|  * 500 million products                                               |
-|  * ~5 KB per product (metadata)                                      |
-|  * Total: 500M x 5KB = 2.5 TB                                        |
+|  PRODUCTS:                                                              |
+|  * 500 million products                                                 |
+|  * ~5 KB per product (metadata)                                         |
+|  * Total: 500M x 5KB = 2.5 TB                                           |
 |                                                                         |
-|  PRODUCT IMAGES:                                                       |
-|  * 500 million products x 5 images x 500KB = 1.25 PB                 |
-|  * (Served via CDN, stored in object storage)                        |
+|  PRODUCT IMAGES:                                                        |
+|  * 500 million products x 5 images x 500KB = 1.25 PB                    |
+|  * (Served via CDN, stored in object storage)                           |
 |                                                                         |
-|  USERS:                                                                |
-|  * 500 million users x 1 KB = 500 GB                                 |
+|  USERS:                                                                 |
+|  * 500 million users x 1 KB = 500 GB                                    |
 |                                                                         |
-|  ORDERS:                                                               |
-|  * 5 million orders/day x 365 x 5 years = 9 billion orders          |
-|  * 9 billion x 2 KB = 18 TB                                          |
+|  ORDERS:                                                                |
+|  * 5 million orders/day x 365 x 5 years = 9 billion orders              |
+|  * 9 billion x 2 KB = 18 TB                                             |
 |                                                                         |
-|  REVIEWS:                                                              |
-|  * 1 billion reviews x 1 KB = 1 TB                                   |
+|  REVIEWS:                                                               |
+|  * 1 billion reviews x 1 KB = 1 TB                                      |
 |                                                                         |
-|  TOTAL STRUCTURED DATA: ~25 TB                                        |
-|  TOTAL MEDIA: ~1-2 PB                                                 |
+|  TOTAL STRUCTURED DATA: ~25 TB                                          |
+|  TOTAL MEDIA: ~1-2 PB                                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -284,44 +284,44 @@ Let's estimate the scale for a large e-commerce platform.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  E-COMMERCE SCALE SUMMARY                                             |
+|  E-COMMERCE SCALE SUMMARY                                               |
 |                                                                         |
-|  +----------------------------------------------------------------+   |
-|  |                                                                |   |
-|  |  USERS                                                        |   |
-|  |  -----                                                        |   |
-|  |  MAU: 100 million                                             |   |
-|  |  DAU: 30 million                                              |   |
-|  |  Peak concurrent: 3 million                                   |   |
-|  |                                                                |   |
-|  |  PRODUCTS                                                     |   |
-|  |  --------                                                     |   |
-|  |  Total: 500 million                                           |   |
-|  |  Sellers: 5 million                                           |   |
-|  |                                                                |   |
-|  |  TRAFFIC                                                      |   |
-|  |  -------                                                      |   |
-|  |  Normal: ~6,000 RPS                                          |   |
-|  |  Peak: ~60,000 RPS                                           |   |
-|  |                                                                |   |
-|  |  ORDERS                                                       |   |
-|  |  ------                                                       |   |
-|  |  Daily: 5-20 million                                         |   |
-|  |  Peak: 200+ orders/second                                    |   |
-|  |                                                                |   |
-|  |  STORAGE                                                      |   |
-|  |  -------                                                      |   |
-|  |  Structured: ~25 TB                                          |   |
-|  |  Media: ~1-2 PB                                              |   |
-|  |                                                                |   |
-|  |  KEY CHALLENGES                                               |   |
-|  |  --------------                                               |   |
-|  |  1. Inventory consistency                                    |   |
-|  |  2. Search at scale                                          |   |
-|  |  3. Flash sale handling                                      |   |
-|  |  4. Distributed transactions                                 |   |
-|  |                                                                |   |
-|  +----------------------------------------------------------------+   |
+|  +----------------------------------------------------------------+     |
+|  |                                                                |     |
+|  |  USERS                                                        |      |
+|  |  -----                                                        |      |
+|  |  MAU: 100 million                                             |      |
+|  |  DAU: 30 million                                              |      |
+|  |  Peak concurrent: 3 million                                   |      |
+|  |                                                                |     |
+|  |  PRODUCTS                                                     |      |
+|  |  --------                                                     |      |
+|  |  Total: 500 million                                           |      |
+|  |  Sellers: 5 million                                           |      |
+|  |                                                                |     |
+|  |  TRAFFIC                                                      |      |
+|  |  -------                                                      |      |
+|  |  Normal: ~6,000 RPS                                          |       |
+|  |  Peak: ~60,000 RPS                                           |       |
+|  |                                                                |     |
+|  |  ORDERS                                                       |      |
+|  |  ------                                                       |      |
+|  |  Daily: 5-20 million                                         |       |
+|  |  Peak: 200+ orders/second                                    |       |
+|  |                                                                |     |
+|  |  STORAGE                                                      |      |
+|  |  -------                                                      |      |
+|  |  Structured: ~25 TB                                          |       |
+|  |  Media: ~1-2 PB                                              |       |
+|  |                                                                |     |
+|  |  KEY CHALLENGES                                               |      |
+|  |  --------------                                               |      |
+|  |  1. Inventory consistency                                    |       |
+|  |  2. Search at scale                                          |       |
+|  |  3. Flash sale handling                                      |       |
+|  |  4. Distributed transactions                                 |       |
+|  |                                                                |     |
+|  +----------------------------------------------------------------+     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

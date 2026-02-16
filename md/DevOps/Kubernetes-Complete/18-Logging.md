@@ -9,38 +9,38 @@ debugging and analysis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LOG COLLECTION PATTERNS                                              |
+|  LOG COLLECTION PATTERNS                                                |
 |                                                                         |
-|  1. NODE-LEVEL AGENT (DaemonSet)                                      |
+|  1. NODE-LEVEL AGENT (DaemonSet)                                        |
 |  -------------------------------                                        |
 |                                                                         |
-|  +-----------------------------------------------------------------+  |
-|  |   Node                                                          |  |
-|  |   +--------------------------------------------------------+   |  |
-|  |   |                                                        |   |  |
-|  |   |  Pod A --> /var/log/containers/                       |   |  |
-|  |   |  Pod B -->        |                                   |   |  |
-|  |   |  Pod C -->        v                                   |   |  |
-|  |   |              +----------+                             |   |  |
-|  |   |              | Fluentd  |----> Log Storage           |   |  |
-|  |   |              | DaemonSet|     (Elasticsearch)        |   |  |
-|  |   |              +----------+                             |   |  |
-|  |   |                                                        |   |  |
-|  |   +--------------------------------------------------------+   |  |
-|  |                                                                 |  |
-|  +-----------------------------------------------------------------+  |
+|  +-----------------------------------------------------------------+    |
+|  |   Node                                                          |    |
+|  |   +--------------------------------------------------------+   |     |
+|  |   |                                                        |   |     |
+|  |   |  Pod A --> /var/log/containers/                       |   |      |
+|  |   |  Pod B -->        |                                   |   |      |
+|  |   |  Pod C -->        v                                   |   |      |
+|  |   |              +----------+                             |   |      |
+|  |   |              | Fluentd  |----> Log Storage           |   |       |
+|  |   |              | DaemonSet|     (Elasticsearch)        |   |       |
+|  |   |              +----------+                             |   |      |
+|  |   |                                                        |   |     |
+|  |   +--------------------------------------------------------+   |     |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  2. SIDECAR CONTAINER                                                 |
+|  2. SIDECAR CONTAINER                                                   |
 |  ---------------------                                                  |
 |                                                                         |
-|  +----------------------------------+                                 |
-|  |   Pod                            |                                 |
-|  |   +----------+  +----------+    |                                 |
-|  |   |   App    |  |  Sidecar |    |                                 |
-|  |   |          |--| (Fluent) |----+--> Log Storage                 |
-|  |   +----------+  +----------+    |                                 |
-|  |        shared volume            |                                 |
-|  +----------------------------------+                                 |
+|  +----------------------------------+                                   |
+|  |   Pod                            |                                   |
+|  |   +----------+  +----------+    |                                    |
+|  |   |   App    |  |  Sidecar |    |                                    |
+|  |   |          |--| (Fluent) |----+--> Log Storage                     |
+|  |   +----------+  +----------+    |                                    |
+|  |        shared volume            |                                    |
+|  +----------------------------------+                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -50,43 +50,43 @@ debugging and analysis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ELASTICSEARCH + FLUENTD + KIBANA                                     |
+|  ELASTICSEARCH + FLUENTD + KIBANA                                       |
 |  =================================                                      |
 |                                                                         |
-|  * Elasticsearch: Store and index logs                               |
-|  * Fluentd/Fluent Bit: Collect and forward logs                     |
-|  * Kibana: Visualize and search logs                                 |
+|  * Elasticsearch: Store and index logs                                  |
+|  * Fluentd/Fluent Bit: Collect and forward logs                         |
+|  * Kibana: Visualize and search logs                                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  FLUENT BIT DAEMONSET                                                 |
+|  FLUENT BIT DAEMONSET                                                   |
 |                                                                         |
-|  apiVersion: apps/v1                                                   |
+|  apiVersion: apps/v1                                                    |
 |  kind: DaemonSet                                                        |
 |  metadata:                                                              |
-|    name: fluent-bit                                                    |
+|    name: fluent-bit                                                     |
 |  spec:                                                                  |
 |    selector:                                                            |
 |      matchLabels:                                                       |
-|        app: fluent-bit                                                 |
+|        app: fluent-bit                                                  |
 |    template:                                                            |
 |      spec:                                                              |
 |        containers:                                                      |
-|          - name: fluent-bit                                            |
-|            image: fluent/fluent-bit:latest                            |
-|            volumeMounts:                                               |
-|              - name: varlog                                            |
-|                mountPath: /var/log                                    |
-|              - name: containers                                       |
-|                mountPath: /var/lib/docker/containers                 |
-|                readOnly: true                                          |
+|          - name: fluent-bit                                             |
+|            image: fluent/fluent-bit:latest                              |
+|            volumeMounts:                                                |
+|              - name: varlog                                             |
+|                mountPath: /var/log                                      |
+|              - name: containers                                         |
+|                mountPath: /var/lib/docker/containers                    |
+|                readOnly: true                                           |
 |        volumes:                                                         |
-|          - name: varlog                                                |
+|          - name: varlog                                                 |
 |            hostPath:                                                    |
-|              path: /var/log                                           |
-|          - name: containers                                           |
+|              path: /var/log                                             |
+|          - name: containers                                             |
 |            hostPath:                                                    |
-|              path: /var/lib/docker/containers                        |
+|              path: /var/lib/docker/containers                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -96,40 +96,40 @@ debugging and analysis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  GRAFANA LOKI (Lightweight Alternative)                               |
+|  GRAFANA LOKI (Lightweight Alternative)                                 |
 |  =======================================                                |
 |                                                                         |
-|  * Loki: Like Prometheus, but for logs                               |
-|  * Promtail: Log collector agent                                     |
-|  * Grafana: Visualize logs alongside metrics                         |
+|  * Loki: Like Prometheus, but for logs                                  |
+|  * Promtail: Log collector agent                                        |
+|  * Grafana: Visualize logs alongside metrics                            |
 |                                                                         |
-|  Advantages:                                                           |
-|  * Lightweight (doesn't index log content)                          |
-|  * Cost-effective storage                                            |
-|  * Native Grafana integration                                        |
-|                                                                         |
-|  ---------------------------------------------------------------------  |
-|                                                                         |
-|  INSTALL LOKI-STACK                                                    |
-|                                                                         |
-|  helm repo add grafana https://grafana.github.io/helm-charts         |
-|                                                                         |
-|  helm install loki grafana/loki-stack \                               |
-|    --namespace logging --create-namespace \                           |
-|    --set grafana.enabled=true                                         |
+|  Advantages:                                                            |
+|  * Lightweight (doesn't index log content)                              |
+|  * Cost-effective storage                                               |
+|  * Native Grafana integration                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
-|  QUERY LOGS (LogQL)                                                    |
+|  INSTALL LOKI-STACK                                                     |
 |                                                                         |
-|  # Filter by label                                                     |
-|  {namespace="default", app="myapp"}                                   |
+|  helm repo add grafana https://grafana.github.io/helm-charts            |
 |                                                                         |
-|  # Search content                                                      |
-|  {app="myapp"} |= "error"                                             |
+|  helm install loki grafana/loki-stack \                                 |
+|    --namespace logging --create-namespace \                             |
+|    --set grafana.enabled=true                                           |
 |                                                                         |
-|  # JSON parsing                                                        |
-|  {app="myapp"} | json | level="error"                                |
+|  ---------------------------------------------------------------------  |
+|                                                                         |
+|  QUERY LOGS (LogQL)                                                     |
+|                                                                         |
+|  # Filter by label                                                      |
+|  {namespace="default", app="myapp"}                                     |
+|                                                                         |
+|  # Search content                                                       |
+|  {app="myapp"} |= "error"                                               |
+|                                                                         |
+|  # JSON parsing                                                         |
+|  {app="myapp"} | json | level="error"                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -139,29 +139,29 @@ debugging and analysis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  KUBECTL LOGS                                                          |
+|  KUBECTL LOGS                                                           |
 |  =============                                                          |
 |                                                                         |
-|  # View pod logs                                                       |
-|  kubectl logs my-pod                                                   |
+|  # View pod logs                                                        |
+|  kubectl logs my-pod                                                    |
 |                                                                         |
-|  # Follow logs (stream)                                               |
-|  kubectl logs -f my-pod                                               |
+|  # Follow logs (stream)                                                 |
+|  kubectl logs -f my-pod                                                 |
 |                                                                         |
-|  # Previous container logs (after restart)                            |
-|  kubectl logs my-pod --previous                                       |
+|  # Previous container logs (after restart)                              |
+|  kubectl logs my-pod --previous                                         |
 |                                                                         |
-|  # Specific container in multi-container pod                         |
-|  kubectl logs my-pod -c my-container                                  |
+|  # Specific container in multi-container pod                            |
+|  kubectl logs my-pod -c my-container                                    |
 |                                                                         |
-|  # Logs from all pods with label                                      |
-|  kubectl logs -l app=myapp                                            |
+|  # Logs from all pods with label                                        |
+|  kubectl logs -l app=myapp                                              |
 |                                                                         |
-|  # Last 100 lines                                                      |
-|  kubectl logs my-pod --tail=100                                       |
+|  # Last 100 lines                                                       |
+|  kubectl logs my-pod --tail=100                                         |
 |                                                                         |
-|  # Since timestamp                                                     |
-|  kubectl logs my-pod --since=1h                                       |
+|  # Since timestamp                                                      |
+|  kubectl logs my-pod --since=1h                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -171,21 +171,21 @@ debugging and analysis.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  LOGGING - KEY TAKEAWAYS                                              |
+|  LOGGING - KEY TAKEAWAYS                                                |
 |                                                                         |
-|  PATTERNS                                                              |
-|  --------                                                              |
-|  * DaemonSet agent (most common)                                     |
-|  * Sidecar container                                                 |
+|  PATTERNS                                                               |
+|  --------                                                               |
+|  * DaemonSet agent (most common)                                        |
+|  * Sidecar container                                                    |
 |                                                                         |
-|  STACKS                                                                |
-|  ------                                                                |
-|  * EFK: Elasticsearch + Fluentd + Kibana                            |
-|  * Loki: Lightweight, Grafana-native                                 |
+|  STACKS                                                                 |
+|  ------                                                                 |
+|  * EFK: Elasticsearch + Fluentd + Kibana                                |
+|  * Loki: Lightweight, Grafana-native                                    |
 |                                                                         |
-|  COMMANDS                                                              |
-|  --------                                                              |
-|  kubectl logs <pod> [-f] [--tail=N] [--since=1h]                    |
+|  COMMANDS                                                               |
+|  --------                                                               |
+|  kubectl logs <pod> [-f] [--tail=N] [--since=1h]                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
