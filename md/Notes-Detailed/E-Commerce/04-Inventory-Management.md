@@ -270,7 +270,7 @@ handling race conditions during flash sales.
 |  Problem:                                                              |
 |  * 10,000 concurrent requests hit inventory service                  |
 |  * All try to SELECT FOR UPDATE on same row                         |
-|  * Database lock contention -> Timeouts -> Failed orders              |
+|  * Database lock contention > Timeouts > Failed orders              |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |

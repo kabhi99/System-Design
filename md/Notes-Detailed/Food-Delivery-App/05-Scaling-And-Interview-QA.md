@@ -183,15 +183,15 @@ SECTION 2: RELIABILITY & FAULT TOLERANCE
 *|  |  --------------------                                           |  |*
 *|  |                                                                 |  |*
 *|  |  Circuit Breaker Pattern:                                      |  |*
-*|  |  * If service fails > 50% in 30 seconds -> OPEN circuit       |  |*
+*|  |  * If service fails > 50% in 30 seconds > OPEN circuit       |  |*
 *|  |  * Return cached/default response                             |  |*
-*|  |  * Try again after 60 seconds -> HALF-OPEN                    |  |*
-*|  |  * If success -> CLOSED                                        |  |*
+*|  |  * Try again after 60 seconds > HALF-OPEN                    |  |*
+*|  |  * If success > CLOSED                                        |  |*
 *|  |                                                                 |  |*
 *|  |  Graceful Degradation:                                         |  |*
-*|  |  * Search fails -> Show cached popular restaurants            |  |*
-*|  |  * ETA fails -> Show "30-45 mins" estimate                    |  |*
-*|  |  * Recommendations fail -> Show all restaurants               |  |*
+*|  |  * Search fails > Show cached popular restaurants            |  |*
+*|  |  * ETA fails > Show "30-45 mins" estimate                    |  |*
+*|  |  * Recommendations fail > Show all restaurants               |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -238,8 +238,8 @@ SECTION 2: RELIABILITY & FAULT TOLERANCE
 *|  |                                                                 |  |*
 *|  |  Server:                                                        |  |*
 *|  |  1. Check Redis: idempotency:{key}                            |  |*
-*|  |  2. If exists -> return cached response                        |  |*
-*|  |  3. If not -> process request                                  |  |*
+*|  |  2. If exists > return cached response                        |  |*
+*|  |  3. If not > process request                                  |  |*
 *|  |  4. Store: idempotency:{key} = response (TTL: 24 hours)      |  |*
 *|  |  5. Return response                                            |  |*
 *|  |                                                                 |  |*
@@ -263,7 +263,7 @@ SECTION 3: MONITORING & OBSERVABILITY
 *|  |  * Orders per minute (by city)                                |  |*
 *|  |  * GMV (Gross Merchandise Value)                              |  |*
 *|  |  * Average order value                                        |  |*
-*|  |  * Conversion rate (search -> order)                          |  |*
+*|  |  * Conversion rate (search > order)                          |  |*
 *|  |  * Cancellation rate                                          |  |*
 *|  |                                                                 |  |*
 *|  |  OPERATIONAL METRICS:                                          |  |*
@@ -332,8 +332,8 @@ SECTION 4: INTERVIEW QUICK REFERENCE
 *|     * Retry with expanding radius                                    |*
 *|                                                                         |*
 *|  4. ORDER STATE MACHINE                                               |*
-*|     * Clear states: PLACED -> CONFIRMED -> PREPARING -> READY ->        |*
-*|       PICKED_UP -> DELIVERED                                          |*
+*|     * Clear states: PLACED > CONFIRMED > PREPARING > READY >        |*
+*|       PICKED_UP > DELIVERED                                          |*
 *|     * Event-driven architecture (Kafka)                              |*
 *|     * Each state change triggers notifications                       |*
 *|                                                                         |*
@@ -362,8 +362,8 @@ SECTION 4: INTERVIEW QUICK REFERENCE
 *|     WebSocket connections. Scale with consistent hashing.            |*
 *|                                                                         |*
 *|  Q: How do you calculate ETA?                                        |*
-*|  A: ETA = Prep time + Partner->Restaurant + Pickup buffer +          |*
-*|     Restaurant->Customer. Prep time from restaurant settings.         |*
+*|  A: ETA = Prep time + Partner>Restaurant + Pickup buffer +          |*
+*|     Restaurant>Customer. Prep time from restaurant settings.         |*
 *|     Travel time from Google Maps API. Dynamic updates every 30s.    |*
 *|                                                                         |*
 *|  Q: How do you handle surge pricing?                                 |*
@@ -390,17 +390,17 @@ SECTION 4: INTERVIEW QUICK REFERENCE
 *|  ARCHITECTURE SUMMARY                                                  |*
 *|                                                                         |*
 *|  Order Flow:                                                           |*
-*|  Customer App -> API Gateway -> Order Service -> MySQL -> Kafka          |*
-*|      -> Restaurant App (confirm) -> Delivery Service (assign)          |*
-*|      -> Partner App (pickup) -> Customer App (track)                   |*
+*|  Customer App > API Gateway > Order Service > MySQL > Kafka          |*
+*|      > Restaurant App (confirm) > Delivery Service (assign)          |*
+*|      > Partner App (pickup) > Customer App (track)                   |*
 *|                                                                         |*
 *|  Location Flow:                                                        |*
-*|  Partner App -> Location Service -> Redis GEO + Kafka                  |*
-*|      -> Tracking Service -> WebSocket -> Customer App                   |*
+*|  Partner App > Location Service > Redis GEO + Kafka                  |*
+*|      > Tracking Service > WebSocket > Customer App                   |*
 *|                                                                         |*
 *|  Search Flow:                                                          |*
-*|  Customer App -> Search Service -> Elasticsearch -> Rankings           |*
-*|      -> Response with personalized results                            |*
+*|  Customer App > Search Service > Elasticsearch > Rankings           |*
+*|      > Response with personalized results                            |*
 *|                                                                         |*
 *|  Key Numbers:                                                          |*
 *|  * 3M orders/day, 140 orders/second peak                            |*
@@ -437,7 +437,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |       ML model for suspicious patterns                        |  |*
 *|  |                                                                 |  |*
 *|  |  RESTAURANT FRAUD:                                             |  |*
-*|  |  * Accept order -> never prepare -> keep platform's attention  |  |*
+*|  |  * Accept order > never prepare > keep platform's attention  |  |*
 *|  |  * Inflate prices vs in-store prices                          |  |*
 *|  |  * Detection: Completion rate, customer complaints, price     |  |*
 *|  |    comparison crawlers                                        |  |*
@@ -523,13 +523,13 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  What: Kitchen-only restaurants (no dine-in)                  |  |*
 *|  |                                                                 |  |*
 *|  |  System Changes:                                               |  |*
-*|  |  * One physical kitchen -> Multiple virtual brands             |  |*
+*|  |  * One physical kitchen > Multiple virtual brands             |  |*
 *|  |  * "Pizza Palace" and "Burger Barn" same kitchen            |  |*
 *|  |  * Inventory shared across brands                             |  |*
 *|  |  * Single partner pickup for multi-brand orders              |  |*
 *|  |                                                                 |  |*
 *|  |  Data Model:                                                   |  |*
-*|  |  kitchen_id -> [brand_1, brand_2, brand_3]                    |  |*
+*|  |  kitchen_id > [brand_1, brand_2, brand_3]                    |  |*
 *|  |  brand shows as separate restaurant to customer              |  |*
 *|  |                                                                 |  |*
 *|  |  Benefits for Platform:                                        |  |*
@@ -549,7 +549,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |                                                                 |  |*
 *|  |  SUPPLY-SIDE SOLUTIONS:                                        |  |*
 *|  |  * Partner incentives: "₹20 extra per order 7-9 PM"          |  |*
-*|  |  * Predict demand -> pre-position partners in hot zones       |  |*
+*|  |  * Predict demand > pre-position partners in hot zones       |  |*
 *|  |  * Part-time partners for peak hours only                    |  |*
 *|  |                                                                 |  |*
 *|  |  DEMAND-SIDE SOLUTIONS:                                        |  |*
@@ -573,8 +573,8 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Problem: New restaurant has no ratings, no order history     |  |*
-*|  |           -> Ranking algorithm pushes them down -> No orders    |  |*
-*|  |           -> They leave platform                                |  |*
+*|  |           > Ranking algorithm pushes them down > No orders    |  |*
+*|  |           > They leave platform                                |  |*
 *|  |                                                                 |  |*
 *|  |  Solutions:                                                    |  |*
 *|  |                                                                 |  |*
@@ -624,8 +624,8 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: Customer orders item -> Restaurant says "out of stock"|  |*
-*|  |           -> Bad experience, cancellation                       |  |*
+*|  |  Problem: Customer orders item > Restaurant says "out of stock"|  |*
+*|  |           > Bad experience, cancellation                       |  |*
 *|  |                                                                 |  |*
 *|  |  Solutions:                                                    |  |*
 *|  |                                                                 |  |*
@@ -636,7 +636,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |                                                                 |  |*
 *|  |  2. MANUAL TOGGLE (Small restaurants)                        |  |*
 *|  |     * Restaurant marks items unavailable in app              |  |*
-*|  |     * Often forgotten -> stale data                           |  |*
+*|  |     * Often forgotten > stale data                           |  |*
 *|  |                                                                 |  |*
 *|  |  3. PREDICTIVE STOCK-OUT                                      |  |*
 *|  |     * ML model predicts when items run out                   |  |*
@@ -657,7 +657,7 @@ SECTION 4: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Problem: Partners work 12+ hours for income                  |  |*
-*|  |           Fatigue -> accidents -> liability + bad PR            |  |*
+*|  |           Fatigue > accidents > liability + bad PR            |  |*
 *|  |                                                                 |  |*
 *|  |  Solutions:                                                    |  |*
 *|  |                                                                 |  |*

@@ -60,7 +60,7 @@
 |      method + path + sorted(query_params) + vary_headers              |
 |  )                                                                     |
 |                                                                         |
-|  "GET:/api/v1/users:limit=10:lang=en" -> "abc123..."                  |
+|  "GET:/api/v1/users:limit=10:lang=en" > "abc123..."                  |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -69,19 +69,19 @@
 |  Response headers from backend:                                        |
 |                                                                         |
 |  Cache-Control: public, max-age=3600                                  |
-|  -> Cache for 1 hour, any client can cache                            |
+|  > Cache for 1 hour, any client can cache                            |
 |                                                                         |
 |  Cache-Control: private, max-age=60                                   |
-|  -> Cache for 1 min, only client cache (not gateway)                  |
+|  > Cache for 1 min, only client cache (not gateway)                  |
 |                                                                         |
 |  Cache-Control: no-store                                              |
-|  -> Never cache                                                        |
+|  > Never cache                                                        |
 |                                                                         |
 |  Cache-Control: no-cache                                              |
-|  -> Cache but revalidate every time                                   |
+|  > Cache but revalidate every time                                   |
 |                                                                         |
 |  Vary: Accept-Language, Authorization                                 |
-|  -> Include these headers in cache key                                |
+|  > Include these headers in cache key                                |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -142,11 +142,11 @@
 |  Request:                                                               |
 |  * Add fields (timestamps, request IDs)                              |
 |  * Remove fields (strip PII before logging)                          |
-|  * Format conversion (JSON -> XML)                                    |
+|  * Format conversion (JSON > XML)                                    |
 |                                                                         |
 |  Response:                                                              |
 |  * Filter fields (remove internal fields)                            |
-|  * Rename fields (snake_case -> camelCase)                           |
+|  * Rename fields (snake_case > camelCase)                           |
 |  * Wrap response ({ data: response, meta: {...} })                   |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -188,8 +188,8 @@
 |  /api/v2/users                                                         |
 |                                                                         |
 |  Gateway routes:                                                        |
-|  /api/v1/* -> service-v1                                               |
-|  /api/v2/* -> service-v2                                               |
+|  /api/v1/* > service-v1                                               |
+|  /api/v2/* > service-v2                                               |
 |                                                                         |
 |  PROS: Clear, cacheable, easy to test                                 |
 |  CONS: URL pollution, harder to sunset                                |
@@ -205,8 +205,8 @@
 |  Accept: application/vnd.example.v2+json                              |
 |                                                                         |
 |  Gateway routes based on header:                                       |
-|  X-API-Version: 1 -> service-v1                                        |
-|  X-API-Version: 2 -> service-v2                                        |
+|  X-API-Version: 1 > service-v1                                        |
+|  X-API-Version: 2 > service-v2                                        |
 |                                                                         |
 |  PROS: Clean URLs, easier sunset                                      |
 |  CONS: Hidden versioning, caching complexity                         |
@@ -358,12 +358,12 @@
 |  Gateway injects/propagates trace headers:                            |
 |                                                                         |
 |  Incoming request (no trace):                                         |
-|  -> Generate: X-Request-ID: abc-123                                   |
-|  -> Generate: traceparent: 00-trace123-span456-01                     |
+|  > Generate: X-Request-ID: abc-123                                   |
+|  > Generate: traceparent: 00-trace123-span456-01                     |
 |                                                                         |
 |  Incoming request (with trace):                                       |
-|  -> Propagate existing traceparent                                    |
-|  -> Create child span for gateway processing                          |
+|  > Propagate existing traceparent                                    |
+|  > Create child span for gateway processing                          |
 |                                                                         |
 |  Forward to backend with headers:                                     |
 |  X-Request-ID: abc-123                                                |
@@ -564,8 +564,8 @@
 |                                                                         |
 |  Q: Gateway vs Service Mesh - what's the difference?                  |
 |  A: Different scopes                                                   |
-|     * Gateway: North-South traffic (external -> services)             |
-|     * Service Mesh: East-West traffic (service -> service)           |
+|     * Gateway: North-South traffic (external > services)             |
+|     * Service Mesh: East-West traffic (service > service)           |
 |     * Often used together (Gateway + Istio)                         |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -575,17 +575,17 @@
 |  1. THIN vs FAT GATEWAY                                               |
 |     Thin: Just routing, auth (lower latency)                        |
 |     Fat: Aggregation, transformation (more features)                |
-|     -> Start thin, add features as needed                            |
+|     > Start thin, add features as needed                            |
 |                                                                         |
 |  2. CENTRALIZED vs DISTRIBUTED RATE LIMITING                          |
 |     Centralized: Accurate but Redis dependency                      |
 |     Distributed: Approximate but faster                             |
-|     -> Hybrid: Local cache + periodic sync                           |
+|     > Hybrid: Local cache + periodic sync                           |
 |                                                                         |
 |  3. INLINE vs ASYNC PROCESSING                                        |
 |     Inline: Auth, routing (must be fast)                            |
 |     Async: Logging, analytics (can be deferred)                     |
-|     -> Async for non-critical path                                   |
+|     > Async for non-critical path                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -582,7 +582,7 @@ PAYMENTS
 |  INTERVIEW TIP                                                         |
 |  -------------                                                         |
 |  Explain the show_seats table in detail.                             |
-|  Show how status transitions: AVAILABLE -> LOCKED -> BOOKED           |
+|  Show how status transitions: AVAILABLE > LOCKED > BOOKED           |
 |  Discuss version column for optimistic locking.                      |
 |                                                                         |
 +-------------------------------------------------------------------------+

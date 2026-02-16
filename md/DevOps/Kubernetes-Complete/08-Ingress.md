@@ -31,9 +31,9 @@ balancing, SSL termination, and name-based virtual hosting.
 |  |      |                                                          |  |
 |  |      +--> LB --> Ingress Controller                            |  |
 |  |                       |                                         |  |
-|  |                       +--> /api   -> api-service                |  |
-|  |                       +--> /      -> web-service                |  |
-|  |                       +--> /admin -> admin-service              |  |
+|  |                       +--> /api   > api-service                |  |
+|  |                       +--> /      > web-service                |  |
+|  |                       +--> /admin > admin-service              |  |
 |  |                                                                 |  |
 |  |   1 LoadBalancer, routes by path/host                         |  |
 |  |                                                                 |  |
@@ -101,7 +101,7 @@ INGRESS - HOW IT WORKS:
 |  |            |                                                    |   |
 |  |            v                                                    |   |
 |  |      +----------+                                              |   |
-|  |      |   ELB    |  <- Only ONE LoadBalancer ($18/month)        |   |
+|  |      |   ELB    |  < Only ONE LoadBalancer ($18/month)        |   |
 |  |      |   $18    |                                              |   |
 |  |      +----+-----+                                              |   |
 |  |           |                                                     |   |
@@ -147,10 +147,10 @@ DETAILED COMPARISON TABLE:
 |  | Layer              | L4 (TCP/UDP)       | L7 (HTTP/HTTPS)        |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Path routing       | [ ] NOT possible     | [x] /api, /admin, /web  |  |
+|  | Path routing       | X NOT possible     | Y /api, /admin, /web  |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Host routing       | [ ] NOT possible     | [x] api.com, web.com    |  |
+|  | Host routing       | X NOT possible     | Y api.com, web.com    |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
 |  | SSL/TLS            | Per LB             | Centralized            |  |
@@ -162,19 +162,19 @@ DETAILED COMPARISON TABLE:
 |  | Protocol support   | Any TCP/UDP        | HTTP/HTTPS only        |  |
 |  |                    | (database, etc)    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | URL rewriting      | [ ] NO               | [x] YES                  |  |
+|  | URL rewriting      | X NO               | Y YES                  |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Rate limiting      | [ ] NO               | [x] YES (annotations)    |  |
+|  | Rate limiting      | X NO               | Y YES (annotations)    |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Authentication     | [ ] NO               | [x] YES (basic auth,    |  |
+|  | Authentication     | X NO               | Y YES (basic auth,    |  |
 |  |                    |                    |   OAuth, etc)          |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Header manipulation| [ ] NO               | [x] YES                  |  |
+|  | Header manipulation| X NO               | Y YES                  |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
-|  | Canary/Blue-Green  | [ ] NO               | [x] YES (traffic split)  |  |
+|  | Canary/Blue-Green  | X NO               | Y YES (traffic split)  |  |
 |  |                    |                    |                        |  |
 |  +--------------------+--------------------+------------------------+  |
 |                                                                         |
@@ -206,7 +206,7 @@ L4 vs L7 - WHAT DOES IT MEAN?
 |  |  |  Dest IP:   52.14.xxx.xxx                                | |   |
 |  |  |  Dest Port: 443                                          | |   |
 |  |  |                                                           | |   |
-|  |  |  That's ALL it knows! <- Can't read URL or headers        | |   |
+|  |  |  That's ALL it knows! < Can't read URL or headers        | |   |
 |  |  +----------------------------------------------------------+ |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
@@ -225,13 +225,13 @@ L4 vs L7 - WHAT DOES IT MEAN?
 |  |                                                                |   |
 |  |  L7 Ingress sees:                                             |   |
 |  |  +----------------------------------------------------------+ |   |
-|  |  |  Host: api.example.com         <- Can route by domain!   | |   |
-|  |  |  Path: /users/123              <- Can route by path!     | |   |
-|  |  |  Method: GET                   <- Can check HTTP method   | |   |
+|  |  |  Host: api.example.com         < Can route by domain!   | |   |
+|  |  |  Path: /users/123              < Can route by path!     | |   |
+|  |  |  Method: GET                   < Can check HTTP method   | |   |
 |  |  |  Headers: Authorization: Bearer xxx                      | |   |
 |  |  |  Cookies: session=abc123                                 | |   |
 |  |  |                                                           | |   |
-|  |  |  Decision: "api.example.com + /users -> api-service"      | |   |
+|  |  |  Decision: "api.example.com + /users > api-service"      | |   |
 |  |  +----------------------------------------------------------+ |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
@@ -294,12 +294,12 @@ WHEN TO USE INGRESS:
 |  2. MULTIPLE SERVICES need external access                            |
 |                                                                         |
 |  3. NEED PATH ROUTING                                                  |
-|     * /api -> backend                                                   |
-|     * /   -> frontend                                                   |
+|     * /api > backend                                                   |
+|     * /   > frontend                                                   |
 |                                                                         |
 |  4. NEED HOST ROUTING                                                  |
-|     * api.example.com -> api-service                                   |
-|     * www.example.com -> web-service                                   |
+|     * api.example.com > api-service                                   |
+|     * www.example.com > web-service                                   |
 |                                                                         |
 |  5. CENTRALIZED SSL                                                    |
 |     * One place to manage certificates                                |
@@ -345,12 +345,12 @@ REAL-WORLD ARCHITECTURE:
 |     |     |     |         |                                           |
 |     v     v     v         v                                           |
 |  +-----++-----++-----++-----+                                        |
-|  | API || Web ||Admin||Auth |  <- ClusterIP services (internal)       |
+|  | API || Web ||Admin||Auth |  < ClusterIP services (internal)       |
 |  | Svc || Svc || Svc || Svc |                                        |
 |  +-----++-----++-----++-----+                                        |
 |                                                                         |
-|  HTTP traffic  -> 1 LoadBalancer -> Ingress -> Many services            |
-|  Database      -> 1 LoadBalancer -> Direct to Postgres                 |
+|  HTTP traffic  > 1 LoadBalancer > Ingress > Many services            |
+|  Database      > 1 LoadBalancer > Direct to Postgres                 |
 |                                                                         |
 |  Cost: $36/month instead of $90+ (5 LoadBalancers)                   |
 |                                                                         |
@@ -404,13 +404,13 @@ SUMMARY - DECISION FLOWCHART:
 |            |                                                           |
 |            Need path or host routing?                                 |
 |            |                                                           |
-|            +-- YES ---> Use Ingress [x]                                 |
+|            +-- YES ---> Use Ingress Y                                 |
 |            |                                                           |
 |            +-- NO                                                      |
 |                 |                                                      |
 |                 Multiple services?                                    |
 |                 |                                                      |
-|                 +-- YES ---> Use Ingress (saves cost) [x]              |
+|                 +-- YES ---> Use Ingress (saves cost) Y              |
 |                 |                                                      |
 |                 +-- NO ---> LoadBalancer is OK                        |
 |                             (but Ingress still works)                 |
@@ -443,7 +443,7 @@ SUMMARY - DECISION FLOWCHART:
 ```
 CONCEPT: Route based on the DOMAIN NAME in the request
 
-Same IP, different domains -> different services
+Same IP, different domains > different services
 
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -475,13 +475,13 @@ HOW IT WORKS INTERNALLY:
 |                                                                         |
 |   1. User types: https://api.example.com/users                        |
 |                                                                         |
-|   2. DNS resolves api.example.com -> 52.14.xxx.xxx (Ingress IP)       |
+|   2. DNS resolves api.example.com > 52.14.xxx.xxx (Ingress IP)       |
 |                                                                         |
 |   3. HTTP request arrives at Ingress Controller with header:          |
 |      Host: api.example.com                                            |
 |                                                                         |
 |   4. Ingress Controller checks rules:                                 |
-|      "Host: api.example.com? -> Route to api-service"                 |
+|      "Host: api.example.com? > Route to api-service"                 |
 |                                                                         |
 |   5. Request forwarded to api-service                                 |
 |                                                                         |
@@ -540,7 +540,7 @@ USE WHEN:
 ```
 CONCEPT: Route based on the URL PATH in the request
 
-Same domain, different paths -> different services
+Same domain, different paths > different services
 
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -622,12 +622,12 @@ USE WHEN:
 |                                                                         |
 |  path: /api                                                            |
 |  ---------------------------------------------                         |
-|  /api        -> MATCHES [x]                                              |
-|  /api/       -> MATCHES [x]                                              |
-|  /api/users  -> MATCHES [x]                                              |
-|  /api/v1/orders -> MATCHES [x]                                           |
-|  /apikeys    -> NO MATCH [ ] (no / after api)                           |
-|  /api-docs   -> NO MATCH [ ] (no / after api)                           |
+|  /api        > MATCHES Y                                              |
+|  /api/       > MATCHES Y                                              |
+|  /api/users  > MATCHES Y                                              |
+|  /api/v1/orders > MATCHES Y                                           |
+|  /apikeys    > NO MATCH X (no / after api)                           |
+|  /api-docs   > NO MATCH X (no / after api)                           |
 |                                                                         |
 |  NOTE: Prefix matching is based on / separated path elements         |
 |                                                                         |
@@ -642,9 +642,9 @@ USE WHEN:
 |                                                                         |
 |  path: /api                                                            |
 |  ---------------------------------------------                         |
-|  /api        -> MATCHES [x]                                              |
-|  /api/       -> NO MATCH [ ]                                             |
-|  /api/users  -> NO MATCH [ ]                                             |
+|  /api        > MATCHES Y                                              |
+|  /api/       > NO MATCH X                                             |
+|  /api/users  > NO MATCH X                                             |
 |                                                                         |
 |  USE WHEN: You want a specific endpoint only                          |
 |  Example: /health or /ready endpoints                                 |
@@ -674,15 +674,15 @@ COMPARISON EXAMPLE:
 |  +-------------------+---------------+----------------+               |
 |  | Rule Path         | pathType      | Matches?       |               |
 |  +-------------------+---------------+----------------+               |
-|  | /api              | Prefix        | YES [x]          |               |
-|  | /api              | Exact         | NO [ ]           |               |
-|  | /api/users        | Prefix        | YES [x]          |               |
-|  | /api/users        | Exact         | NO [ ]           |               |
-|  | /api/users/123    | Exact         | YES [x]          |               |
-|  | /                 | Prefix        | YES [x]          |               |
+|  | /api              | Prefix        | YES Y          |               |
+|  | /api              | Exact         | NO X           |               |
+|  | /api/users        | Prefix        | YES Y          |               |
+|  | /api/users        | Exact         | NO X           |               |
+|  | /api/users/123    | Exact         | YES Y          |               |
+|  | /                 | Prefix        | YES Y          |               |
 |  +-------------------+---------------+----------------+               |
 |                                                                         |
-|  Multiple rules match? -> Most specific (longest) path wins!           |
+|  Multiple rules match? > Most specific (longest) path wins!           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -768,7 +768,7 @@ CONCEPT: Handle requests that don't match any rule
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  If NO host and NO path matches -> defaultBackend handles it           |
+|  If NO host and NO path matches > defaultBackend handles it           |
 |                                                                         |
 |  Useful for:                                                           |
 |  * Custom 404 pages                                                    |
@@ -1014,8 +1014,8 @@ kubectl run test --rm -it --image=busybox -- wget -qO- http://<service>
 |                                                                         |
 |  ROUTING                                                               |
 |  -------                                                               |
-|  * Path-based: /api -> api-service                                   |
-|  * Host-based: api.example.com -> api-service                        |
+|  * Path-based: /api > api-service                                   |
+|  * Host-based: api.example.com > api-service                        |
 |                                                                         |
 |  TLS                                                                   |
 |  ---                                                                   |

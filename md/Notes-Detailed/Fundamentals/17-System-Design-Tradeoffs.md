@@ -35,16 +35,16 @@ informed decisions and explain your choices in interviews.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Easy to scale horizontally (add more servers)                      |
-|  [x] Any server can handle any request                                  |
-|  [x] No session synchronization needed                                  |
-|  [x] Better fault tolerance (server crash doesn't lose state)          |
-|  [x] Simpler load balancing                                             |
+|  Y Easy to scale horizontally (add more servers)                      |
+|  Y Any server can handle any request                                  |
+|  Y No session synchronization needed                                  |
+|  Y Better fault tolerance (server crash doesn't lose state)          |
+|  Y Simpler load balancing                                             |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Larger request size (must send context each time)                  |
-|  [ ] More processing per request (validate tokens)                      |
-|  [ ] Some use cases need state (shopping cart, wizard flows)           |
+|  X Larger request size (must send context each time)                  |
+|  X More processing per request (validate tokens)                      |
+|  X Some use cases need state (shopping cart, wizard flows)           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -72,15 +72,15 @@ informed decisions and explain your choices in interviews.
 |  * Chat servers (connection state)                                    |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Smaller requests (no repeated context)                             |
-|  [x] Faster (no token validation, cached session)                       |
-|  [x] Natural for real-time applications                                 |
+|  Y Smaller requests (no repeated context)                             |
+|  Y Faster (no token validation, cached session)                       |
+|  Y Natural for real-time applications                                 |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Hard to scale (session affinity needed)                            |
-|  [ ] Server failure loses session                                       |
-|  [ ] Complex load balancing (sticky sessions)                           |
-|  [ ] Session synchronization overhead                                   |
+|  X Hard to scale (session affinity needed)                            |
+|  X Server failure loses session                                       |
+|  X Complex load balancing (sticky sessions)                           |
+|  X Session synchronization overhead                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -137,15 +137,15 @@ informed decisions and explain your choices in interviews.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Simple to implement                                                |
-|  [x] Works everywhere (HTTP)                                            |
-|  [x] Client controls timing                                             |
-|  [x] Stateless server                                                   |
+|  Y Simple to implement                                                |
+|  Y Works everywhere (HTTP)                                            |
+|  Y Client controls timing                                             |
+|  Y Stateless server                                                   |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Wasted requests (most return empty)                                |
-|  [ ] Delayed updates (up to polling interval)                           |
-|  [ ] Server load from frequent polling                                  |
+|  X Wasted requests (most return empty)                                |
+|  X Delayed updates (up to polling interval)                           |
+|  X Server load from frequent polling                                  |
 |                                                                         |
 |  USE: Email checking, news feeds, background sync                     |
 |                                                                         |
@@ -182,15 +182,15 @@ informed decisions and explain your choices in interviews.
 |  * Push Notifications (mobile)                                        |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Real-time updates (instant)                                        |
-|  [x] Efficient (no wasted requests)                                     |
-|  [x] Lower latency                                                      |
+|  Y Real-time updates (instant)                                        |
+|  Y Efficient (no wasted requests)                                     |
+|  Y Lower latency                                                      |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Connection management complexity                                   |
-|  [ ] Stateful (server tracks connections)                               |
-|  [ ] Scaling challenges                                                 |
-|  [ ] Network/firewall issues                                            |
+|  X Connection management complexity                                   |
+|  X Stateful (server tracks connections)                               |
+|  X Scaling challenges                                                 |
+|  X Network/firewall issues                                            |
 |                                                                         |
 |  USE: Chat, live sports, stock tickers, collaborative editing        |
 |                                                                         |
@@ -354,16 +354,16 @@ informed decisions and explain your choices in interviews.
 |  PROTOCOLS: HTTP, gRPC, direct function calls                         |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Simple to understand and implement                                 |
-|  [x] Immediate response                                                 |
-|  [x] Easy error handling                                                |
-|  [x] Strong consistency (see result immediately)                        |
+|  Y Simple to understand and implement                                 |
+|  Y Immediate response                                                 |
+|  Y Easy error handling                                                |
+|  Y Strong consistency (see result immediately)                        |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Caller blocked during request                                      |
-|  [ ] Tight coupling                                                     |
-|  [ ] Cascading failures                                                 |
-|  [ ] Both services must be available                                    |
+|  X Caller blocked during request                                      |
+|  X Tight coupling                                                     |
+|  X Cascading failures                                                 |
+|  X Both services must be available                                    |
 |                                                                         |
 |  USE: User-facing requests, queries needing immediate response        |
 |                                                                         |
@@ -393,17 +393,17 @@ informed decisions and explain your choices in interviews.
 |  PROTOCOLS: Message queues (Kafka, RabbitMQ, SQS), webhooks           |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Loose coupling                                                     |
-|  [x] Better fault tolerance                                             |
-|  [x] Handles traffic spikes (queue buffers)                             |
-|  [x] Services can be offline temporarily                                |
-|  [x] Independent scaling                                                |
+|  Y Loose coupling                                                     |
+|  Y Better fault tolerance                                             |
+|  Y Handles traffic spikes (queue buffers)                             |
+|  Y Services can be offline temporarily                                |
+|  Y Independent scaling                                                |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] More complex                                                       |
-|  [ ] Eventual consistency                                               |
-|  [ ] Debugging harder                                                   |
-|  [ ] Delivery guarantees to manage                                      |
+|  X More complex                                                       |
+|  X Eventual consistency                                               |
+|  X Debugging harder                                                   |
+|  X Delivery guarantees to manage                                      |
 |                                                                         |
 |  USE: Background jobs, notifications, event-driven workflows          |
 |                                                                         |
@@ -526,7 +526,7 @@ informed decisions and explain your choices in interviews.
 |  SPECTRUM OF CONSISTENCY:                                               |
 |                                                                         |
 |  Strong <--------------------------------------------> Eventual       |
-|  Linearizable -> Sequential -> Causal -> Read-your-writes -> Eventual    |
+|  Linearizable > Sequential > Causal > Read-your-writes > Eventual    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

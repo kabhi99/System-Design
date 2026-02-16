@@ -66,14 +66,14 @@ Network Policies implement the principle of least privilege:
 |  |  |   Pod   |    |   Pod   |    |   Pod   |                    |   |
 |  |  +---------+    +----+----+    +---------+                    |   |
 |  |                      |                                          |   |
-|  |                      [ ] BLOCKED!                                |   |
+|  |                      X BLOCKED!                                |   |
 |  |                                                                  |   |
 |  |  CONTROLLED COMMUNICATION:                                      |   |
-|  |  [x] Frontend -> API (allowed)                                    |   |
-|  |  [x] API -> Database (allowed)                                    |   |
-|  |  [x] API -> Cache (allowed)                                       |   |
-|  |  [ ] Attacker -> Database (blocked!)                              |   |
-|  |  [ ] Frontend -> Database (blocked!)                              |   |
+|  |  Y Frontend > API (allowed)                                    |   |
+|  |  Y API > Database (allowed)                                    |   |
+|  |  Y API > Cache (allowed)                                       |   |
+|  |  X Attacker > Database (blocked!)                              |   |
+|  |  X Frontend > Database (blocked!)                              |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
 |                                                                         |
@@ -333,8 +333,8 @@ spec:
       port: 5432
 
 # Result:
-# [x] API pods can reach database on port 5432
-# [ ] All other pods cannot reach database
+# Y API pods can reach database on port 5432
+# X All other pods cannot reach database
 ```
 
 ### EXAMPLE 2: ALLOW INTER-NAMESPACE COMMUNICATION
@@ -545,14 +545,14 @@ IMPORTANT: NOT ALL CNIs SUPPORT NETWORK POLICIES!
 |  CNI NETWORK POLICY SUPPORT                                            |
 |                                                                         |
 |  FULL SUPPORT:                                                         |
-|  [x] Calico                 Full support + extensions                   |
-|  [x] Cilium                 Full support + L7 policies                  |
-|  [x] Weave                  Full support                                |
-|  [x] Antrea                 Full support                                |
-|  [x] Romana                 Full support                                |
+|  Y Calico                 Full support + extensions                   |
+|  Y Cilium                 Full support + L7 policies                  |
+|  Y Weave                  Full support                                |
+|  Y Antrea                 Full support                                |
+|  Y Romana                 Full support                                |
 |                                                                         |
 |  PARTIAL/NO SUPPORT:                                                   |
-|  [ ] Flannel                NO network policy support!                  |
+|  X Flannel                NO network policy support!                  |
 |                           (use Flannel + Calico for policies)         |
 |  ~ AWS VPC CNI            Limited (use Security Groups instead)       |
 |                                                                         |
@@ -704,9 +704,9 @@ spec:
           path: "/api/v1/.*"
 
 # This policy:
-# [x] Allows GET requests
-# [x] Allows POST to /api/v1/*
-# [ ] Blocks DELETE requests!
+# Y Allows GET requests
+# Y Allows POST to /api/v1/*
+# X Blocks DELETE requests!
 ```
 
 ## CHAPTER SUMMARY
@@ -738,7 +738,7 @@ spec:
 |  |  COMMON PATTERNS                                                 | |
 |  |  * Default deny ingress + egress                                | |
 |  |  * Allow DNS (port 53 to kube-system)                          | |
-|  |  * Tier-based policies (frontend->api->database)                 | |
+|  |  * Tier-based policies (frontend>api>database)                 | |
 |  |                                                                   | |
 |  +-------------------------------------------------------------------+ |
 |  |                                                                   | |

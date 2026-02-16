@@ -246,7 +246,7 @@ essential for system design interviews.
 |     * More conservative than slow start                              |
 |                                                                         |
 |  3. ON PACKET LOSS                                                     |
-|     Fast Retransmit: 3 duplicate ACKs -> retransmit immediately       |
+|     Fast Retransmit: 3 duplicate ACKs > retransmit immediately       |
 |     Fast Recovery: ssthresh = cwnd/2, cwnd = ssthresh + 3           |
 |     Timeout: ssthresh = cwnd/2, cwnd = 1 (back to slow start)       |
 |                                                                         |
@@ -311,16 +311,16 @@ essential for system design interviews.
 |                                                                         |
 |  UDP CHARACTERISTICS:                                                   |
 |                                                                         |
-|  [x] No connection setup (send immediately)                             |
-|  [x] No state maintained                                                |
-|  [x] Minimal header overhead (8 bytes vs 20+ TCP)                       |
-|  [x] No flow/congestion control (can send as fast as possible)         |
-|  [x] Supports broadcast and multicast                                   |
+|  Y No connection setup (send immediately)                             |
+|  Y No state maintained                                                |
+|  Y Minimal header overhead (8 bytes vs 20+ TCP)                       |
+|  Y No flow/congestion control (can send as fast as possible)         |
+|  Y Supports broadcast and multicast                                   |
 |                                                                         |
-|  [ ] No delivery guarantee                                              |
-|  [ ] No ordering guarantee                                              |
-|  [ ] No duplicate protection                                            |
-|  [ ] No fragmentation handling (application must handle)               |
+|  X No delivery guarantee                                              |
+|  X No ordering guarantee                                              |
+|  X No duplicate protection                                            |
+|  X No fragmentation handling (application must handle)               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -577,8 +577,8 @@ essential for system design interviews.
 |  |  HTTP/3 over QUIC (stream A packet lost):                     |  |
 |  |                                                                 |  |
 |  |  Stream A: [1][2][BLOCKED]                                    |  |
-|  |  Stream B: [1][2][3][4][5] [x] continues                       |  |
-|  |  Stream C: [1][2][3][4][5] [x] continues                       |  |
+|  |  Stream B: [1][2][3][4][5] Y continues                       |  |
+|  |  Stream C: [1][2][3][4][5] Y continues                       |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -588,7 +588,7 @@ essential for system design interviews.
 |  ========================                                               |
 |                                                                         |
 |  TCP identified by: (src_ip, src_port, dst_ip, dst_port)             |
-|  If IP changes (WiFi -> cellular), connection breaks                  |
+|  If IP changes (WiFi > cellular), connection breaks                  |
 |                                                                         |
 |  QUIC identified by: Connection ID (random token)                    |
 |  IP can change, connection continues!                                 |

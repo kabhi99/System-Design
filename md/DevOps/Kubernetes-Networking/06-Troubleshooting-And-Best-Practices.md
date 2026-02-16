@@ -363,8 +363,8 @@ tshark -r capture.pcap
 |                                                                         |
 |  Example sizing:                                                       |
 |  * 100 nodes × 100 pods/node = 10,000 pods minimum                   |
-|  * /16 for pods = 65,536 IPs [x]                                       |
-|  * /20 for pods = 4,096 IPs [ ] (too small for growth)                |
+|  * /16 for pods = 65,536 IPs Y                                       |
+|  * /20 for pods = 4,096 IPs X (too small for growth)                |
 |                                                                         |
 |  CNI SELECTION                                                         |
 |  -------------                                                         |
@@ -610,7 +610,7 @@ data:
 |  +-------------------------------------------------------------------+ |
 |  |                                                                   | |
 |  |  TROUBLESHOOTING APPROACH                                        | |
-|  |  * Work through layers: Pod -> Pod-to-Pod -> Service -> DNS ->      | |
+|  |  * Work through layers: Pod > Pod-to-Pod > Service > DNS >      | |
 |  |    External                                                      | |
 |  |  * Check Endpoints first (most common issue!)                   | |
 |  |  * Use netshoot for debugging                                   | |

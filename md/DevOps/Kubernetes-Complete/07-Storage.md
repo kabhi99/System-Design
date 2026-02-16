@@ -47,7 +47,7 @@ storage provisioning from consumption.
 |     * Can't share data between containers in pod                     |
 |                                                                         |
 |  3. NO DATA PERSISTENCE ACROSS RESCHEDULING                          |
-|     * Pod moves to different node -> data stays on old node          |
+|     * Pod moves to different node > data stays on old node          |
 |     * New pod can't access the old data                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -63,7 +63,7 @@ storage provisioning from consumption.
 |  |   +---------------------------------------------------------+  |   |
 |  |   |                                                         |  |   |
 |  |   |  Container mounts external volume:                     |  |   |
-|  |   |  /var/lib/mysql -> PersistentVolume                    |  |   |
+|  |   |  /var/lib/mysql > PersistentVolume                    |  |   |
 |  |   |                         |                              |  |   |
 |  |   +-------------------------+-------------------------------+  |   |
 |  |                             |                                  |   |
@@ -75,7 +75,7 @@ storage provisioning from consumption.
 |  |                             |                                  |   |
 |  |   +-------------------------+-------------------------------+  |   |
 |  |   |  Container remounts:    |                              |  |   |
-|  |   |  /var/lib/mysql -> PersistentVolume                    |  |   |
+|  |   |  /var/lib/mysql > PersistentVolume                    |  |   |
 |  |   +-------------------------+-------------------------------+  |   |
 |  |                             |                                  |   |
 |  |                             v                                  |   |
@@ -83,8 +83,8 @@ storage provisioning from consumption.
 |  |   |           PERSISTENT VOLUME (AWS EBS)                  |  |   |
 |  |   |                                                         |  |   |
 |  |   |   Data SURVIVES pod restarts!                         |  |   |
-|  |   |   users: 10,000 records [x]                            |  |   |
-|  |   |   orders: 50,000 records [x]                           |  |   |
+|  |   |   users: 10,000 records Y                            |  |   |
+|  |   |   orders: 50,000 records Y                           |  |   |
 |  |   |                                                         |  |   |
 |  |   +---------------------------------------------------------+  |   |
 |  |                                                                 |   |
@@ -168,11 +168,11 @@ storage provisioning from consumption.
 |  |    |                                                            |  |
 |  |    | "I need 10Gi of storage"                                  |  |
 |  |    v                                                            |  |
-|  |   PersistentVolumeClaim (PVC)  <- Developer creates            |  |
+|  |   PersistentVolumeClaim (PVC)  < Developer creates            |  |
 |  |    |                                                            |  |
 |  |    | Binds to                                                  |  |
 |  |    v                                                            |  |
-|  |   PersistentVolume (PV)        <- Admin creates (or dynamic)   |  |
+|  |   PersistentVolume (PV)        < Admin creates (or dynamic)   |  |
 |  |    |                                                            |  |
 |  |    | Backed by                                                 |  |
 |  |    v                                                            |  |

@@ -42,16 +42,16 @@ practices for image management.
 |                                                                         |
 |  Examples:                                                             |
 |  * nginx                                                              |
-|    -> docker.io/library/nginx:latest                                  |
+|    > docker.io/library/nginx:latest                                  |
 |                                                                         |
 |  * myuser/myapp:v1.0                                                  |
-|    -> docker.io/myuser/myapp:v1.0                                     |
+|    > docker.io/myuser/myapp:v1.0                                     |
 |                                                                         |
 |  * gcr.io/myproject/myapp:v1.0                                       |
-|    -> Google Container Registry                                       |
+|    > Google Container Registry                                       |
 |                                                                         |
 |  * 123456789.dkr.ecr.us-east-1.amazonaws.com/myapp:v1.0             |
-|    -> AWS ECR                                                          |
+|    > AWS ECR                                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

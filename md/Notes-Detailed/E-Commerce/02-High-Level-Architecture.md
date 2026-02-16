@@ -155,7 +155,7 @@ explaining microservices, data flow, and technology choices.
 |  * Aggregations for filters                                          |
 |                                                                         |
 |  DATA SYNC:                                                            |
-|  MongoDB -> Change Data Capture -> Kafka -> Elasticsearch               |
+|  MongoDB > Change Data Capture > Kafka > Elasticsearch               |
 |                                                                         |
 |  PERSONALIZATION:                                                      |
 |  Search results can be personalized based on:                        |
@@ -176,7 +176,7 @@ explaining microservices, data flow, and technology choices.
 |  RESPONSIBILITIES:                                                     |
 |  * Manage shopping cart                                               |
 |  * Persist cart across sessions                                       |
-|  * Handle cart merging (guest -> logged in)                           |
+|  * Handle cart merging (guest > logged in)                           |
 |  * Price updates                                                      |
 |                                                                         |
 |  ENDPOINTS:                                                            |
@@ -285,7 +285,7 @@ explaining microservices, data flow, and technology choices.
 |  ORDER STATES:                                                         |
 |  +----------------------------------------------------------------+   |
 |  |                                                                |   |
-|  |  CREATED -> PAYMENT_PENDING -> CONFIRMED -> PROCESSING           |   |
+|  |  CREATED > PAYMENT_PENDING > CONFIRMED > PROCESSING           |   |
 |  |                                              v                 |   |
 |  |                                          SHIPPED               |   |
 |  |                                              v                 |   |
@@ -293,7 +293,7 @@ explaining microservices, data flow, and technology choices.
 |  |                                              v                 |   |
 |  |                                          COMPLETED             |   |
 |  |                                                                |   |
-|  |  At any point: -> CANCELLED or RETURNED                        |   |
+|  |  At any point: > CANCELLED or RETURNED                        |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
@@ -423,9 +423,9 @@ explaining microservices, data flow, and technology choices.
 |                                                                         |
 |  DATA FLOW                                                             |
 |  ---------                                                             |
-|  * Checkout: Cart -> Inventory -> Order -> Payment                       |
-|  * Search: MongoDB -> CDC -> Kafka -> Elasticsearch                     |
-|  * Events: All services -> Kafka -> Consumers                          |
+|  * Checkout: Cart > Inventory > Order > Payment                       |
+|  * Search: MongoDB > CDC > Kafka > Elasticsearch                     |
+|  * Events: All services > Kafka > Consumers                          |
 |                                                                         |
 |  CRITICAL POINTS                                                       |
 |  ---------------                                                       |

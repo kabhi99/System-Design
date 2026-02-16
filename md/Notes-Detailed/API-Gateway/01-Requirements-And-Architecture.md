@@ -90,7 +90,7 @@
 |  1. REQUEST ROUTING                                                    |
 |     ===================                                                 |
 |     * Route requests to appropriate backend service                   |
-|     * Path-based routing (/users/* -> User Service)                   |
+|     * Path-based routing (/users/* > User Service)                   |
 |     * Header-based routing (version, tenant)                         |
 |     * Query param routing                                             |
 |                                                                         |

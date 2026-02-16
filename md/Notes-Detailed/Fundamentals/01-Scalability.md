@@ -65,12 +65,12 @@ increases.
 |  System A: Handles 1000 RPS at 50ms latency                           |
 |           At 2000 RPS: 100ms latency (still good)                     |
 |           At 5000 RPS: 500ms latency (degraded but functional)        |
-|           -> Scalable but requires manual intervention                  |
+|           > Scalable but requires manual intervention                  |
 |                                                                         |
 |  System B: Same as A, but                                             |
 |           Automatically spins up more servers when load > 1500 RPS    |
 |           Automatically scales down when load < 500 RPS               |
-|           -> Scalable AND elastic                                       |
+|           > Scalable AND elastic                                       |
 |                                                                         |
 |  CLOUD-NATIVE = Scalable + Elastic + Cost-efficient                   |
 |                                                                         |
@@ -99,17 +99,17 @@ increases.
 |       Before                        After                              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple - no code changes required                                  |
-|  [x] No distributed system complexity                                   |
-|  [x] Strong consistency (single machine)                                |
-|  [x] Lower operational overhead                                         |
+|  Y Simple - no code changes required                                  |
+|  Y No distributed system complexity                                   |
+|  Y Strong consistency (single machine)                                |
+|  Y Lower operational overhead                                         |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Hardware limits (can't scale forever)                              |
-|  [ ] Single point of failure                                            |
-|  [ ] Expensive at high end (exponential cost)                           |
-|  [ ] Downtime for upgrades                                              |
-|  [ ] Diminishing returns (2x CPU ≠ 2x throughput)                      |
+|  X Hardware limits (can't scale forever)                              |
+|  X Single point of failure                                            |
+|  X Expensive at high end (exponential cost)                           |
+|  X Downtime for upgrades                                              |
+|  X Diminishing returns (2x CPU ≠ 2x throughput)                      |
 |                                                                         |
 |  REAL-WORLD LIMITS:                                                    |
 |  * AWS largest instance: u-24tb1.metal (448 vCPU, 24TB RAM)          |
@@ -131,18 +131,18 @@ increases.
 |       Before                        After (4 servers)                  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Virtually unlimited scale                                          |
-|  [x] No single point of failure (with proper design)                   |
-|  [x] Cost-effective (commodity hardware)                                |
-|  [x] Can scale incrementally                                            |
-|  [x] Geographic distribution possible                                   |
+|  Y Virtually unlimited scale                                          |
+|  Y No single point of failure (with proper design)                   |
+|  Y Cost-effective (commodity hardware)                                |
+|  Y Can scale incrementally                                            |
+|  Y Geographic distribution possible                                   |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Application must support it (stateless design)                    |
-|  [ ] Distributed system complexity                                      |
-|  [ ] Network becomes a factor                                           |
-|  [ ] Consistency challenges (CAP theorem)                               |
-|  [ ] Operational complexity                                             |
+|  X Application must support it (stateless design)                    |
+|  X Distributed system complexity                                      |
+|  X Network becomes a factor                                           |
+|  X Consistency challenges (CAP theorem)                               |
+|  X Operational complexity                                             |
 |                                                                         |
 |  REAL-WORLD EXAMPLES:                                                  |
 |  * Google: Millions of commodity servers                              |
@@ -414,7 +414,7 @@ Split data across databases.
 |  Server stores session/user state in memory:                          |
 |                                                                         |
 |  Request 1 --> Server A (stores session)                              |
-|  Request 2 --> Server B (no session!) [ ] FAILS                        |
+|  Request 2 --> Server B (no session!) X FAILS                        |
 |                                                                         |
 |  PROBLEMS:                                                              |
 |  * User must always hit the same server                               |
@@ -429,10 +429,10 @@ Split data across databases.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  STILL HAS PROBLEMS:                                                   |
-|  [ ] Uneven load distribution                                           |
-|  [ ] Server failure still loses sessions                                |
-|  [ ] Scaling down is complicated (session migration)                   |
-|  [ ] Rolling updates are hard                                           |
+|  X Uneven load distribution                                           |
+|  X Server failure still loses sessions                                |
+|  X Scaling down is complicated (session migration)                   |
+|  X Rolling updates are hard                                           |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -460,12 +460,12 @@ Split data across databases.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Any request can hit any server                                    |
-|  [x] Easy to scale (add/remove servers instantly)                     |
-|  [x] Server failure doesn't lose sessions                              |
-|  [x] Even load distribution                                            |
-|  [x] Rolling updates are trivial                                       |
-|  [x] Cloud-native and container-friendly                               |
+|  Y Any request can hit any server                                    |
+|  Y Easy to scale (add/remove servers instantly)                     |
+|  Y Server failure doesn't lose sessions                              |
+|  Y Even load distribution                                            |
+|  Y Rolling updates are trivial                                       |
+|  Y Cloud-native and container-friendly                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -608,7 +608,7 @@ The fundamental formula connecting throughput, latency, and concurrency.
 |  L = 10,000 × 0.5 = 5,000 concurrent connections                      |
 |                                                                         |
 |  You now need 50 servers!                                             |
-|  -> 5x more servers just because latency increased 5x                 |
+|  > 5x more servers just because latency increased 5x                 |
 |                                                                         |
 |  LESSON: Reducing latency saves infrastructure costs!                 |
 |                                                                         |
@@ -652,15 +652,15 @@ Why systems don't scale linearly.
 |                                                                         |
 |  Throughput                                                            |
 |       |                    . . .                                      |
-|       |                  .       .  <- Peak (retrograde begins)        |
+|       |                  .       .  < Peak (retrograde begins)        |
 |       |               .            .                                  |
-|       |            .                 . <- κ > 0 (coherence overhead)   |
+|       |            .                 . < κ > 0 (coherence overhead)   |
 |       |         .                      .                              |
-|       |       .    _____________________ <- σ > 0 (contention)         |
+|       |       .    _____________________ < σ > 0 (contention)         |
 |       |     .   _/                                                    |
 |       |   .  _/                                                       |
 |       |  . /                                                          |
-|       | /  <- Linear (ideal)                                           |
+|       | /  < Linear (ideal)                                           |
 |       |/                                                               |
 |       +------------------------------------------------> Nodes        |
 |                                                                         |
@@ -873,7 +873,7 @@ Defining and measuring reliability and performance.
 |                                                                         |
 |  RELATIONSHIP:                                                         |
 |                                                                         |
-|  SLI (what you measure) -> SLO (what you aim for) -> SLA (what you    |
+|  SLI (what you measure) > SLO (what you aim for) > SLA (what you    |
 |                                                          promise)    |
 |                                                                         |
 |  Example:                                                              |

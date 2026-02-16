@@ -21,7 +21,7 @@
 |  |  |  |                                                 |   |  |  |
 |  |  |  | * Velocity limits (5 txns in 10 min)           |   |  |  |
 |  |  |  | * Amount thresholds (>$10K needs review)       |   |  |  |
-|  |  |  | * Geographic anomalies (USA -> Nigeria)         |   |  |  |
+|  |  |  | * Geographic anomalies (USA > Nigeria)         |   |  |  |
 |  |  |  | * Known fraud patterns                         |   |  |  |
 |  |  |  | * BIN (card issuer) blacklists                |   |  |  |
 |  |  |  | * IP reputation                                |   |  |  |
@@ -44,9 +44,9 @@
 |  |  |  +-------------------------------------------------+   |  |  |
 |  |  |  | DECISION ENGINE                                 |   |  |  |
 |  |  |  |                                                 |   |  |  |
-|  |  |  | Risk < 30  -> APPROVE                          |   |  |  |
-|  |  |  | Risk 30-70 -> CHALLENGE (3DS, OTP)             |   |  |  |
-|  |  |  | Risk > 70  -> DECLINE                          |   |  |  |
+|  |  |  | Risk < 30  > APPROVE                          |   |  |  |
+|  |  |  | Risk 30-70 > CHALLENGE (3DS, OTP)             |   |  |  |
+|  |  |  | Risk > 70  > DECLINE                          |   |  |  |
 |  |  |  |                                                 |   |  |  |
 |  |  |  +-------------------------------------------------+   |  |  |
 |  |  |                                                         |  |  |
@@ -287,7 +287,7 @@
 |  |    Account: payment_processor_receivable                      |  |
 |  |    Amount: -$100 (processor will send us this money)          |  |
 |  |                                                                 |  |
-|  |  Net: +$100 - $100 = $0 [x]                                     |  |
+|  |  Net: +$100 - $100 = $0 Y                                     |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -298,7 +298,7 @@
 |  |  Entry 2: merchant_payable +$97 (net after fees)              |  |
 |  |  Entry 3: fee_revenue +$3 (our cut)                           |  |
 |  |                                                                 |  |
-|  |  Net: -$100 + $97 + $3 = $0 [x]                                 |  |
+|  |  Net: -$100 + $97 + $3 = $0 Y                                 |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -355,7 +355,7 @@
 |  1. SYNC vs ASYNC PROCESSING                                          |
 |     Sync: Lower latency, simpler error handling                      |
 |     Async: Better throughput, complex failure recovery               |
-|     -> Use sync for authorization, async for settlements              |
+|     > Use sync for authorization, async for settlements              |
 |                                                                         |
 |  2. STRONG vs EVENTUAL CONSISTENCY                                    |
 |     Strong: Required for payment status                              |

@@ -358,10 +358,10 @@ SECTION 3.4: BANDWIDTH ESTIMATION AND ADAPTATION
 *|  ADAPTATION STRATEGIES:                                                 |*
 *|                                                                         |*
 *|  1. RESOLUTION REDUCTION                                               |*
-*|     1080p -> 720p -> 480p -> 360p                                       |*
+*|     1080p > 720p > 480p > 360p                                       |*
 *|                                                                         |*
 *|  2. FRAME RATE REDUCTION                                               |*
-*|     30fps -> 24fps -> 15fps -> 10fps                                     |*
+*|     30fps > 24fps > 15fps > 10fps                                     |*
 *|                                                                         |*
 *|  3. ENCODER QUALITY                                                    |*
 *|     Lower quantization = more compression = less quality              |*

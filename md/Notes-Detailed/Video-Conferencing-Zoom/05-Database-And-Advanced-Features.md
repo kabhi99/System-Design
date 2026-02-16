@@ -166,7 +166,7 @@ SECTION 5.1: DATABASE DESIGN
 *|                                                                         |*
 *|  --------------------------------------------------------------------  |*
 *|                                                                         |*
-*|  4. SIGNALING SERVER -> USER MAPPING                                    |*
+*|  4. SIGNALING SERVER > USER MAPPING                                    |*
 *|                                                                         |*
 *|  Key: user_connection:{user_id}                                        |*
 *|  Type: String                                                          |*
@@ -176,7 +176,7 @@ SECTION 5.1: DATABASE DESIGN
 *|                                                                         |*
 *|  --------------------------------------------------------------------  |*
 *|                                                                         |*
-*|  5. MEETING -> SFU MAPPING                                              |*
+*|  5. MEETING > SFU MAPPING                                              |*
 *|                                                                         |*
 *|  Key: meeting_sfu:{meeting_id}                                         |*
 *|  Type: String                                                          |*
@@ -366,7 +366,7 @@ SECTION 5.5: PHONE DIAL-IN (PSTN GATEWAY)
 *|  * Direct carrier relationships                                        |*
 *|                                                                         |*
 *|  DIAL-OUT (Zoom calls you):                                            |*
-*|  Meeting host requests dial-out -> Gateway initiates call to phone    |*
+*|  Meeting host requests dial-out > Gateway initiates call to phone    |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -444,7 +444,7 @@ SECTION 5.6: INTERVIEW QUESTIONS & ANSWERS
 *|  3. Congestion control: Reduce bitrate on packet loss                |*
 *|  4. FEC: Forward error correction for audio                          |*
 *|  5. Jitter buffer: Smooth out packet timing variations               |*
-*|  6. Graceful degradation: Video -> audio-only if needed              |*
+*|  6. Graceful degradation: Video > audio-only if needed              |*
 *|                                                                         |*
 *|  --------------------------------------------------------------------  |*
 *|                                                                         |*

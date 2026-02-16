@@ -120,7 +120,7 @@ A Pod is:
 |  |  |  IP: 10.244.1.5 (assigned by CNI)                       |  |   |
 |  |  |                                                          |  |   |
 |  |  |  +------------+  +------------+                         |  |   |
-|  |  |  | Container1 |  | Container2 |  <- Share same IP!      |  |   |
+|  |  |  | Container1 |  | Container2 |  < Share same IP!      |  |   |
 |  |  |  | :8080      |  | :9090      |                         |  |   |
 |  |  |  +------------+  +------------+                         |  |   |
 |  |  |                                                          |  |   |
@@ -200,7 +200,7 @@ A Pod is:
 |  |  +---------------------------------------------------------+  |   |
 |  |  |              VIRTUAL BRIDGE (cbr0/cni0)                 |  |   |
 |  |  |                                                         |  |   |
-|  |  |   Packet from 10.244.1.5 -> 10.244.1.6                 |  |   |
+|  |  |   Packet from 10.244.1.5 > 10.244.1.6                 |  |   |
 |  |  |   Bridge switches packet to Pod B                      |  |   |
 |  |  |                                                         |  |   |
 |  |  +---------------------------------------------------------+  |   |
@@ -266,7 +266,7 @@ A Pod is:
 |  |         v                                                        | |
 |  |  +----------------+                                              | |
 |  |  |     Pod B      |                                              | |
-|  |  |  10.244.2.10   |  <- Packet arrives here!                     | |
+|  |  |  10.244.2.10   |  < Packet arrives here!                     | |
 |  |  |  :8080         |                                              | |
 |  |  +----------------+                                              | |
 |  |                                                                   | |
@@ -274,7 +274,7 @@ A Pod is:
 |  |                                                                   | |
 |  +-------------------------------------------------------------------+ |
 |                                                                         |
-|  KEY: Each node knows "10.244.2.0/24 -> Node 2"                       |
+|  KEY: Each node knows "10.244.2.0/24 > Node 2"                       |
 |       CNI sets up these routes automatically!                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -369,7 +369,7 @@ A Pod is:
 |  ---------------------                                                  |
 |  Changes the SOURCE IP address                                        |
 |                                                                         |
-|  Use case: Internal device -> Internet                                 |
+|  Use case: Internal device > Internet                                 |
 |  Before: src=192.168.1.10 dst=8.8.8.8                                |
 |  After:  src=203.0.113.50 dst=8.8.8.8 (source changed!)              |
 |                                                                         |
@@ -379,12 +379,12 @@ A Pod is:
 |  --------------------------                                             |
 |  Changes the DESTINATION IP address                                   |
 |                                                                         |
-|  Use case: Internet -> Internal server (port forwarding)              |
+|  Use case: Internet > Internal server (port forwarding)              |
 |  Before: src=1.2.3.4 dst=203.0.113.50:80                            |
 |  After:  src=1.2.3.4 dst=192.168.1.100:8080 (dest changed!)         |
 |                                                                         |
 |  KUBERNETES USES DNAT for Services!                                   |
-|  ClusterIP:80 -> DNAT -> Pod-IP:8080                                   |
+|  ClusterIP:80 > DNAT > Pod-IP:8080                                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -434,7 +434,7 @@ A Pod is:
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |   Pod A (10.244.1.5) -> Pod B (10.244.2.10)                    |   |
+|  |   Pod A (10.244.1.5) > Pod B (10.244.2.10)                    |   |
 |  |                                                                 |   |
 |  |   1. Pod A sends: src=10.244.1.5 dst=10.244.2.10              |   |
 |  |   2. NAT on Node 1: src=192.168.1.10 dst=10.244.2.10          |   |
@@ -453,7 +453,7 @@ A Pod is:
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |   Pod A (10.244.1.5) -> Pod B (10.244.2.10)                    |   |
+|  |   Pod A (10.244.1.5) > Pod B (10.244.2.10)                    |   |
 |  |                                                                 |   |
 |  |   1. Pod A sends: src=10.244.1.5 dst=10.244.2.10              |   |
 |  |   2. Routed across nodes (NO NAT)                             |   |
@@ -507,7 +507,7 @@ A Pod is:
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  Pod A (10.244.1.5) -> Pod B (10.244.2.10)                     |   |
+|  |  Pod A (10.244.1.5) > Pod B (10.244.2.10)                     |   |
 |  |                                                                 |   |
 |  |  STEP 1: Pod A creates packet                                  |   |
 |  |  +---------------------------------------------+               |   |
@@ -520,7 +520,7 @@ A Pod is:
 |  |  +---------------------------------------------------------+   |   |
 |  |  | Outer Packet (UDP)                                      |   |   |
 |  |  | src: 192.168.1.10 (Node 1)                             |   |   |
-|  |  | dst: 192.168.1.11 (Node 2)  <- Node-to-node routing     |   |   |
+|  |  | dst: 192.168.1.11 (Node 2)  < Node-to-node routing     |   |   |
 |  |  | +-----------------------------------------------------+|   |   |
 |  |  | | Inner Packet (unchanged!)                           ||   |   |
 |  |  | | src: 10.244.1.5  dst: 10.244.2.10                  ||   |   |
@@ -536,14 +536,14 @@ A Pod is:
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Works on any network (no special config needed)                   |
-|  [x] Nodes just need to reach each other                               |
-|  [x] Easy to set up                                                    |
+|  Y Works on any network (no special config needed)                   |
+|  Y Nodes just need to reach each other                               |
+|  Y Easy to set up                                                    |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Overhead (extra headers = larger packets)                         |
-|  [ ] Slightly higher latency                                           |
-|  [ ] MTU issues (may need to reduce)                                   |
+|  X Overhead (extra headers = larger packets)                         |
+|  X Slightly higher latency                                           |
+|  X MTU issues (may need to reduce)                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -556,11 +556,11 @@ A Pod is:
 |                                                                         |
 |  HOW IT WORKS:                                                         |
 |  Each node advertises its pod CIDR via BGP                           |
-|  Network routers learn: "10.244.1.0/24 -> Node 1"                     |
+|  Network routers learn: "10.244.1.0/24 > Node 1"                     |
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  Pod A (10.244.1.5) -> Pod B (10.244.2.10)                     |   |
+|  |  Pod A (10.244.1.5) > Pod B (10.244.2.10)                     |   |
 |  |                                                                 |   |
 |  |  Packet (NO encapsulation!):                                   |   |
 |  |  +---------------------------------------------+               |   |
@@ -569,7 +569,7 @@ A Pod is:
 |  |  +---------------------------------------------+               |   |
 |  |                                                                 |   |
 |  |  ROUTING:                                                       |   |
-|  |  * Node 1 routing table: 10.244.2.0/24 -> Node 2               |   |
+|  |  * Node 1 routing table: 10.244.2.0/24 > Node 2               |   |
 |  |  * Packet routed directly to Node 2                           |   |
 |  |  * Node 2 delivers to Pod B                                   |   |
 |  |                                                                 |   |
@@ -578,14 +578,14 @@ A Pod is:
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] No encapsulation overhead                                         |
-|  [x] Best performance                                                  |
-|  [x] Standard networking (BGP is well understood)                     |
+|  Y No encapsulation overhead                                         |
+|  Y Best performance                                                  |
+|  Y Standard networking (BGP is well understood)                     |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Requires network support for BGP                                  |
-|  [ ] More complex setup                                                |
-|  [ ] May not work in all environments                                 |
+|  X Requires network support for BGP                                  |
+|  X More complex setup                                                |
+|  X May not work in all environments                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -604,7 +604,7 @@ A Pod is:
 |  |                                                                 |   |
 |  |  TRADITIONAL CNI:              AWS VPC CNI:                    |   |
 |  |  Node IP: 10.0.1.100           Node IP: 10.0.1.100            |   |
-|  |  Pod IP:  10.244.1.5           Pod IP:  10.0.1.150 <- VPC IP!  |   |
+|  |  Pod IP:  10.244.1.5           Pod IP:  10.0.1.150 < VPC IP!  |   |
 |  |          (overlay)                      (real VPC IP)         |   |
 |  |                                                                 |   |
 |  |  AWS VPC already knows how to route 10.0.1.150!               |   |
@@ -613,15 +613,15 @@ A Pod is:
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Best performance (native cloud networking)                        |
-|  [x] Pods can be accessed directly from VPC                           |
-|  [x] Security groups work on pods                                     |
-|  [x] No encapsulation                                                  |
+|  Y Best performance (native cloud networking)                        |
+|  Y Pods can be accessed directly from VPC                           |
+|  Y Security groups work on pods                                     |
+|  Y No encapsulation                                                  |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Limited by VPC IP address availability                           |
-|  [ ] Cloud-specific (not portable)                                    |
-|  [ ] May run out of IPs on busy nodes                                 |
+|  X Limited by VPC IP address availability                           |
+|  X Cloud-specific (not portable)                                    |
+|  X May run out of IPs on busy nodes                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -660,7 +660,7 @@ A Pod is:
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  Client Pod -> ClusterIP (10.96.0.100:80)                      |   |
+|  |  Client Pod > ClusterIP (10.96.0.100:80)                      |   |
 |  |                                                                 |   |
 |  |  BEFORE (entering iptables):                                   |   |
 |  |  src: 10.244.1.5    dst: 10.96.0.100:80                       |   |
@@ -677,7 +677,7 @@ A Pod is:
 |                                                                         |
 |  WHY THIS IS OK:                                                       |
 |  * ClusterIP is virtual (doesn't exist anywhere)                     |
-|  * DNAT just translates virtual -> real IP                           |
+|  * DNAT just translates virtual > real IP                           |
 |  * Source IP is preserved (no SNAT)                                  |
 |  * Server pod can see client's real IP                              |
 |                                                                         |
@@ -704,7 +704,7 @@ A Pod is:
 |  BEFORE:                                                               |
 |  +----------------+                                                    |
 |  |     Pod        |                                                    |
-|  |  10.244.1.5    |  <- Clients know this IP                          |
+|  |  10.244.1.5    |  < Clients know this IP                          |
 |  +----------------+                                                    |
 |                                                                         |
 |  POD DIES...                                                           |
@@ -712,7 +712,7 @@ A Pod is:
 |  AFTER (new pod created):                                             |
 |  +----------------+                                                    |
 |  |     Pod        |                                                    |
-|  |  10.244.2.99   |  <- DIFFERENT IP! (maybe different node too)      |
+|  |  10.244.2.99   |  < DIFFERENT IP! (maybe different node too)      |
 |  +----------------+                                                    |
 |                                                                         |
 |  PROBLEMS:                                                             |
@@ -1167,7 +1167,7 @@ spec:
 |                                                                         |
 |  POD PHASES                                                            |
 |  ----------                                                            |
-|  * Pending -> Running -> Succeeded/Failed                               |
+|  * Pending > Running > Succeeded/Failed                               |
 |                                                                         |
 |  MULTI-CONTAINER PATTERNS                                              |
 |  ------------------------                                              |

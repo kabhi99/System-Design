@@ -15,25 +15,25 @@ algorithms, and implementation challenges.
 |  Normal conditions:                                                    |
 |  --------------------                                                   |
 |  Riders: 1,000/hour      Drivers: 1,200 available                    |
-|  -> Everyone gets a ride quickly                                      |
+|  > Everyone gets a ride quickly                                      |
 |                                                                         |
 |  High demand (concert ends, rain, New Year's Eve):                   |
 |  ------------------------------------------------                       |
 |  Riders: 5,000/hour      Drivers: 1,200 available                    |
-|  -> Wait times spike to 30+ minutes                                   |
-|  -> Rider satisfaction drops                                          |
-|  -> Drivers overwhelmed                                               |
+|  > Wait times spike to 30+ minutes                                   |
+|  > Rider satisfaction drops                                          |
+|  > Drivers overwhelmed                                               |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  HOW SURGE HELPS                                                       |
 |                                                                         |
 |  1. DEMAND REDUCTION                                                   |
-|     * Higher prices -> some riders wait or use alternatives          |
+|     * Higher prices > some riders wait or use alternatives          |
 |     * Demand drops from 5,000 to 3,000                               |
 |                                                                         |
 |  2. SUPPLY INCREASE                                                    |
-|     * Higher earnings -> more drivers come online                    |
+|     * Higher earnings > more drivers come online                    |
 |     * Drivers in nearby areas drive to surge zone                   |
 |     * Supply increases from 1,200 to 2,000                          |
 |                                                                         |
@@ -329,7 +329,7 @@ algorithms, and implementation challenges.
 |  WHY SMOOTHING?                                                        |
 |                                                                         |
 |  Problem: Raw surge is volatile.                                      |
-|  * 1.5x -> 2.3x -> 1.8x -> 2.1x (every 30 seconds)                    |
+|  * 1.5x > 2.3x > 1.8x > 2.1x (every 30 seconds)                    |
 |  * Confusing for riders                                              |
 |  * "I just checked and it was cheaper!"                             |
 |                                                                         |
@@ -342,7 +342,7 @@ algorithms, and implementation challenges.
 |                                                                         |
 |  2. STEP INCREMENTS                                                    |
 |     Surge only changes in 0.25x steps                                |
-|     1.0 -> 1.25 -> 1.5 -> 1.75 -> 2.0 ...                              |
+|     1.0 > 1.25 > 1.5 > 1.75 > 2.0 ...                              |
 |                                                                         |
 |  3. MINIMUM DURATION                                                   |
 |     Surge stays at level for at least 2 minutes                      |

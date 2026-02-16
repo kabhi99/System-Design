@@ -35,12 +35,12 @@ Jobs run tasks to completion. CronJobs run Jobs on a schedule.
 |        containers:                                                     |
 |          - name: migrate                                              |
 |            command: ["python", "migrate.py"]                         |
-|            # Script finishes -> container exits -> pod "completes"     |
+|            # Script finishes > container exits > pod "completes"     |
 |                                                                         |
 |  PROBLEM: Deployment sees pod "failed" and RESTARTS IT!              |
 |                                                                         |
-|  migrate.py finishes -> pod exits -> Deployment: "Pod died! Restart!"  |
-|  migrate.py runs AGAIN -> exits -> "Pod died! Restart!"                |
+|  migrate.py finishes > pod exits > Deployment: "Pod died! Restart!"  |
+|  migrate.py runs AGAIN > exits > "Pod died! Restart!"                |
 |  ... INFINITE LOOP!                                                    |
 |                                                                         |
 |  SOLUTION: Use Job!                                                    |

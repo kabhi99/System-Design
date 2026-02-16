@@ -23,7 +23,7 @@ SECTION 5.1: COMMON INTERVIEW QUESTIONS
 *|     - Query patterns: Search by tag? Duration? Error?                |*
 *|                                                                         |*
 *|  2. High-level design (10 min)                                        |*
-*|     - Draw: SDK -> Agent -> Collector -> Storage -> Query -> UI          |*
+*|     - Draw: SDK > Agent > Collector > Storage > Query > UI          |*
 *|     - Explain each component's role                                   |*
 *|     - Mention context propagation                                     |*
 *|                                                                         |*
@@ -135,7 +135,7 @@ SECTION 5.1: COMMON INTERVIEW QUESTIONS
 *|     * Fire-and-forget to agent                                       |*
 *|     * Application doesn't wait for ACK                              |*
 *|                                                                         |*
-*|  2. UDP protocol (SDK -> Agent)                                       |*
+*|  2. UDP protocol (SDK > Agent)                                       |*
 *|     * No connection overhead                                         |*
 *|     * No retries blocking app                                        |*
 *|                                                                         |*
@@ -250,13 +250,13 @@ SECTION 5.2: DESIGN TRADE-OFFS
 *|  +-------------------------+-------------------------+              |*
 *|  |     HEAD SAMPLING       |     TAIL SAMPLING       |              |*
 *|  +-------------------------+-------------------------+              |*
-*|  | [x] Simple to implement  | [x] Captures all errors   |              |*
-*|  | [x] Low overhead         | [x] Captures slow traces  |              |*
-*|  | [x] Scales easily        | [x] Smarter decisions     |              |*
+*|  | Y Simple to implement  | Y Captures all errors   |              |*
+*|  | Y Low overhead         | Y Captures slow traces  |              |*
+*|  | Y Scales easily        | Y Smarter decisions     |              |*
 *|  |                         |                         |              |*
-*|  | [ ] May miss errors      | [ ] Higher complexity     |              |*
-*|  | [ ] Random selection     | [ ] More memory needed    |              |*
-*|  |                         | [ ] Requires affinity    |              |*
+*|  | X May miss errors      | X Higher complexity     |              |*
+*|  | X Random selection     | X More memory needed    |              |*
+*|  |                         | X Requires affinity    |              |*
 *|  +-------------------------+-------------------------+              |*
 *|                                                                         |*
 *|  RECOMMENDATION:                                                       |*
@@ -394,7 +394,7 @@ SECTION 5.3: REAL-WORLD CONSIDERATIONS
 *|                                                                         |*
 *|  5. Reduce tag cardinality                                            |*
 *|     * Don't index high-cardinality tags                             |*
-*|     * request_id, session_id -> don't index                         |*
+*|     * request_id, session_id > don't index                         |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -451,9 +451,9 @@ SECTION 5.5: QUICK REFERENCE CHEAT SHEET
 *|                                                                         |*
 *|  ARCHITECTURE AT A GLANCE                                             |*
 *|                                                                         |*
-*|  Services (SDK) -> Agents -> Collectors -> Kafka -> Ingesters -> Storage  |*
+*|  Services (SDK) > Agents > Collectors > Kafka > Ingesters > Storage  |*
 *|                                                         v              |*
-*|                                              Query Service -> UI       |*
+*|                                              Query Service > UI       |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -470,7 +470,7 @@ SECTION 5.5: QUICK REFERENCE CHEAT SHEET
 *|                                                                         |*
 *|  STORAGE SCHEMA (Cassandra)                                           |*
 *|                                                                         |*
-*|  traces: PK(trace_id), CK(span_id) -> Full span data                 |*
+*|  traces: PK(trace_id), CK(span_id) > Full span data                 |*
 *|  service_name_index: PK(service, bucket), CK(time, trace_id)        |*
 *|  tag_index: PK(service, key, value, bucket), CK(time, trace_id)     |*
 *|  duration_index: PK(service, op, bucket), CK(duration, trace_id)    |*

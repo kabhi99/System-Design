@@ -29,7 +29,7 @@ Part 4: Product Catalog & Search
 Part 5: Shopping Cart
 5.1 Cart Architecture
 5.2 Cart Storage Strategies
-5.3 Cart Merge (Guest -> User)
+5.3 Cart Merge (Guest > User)
 5.4 Price & Availability Sync
 
 Part 6: Inventory Management (The Hard Problem)
@@ -43,11 +43,11 @@ Part 7: Checkout & Order Processing
 7.2 Payment Integration
 7.3 Order State Machine
 7.4 Saga Pattern: Orchestration (Central Coordinator)
-7.5 Saga Pattern: Choreography (Event-Driven)            <- NEW
-7.6 Kafka Event Contracts                                 <- NEW
-7.7 Idempotency Design                                    <- NEW
-7.8 Saga Recovery Mechanism                               <- NEW
-7.9 Complete Saga Flow with All Edge Cases               <- NEW
+7.5 Saga Pattern: Choreography (Event-Driven)            < NEW
+7.6 Kafka Event Contracts                                 < NEW
+7.7 Idempotency Design                                    < NEW
+7.8 Saga Recovery Mechanism                               < NEW
+7.9 Complete Saga Flow with All Edge Cases               < NEW
 
 Part 8: Pricing & Promotions
 8.1 Dynamic Pricing
@@ -166,7 +166,7 @@ This is the E-Commerce problem — a classic example of:
 |                    TRAFFIC ESTIMATION                                   |
 |                                                                         |
 |  DAILY ACTIVE USERS:                                                   |
-|  * 100M MAU -> ~10M DAU (10% daily active)                             |
+|  * 100M MAU > ~10M DAU (10% daily active)                             |
 |                                                                         |
 |  PAGE VIEWS:                                                           |
 |  * Average 20 page views per user per session                         |
@@ -1004,35 +1004,35 @@ ORDER APIs:
 
 ```
 +-------------------------------------------------------------------------+
-|                    SERVICE -> DATABASE MAPPING                          |
+|                    SERVICE > DATABASE MAPPING                          |
 |                                                                         |
-|  USER SERVICE -> User DB                                                |
+|  USER SERVICE > User DB                                                |
 |  -------------------------                                             |
 |  Tables: users, addresses, user_preferences                           |
 |                                                                         |
-|  PRODUCT SERVICE -> Product DB                                          |
+|  PRODUCT SERVICE > Product DB                                          |
 |  ----------------------------                                          |
 |  Tables: products, categories, product_variants, product_images,      |
 |          reviews, sellers                                             |
 |                                                                         |
-|  CART SERVICE -> Redis + Cart DB                                        |
+|  CART SERVICE > Redis + Cart DB                                        |
 |  ------------------------------                                        |
 |  Redis: Active carts (fast access)                                    |
 |  DB: carts, cart_items (backup, analytics)                           |
 |                                                                         |
-|  INVENTORY SERVICE -> Inventory DB                                      |
+|  INVENTORY SERVICE > Inventory DB                                      |
 |  --------------------------------                                      |
 |  Tables: inventory, inventory_reservations, warehouses                |
 |                                                                         |
-|  ORDER SERVICE -> Order DB                                              |
+|  ORDER SERVICE > Order DB                                              |
 |  ------------------------                                              |
 |  Tables: orders, order_items, order_status_history                    |
 |                                                                         |
-|  PAYMENT SERVICE -> Payment DB                                          |
+|  PAYMENT SERVICE > Payment DB                                          |
 |  --------------------------                                            |
 |  Tables: payments, refunds, payment_methods                           |
 |                                                                         |
-|  SEARCH SERVICE -> Elasticsearch                                        |
+|  SEARCH SERVICE > Elasticsearch                                        |
 |  ------------------------------                                        |
 |  Indexes: products_index (denormalized)                               |
 |  Synced via CDC from Product DB                                       |
@@ -1111,7 +1111,7 @@ ORDER APIs:
 +-------------------------------------------------------------------------+
 ```
 
-DATA SYNC (PostgreSQL -> Elasticsearch):
+DATA SYNC (PostgreSQL > Elasticsearch):
 
 ```
 +-------------------------------------------------------------------------+
@@ -1138,19 +1138,19 @@ DATA SYNC (PostgreSQL -> Elasticsearch):
 |  Admin       Product     PostgreSQL    Debezium    Kafka       ES       |
 |   |          Service        |            |          |          |        |
 |   |            |            |            |          |          |        |
-|   |--Update ---->           |            |          |          |        |
+|   |--Update --->           |            |          |          |        |
 |   |  product   |            |            |          |          |        |
-|   |            |--INSERT ---->           |          |          |        |
+|   |            |--INSERT --->           |          |          |        |
 |   |            |            |            |          |          |        |
-|   |            |--COMMIT----->           |          |          |        |
+|   |            |--COMMIT---->           |          |          |        |
 |   |            |            |            |          |          |        |
-|   |            |            |--WAL ------->          |          |        |
+|   |            |            |--WAL ------>          |          |        |
 |   |            |            |  change    |          |          |        |
 |   |            |            |            |          |          |        |
-|   |            |            |            |--Publish--->         |        |
+|   |            |            |            |--Publish-->         |        |
 |   |            |            |            |  event   |          |        |
 |   |            |            |            |          |          |        |
-|   |            |            |            |          |--Index --->        |
+|   |            |            |            |          |--Index -->        |
 |   |            |            |            |          |  update  |        |
 |   |            |            |            |          |          |        |
 |   |            |            |            |          |          |  Done  |
@@ -1168,31 +1168,31 @@ DATA SYNC (PostgreSQL -> Elasticsearch):
 |                                                                         |
 |  User       Frontend      API GW      Search Svc   Elasticsearch       |
 |   |           |             |            |              |               |
-|   |--Type ----->            |            |              |               |
+|   |--Type ---->            |            |              |               |
 |   |  "laptop" |            |            |              |               |
 |   |           |            |            |              |               |
-|   |           |-/suggest---->           |              |               |
+|   |           |-/suggest--->           |              |               |
 |   |           |  ?q=lap    |            |              |               |
-|   |           |            |--Suggest --->              |               |
-|   |           |            |            |--Completion--->               |
+|   |           |            |--Suggest -->              |               |
+|   |           |            |            |--Completion-->               |
 |   |           |            |            |  query       |               |
-|   |           |            |            |<--laptop,     |               |
+|   |           |            |            |<-laptop,     |               |
 |   |           |            |            |  laptop bag..|               |
 |   |           |            |            |              |               |
-|   |<--Autocomplete suggestions----------|              |               |
+|   |<-Autocomplete suggestions----------|              |               |
 |   |                        |            |              |               |
-|   |--Submit --->           |            |              |               |
+|   |--Submit -->           |            |              |               |
 |   |  search   |            |            |              |               |
-|   |           |-/search ---->           |              |               |
+|   |           |-/search --->           |              |               |
 |   |           |  ?q=laptop |            |              |               |
-|   |           |            |--Search ---->              |               |
-|   |           |            |            |--Multi-match--->              |
+|   |           |            |--Search --->              |               |
+|   |           |            |            |--Multi-match-->              |
 |   |           |            |            |  + aggregations              |
 |   |           |            |            |              |               |
-|   |           |            |            |<--Results +   |               |
+|   |           |            |            |<-Results +   |               |
 |   |           |            |            |  facets      |               |
 |   |           |            |            |              |               |
-|   |<--Products + filters----------------|              |               |
+|   |<-Products + filters----------------|              |               |
 |   |  (Brand: Apple 45,                 |              |               |
 |   |   Dell 38, HP 52...)               |              |               |
 |                                                                         |
@@ -1273,7 +1273,7 @@ DATA SYNC (PostgreSQL -> Elasticsearch):
 |  Option C: Redis + Database (RECOMMENDED)                             |
 |  * Redis for hot path (reads/writes)                                 |
 |  * Database as backup, for analytics                                 |
-|  * Async sync from Redis -> DB                                        |
+|  * Async sync from Redis > DB                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1295,7 +1295,7 @@ DATA SYNC (PostgreSQL -> Elasticsearch):
 |      currency "USD"                                                   |
 |                                                                         |
 |  KEY: cart:{cart_id}:items                                            |
-|  TYPE: Hash (product_id:variant_id -> JSON item)                       |
+|  TYPE: Hash (product_id:variant_id > JSON item)                       |
 |                                                                         |
 |  HSET cart:abc123:items                                               |
 |      "prod_123:var_001" '{"qty":2,"price":99.99,"added":"..."}'      |
@@ -1321,46 +1321,46 @@ DATA SYNC (PostgreSQL -> Elasticsearch):
 |                                                                         |
 |  User       Frontend      API GW       Cart Svc      Redis       DB     |
 |   |           |             |            |            |          |      |
-|   |--Add to --->            |            |            |          |      |
+|   |--Add to -->            |            |            |          |      |
 |   |  cart     |            |            |            |          |      |
-|   |           |--POST ------>           |            |          |      |
+|   |           |--POST ----->           |            |          |      |
 |   |           |  /cart/items           |            |          |      |
 |   |           |  {productId,           |            |          |      |
 |   |           |   variantId, qty}      |            |          |      |
 |   |           |            |            |            |          |      |
-|   |           |            |--Add item--->           |          |      |
+|   |           |            |--Add item-->           |          |      |
 |   |           |            |            |            |          |      |
-|   |           |            |            |--Validate product------->      |
+|   |           |            |            |--Validate product------>      |
 |   |           |            |            |  (exists, in stock)   |      |
-|   |           |            |            |<--Valid-----|          |      |
+|   |           |            |            |<-Valid-----|          |      |
 |   |           |            |            |            |          |      |
-|   |           |            |            |--HGET ------>          |      |
+|   |           |            |            |--HGET ----->          |      |
 |   |           |            |            |  cart:id:items        |      |
-|   |           |            |            |<--Current items-       |      |
+|   |           |            |            |<-Current items-       |      |
 |   |           |            |            |            |          |      |
 |   |           |            |            |  (merge if exists)    |      |
 |   |           |            |            |            |          |      |
-|   |           |            |            |--HSET ------>          |      |
+|   |           |            |            |--HSET ----->          |      |
 |   |           |            |            |  cart:id:items        |      |
 |   |           |            |            |  {key: json}          |      |
 |   |           |            |            |            |          |      |
-|   |           |            |            |--HSET ------>          |      |
+|   |           |            |            |--HSET ----->          |      |
 |   |           |            |            |  cart:id              |      |
 |   |           |            |            |  updated_at           |      |
 |   |           |            |            |            |          |      |
-|   |           |            |            |--ASYNC ----------------->      |
+|   |           |            |            |--ASYNC ---------------->      |
 |   |           |            |            |  sync to DB (analytics)      |
 |   |           |            |            |            |          |      |
-|   |           |            |<--Updated cart--         |          |      |
-|   |           |<--200 + cart total------|            |          |      |
+|   |           |            |<-Updated cart--         |          |      |
+|   |           |<-200 + cart total------|            |          |      |
 |   |           |                         |            |          |      |
-|   |<--Cart badge updated--|             |            |          |      |
+|   |<-Cart badge updated--|             |            |          |      |
 |   |  "Cart (3)"         |             |            |          |      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 5.3 CART MERGE (GUEST -> USER)
+### 5.3 CART MERGE (GUEST > USER)
 
 ```
 +-------------------------------------------------------------------------+
@@ -1404,23 +1404,23 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 |                                                                         |
 |  User       Frontend      Auth Svc      Cart Svc       Redis           |
 |   |           |             |             |              |              |
-|   |--Login ---->            |             |              |              |
+|   |--Login --->            |             |              |              |
 |   |  (with guest_cart_id)  |             |              |              |
 |   |           |            |             |              |              |
-|   |           |--Authenticate------------>|              |              |
+|   |           |--Authenticate----------->|              |              |
 |   |           |            |             |              |              |
-|   |           |            |<--JWT + user_id-            |              |
+|   |           |            |<-JWT + user_id-            |              |
 |   |           |            |             |              |              |
-|   |           |--Merge cart-------------->|              |              |
+|   |           |--Merge cart------------->|              |              |
 |   |           |  (guest_id, user_id)     |              |              |
 |   |           |            |             |              |              |
-|   |           |            |             |--HGETALL ----->              |
+|   |           |            |             |--HGETALL ---->              |
 |   |           |            |             |  cart:guest:items           |
-|   |           |            |             |<--Guest items-|              |
+|   |           |            |             |<-Guest items-|              |
 |   |           |            |             |              |              |
-|   |           |            |             |--HGETALL ----->              |
+|   |           |            |             |--HGETALL ---->              |
 |   |           |            |             |  cart:user:items            |
-|   |           |            |             |<--User items--|              |
+|   |           |            |             |<-User items--|              |
 |   |           |            |             |              |              |
 |   |           |            |             |  +---------------------+    |
 |   |           |            |             |  | MERGE LOGIC:        |    |
@@ -1429,16 +1429,16 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 |   |           |            |             |  | * Validate products |    |
 |   |           |            |             |  +---------------------+    |
 |   |           |            |             |              |              |
-|   |           |            |             |--HSET (merged)--->           |
+|   |           |            |             |--HSET (merged)-->           |
 |   |           |            |             |  cart:user:items            |
 |   |           |            |             |              |              |
-|   |           |            |             |--DEL --------->              |
+|   |           |            |             |--DEL -------->              |
 |   |           |            |             |  cart:guest:*              |
 |   |           |            |             |              |              |
-|   |           |            |             |<--Merged cart-|              |
-|   |           |<--Logged in + cart merged-|              |              |
+|   |           |            |             |<-Merged cart-|              |
+|   |           |<-Logged in + cart merged-|              |              |
 |   |           |                          |              |              |
-|   |<--Dashboard + "3 items in cart"------|              |              |
+|   |<-Dashboard + "3 items in cart"------|              |              |
 |   |                                      |              |              |
 |   |  If conflicts:                       |              |              |
 |   |  "We updated some items in your cart"|              |              |
@@ -1494,8 +1494,8 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 |  ---------                                                             |
 |  Stock: 100 units                                                     |
 |                                                                         |
-|  T1: User A checks stock -> 100 available                             |
-|  T2: User B checks stock -> 100 available                             |
+|  T1: User A checks stock > 100 available                             |
+|  T2: User B checks stock > 100 available                             |
 |  T3: User A reserves 100 units                                       |
 |  T4: User B reserves 100 units (PROBLEM!)                            |
 |                                                                         |
@@ -1519,7 +1519,7 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 +-------------------------------------------------------------------------+
 |                    STRATEGY 1: RESERVE AT ADD-TO-CART                  |
 |                                                                         |
-|  User adds to cart -> Immediately reserve inventory                    |
+|  User adds to cart > Immediately reserve inventory                    |
 |                                                                         |
 |  PROS:                                                                 |
 |  * Zero overselling possible                                         |
@@ -1538,7 +1538,7 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 +-------------------------------------------------------------------------+
 |                    STRATEGY 2: RESERVE AT CHECKOUT                     |
 |                                                                         |
-|  User clicks "Checkout" -> Reserve inventory for X minutes            |
+|  User clicks "Checkout" > Reserve inventory for X minutes            |
 |                                                                         |
 |  PROS:                                                                 |
 |  * Better inventory utilization                                      |
@@ -1557,7 +1557,7 @@ CART MERGE SEQUENCE DIAGRAM (Guest Login):
 +-------------------------------------------------------------------------+
 |                    STRATEGY 3: RESERVE AT PAYMENT (OPTIMISTIC)        |
 |                                                                         |
-|  No reservation until payment succeeds -> Then deduct stock           |
+|  No reservation until payment succeeds > Then deduct stock           |
 |                                                                         |
 |  PROS:                                                                 |
 |  * Maximum inventory availability                                    |
@@ -1626,7 +1626,7 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |  REDIS KEYS:                                                           |
 |  ------------                                                          |
 |  inventory:{product_id}:available = 100      (available count)       |
-|  inventory:{product_id}:reserved  = Hash of reservation_id -> qty    |
+|  inventory:{product_id}:reserved  = Hash of reservation_id > qty    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1667,15 +1667,15 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 
 ```
 +-------------------------------------------------------------------------+
-|                    CHECKOUT -> ORDER INVENTORY FLOW                     |
+|                    CHECKOUT > ORDER INVENTORY FLOW                     |
 |                                                                         |
 |  User         Cart        Inventory       Payment       Order          |
 |    |           |            |               |            |             |
-|    |--Checkout--->           |               |            |             |
+|    |--Checkout-->           |               |            |             |
 |    |           |            |               |            |             |
 |    |           |--Get items-|               |            |             |
 |    |           |            |               |            |             |
-|    |           |--Reserve---->               |            |             |
+|    |           |--Reserve--->               |            |             |
 |    |           |   (Lua)    |               |            |             |
 |    |           |            |               |            |             |
 |    |           |  +---------+--------+     |            |             |
@@ -1685,23 +1685,23 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |    |           |  | Store reservation|     |            |             |
 |    |           |  +---------+--------+     |            |             |
 |    |           |            |               |            |             |
-|    |           |<--Reserved (15 min)-       |            |             |
-|    |<--Checkout page, timer--|               |            |             |
+|    |           |<-Reserved (15 min)-       |            |             |
+|    |<-Checkout page, timer--|               |            |             |
 |    |           |            |               |            |             |
-|    |--Pay----------------------------------->            |             |
+|    |--Pay---------------------------------->            |             |
 |    |           |            |               |            |             |
 |    |           |            |  +-----------+-----+      |             |
 |    |           |            |  |Process payment  |      |             |
 |    |           |            |  +-----------+-----+      |             |
 |    |           |            |              |            |             |
-|    |           |            |<--Success-----|            |             |
+|    |           |            |<-Success-----|            |             |
 |    |           |            |               |            |             |
-|    |           |            |--Confirm reservation------->             |
+|    |           |            |--Confirm reservation------>             |
 |    |           |            |   (DB update)             |             |
 |    |           |            |               |            |             |
-|    |           |            |              |<--Order created           |
+|    |           |            |              |<-Order created           |
 |    |           |            |               |            |             |
-|    |<--Order confirmation--------------------------------|             |
+|    |<-Order confirmation--------------------------------|             |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1810,15 +1810,15 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |                                                                         |
 |  User        Frontend      API GW      Cart       Inventory    Pricing |
 |   |            |             |          |            |           |      |
-|   |--Click ----->            |          |            |           |      |
+|   |--Click ---->            |          |            |           |      |
 |   |  Checkout  |            |          |            |           |      |
-|   |            |--Checkout--->          |            |           |      |
+|   |            |--Checkout-->          |            |           |      |
 |   |            |  Request   |          |            |           |      |
-|   |            |            |--Get ----->            |           |      |
+|   |            |            |--Get ---->            |           |      |
 |   |            |            |  Cart    |            |           |      |
-|   |            |            |<--Items---|            |           |      |
+|   |            |            |<-Items---|            |           |      |
 |   |            |            |          |            |           |      |
-|   |            |            |----------Reserve------->           |      |
+|   |            |            |----------Reserve------>           |      |
 |   |            |            |          |            |           |      |
 |   |            |            |          |  +---------+--------+  |      |
 |   |            |            |          |  | Lua Script:      |  |      |
@@ -1827,13 +1827,13 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |   |            |            |          |  | Store reservation|  |      |
 |   |            |            |          |  +---------+--------+  |      |
 |   |            |            |          |            |           |      |
-|   |            |            |<-------Reserved (15 min)-----------|      |
+|   |            |            |<------Reserved (15 min)-----------|      |
 |   |            |            |          |            |           |      |
-|   |            |            |----------Calculate total----------->      |
-|   |            |            |<----------Subtotal + tax + ship----|      |
+|   |            |            |----------Calculate total---------->      |
+|   |            |            |<---------Subtotal + tax + ship----|      |
 |   |            |            |          |            |           |      |
-|   |            |<--Checkout page (items, total, timer)--         |      |
-|   |<--Show payment form------|          |            |           |      |
+|   |            |<-Checkout page (items, total, timer)--         |      |
+|   |<-Show payment form------|          |            |           |      |
 |   |                         |          |            |           |      |
 |   |  Timer: 14:59...        |          |            |           |      |
 |   |                         |          |            |           |      |
@@ -1885,40 +1885,40 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |                                                                         |
 |  User       Frontend     Order Svc    Payment Svc   Stripe      DB     |
 |   |           |             |             |           |          |      |
-|   |--Submit --->            |             |           |          |      |
+|   |--Submit -->            |             |           |          |      |
 |   |  payment  |            |             |           |          |      |
-|   |           |--Pay ------->            |           |          |      |
+|   |           |--Pay ------>            |           |          |      |
 |   |           |  request   |             |           |          |      |
-|   |           |            |--Verify ----->           |          |      |
+|   |           |            |--Verify ---->           |          |      |
 |   |           |            |  reservation|           |          |      |
-|   |           |            |<--Valid -----|           |          |      |
+|   |           |            |<-Valid -----|           |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |--Process ---->           |          |      |
+|   |           |            |--Process --->           |          |      |
 |   |           |            |  payment    |           |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |--Create --->          |      |
+|   |           |            |             |--Create -->          |      |
 |   |           |            |             |  payment  |          |      |
-|   |           |            |             |  record   |--INSERT--->      |
+|   |           |            |             |  record   |--INSERT-->      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |--Charge --->          |      |
+|   |           |            |             |--Charge -->          |      |
 |   |           |            |             |  (idempotency key)   |      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |<--Success -|          |      |
+|   |           |            |             |<-Success -|          |      |
 |   |           |            |             |  txn_id   |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |--UPDATE --------------->      |
+|   |           |            |             |--UPDATE -------------->      |
 |   |           |            |             |  CAPTURED |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |<--Payment ---|           |          |      |
+|   |           |            |<-Payment ---|           |          |      |
 |   |           |            |  success    |           |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |--Create order----------------------->      |
-|   |           |            |--Confirm inventory------------------>      |
+|   |           |            |--Create order---------------------->      |
+|   |           |            |--Confirm inventory----------------->      |
 |   |           |            |--Publish OrderCreated event        |      |
 |   |           |            |             |           |          |      |
-|   |           |<--Order ----|             |           |          |      |
+|   |           |<-Order ----|             |           |          |      |
 |   |           |  confirmed |             |           |          |      |
-|   |<--Success -|            |             |           |          |      |
+|   |<-Success -|            |             |           |          |      |
 |   |  page     |            |             |           |          |      |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1931,25 +1931,25 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |                                                                         |
 |  User       Frontend     Order Svc    Payment Svc   Stripe    Inventory|
 |   |           |             |             |           |          |      |
-|   |--Submit --->            |             |           |          |      |
+|   |--Submit -->            |             |           |          |      |
 |   |  payment  |            |             |           |          |      |
-|   |           |--Pay ------->            |           |          |      |
-|   |           |            |--Process ---->           |          |      |
-|   |           |            |             |--Charge --->          |      |
+|   |           |--Pay ------>            |           |          |      |
+|   |           |            |--Process --->           |          |      |
+|   |           |            |             |--Charge -->          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |<--DECLINED-|          |      |
+|   |           |            |             |<-DECLINED-|          |      |
 |   |           |            |             |  insufficient_funds  |      |
 |   |           |            |             |           |          |      |
-|   |           |            |<--Payment ---|           |          |      |
+|   |           |            |<-Payment ---|           |          |      |
 |   |           |            |  FAILED     |           |          |      |
 |   |           |            |             |           |          |      |
-|   |           |            |-------------Release reservation----->      |
+|   |           |            |-------------Release reservation---->      |
 |   |           |            |             |           |          |      |
-|   |           |            |             |           |<--Released|      |
+|   |           |            |             |           |<-Released|      |
 |   |           |            |             |           |          |      |
-|   |           |<--Error ----|             |           |          |      |
+|   |           |<-Error ----|             |           |          |      |
 |   |           |  message   |             |           |          |      |
-|   |<--"Payment-|            |             |           |          |      |
+|   |<-"Payment-|            |             |           |          |      |
 |   |  failed"  |            |             |           |          |      |
 |   |           |            |             |           |          |      |
 |   |  (User can retry with different card)           |          |      |
@@ -1999,12 +1999,12 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  VALID TRANSITIONS:                                                   |
-|  * PENDING -> CONFIRMED, FAILED, CANCELLED                            |
-|  * CONFIRMED -> PROCESSING, CANCELLED                                 |
-|  * PROCESSING -> SHIPPED, CANCELLED                                   |
-|  * SHIPPED -> DELIVERED, RETURNED                                     |
-|  * DELIVERED -> RETURNED (within return window)                       |
-|  * RETURNED -> REFUNDED                                               |
+|  * PENDING > CONFIRMED, FAILED, CANCELLED                            |
+|  * CONFIRMED > PROCESSING, CANCELLED                                 |
+|  * PROCESSING > SHIPPED, CANCELLED                                   |
+|  * SHIPPED > DELIVERED, RETURNED                                     |
+|  * DELIVERED > RETURNED (within return window)                       |
+|  * RETURNED > REFUNDED                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2016,9 +2016,9 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |                                                                         |
 |  User       Frontend     Order Svc    Inventory   Payment    Notify    |
 |   |           |            |            |           |          |        |
-|   |--Request -->           |            |           |          |        |
+|   |--Request ->           |            |           |          |        |
 |   |  return   |            |            |           |          |        |
-|   |           |--POST ------>           |           |          |        |
+|   |           |--POST ----->           |           |          |        |
 |   |           |  /orders/{id}/return   |           |          |        |
 |   |           |            |            |           |          |        |
 |   |           |            |--Validate--|           |          |        |
@@ -2034,38 +2034,38 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |   |           |            |  request   |           |          |        |
 |   |           |            |  (PENDING) |           |          |        |
 |   |           |            |            |           |          |        |
-|   |           |<--Return ID + instructions--         |          |        |
-|   |<--"Ship item back to..."--|          |           |          |        |
+|   |           |<-Return ID + instructions--         |          |        |
+|   |<-"Ship item back to..."--|          |           |          |        |
 |   |                         |            |           |          |        |
 |  ===============================================================        |
 |  |  WAREHOUSE RECEIVES ITEM, INSPECTS, APPROVES RETURN       |        |
 |  ===============================================================        |
 |                             |            |           |          |        |
-|       (Admin)--Approve ------>           |           |          |        |
+|       (Admin)--Approve ----->           |           |          |        |
 |                return       |            |           |          |        |
 |                             |            |           |          |        |
-|                             |--Update ---->           |          |        |
+|                             |--Update --->           |          |        |
 |                             |  order:    |           |          |        |
 |                             |  RETURNED  |           |          |        |
 |                             |            |           |          |        |
-|                             |--Restore --->           |          |        |
+|                             |--Restore -->           |          |        |
 |                             |  inventory |           |          |        |
 |                             |            |--INCREMENT |          |        |
 |                             |            |  stock     |          |        |
 |                             |            |           |          |        |
-|                             |-----------Initiate refund----->    |        |
+|                             |-----------Initiate refund---->    |        |
 |                             |            |           |          |        |
 |                             |            |           |--Refund  |        |
 |                             |            |           |  to      |        |
 |                             |            |           |  gateway |        |
 |                             |            |           |          |        |
-|                             |<-----------Refund success----|    |        |
+|                             |<----------Refund success----|    |        |
 |                             |            |           |          |        |
 |                             |--Update order: REFUNDED|          |        |
 |                             |            |           |          |        |
-|                             |--------------------------Notify --->        |
+|                             |--------------------------Notify -->        |
 |                             |            |           |          |        |
-|   |<--"Refund of $XX processed"-----------------------|   Email  |        |
+|   |<-"Refund of $XX processed"-----------------------|   Email  |        |
 |   |  (3-5 business days)    |           |           |          |        |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -2094,26 +2094,26 @@ APPROACH 2: REDIS DISTRIBUTED LOCK
 |  +---------------------------------------------------------------+    |
 |  |                    COMPENSATION (Payment Fails)               |    |
 |  |                                                               |    |
-|  |  1. Reserve inventory     [x] Success                         |    |
-|  |  2. Process payment       [ ] FAILED                          |    |
+|  |  1. Reserve inventory     Y Success                         |    |
+|  |  2. Process payment       X FAILED                          |    |
 |  |                                                               |    |
 |  |  COMPENSATE:                                                 |    |
-|  |  -> Release inventory reservation                             |    |
-|  |  -> Return error to user                                     |    |
+|  |  > Release inventory reservation                             |    |
+|  |  > Return error to user                                     |    |
 |  |                                                               |    |
 |  +---------------------------------------------------------------+    |
 |                                                                         |
 |  +---------------------------------------------------------------+    |
 |  |              COMPENSATION (Order Creation Fails)              |    |
 |  |                                                               |    |
-|  |  1. Reserve inventory     [x] Success                         |    |
-|  |  2. Process payment       [x] Success                         |    |
-|  |  3. Create order          [ ] FAILED                          |    |
+|  |  1. Reserve inventory     Y Success                         |    |
+|  |  2. Process payment       Y Success                         |    |
+|  |  3. Create order          X FAILED                          |    |
 |  |                                                               |    |
 |  |  COMPENSATE:                                                 |    |
-|  |  -> Refund payment                                           |    |
-|  |  -> Release inventory reservation                             |    |
-|  |  -> Notify user: "Sorry, refund initiated"                  |    |
+|  |  > Refund payment                                           |    |
+|  |  > Release inventory reservation                             |    |
+|  |  > Notify user: "Sorry, refund initiated"                  |    |
 |  |                                                               |    |
 |  +---------------------------------------------------------------+    |
 |                                                                         |
@@ -2128,35 +2128,35 @@ SAGA ORCHESTRATION SEQUENCE DIAGRAM (Happy Path):
 |  Orchestrator    Inventory     Payment      Order       Notification   |
 |  (Order Svc)      Service      Service     Service       Service       |
 |       |             |            |           |              |           |
-|       |--Reserve----->           |           |              |           |
+|       |--Reserve---->           |           |              |           |
 |       |  inventory  |            |           |              |           |
 |       |             |            |           |              |           |
-|       |<--Reserved---|           |           |              |           |
+|       |<-Reserved---|           |           |              |           |
 |       |  (sagaId)   |            |           |              |           |
 |       |             |            |           |              |           |
-|       |-------------Process------>           |              |           |
+|       |-------------Process----->           |              |           |
 |       |             |  payment   |           |              |           |
 |       |             |            |           |              |           |
-|       |<-------------Success-----|           |              |           |
+|       |<------------Success-----|           |              |           |
 |       |             |  (paymentId)          |              |           |
 |       |             |            |           |              |           |
-|       |-------------------------Create------->              |           |
+|       |-------------------------Create------>              |           |
 |       |             |            |  order    |              |           |
 |       |             |            |           |              |           |
-|       |<-------------------------Created-----|              |           |
+|       |<------------------------Created-----|              |           |
 |       |             |            |  (orderId)|              |           |
 |       |             |            |           |              |           |
-|       |--Confirm----->           |           |              |           |
+|       |--Confirm---->           |           |              |           |
 |       |  inventory  |            |           |              |           |
 |       |             |            |           |              |           |
-|       |<--Confirmed--|           |           |              |           |
+|       |<-Confirmed--|           |           |              |           |
 |       |             |            |           |              |           |
-|       |-------------------------------------Send confirmation--->       |
+|       |-------------------------------------Send confirmation-->       |
 |       |             |            |           |              |           |
 |       |             |            |           |              | Email    |
 |       |             |            |           |              | sent     |
 |       |                                                                 |
-|       |  SAGA COMPLETED [x]                                              |
+|       |  SAGA COMPLETED Y                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2169,26 +2169,26 @@ SAGA COMPENSATION SEQUENCE DIAGRAM (Payment Fails):
 |  Orchestrator    Inventory     Payment      Order       Notification   |
 |  (Order Svc)      Service      Service     Service       Service       |
 |       |             |            |           |              |           |
-|       |--Reserve----->           |           |              |           |
+|       |--Reserve---->           |           |              |           |
 |       |  inventory  |            |           |              |           |
-|       |<--Reserved---|           |           |              |           |
+|       |<-Reserved---|           |           |              |           |
 |       |             |            |           |              |           |
-|       |-------------Process------>           |              |           |
+|       |-------------Process----->           |              |           |
 |       |             |  payment   |           |              |           |
 |       |             |            |           |              |           |
-|       |<-------------FAILED------|           |              |           |
+|       |<------------FAILED------|           |              |           |
 |       |             |  (card declined)      |              |           |
 |       |             |            |           |              |           |
 |       |  ======================================================        |
 |       |  |  COMPENSATION TRIGGERED                         |           |
 |       |  ======================================================        |
 |       |             |            |           |              |           |
-|       |--Release----->           |           |              |           |
+|       |--Release---->           |           |              |           |
 |       |  reservation|            |           |              |           |
 |       |             |            |           |              |           |
-|       |<--Released---|           |           |              |           |
+|       |<-Released---|           |           |              |           |
 |       |             |            |           |              |           |
-|       |  SAGA COMPENSATED [ ]                                            |
+|       |  SAGA COMPENSATED X                                            |
 |       |  Return error to user                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -2201,35 +2201,35 @@ SAGA COMPENSATION SEQUENCE (Order Creation Fails After Payment):
 |                                                                         |
 |  Orchestrator    Inventory     Payment      Order       Notification   |
 |       |             |            |           |              |           |
-|       |--Reserve----->           |           |              |           |
-|       |<--Reserved---|           |           |              |           |
+|       |--Reserve---->           |           |              |           |
+|       |<-Reserved---|           |           |              |           |
 |       |             |            |           |              |           |
-|       |-------------Process------>           |              |           |
-|       |<-------------Success-----|           |              |           |
+|       |-------------Process----->           |              |           |
+|       |<------------Success-----|           |              |           |
 |       |             |            |           |              |           |
-|       |-------------------------Create------->              |           |
+|       |-------------------------Create------>              |           |
 |       |             |            |           |              |           |
-|       |<-------------------------FAILED------|              |           |
+|       |<------------------------FAILED------|              |           |
 |       |             |            |  (DB error)             |           |
 |       |             |            |           |              |           |
 |       |  ======================================================        |
 |       |  |  COMPENSATION (Reverse Order)                   |           |
 |       |  ======================================================        |
 |       |             |            |           |              |           |
-|       |-------------Refund------->           |              |           |
+|       |-------------Refund------>           |              |           |
 |       |             |            |           |              |           |
-|       |<-------------Refunded----|           |              |           |
+|       |<------------Refunded----|           |              |           |
 |       |             |            |           |              |           |
-|       |--Release----->           |           |              |           |
-|       |<--Released---|           |           |              |           |
+|       |--Release---->           |           |              |           |
+|       |<-Released---|           |           |              |           |
 |       |             |            |           |              |           |
-|       |------------------------------------- Notify user --->           |
+|       |------------------------------------- Notify user -->           |
 |       |             |            |           |              |           |
 |       |             |            |           |     "Sorry, |           |
 |       |             |            |           |      refund |           |
 |       |             |            |           |   initiated"|           |
 |       |                                                                 |
-|       |  SAGA COMPENSATED [ ]                                            |
+|       |  SAGA COMPENSATED X                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2414,7 +2414,7 @@ CHOREOGRAPHY COMPENSATION (Payment Fails):
 |  * Complex compensation logic                                        |
 |  * Fewer services involved (3-5)                                     |
 |  * Team prefers centralized control                                  |
-|  * E-commerce checkout <- RECOMMENDED                                 |
+|  * E-commerce checkout < RECOMMENDED                                 |
 |                                                                         |
 |  USE CHOREOGRAPHY WHEN:                                                |
 |  -------------------------                                             |
@@ -2576,8 +2576,8 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  CONSUMER GROUP SETUP:                                                 |
 |  ----------------------                                                |
-|  * inventory-service-group -> processes inventory.events              |
-|  * payment-service-group -> processes payment.events                  |
+|  * inventory-service-group > processes inventory.events              |
+|  * payment-service-group > processes payment.events                  |
 |  * Each service has dedicated consumer group                         |
 |  * Partitioning by sagaId for ordering within saga                  |
 |                                                                         |
@@ -2592,7 +2592,7 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  SCENARIOS WHERE DUPLICATES HAPPEN:                                    |
 |  ------------------------------------                                  |
-|  1. Network timeout -> Client retries                                 |
+|  1. Network timeout > Client retries                                 |
 |  2. Kafka redelivery (at-least-once)                                 |
 |  3. User double-clicks button                                        |
 |  4. Service restart mid-processing                                   |
@@ -2736,19 +2736,19 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  1. SERVICE CRASH MID-SAGA                                            |
 |     Orchestrator crashes after reserving inventory, before payment   |
-|     -> Inventory stuck reserved forever                              |
+|     > Inventory stuck reserved forever                              |
 |                                                                         |
 |  2. NETWORK PARTITION                                                  |
 |     Payment succeeds but response never received                     |
-|     -> Order not created, customer charged                           |
+|     > Order not created, customer charged                           |
 |                                                                         |
 |  3. DATABASE FAILURE                                                   |
 |     Order DB down during order creation                              |
-|     -> Payment captured but no order record                          |
+|     > Payment captured but no order record                          |
 |                                                                         |
 |  4. STUCK SAGA                                                         |
 |     Saga in progress > 30 minutes                                    |
-|     -> Something is wrong, needs intervention                        |
+|     > Something is wrong, needs intervention                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3013,10 +3013,10 @@ EVENT SCHEMAS (Avro/JSON):
 +-------------------------------------------------------------------------+
 |                    PRICING FACTORS                                     |
 |                                                                         |
-|  * Demand: High demand -> higher price                                 |
+|  * Demand: High demand > higher price                                 |
 |  * Competition: Match competitor prices                               |
 |  * Time: Time-limited sales, happy hours                             |
-|  * Inventory: Low stock -> higher price (or lower to clear)          |
+|  * Inventory: Low stock > higher price (or lower to clear)          |
 |  * User segment: Premium members get better prices                   |
 |  * Location: Regional pricing                                        |
 |                                                                         |
@@ -3064,9 +3064,9 @@ EVENT SCHEMAS (Avro/JSON):
 |  LAYER 3: Inventory Token System                                      |
 |  ---------------------------------                                     |
 |  * Pre-generate 10,000 "purchase tokens"                             |
-|  * User gets token -> guaranteed purchase                             |
+|  * User gets token > guaranteed purchase                             |
 |  * Token has TTL (5 minutes to complete)                            |
-|  * No token -> "Sold out"                                            |
+|  * No token > "Sold out"                                            |
 |                                                                         |
 |  LAYER 4: Rate Limiting                                               |
 |  -----------------------                                               |
@@ -3109,7 +3109,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  CACHE-ASIDE PATTERN:                                                  |
 |  ---------------------                                                 |
 |  1. Check cache first                                                 |
-|  2. Cache miss -> Query DB                                            |
+|  2. Cache miss > Query DB                                            |
 |  3. Store in cache with TTL                                          |
 |  4. Return data                                                       |
 |                                                                         |
@@ -3143,7 +3143,7 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  ASYNC VIA KAFKA:                                                      |
 |  -----------------                                                     |
-|  Order Service -> Kafka (order.events) -> Notification Consumers        |
+|  Order Service > Kafka (order.events) > Notification Consumers        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3212,9 +3212,9 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  RECONCILIATION JOBS:                                                  |
 |  ---------------------                                                 |
-|  * Pending payments > 1 hour -> Query gateway, update status          |
-|  * Reserved inventory > 30 min without order -> Release              |
-|  * Order CONFIRMED but no payment -> Flag for review                 |
+|  * Pending payments > 1 hour > Query gateway, update status          |
+|  * Reserved inventory > 30 min without order > Release              |
+|  * Order CONFIRMED but no payment > Flag for review                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3232,9 +3232,9 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  AUTO-SCALING TRIGGERS:                                                |
 |  ------------------------                                              |
-|  * CPU > 70% for 2 min -> Scale up                                   |
-|  * CPU < 30% for 10 min -> Scale down                                |
-|  * Request latency p99 > 500ms -> Scale up                           |
+|  * CPU > 70% for 2 min > Scale up                                   |
+|  * CPU < 30% for 10 min > Scale down                                |
+|  * Request latency p99 > 500ms > Scale up                           |
 |                                                                         |
 |  PRE-SCALING FOR EVENTS:                                              |
 |  -------------------------                                             |
@@ -3333,8 +3333,8 @@ EVENT SCHEMAS (Avro/JSON):
 |  -----------------------------------------                             |
 |  A: Cart ID in cookie, stored in Redis with 30-day TTL.             |
 |     On login: Merge guest cart into user cart.                       |
-|     Same product -> sum quantities (up to max limit).                |
-|     Different products -> add all.                                    |
+|     Same product > sum quantities (up to max limit).                |
+|     Different products > add all.                                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3407,7 +3407,7 @@ EVENT SCHEMAS (Avro/JSON):
 |     1. Retry with exponential backoff (same idempotency key)        |
 |     2. After N retries: Mark PENDING, hold reservation              |
 |     3. Background job polls gateway for status                      |
-|     4. Multi-gateway fallback (Stripe fails -> use PayPal)          |
+|     4. Multi-gateway fallback (Stripe fails > use PayPal)          |
 |     5. Circuit breaker to fail fast on gateway outage              |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -3502,7 +3502,7 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  UI OPTIMIZATION:                                                     |
 |  * Don't load all variants upfront                                  |
-|  * User selects color -> Load size availability                     |
+|  * User selects color > Load size availability                     |
 |  * API: GET /products/123/variants?color=red                       |
 |                                                                         |
 |  INVENTORY TRACKING:                                                  |
@@ -3676,8 +3676,8 @@ EVENT SCHEMAS (Avro/JSON):
 |  -----------                                                            |
 |  * Concurrent transactions don't interfere with each other             |
 |  * Each transaction sees a consistent snapshot                         |
-|  * Isolation levels: READ UNCOMMITTED -> READ COMMITTED ->               |
-|                      REPEATABLE READ -> SERIALIZABLE                    |
+|  * Isolation levels: READ UNCOMMITTED > READ COMMITTED >               |
+|                      REPEATABLE READ > SERIALIZABLE                    |
 |                                                                         |
 |  ISOLATION LEVELS:                                                      |
 |  +------------------+------------+-------------+-------------------+   |
@@ -3780,7 +3780,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * But order may not match real-time order                             |
 |                                                                         |
 |  Client A: Write(x=1), Write(x=2)                                      |
-|  Client B: Read(x) -> might see 1 then 2, never 2 then 1               |
+|  Client B: Read(x) > might see 1 then 2, never 2 then 1               |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3837,7 +3837,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Expensive at scale                                                  |
 |                                                                         |
 |  +---------+         +-----------------+                               |
-|  | Small   |   ->     |    BIGGER       |                               |
+|  | Small   |   >     |    BIGGER       |                               |
 |  | Server  |         |    SERVER       |                               |
 |  +---------+         +-----------------+                               |
 |                                                                         |
@@ -3852,7 +3852,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * More complex (data distribution, coordination)                      |
 |                                                                         |
 |  +---------+         +-------+ +-------+ +-------+                    |
-|  | Server  |   ->     |Server | |Server | |Server |                    |
+|  | Server  |   >     |Server | |Server | |Server |                    |
 |  +---------+         +-------+ +-------+ +-------+                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -3877,7 +3877,7 @@ EVENT SCHEMAS (Avro/JSON):
 |              +---------+---------+                                     |
 |              v         v         v                                     |
 |         +--------++--------++--------+                                |
-|  Reads-> |Follower||Follower||Follower| <-Reads                         |
+|  Reads> |Follower||Follower||Follower| <Reads                         |
 |         +--------++--------++--------+                                |
 |                                                                         |
 |  * All writes go to leader                                             |
@@ -3930,7 +3930,7 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  Example: N=3, W=2, R=2                                                |
 |  * Write to 2 nodes, read from 2 nodes                                |
-|  * Guaranteed overlap -> see latest write                              |
+|  * Guaranteed overlap > see latest write                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -3963,7 +3963,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Even distribution                                                   |
 |  * Range queries require scatter-gather                                |
 |                                                                         |
-|  hash("user_123") % 4 = 2  -> Shard 2                                  |
+|  hash("user_123") % 4 = 2  > Shard 2                                  |
 |                                                                         |
 |  3. CONSISTENT HASHING:                                                 |
 |  ------------------------                                               |
@@ -3981,11 +3981,11 @@ EVENT SCHEMAS (Avro/JSON):
 |           ●                                                            |
 |        Node C                                                          |
 |                                                                         |
-|  Keys map to points on ring -> assigned to next node clockwise         |
+|  Keys map to points on ring > assigned to next node clockwise         |
 |                                                                         |
 |  4. DIRECTORY-BASED:                                                    |
 |  ---------------------                                                  |
-|  * Lookup service maps key -> shard                                    |
+|  * Lookup service maps key > shard                                    |
 |  * Most flexible                                                       |
 |  * Directory can be bottleneck                                        |
 |                                                                         |
@@ -3994,7 +3994,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  CHOOSING SHARD KEY:                                                    |
 |                                                                         |
 |  Good: user_id (even distribution, natural partition)                  |
-|  Bad: timestamp (all writes go to latest shard -> hotspot)             |
+|  Bad: timestamp (all writes go to latest shard > hotspot)             |
 |  Bad: country (US has way more data than Luxembourg)                  |
 |                                                                         |
 |  CROSS-SHARD QUERIES:                                                   |
@@ -4015,8 +4015,8 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  READ:                                                                  |
 |  1. Check cache                                                        |
-|  2. Cache hit -> return data                                            |
-|  3. Cache miss -> query DB -> store in cache -> return                   |
+|  2. Cache hit > return data                                            |
+|  3. Cache miss > query DB > store in cache > return                   |
 |                                                                         |
 |  +---------+     1. Get      +---------+                               |
 |  |   App   | <--------------> |  Cache  |                               |
@@ -4140,10 +4140,10 @@ EVENT SCHEMAS (Avro/JSON):
 |                                                                         |
 |  1. ROUND ROBIN:                                                        |
 |  -----------------                                                      |
-|  Request 1 -> Server A                                                  |
-|  Request 2 -> Server B                                                  |
-|  Request 3 -> Server C                                                  |
-|  Request 4 -> Server A  (cycle repeats)                                 |
+|  Request 1 > Server A                                                  |
+|  Request 2 > Server B                                                  |
+|  Request 3 > Server C                                                  |
+|  Request 4 > Server A  (cycle repeats)                                 |
 |                                                                         |
 |  Pros: Simple, fair distribution                                       |
 |  Cons: Ignores server capacity/load                                    |
@@ -4164,7 +4164,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  Route to server with fewest active connections                        |
 |                                                                         |
 |  Server A: 5 connections                                               |
-|  Server B: 2 connections  <- Next request goes here                     |
+|  Server B: 2 connections  < Next request goes here                     |
 |  Server C: 8 connections                                               |
 |                                                                         |
 |  Good for: Long-lived connections, varying request times               |
@@ -4176,7 +4176,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  Route to server with lowest average response time                     |
 |                                                                         |
 |  Server A: 50ms avg                                                    |
-|  Server B: 30ms avg  <- Next request goes here                          |
+|  Server B: 30ms avg  < Next request goes here                          |
 |  Server C: 45ms avg                                                    |
 |                                                                         |
 |  Adapts to real server performance                                     |
@@ -4228,9 +4228,9 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Examples: AWS ALB, Nginx, HAProxy (HTTP mode)                       |
 |                                                                         |
 |  Example L7 routing:                                                    |
-|  * /api/*     -> API servers                                            |
-|  * /static/*  -> CDN                                                    |
-|  * /admin/*   -> Admin servers                                          |
+|  * /api/*     > API servers                                            |
+|  * /static/*  > CDN                                                    |
+|  * /admin/*   > Admin servers                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -4248,7 +4248,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * No token = request rejected                                         |
 |                                                                         |
 |         +---------------+                                              |
-|         | ○ ○ ○ ○ ○ ○ ○ | <- Bucket (capacity: 10)                     |
+|         | ○ ○ ○ ○ ○ ○ ○ | < Bucket (capacity: 10)                     |
 |         |   ○ ○ ○       |                                              |
 |         +-------+-------+                                              |
 |                 |                                                      |
@@ -4279,9 +4279,9 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Processed at fixed rate (leak rate)                                 |
 |  * Bucket overflow = request rejected                                  |
 |                                                                         |
-|         +---------------+ <- Requests enter                             |
+|         +---------------+ < Requests enter                             |
 |         | v v v v v v v |                                              |
-|         |   Queue       | <- Bucket (max size)                          |
+|         |   Queue       | < Bucket (max size)                          |
 |         |               |                                              |
 |         +-------+-------+                                              |
 |                 |                                                      |
@@ -4384,8 +4384,8 @@ EVENT SCHEMAS (Avro/JSON):
 |  * No retries on failure                                               |
 |  * Fire and forget                                                     |
 |                                                                         |
-|  Producer -> Queue -> Consumer                                           |
-|                  [ ] (lost)                                               |
+|  Producer > Queue > Consumer                                           |
+|                  X (lost)                                               |
 |                                                                         |
 |  Use: Metrics, logs (loss acceptable)                                  |
 |  Implementation: No acks, no persistence                               |
@@ -4398,10 +4398,10 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Retry until acknowledged                                            |
 |  * May cause duplicates                                                |
 |                                                                         |
-|  Producer -> Queue -> Consumer                                           |
-|                  -> Consumer (retry)                                    |
-|                  -> Consumer (retry again)                              |
-|                  [x] ACK                                                 |
+|  Producer > Queue > Consumer                                           |
+|                  > Consumer (retry)                                    |
+|                  > Consumer (retry again)                              |
+|                  Y ACK                                                 |
 |                                                                         |
 |  Use: Most use cases (with idempotent consumers)                       |
 |  Implementation: ACKs + retries + persistence                          |
@@ -4443,7 +4443,7 @@ EVENT SCHEMAS (Avro/JSON):
 |  * Different partitions = no order guarantee                           |
 |  * Kafka partitions, SQS FIFO                                         |
 |                                                                         |
-|  Kafka: Messages with same key -> same partition -> ordered              |
+|  Kafka: Messages with same key > same partition > ordered              |
 |                                                                         |
 |  TOTAL ORDERING:                                                        |
 |  -----------------                                                      |
@@ -4544,14 +4544,14 @@ EVENT SCHEMAS (Avro/JSON):
 |  -----------------                                                      |
 |  +-------------------------------------+                               |
 |  |           Thread Pool (100)         |                               |
-|  |  Service A, B, C share all threads  | <- One slow service blocks all|
+|  |  Service A, B, C share all threads  | < One slow service blocks all|
 |  +-------------------------------------+                               |
 |                                                                         |
 |  WITH BULKHEAD:                                                         |
 |  ---------------                                                        |
 |  +----------+ +----------+ +----------+                               |
 |  |Service A | |Service B | |Service C |                               |
-|  | Pool(30) | | Pool(40) | | Pool(30) | <- Isolation                  |
+|  | Pool(30) | | Pool(40) | | Pool(30) | < Isolation                  |
 |  +----------+ +----------+ +----------+                               |
 |                                                                         |
 |  If Service A is slow, only its 30 threads blocked                     |

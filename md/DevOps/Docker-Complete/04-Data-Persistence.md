@@ -127,12 +127,12 @@ This chapter covers how to persist data beyond the container lifecycle.
 |  VOLUME ADVANTAGES                                                     |
 |  -----------------                                                      |
 |                                                                         |
-|  [x] Docker manages the location                                        |
-|  [x] Easier to backup (docker volume commands)                         |
-|  [x] Works on Linux and Windows                                        |
-|  [x] Can be shared among containers                                    |
-|  [x] Volume drivers enable remote storage (NFS, cloud)                |
-|  [x] Pre-populated with container's existing files                    |
+|  Y Docker manages the location                                        |
+|  Y Easier to backup (docker volume commands)                         |
+|  Y Works on Linux and Windows                                        |
+|  Y Can be shared among containers                                    |
+|  Y Volume drivers enable remote storage (NFS, cloud)                |
+|  Y Pre-populated with container's existing files                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -194,15 +194,15 @@ This chapter covers how to persist data beyond the container lifecycle.
 |    -p 3000:3000 \                                                       |
 |    node:18 npm run dev                                                 |
 |                                                                         |
-|  Edit files locally -> Changes immediately visible in container       |
+|  Edit files locally > Changes immediately visible in container       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  BIND MOUNT CONSIDERATIONS                                            |
 |  -------------------------                                              |
 |                                                                         |
-|  [x] Good for: Development, config files                               |
-|  [ ] Bad for: Production databases                                     |
+|  Y Good for: Development, config files                               |
+|  X Bad for: Production databases                                     |
 |                                                                         |
 |  ISSUES:                                                               |
 |  * Host path must exist (not auto-created)                           |

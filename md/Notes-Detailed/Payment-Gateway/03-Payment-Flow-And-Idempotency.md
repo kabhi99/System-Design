@@ -125,7 +125,7 @@
 |  |     Redis: SET idempotency:{key} = {response} EX 86400        |  |
 |  |                                                                 |  |
 |  |  8. EMIT EVENT                                                 |  |
-|  |     Kafka: payment.events -> { payment_id, status: CAPTURED }  |  |
+|  |     Kafka: payment.events > { payment_id, status: CAPTURED }  |  |
 |  |                                                                 |  |
 |  |  9. RELEASE LOCK                                               |  |
 |  |     Redis: DEL lock:payment:{id}                              |  |
@@ -150,8 +150,8 @@
 |  WITHOUT IDEMPOTENCY:                                                   |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  Click 1 -> POST /payments -> $100 charged [x]                    |  |
-|  |  Click 2 -> POST /payments -> $100 charged [x] (DUPLICATE!)       |  |
+|  |  Click 1 > POST /payments > $100 charged Y                    |  |
+|  |  Click 2 > POST /payments > $100 charged Y (DUPLICATE!)       |  |
 |  |                                                                 |  |
 |  |  Customer charged $200 instead of $100!                       |  |
 |  |                                                                 |  |
@@ -160,15 +160,15 @@
 |  WITH IDEMPOTENCY:                                                      |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  Click 1 -> POST /payments                                     |  |
+|  |  Click 1 > POST /payments                                     |  |
 |  |            Idempotency-Key: order_123                         |  |
-|  |            -> $100 charged [x]                                   |  |
+|  |            > $100 charged Y                                   |  |
 |  |                                                                 |  |
-|  |  Click 2 -> POST /payments                                     |  |
+|  |  Click 2 > POST /payments                                     |  |
 |  |            Idempotency-Key: order_123 (same key)              |  |
-|  |            -> Return cached result (no duplicate charge)       |  |
+|  |            > Return cached result (no duplicate charge)       |  |
 |  |                                                                 |  |
-|  |  Customer charged exactly $100 [x]                              |  |
+|  |  Customer charged exactly $100 Y                              |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -329,8 +329,8 @@
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  1. Card charged successfully [x]                                |  |
-|  |  2. UPDATE payments SET status = 'CAPTURED' -> DB ERROR!       |  |
+|  |  1. Card charged successfully Y                                |  |
+|  |  2. UPDATE payments SET status = 'CAPTURED' > DB ERROR!       |  |
 |  |  3. Transaction rolled back                                    |  |
 |  |  4. Customer sees "failed" but money is gone!                 |  |
 |  |                                                                 |  |
@@ -379,7 +379,7 @@
 |  |     - Another worker processing                                |  |
 |  |     - Or previous worker crashed                               |  |
 |  |                                                                 |  |
-|  |  3. Lock expires after 30s -> next worker can take over        |  |
+|  |  3. Lock expires after 30s > next worker can take over        |  |
 |  |                                                                 |  |
 |  |  4. State machine ensures idempotent processing:               |  |
 |  |     IF status == 'PROCESSING':                                 |  |

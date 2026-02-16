@@ -176,9 +176,9 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  3. REQUEST ROUTING                                                    |
 |     Route to appropriate microservice based on path                  |
-|     /api/users/*     -> User Service                                  |
-|     /api/movies/*    -> Catalog Service                               |
-|     /api/bookings/*  -> Booking Service                               |
+|     /api/users/*     > User Service                                  |
+|     /api/movies/*    > Catalog Service                               |
+|     /api/bookings/*  > Booking Service                               |
 |                                                                         |
 |  4. REQUEST/RESPONSE TRANSFORMATION                                   |
 |     Add request IDs for tracing                                       |
@@ -311,7 +311,7 @@ explaining each component, its responsibilities, and how they interact.
 |  * Push notifications (reminders)                                    |
 |                                                                         |
 |  Pattern: Async via message queue                                     |
-|  Booking Service -> Kafka -> Notification Service -> Send              |
+|  Booking Service > Kafka > Notification Service > Send              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -393,7 +393,7 @@ explaining each component, its responsibilities, and how they interact.
 |  * Geo queries for nearby venues                                     |
 |                                                                         |
 |  DATA SYNC:                                                            |
-|  PostgreSQL -> Debezium (CDC) -> Kafka -> Elasticsearch                 |
+|  PostgreSQL > Debezium (CDC) > Kafka > Elasticsearch                 |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -401,10 +401,10 @@ explaining each component, its responsibilities, and how they interact.
 |  =========================                                              |
 |                                                                         |
 |  TOPICS:                                                               |
-|  * booking.created     -> Trigger notification                        |
-|  * booking.confirmed   -> Analytics, loyalty points                   |
-|  * payment.completed   -> Finalize booking                            |
-|  * seat.availability   -> Real-time updates to clients               |
+|  * booking.created     > Trigger notification                        |
+|  * booking.confirmed   > Analytics, loyalty points                   |
+|  * payment.completed   > Finalize booking                            |
+|  * seat.availability   > Real-time updates to clients               |
 |                                                                         |
 |  WHY KAFKA?                                                            |
 |  * High throughput                                                    |
@@ -479,11 +479,11 @@ explaining each component, its responsibilities, and how they interact.
 |  |   |                                                            |   |
 |  |   |  1. Get seat layout (venue template)                      |   |
 |  |   v                                                            |   |
-|  |  Redis: venue:456:layout -> seat positions, categories        |   |
+|  |  Redis: venue:456:layout > seat positions, categories        |   |
 |  |   |                                                            |   |
 |  |   |  2. Get real-time availability                            |   |
 |  |   v                                                            |   |
-|  |  Redis: show:123:seats -> bitmap of availability               |   |
+|  |  Redis: show:123:seats > bitmap of availability               |   |
 |  |   |                                                            |   |
 |  |   |     Bit 0 = A1, Bit 1 = A2, ...                           |   |
 |  |   |     0 = available, 1 = taken/locked                       |   |
@@ -506,7 +506,7 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  REAL-TIME UPDATES:                                                    |
 |  WebSocket connection pushes availability changes                     |
-|  When another user books -> push update to all viewing users          |
+|  When another user books > push update to all viewing users          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

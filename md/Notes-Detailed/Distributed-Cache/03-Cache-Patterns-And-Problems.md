@@ -11,7 +11,7 @@ problems like cache stampede, thundering herd, and consistency issues.
 |                                                                         |
 |  THE PROBLEM                                                           |
 |                                                                         |
-|  Popular key expires -> many requests hit database simultaneously     |
+|  Popular key expires > many requests hit database simultaneously     |
 |                                                                         |
 |  Time: 12:00:00 - Cache key "popular_product" expires                 |
 |                                                                         |
@@ -134,7 +134,7 @@ problems like cache stampede, thundering herd, and consistency issues.
 |  Key C: 1,000 req/s                                                    |
 |                                                                         |
 |  Hot key event:                                                        |
-|  Key A: 500,000 req/s  <- Single node can't handle!                  |
+|  Key A: 500,000 req/s  < Single node can't handle!                  |
 |  Key B: 1,000 req/s                                                    |
 |  Key C: 1,000 req/s                                                    |
 |                                                                         |
@@ -460,7 +460,7 @@ problems like cache stampede, thundering herd, and consistency issues.
 |  For new cache nodes, gradually shift traffic:                       |
 |                                                                         |
 |  1. Deploy new node with 0% traffic                                  |
-|  2. Route 1% -> 5% -> 10% -> ... -> 100%                                |
+|  2. Route 1% > 5% > 10% > ... > 100%                                |
 |  3. Each step allows cache to warm naturally                        |
 |                                                                         |
 |  def route_request(key):                                              |

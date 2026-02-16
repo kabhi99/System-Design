@@ -265,11 +265,11 @@ SECTION 2.3: DISTRIBUTED RATE LIMITING CHALLENGES
 *|  |                                 v                              |  |*
 *|  |                    +-------------------------+                |  |*
 *|  |                    |        Redis           |                |  |*
-*|  |                    |   user:123 -> 120      |                |  |*
+*|  |                    |   user:123 > 120      |                |  |*
 *|  |                    |   (shared counter)    |                |  |*
 *|  |                    +-------------------------+                |  |*
 *|  |                                                                 |  |*
-*|  |  All servers check same counter [x]                             |  |*
+*|  |  All servers check same counter Y                             |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -580,7 +580,7 @@ SECTION 2.5: SCALING STRATEGIES
 *|                                                                         |*
 *|  STICKY SESSIONS (Alternative)                                        |*
 *|                                                                         |*
-*|  Route same user to same server -> local rate limiting works          |*
+*|  Route same user to same server > local rate limiting works          |*
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*

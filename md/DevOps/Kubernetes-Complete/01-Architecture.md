@@ -268,16 +268,16 @@ Objects are persistent entities stored in etcd that represent the cluster state.
 |  * Controllers watch objects and make reality match intent            |
 |                                                                         |
 |  EXAMPLE:                                                              |
-|    apiVersion: v1           <- API version                             |
-|    kind: Pod                <- Object type                             |
+|    apiVersion: v1           < API version                             |
+|    kind: Pod                < Object type                             |
 |    metadata:                                                           |
-|      name: nginx            <- Object name                             |
-|      namespace: default     <- Where it lives                          |
-|    spec:                    <- Desired state (you define)              |
+|      name: nginx            < Object name                             |
+|      namespace: default     < Where it lives                          |
+|    spec:                    < Desired state (you define)              |
 |      containers:                                                       |
 |      - name: nginx                                                     |
 |        image: nginx:1.21                                              |
-|    status:                  <- Current state (Kubernetes fills)        |
+|    status:                  < Current state (Kubernetes fills)        |
 |      phase: Running                                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -418,10 +418,10 @@ WHY USE NAMESPACES?
 
 DEFAULT NAMESPACES:
 -------------------
-default         -> Where resources go if you don't specify
-kube-system     -> Kubernetes system components
-kube-public     -> Publicly readable (rarely used)
-kube-node-lease -> Node heartbeats
+default         > Where resources go if you don't specify
+kube-system     > Kubernetes system components
+kube-public     > Publicly readable (rarely used)
+kube-node-lease > Node heartbeats
 
 NOT NAMESPACED (Cluster-wide):
 ------------------------------
@@ -601,16 +601,16 @@ WATCH = Long-lived connection waiting for updates:
 --------------------------------------------------
 
 Deployment Controller:
--> "API Server, tell me when a Deployment changes"
+> "API Server, tell me when a Deployment changes"
 
 ReplicaSet Controller:
--> "API Server, tell me when a ReplicaSet changes"
+> "API Server, tell me when a ReplicaSet changes"
 
 Scheduler:
--> "API Server, tell me when an unscheduled Pod appears"
+> "API Server, tell me when an unscheduled Pod appears"
 
 kubelet:
--> "API Server, tell me when a Pod is assigned to my node"
+> "API Server, tell me when a Pod is assigned to my node"
 
 ```bash
 EXAMPLE: Creating a Deployment
@@ -656,7 +656,7 @@ The scheduler decides where pods run:
 |  |     * Tolerates taints?                                        |  |
 |  |     * Has required ports available?                            |  |
 |  |                                                                  |  |
-|  |     Nodes: [A, B, C, D] -> Filtered: [A, B, D]                 |  |
+|  |     Nodes: [A, B, C, D] > Filtered: [A, B, D]                 |  |
 |  |                                                                  |  |
 |  |  2. SCORING                                                     |  |
 |  |     Rank the filtered nodes                                    |  |
@@ -665,7 +665,7 @@ The scheduler decides where pods run:
 |  |     * Inter-pod affinity/anti-affinity                        |  |
 |  |     * Custom priorities                                        |  |
 |  |                                                                  |  |
-|  |     Scores: A=85, B=70, D=90 -> Best: D                        |  |
+|  |     Scores: A=85, B=70, D=90 > Best: D                        |  |
 |  |                                                                  |  |
 |  |  3. BINDING                                                     |  |
 |  |     Assign pod to node D                                       |  |
@@ -727,9 +727,9 @@ kubectl top nodes                        # Resource usage
 |          effect: "NoSchedule"                                           |
 |                                                                         |
 |  Taint Effects:                                                         |
-|    NoSchedule       -> Won't schedule new pods                          |
-|    PreferNoSchedule -> Soft rule, avoid if possible                     |
-|    NoExecute        -> Evict existing pods + prevent new               |
+|    NoSchedule       > Won't schedule new pods                          |
+|    PreferNoSchedule > Soft rule, avoid if possible                     |
+|    NoExecute        > Evict existing pods + prevent new               |
 |                                                                         |
 |  Use cases: GPU-only nodes, master nodes, maintenance draining        |
 |                                                                         |
@@ -841,7 +841,7 @@ Controllers maintain the desired state:
 |                                                                         |
 |  WHY NOT CREATE PODS DIRECTLY?                                        |
 |  -----------------------------                                         |
-|  * Pod dies -> stays dead (no restart)                                 |
+|  * Pod dies > stays dead (no restart)                                 |
 |  * No scaling                                                          |
 |  * No rolling updates                                                  |
 |                                                                         |
@@ -853,11 +853,11 @@ Controllers maintain the desired state:
 |                                                                         |
 |  DEPLOYMENT GIVES YOU:                                                 |
 |  ---------------------                                                 |
-|  [x] Declarative updates                                                |
-|  [x] Rolling updates (zero downtime)                                   |
-|  [x] Rollback to previous version                                      |
-|  [x] Scaling up/down                                                   |
-|  [x] Pause/resume deployments                                          |
+|  Y Declarative updates                                                |
+|  Y Rolling updates (zero downtime)                                   |
+|  Y Rollback to previous version                                      |
+|  Y Scaling up/down                                                   |
+|  Y Pause/resume deployments                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -897,21 +897,21 @@ HOW ROLLING UPDATE WORKS:
 |                                                                         |
 |  STEP 1: New ReplicaSet created (v2)                                   |
 |                                                                         |
-|    ReplicaSet v1: [Pod] [Pod] [Pod]     <- running nginx:1.21          |
-|    ReplicaSet v2: (empty)                <- new, nginx:1.22             |
+|    ReplicaSet v1: [Pod] [Pod] [Pod]     < running nginx:1.21          |
+|    ReplicaSet v2: (empty)                < new, nginx:1.22             |
 |                                                                         |
 |  STEP 2: Gradually scale up v2, scale down v1                         |
 |                                                                         |
-|    ReplicaSet v1: [Pod] [Pod]            <- 2 pods                      |
-|    ReplicaSet v2: [Pod]                  <- 1 pod                       |
+|    ReplicaSet v1: [Pod] [Pod]            < 2 pods                      |
+|    ReplicaSet v2: [Pod]                  < 1 pod                       |
 |                                                                         |
 |  STEP 3: Continue until complete                                       |
 |                                                                         |
-|    ReplicaSet v1: (empty)                <- scaled to 0                 |
-|    ReplicaSet v2: [Pod] [Pod] [Pod]     <- all traffic here            |
+|    ReplicaSet v1: (empty)                < scaled to 0                 |
+|    ReplicaSet v2: [Pod] [Pod] [Pod]     < all traffic here            |
 |                                                                         |
 |  ROLLBACK: kubectl rollout undo deployment/nginx                       |
-|    -> Scales v1 back up, v2 back down                                  |
+|    > Scales v1 back up, v2 back down                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1039,7 +1039,7 @@ kubectl create deployment nginx --image=nginx --replicas=3
 
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  STEP 1: kubectl -> API Server                                         |
+|  STEP 1: kubectl > API Server                                         |
 |  -----------------------------                                         |
 |  * kubectl sends Deployment spec to API server                        |
 |  * API server authenticates, authorizes, validates                   |

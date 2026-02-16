@@ -24,22 +24,22 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Request -> Fail -> Retry -> Fail -> Retry -> Success/Give Up             | |*
+*|  |  Request > Fail > Retry > Fail > Retry > Success/Give Up             | |*
 *|  |                                                                        | |*
 *|  |  Timing: Retry 1 at 0ms, Retry 2 at 0ms, Retry 3 at 0ms              | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Fast recovery for very transient failures                               |*
-*|  [x] Simple to implement                                                      |*
-*|  [x] Low latency when retry succeeds immediately                             |*
+*|  Y Fast recovery for very transient failures                               |*
+*|  Y Simple to implement                                                      |*
+*|  Y Low latency when retry succeeds immediately                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Can overwhelm already failing service                                   |*
-*|  [ ] Thundering herd problem                                                 |*
-*|  [ ] Wastes resources if failure is persistent                              |*
-*|  [ ] No time for service to recover                                         |*
+*|  X Can overwhelm already failing service                                   |*
+*|  X Thundering herd problem                                                 |*
+*|  X Wastes resources if failure is persistent                              |*
+*|  X No time for service to recover                                         |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Connection reset (TCP RST)                                               |*
@@ -52,21 +52,21 @@ SECTION 1: RETRY STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Request -> Fail -> Wait 2s -> Retry -> Fail -> Wait 2s -> Retry           | |*
+*|  |  Request > Fail > Wait 2s > Retry > Fail > Wait 2s > Retry           | |*
 *|  |                                                                        | |*
 *|  |  Timing: Retry 1 at 2s, Retry 2 at 4s, Retry 3 at 6s                 | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simple to understand and implement                                      |*
-*|  [x] Gives service time to recover                                           |*
-*|  [x] Predictable retry timing                                                |*
+*|  Y Simple to understand and implement                                      |*
+*|  Y Gives service time to recover                                           |*
+*|  Y Predictable retry timing                                                |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Synchronized retries (all clients retry at same intervals)             |*
-*|  [ ] Fixed delay may be too short or too long                               |*
-*|  [ ] Doesn't adapt to severity of failure                                   |*
+*|  X Synchronized retries (all clients retry at same intervals)             |*
+*|  X Fixed delay may be too short or too long                               |*
+*|  X Doesn't adapt to severity of failure                                   |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Known recovery time (e.g., leader election takes ~5s)                   |*
@@ -99,14 +99,14 @@ SECTION 1: RETRY STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Reduces load on failing service over time                               |*
-*|  [x] Handles both short and long outages                                     |*
-*|  [x] Industry standard approach                                              |*
+*|  Y Reduces load on failing service over time                               |*
+*|  Y Handles both short and long outages                                     |*
+*|  Y Industry standard approach                                              |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Still synchronized (all clients double at same time)                   |*
-*|  [ ] Can become very slow for extended outages                              |*
-*|  [ ] First retries still happen together                                    |*
+*|  X Still synchronized (all clients double at same time)                   |*
+*|  X Can become very slow for extended outages                              |*
+*|  X First retries still happen together                                    |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * General purpose retrying                                                 |*
@@ -152,14 +152,14 @@ SECTION 1: RETRY STRATEGIES
 *|  Decorrelated:       delay = random(base, prev_delay × 3)                  |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Prevents thundering herd                                                |*
-*|  [x] Spreads load evenly                                                     |*
-*|  [x] Best for high-concurrency systems                                       |*
-*|  [x] AWS, Google, Netflix recommended                                        |*
+*|  Y Prevents thundering herd                                                |*
+*|  Y Spreads load evenly                                                     |*
+*|  Y Best for high-concurrency systems                                       |*
+*|  Y AWS, Google, Netflix recommended                                        |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Slightly more complex to implement                                      |*
-*|  [ ] Less predictable timing (harder to debug)                              |*
+*|  X Slightly more complex to implement                                      |*
+*|  X Less predictable timing (harder to debug)                              |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * High traffic systems                                                     |*
@@ -180,13 +180,13 @@ SECTION 1: RETRY STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] More gradual increase than exponential                                  |*
-*|  [x] Doesn't grow as aggressively                                           |*
-*|  [x] Predictable                                                             |*
+*|  Y More gradual increase than exponential                                  |*
+*|  Y Doesn't grow as aggressively                                           |*
+*|  Y Predictable                                                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] May not back off fast enough for severe outages                        |*
-*|  [ ] Synchronized retries without jitter                                    |*
+*|  X May not back off fast enough for severe outages                        |*
+*|  X Synchronized retries without jitter                                    |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Failures expected to resolve quickly                                     |*
@@ -206,12 +206,12 @@ SECTION 1: RETRY STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Growth rate between linear and exponential                              |*
-*|  [x] More gradual than exponential                                           |*
+*|  Y Growth rate between linear and exponential                              |*
+*|  Y More gradual than exponential                                           |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Less common, unusual choice                                             |*
-*|  [ ] Still synchronized without jitter                                       |*
+*|  X Less common, unusual choice                                             |*
+*|  X Still synchronized without jitter                                       |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Want slower growth than exponential                                      |*
@@ -264,27 +264,27 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Read resource with version -> Modify -> Write with version check       | |*
+*|  |  Read resource with version > Modify > Write with version check       | |*
 *|  |                                                                        | |*
 *|  |  Example:                                                              | |*
 *|  |  1. Read: { id: 1, balance: 100, version: 5 }                        | |*
 *|  |  2. Modify: balance = 100 - 20 = 80                                  | |*
 *|  |  3. Write: UPDATE accounts SET balance=80, version=6                 | |*
 *|  |            WHERE id=1 AND version=5                                   | |*
-*|  |  4. If rows_affected = 0 -> Conflict! Retry from step 1               | |*
+*|  |  4. If rows_affected = 0 > Conflict! Retry from step 1               | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] No locks held during processing                                         |*
-*|  [x] High throughput under low contention                                    |*
-*|  [x] No deadlock risk                                                        |*
-*|  [x] Works well for read-heavy workloads                                     |*
+*|  Y No locks held during processing                                         |*
+*|  Y High throughput under low contention                                    |*
+*|  Y No deadlock risk                                                        |*
+*|  Y Works well for read-heavy workloads                                     |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Retries under high contention                                           |*
-*|  [ ] Starvation possible (same request keeps losing)                        |*
-*|  [ ] Requires version column in schema                                       |*
+*|  X Retries under high contention                                           |*
+*|  X Starvation possible (same request keeps losing)                        |*
+*|  X Requires version column in schema                                       |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Low to medium contention                                                 |*
@@ -298,7 +298,7 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Acquire lock -> Read -> Modify -> Write -> Release lock                  | |*
+*|  |  Acquire lock > Read > Modify > Write > Release lock                  | |*
 *|  |                                                                        | |*
 *|  |  Example (Database):                                                   | |*
 *|  |  SELECT * FROM accounts WHERE id=1 FOR UPDATE;  -- Lock row          | |*
@@ -313,16 +313,16 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Guarantees exclusive access                                             |*
-*|  [x] No retry loops                                                          |*
-*|  [x] Predictable behavior                                                    |*
-*|  [x] Better under high contention                                            |*
+*|  Y Guarantees exclusive access                                             |*
+*|  Y No retry loops                                                          |*
+*|  Y Predictable behavior                                                    |*
+*|  Y Better under high contention                                            |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Reduced throughput (blocking)                                           |*
-*|  [ ] Deadlock risk if multiple resources locked                             |*
-*|  [ ] Lock management complexity                                              |*
-*|  [ ] Lock holder crash leaves lock held (needs TTL)                         |*
+*|  X Reduced throughput (blocking)                                           |*
+*|  X Deadlock risk if multiple resources locked                             |*
+*|  X Lock management complexity                                              |*
+*|  X Lock holder crash leaves lock held (needs TTL)                         |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * High contention scenarios                                                |*
@@ -342,26 +342,26 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|  |  |                                                                 |  | |*
 *|  |  |  Semaphore (permits = 10)                                      |  | |*
 *|  |  |                                                                 |  | |*
-*|  |  |  Request 1 -> Acquire permit [x] -> Process -> Release             |  | |*
-*|  |  |  Request 2 -> Acquire permit [x] -> Process -> Release             |  | |*
+*|  |  |  Request 1 > Acquire permit Y > Process > Release             |  | |*
+*|  |  |  Request 2 > Acquire permit Y > Process > Release             |  | |*
 *|  |  |  ...                                                            |  | |*
-*|  |  |  Request 10 -> Acquire permit [x] -> Process                      |  | |*
-*|  |  |  Request 11 -> Wait (no permits available)                      |  | |*
+*|  |  |  Request 10 > Acquire permit Y > Process                      |  | |*
+*|  |  |  Request 11 > Wait (no permits available)                      |  | |*
 *|  |  |                                                                 |  | |*
 *|  |  +-----------------------------------------------------------------+  | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Protects downstream services from overload                              |*
-*|  [x] Predictable resource usage                                              |*
-*|  [x] Simple to implement                                                     |*
-*|  [x] Graceful degradation under load                                         |*
+*|  Y Protects downstream services from overload                              |*
+*|  Y Predictable resource usage                                              |*
+*|  Y Simple to implement                                                     |*
+*|  Y Graceful degradation under load                                         |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Artificial limitation on throughput                                     |*
-*|  [ ] Queuing adds latency                                                    |*
-*|  [ ] Need to tune the limit                                                  |*
+*|  X Artificial limitation on throughput                                     |*
+*|  X Queuing adds latency                                                    |*
+*|  X Need to tune the limit                                                  |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Protecting limited resources (DB connections, external APIs)            |*
@@ -393,14 +393,14 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Safe retries for non-idempotent operations                              |*
-*|  [x] Handles network failures gracefully                                     |*
-*|  [x] Client controls deduplication scope                                     |*
+*|  Y Safe retries for non-idempotent operations                              |*
+*|  Y Handles network failures gracefully                                     |*
+*|  Y Client controls deduplication scope                                     |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires idempotency store (Redis/DB)                                   |*
-*|  [ ] Storage for idempotency records                                         |*
-*|  [ ] Client must generate and manage keys                                    |*
+*|  X Requires idempotency store (Redis/DB)                                   |*
+*|  X Storage for idempotency records                                         |*
+*|  X Client must generate and manage keys                                    |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Payment processing                                                       |*
@@ -416,26 +416,26 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|  |                                                                        | |*
 *|  |  Route related work to same queue/partition for ordering              | |*
 *|  |                                                                        | |*
-*|  |  Requests for Account A -> Queue/Partition A -> Single consumer        | |*
-*|  |  Requests for Account B -> Queue/Partition B -> Single consumer        | |*
+*|  |  Requests for Account A > Queue/Partition A > Single consumer        | |*
+*|  |  Requests for Account B > Queue/Partition B > Single consumer        | |*
 *|  |                                                                        | |*
 *|  |  Kafka Example:                                                       | |*
 *|  |  Partition key = account_id                                          | |*
 *|  |  All operations for same account go to same partition                | |*
-*|  |  Single consumer per partition -> Sequential processing               | |*
+*|  |  Single consumer per partition > Sequential processing               | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Guaranteed ordering per entity                                          |*
-*|  [x] No locks needed                                                         |*
-*|  [x] Scales horizontally (more partitions)                                   |*
-*|  [x] Natural load distribution                                               |*
+*|  Y Guaranteed ordering per entity                                          |*
+*|  Y No locks needed                                                         |*
+*|  Y Scales horizontally (more partitions)                                   |*
+*|  Y Natural load distribution                                               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Introduces latency (async)                                              |*
-*|  [ ] Hot partitions if uneven distribution                                   |*
-*|  [ ] Single consumer bottleneck per partition                               |*
+*|  X Introduces latency (async)                                              |*
+*|  X Hot partitions if uneven distribution                                   |*
+*|  X Single consumer bottleneck per partition                               |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Event sourcing                                                           |*
@@ -461,14 +461,14 @@ SECTION 2: CONCURRENCY HANDLING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Lock-free                                                               |*
-*|  [x] Very fast                                                               |*
-*|  [x] No blocking                                                             |*
+*|  Y Lock-free                                                               |*
+*|  Y Very fast                                                               |*
+*|  Y No blocking                                                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires retry on conflict                                              |*
-*|  [ ] ABA problem possible                                                    |*
-*|  [ ] Limited to single value/record                                          |*
+*|  X Requires retry on conflict                                              |*
+*|  X ABA problem possible                                                    |*
+*|  X Limited to single value/record                                          |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Counters, balances                                                       |*
@@ -535,14 +535,14 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simple and straightforward                                              |*
-*|  [x] Built into most deployment tools                                        |*
-*|  [x] Proven stable version                                                   |*
+*|  Y Simple and straightforward                                              |*
+*|  Y Built into most deployment tools                                        |*
+*|  Y Proven stable version                                                   |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Takes time to redeploy                                                  |*
-*|  [ ] May not handle schema changes                                           |*
-*|  [ ] Requires keeping old artifacts                                          |*
+*|  X Takes time to redeploy                                                  |*
+*|  X May not handle schema changes                                           |*
+*|  X Requires keeping old artifacts                                          |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Code bug discovered                                                      |*
@@ -570,14 +570,14 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Instant rollback (DNS/LB switch)                                        |*
-*|  [x] No redeployment needed                                                  |*
-*|  [x] Can test new version before switch                                      |*
+*|  Y Instant rollback (DNS/LB switch)                                        |*
+*|  Y No redeployment needed                                                  |*
+*|  Y Can test new version before switch                                      |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires 2x infrastructure                                              |*
-*|  [ ] Database compatibility needed for both versions                        |*
-*|  [ ] Cost of running two environments                                        |*
+*|  X Requires 2x infrastructure                                              |*
+*|  X Database compatibility needed for both versions                        |*
+*|  X Cost of running two environments                                        |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Zero-downtime requirements                                               |*
@@ -604,16 +604,16 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Instant rollback without deployment                                     |*
-*|  [x] Granular control (disable specific features)                           |*
-*|  [x] No infrastructure duplication                                           |*
-*|  [x] Can rollback per user/segment                                           |*
+*|  Y Instant rollback without deployment                                     |*
+*|  Y Granular control (disable specific features)                           |*
+*|  Y No infrastructure duplication                                           |*
+*|  Y Can rollback per user/segment                                           |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires feature flag infrastructure                                    |*
-*|  [ ] Code complexity (branching logic)                                       |*
-*|  [ ] Technical debt if flags not cleaned up                                  |*
-*|  [ ] Both code paths must be maintained                                      |*
+*|  X Requires feature flag infrastructure                                    |*
+*|  X Code complexity (branching logic)                                       |*
+*|  X Technical debt if flags not cleaned up                                  |*
+*|  X Both code paths must be maintained                                      |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Risky features                                                           |*
@@ -627,23 +627,23 @@ SECTION 3: ROLLBACK STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Canary at 5% -> Detect issues -> Abort and route 100% to stable       | |*
+*|  |  Canary at 5% > Detect issues > Abort and route 100% to stable       | |*
 *|  |                                                                        | |*
-*|  |  Before: 5% -> v2 (canary), 95% -> v1                                  | |*
+*|  |  Before: 5% > v2 (canary), 95% > v1                                  | |*
 *|  |  Problem detected!                                                    | |*
-*|  |  After: 0% -> v2, 100% -> v1                                           | |*
+*|  |  After: 0% > v2, 100% > v1                                           | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Limited blast radius (only 5% affected)                                 |*
-*|  [x] Quick rollback (just routing change)                                    |*
-*|  [x] Automatic rollback with metrics (Argo Rollouts, Flagger)               |*
+*|  Y Limited blast radius (only 5% affected)                                 |*
+*|  Y Quick rollback (just routing change)                                    |*
+*|  Y Automatic rollback with metrics (Argo Rollouts, Flagger)               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Some users already impacted                                             |*
-*|  [ ] Requires traffic splitting infrastructure                               |*
-*|  [ ] Metrics/monitoring required for detection                               |*
+*|  X Some users already impacted                                             |*
+*|  X Requires traffic splitting infrastructure                               |*
+*|  X Metrics/monitoring required for detection                               |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Progressive delivery                                                     |*
@@ -685,13 +685,13 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Backward-compatible: Safe, no data loss                                 |*
-*|  [x] Compensating: Explicit undo logic                                       |*
+*|  Y Backward-compatible: Safe, no data loss                                 |*
+*|  Y Compensating: Explicit undo logic                                       |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Complex migration process                                               |*
-*|  [ ] Point-in-time loses data                                                |*
-*|  [ ] Compensating migrations can be complex                                  |*
+*|  X Complex migration process                                               |*
+*|  X Point-in-time loses data                                                |*
+*|  X Compensating migrations can be complex                                  |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Always use backward-compatible migrations                                |*
@@ -707,9 +707,9 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  |  For distributed transactions, undo previous steps                    | |*
 *|  |                                                                        | |*
 *|  |  Forward:                                                             | |*
-*|  |  1. Create Order [x]                                                   | |*
-*|  |  2. Reserve Inventory [x]                                              | |*
-*|  |  3. Process Payment [ ] (failed!)                                      | |*
+*|  |  1. Create Order Y                                                   | |*
+*|  |  2. Reserve Inventory Y                                              | |*
+*|  |  3. Process Payment X (failed!)                                      | |*
 *|  |                                                                        | |*
 *|  |  Compensate (rollback):                                               | |*
 *|  |  1. Release Inventory (undo step 2)                                  | |*
@@ -718,14 +718,14 @@ SECTION 3: ROLLBACK STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Works across services                                                   |*
-*|  [x] No distributed transactions needed                                      |*
-*|  [x] Each service handles its own rollback                                   |*
+*|  Y Works across services                                                   |*
+*|  Y No distributed transactions needed                                      |*
+*|  Y Each service handles its own rollback                                   |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Compensating logic for every action                                     |*
-*|  [ ] Eventual consistency during rollback                                    |*
-*|  [ ] Complex failure handling                                                |*
+*|  X Compensating logic for every action                                     |*
+*|  X Eventual consistency during rollback                                    |*
+*|  X Complex failure handling                                                |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Multi-service transactions                                               |*
@@ -765,7 +765,7 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  FEATURE FLAGS (aka Feature Toggles)                                   |*
 *|                                                                         |*
 *|  Decouple deployment from release.                                     |*
-*|  Deploy code -> Enable flag -> Feature is live                           |*
+*|  Deploy code > Enable flag > Feature is live                           |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 *+------------------------------------------------------------------------------+*
@@ -782,13 +782,13 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simplest to implement                                                   |*
-*|  [x] Easy to understand                                                      |*
-*|  [x] Quick kill switch                                                       |*
+*|  Y Simplest to implement                                                   |*
+*|  Y Easy to understand                                                      |*
+*|  Y Quick kill switch                                                       |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] All or nothing (no gradual rollout)                                     |*
-*|  [ ] No targeting                                                            |*
+*|  X All or nothing (no gradual rollout)                                     |*
+*|  X No targeting                                                            |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Kill switches                                                            |*
@@ -808,7 +808,7 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  |    "rollout_percentage": 10                                          | |*
 *|  |  }                                                                    | |*
 *|  |                                                                        | |*
-*|  |  Hash(user_id) % 100 < 10 -> See new feature                          | |*
+*|  |  Hash(user_id) % 100 < 10 > See new feature                          | |*
 *|  |                                                                        | |*
 *|  |  Day 1: 5%                                                            | |*
 *|  |  Day 2: 25%                                                           | |*
@@ -818,13 +818,13 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Limit blast radius                                                      |*
-*|  [x] Monitor metrics before full rollout                                     |*
-*|  [x] Consistent per user (same user always sees same version)               |*
+*|  Y Limit blast radius                                                      |*
+*|  Y Monitor metrics before full rollout                                     |*
+*|  Y Consistent per user (same user always sees same version)               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Can't target specific users                                             |*
-*|  [ ] Random selection (might miss important segments)                       |*
+*|  X Can't target specific users                                             |*
+*|  X Random selection (might miss important segments)                       |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Safe, gradual rollouts                                                   |*
@@ -851,14 +851,14 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Target specific users (beta testers, employees)                        |*
-*|  [x] Regional rollouts                                                       |*
-*|  [x] Segment-based experiments                                               |*
+*|  Y Target specific users (beta testers, employees)                        |*
+*|  Y Regional rollouts                                                       |*
+*|  Y Segment-based experiments                                               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] More complex configuration                                              |*
-*|  [ ] Need user context available                                             |*
-*|  [ ] Can miss edge cases in other segments                                   |*
+*|  X More complex configuration                                              |*
+*|  X Need user context available                                             |*
+*|  X Can miss edge cases in other segments                                   |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Beta programs                                                            |*
@@ -887,14 +887,14 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Data-driven decisions                                                   |*
-*|  [x] Statistical significance                                                |*
-*|  [x] Multiple variants possible                                              |*
+*|  Y Data-driven decisions                                                   |*
+*|  Y Statistical significance                                                |*
+*|  Y Multiple variants possible                                              |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires analytics integration                                          |*
-*|  [ ] Need enough traffic for significance                                    |*
-*|  [ ] More complex setup                                                      |*
+*|  X Requires analytics integration                                          |*
+*|  X Need enough traffic for significance                                    |*
+*|  X More complex setup                                                      |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * UX experiments                                                           |*
@@ -922,13 +922,13 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Automated activation/deactivation                                       |*
-*|  [x] Schedule campaigns in advance                                           |*
-*|  [x] No manual intervention needed                                           |*
+*|  Y Automated activation/deactivation                                       |*
+*|  Y Schedule campaigns in advance                                           |*
+*|  Y No manual intervention needed                                           |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Time zone complexity                                                    |*
-*|  [ ] Less flexibility for immediate changes                                 |*
+*|  X Time zone complexity                                                    |*
+*|  X Less flexibility for immediate changes                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Marketing campaigns                                                      |*
@@ -952,13 +952,13 @@ SECTION 4: FEATURE FLAG STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Operational flexibility without deployment                              |*
-*|  [x] Quick response to incidents                                             |*
-*|  [x] Graceful degradation                                                    |*
+*|  Y Operational flexibility without deployment                              |*
+*|  Y Quick response to incidents                                             |*
+*|  Y Graceful degradation                                                    |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Can mask underlying issues                                              |*
-*|  [ ] Need monitoring to know when to toggle                                  |*
+*|  X Can mask underlying issues                                              |*
+*|  X Need monitoring to know when to toggle                                  |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Kill switches for expensive features                                     |*
@@ -1005,7 +1005,7 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|                                                                              |*
 *|  +------------------------------------------------------------------------+ |*
 *|  |                                                                        | |*
-*|  |  Stop all v1 -> Deploy all v2                                          | |*
+*|  |  Stop all v1 > Deploy all v2                                          | |*
 *|  |                                                                        | |*
 *|  |  Before:  [v1] [v1] [v1] [v1]                                        | |*
 *|  |                    v (downtime)                                        | |*
@@ -1014,14 +1014,14 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simple                                                                   |*
-*|  [x] Clean state (no version mixing)                                         |*
-*|  [x] No backward compatibility needed                                        |*
+*|  Y Simple                                                                   |*
+*|  Y Clean state (no version mixing)                                         |*
+*|  Y No backward compatibility needed                                        |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] DOWNTIME during deployment                                              |*
-*|  [ ] Risky (all-at-once)                                                     |*
-*|  [ ] Slow rollback                                                           |*
+*|  X DOWNTIME during deployment                                              |*
+*|  X Risky (all-at-once)                                                     |*
+*|  X Slow rollback                                                           |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Development/staging environments                                         |*
@@ -1047,16 +1047,16 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Zero downtime                                                           |*
-*|  [x] Gradual rollout                                                         |*
-*|  [x] Built into Kubernetes                                                   |*
-*|  [x] Resource efficient                                                      |*
+*|  Y Zero downtime                                                           |*
+*|  Y Gradual rollout                                                         |*
+*|  Y Built into Kubernetes                                                   |*
+*|  Y Resource efficient                                                      |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Mixed versions during rollout                                           |*
-*|  [ ] Requires backward-compatible APIs                                       |*
-*|  [ ] Slow for large deployments                                              |*
-*|  [ ] Rollback also gradual                                                   |*
+*|  X Mixed versions during rollout                                           |*
+*|  X Requires backward-compatible APIs                                       |*
+*|  X Slow for large deployments                                              |*
+*|  X Rollback also gradual                                                   |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Most production deployments                                              |*
@@ -1088,15 +1088,15 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Instant switch                                                          |*
-*|  [x] Instant rollback                                                        |*
-*|  [x] Test new version in production environment                              |*
-*|  [x] No mixed versions during traffic                                        |*
+*|  Y Instant switch                                                          |*
+*|  Y Instant rollback                                                        |*
+*|  Y Test new version in production environment                              |*
+*|  Y No mixed versions during traffic                                        |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] 2x infrastructure cost                                                  |*
-*|  [ ] Database compatibility for both versions                               |*
-*|  [ ] Complex stateful applications                                           |*
+*|  X 2x infrastructure cost                                                  |*
+*|  X Database compatibility for both versions                               |*
+*|  X Complex stateful applications                                           |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Critical services requiring instant rollback                            |*
@@ -1112,33 +1112,33 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  |                                                                        | |*
 *|  |  Release to small percentage, monitor, expand                         | |*
 *|  |                                                                        | |*
-*|  |  Stage 1:  5% -> v2 (canary), 95% -> v1                                | |*
+*|  |  Stage 1:  5% > v2 (canary), 95% > v1                                | |*
 *|  |            Monitor: errors, latency, conversions                      | |*
-*|  |            [x] Metrics OK                                              | |*
+*|  |            Y Metrics OK                                              | |*
 *|  |                                                                        | |*
-*|  |  Stage 2:  25% -> v2, 75% -> v1                                        | |*
-*|  |            [x] Metrics OK                                              | |*
+*|  |  Stage 2:  25% > v2, 75% > v1                                        | |*
+*|  |            Y Metrics OK                                              | |*
 *|  |                                                                        | |*
-*|  |  Stage 3:  50% -> v2, 50% -> v1                                        | |*
-*|  |            [x] Metrics OK                                              | |*
+*|  |  Stage 3:  50% > v2, 50% > v1                                        | |*
+*|  |            Y Metrics OK                                              | |*
 *|  |                                                                        | |*
-*|  |  Stage 4:  100% -> v2, retire v1                                      | |*
+*|  |  Stage 4:  100% > v2, retire v1                                      | |*
 *|  |                                                                        | |*
 *|  |  If any stage fails: Abort, route 100% back to v1                    | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Minimal blast radius                                                    |*
-*|  [x] Real production traffic testing                                         |*
-*|  [x] Metrics-driven promotion                                                |*
-*|  [x] Automatic rollback possible (Argo Rollouts, Flagger)                   |*
+*|  Y Minimal blast radius                                                    |*
+*|  Y Real production traffic testing                                         |*
+*|  Y Metrics-driven promotion                                                |*
+*|  Y Automatic rollback possible (Argo Rollouts, Flagger)                   |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Slower rollout                                                          |*
-*|  [ ] Requires traffic splitting                                              |*
-*|  [ ] Need good observability                                                 |*
-*|  [ ] Some users hit bugs                                                     |*
+*|  X Slower rollout                                                          |*
+*|  X Requires traffic splitting                                              |*
+*|  X Need good observability                                                 |*
+*|  X Some users hit bugs                                                     |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * High-risk changes                                                        |*
@@ -1155,22 +1155,22 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  |  Route specific users/segments to different versions                  | |*
 *|  |                                                                        | |*
 *|  |  Criteria-based routing:                                              | |*
-*|  |  * user.country == "US" -> v2                                         | |*
-*|  |  * user.subscription == "premium" -> v2                               | |*
-*|  |  * request.header["X-Beta"] == "true" -> v2                           | |*
-*|  |  * else -> v1                                                          | |*
+*|  |  * user.country == "US" > v2                                         | |*
+*|  |  * user.subscription == "premium" > v2                               | |*
+*|  |  * request.header["X-Beta"] == "true" > v2                           | |*
+*|  |  * else > v1                                                          | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Target specific user segments                                           |*
-*|  [x] A/B experiments on deployments                                          |*
-*|  [x] Sticky routing (same user, same version)                               |*
+*|  Y Target specific user segments                                           |*
+*|  Y A/B experiments on deployments                                          |*
+*|  Y Sticky routing (same user, same version)                               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Complex routing rules                                                   |*
-*|  [ ] Requires user context                                                   |*
-*|  [ ] Session affinity needed                                                 |*
+*|  X Complex routing rules                                                   |*
+*|  X Requires user context                                                   |*
+*|  X Session affinity needed                                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Testing with specific users                                              |*
@@ -1205,16 +1205,16 @@ SECTION 5: DEPLOYMENT STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Zero user impact                                                        |*
-*|  [x] Test with real production traffic                                       |*
-*|  [x] Compare responses for correctness                                       |*
-*|  [x] Performance testing at scale                                            |*
+*|  Y Zero user impact                                                        |*
+*|  Y Test with real production traffic                                       |*
+*|  Y Compare responses for correctness                                       |*
+*|  Y Performance testing at scale                                            |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] 2x load on backend                                                      |*
-*|  [ ] Doesn't test user-facing behavior                                       |*
-*|  [ ] Complex for write operations                                            |*
-*|  [ ] Data consistency issues                                                 |*
+*|  X 2x load on backend                                                      |*
+*|  X Doesn't test user-facing behavior                                       |*
+*|  X Complex for write operations                                            |*
+*|  X Data consistency issues                                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Major refactoring (same API, new implementation)                        |*
@@ -1307,16 +1307,16 @@ SECTION 6: FEATURE FLAG IMPLEMENTATION STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Extremely simple                                                        |*
-*|  [x] No external dependencies                                                |*
-*|  [x] Version controlled                                                      |*
-*|  [x] Works offline                                                           |*
+*|  Y Extremely simple                                                        |*
+*|  Y No external dependencies                                                |*
+*|  Y Version controlled                                                      |*
+*|  Y Works offline                                                           |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires redeployment to change flags                                   |*
-*|  [ ] No dynamic updates                                                      |*
-*|  [ ] No targeting/segmentation                                               |*
-*|  [ ] No audit trail                                                          |*
+*|  X Requires redeployment to change flags                                   |*
+*|  X No dynamic updates                                                      |*
+*|  X No targeting/segmentation                                               |*
+*|  X No audit trail                                                          |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Simple applications                                                      |*
@@ -1349,16 +1349,16 @@ SECTION 6: FEATURE FLAG IMPLEMENTATION STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simple                                                                  |*
-*|  [x] Environment-specific (dev/staging/prod)                                 |*
-*|  [x] Works with container orchestration                                      |*
-*|  [x] No code changes to toggle                                               |*
+*|  Y Simple                                                                  |*
+*|  Y Environment-specific (dev/staging/prod)                                 |*
+*|  Y Works with container orchestration                                      |*
+*|  Y No code changes to toggle                                               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Requires pod restart (usually)                                          |*
-*|  [ ] No targeting/segmentation                                               |*
-*|  [ ] Hard to manage many flags                                               |*
-*|  [ ] No audit trail                                                          |*
+*|  X Requires pod restart (usually)                                          |*
+*|  X No targeting/segmentation                                               |*
+*|  X Hard to manage many flags                                               |*
+*|  X No audit trail                                                          |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Container-based deployments                                              |*
@@ -1394,17 +1394,17 @@ SECTION 6: FEATURE FLAG IMPLEMENTATION STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Dynamic updates (no restart)                                            |*
-*|  [x] Admin UI can modify flags                                               |*
-*|  [x] Supports targeting/conditions                                           |*
-*|  [x] Audit trail possible                                                    |*
-*|  [x] Self-hosted                                                             |*
+*|  Y Dynamic updates (no restart)                                            |*
+*|  Y Admin UI can modify flags                                               |*
+*|  Y Supports targeting/conditions                                           |*
+*|  Y Audit trail possible                                                    |*
+*|  Y Self-hosted                                                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Need to build infrastructure                                            |*
-*|  [ ] Cache invalidation complexity                                           |*
-*|  [ ] Database dependency                                                     |*
-*|  [ ] Polling latency or pub/sub complexity                                   |*
+*|  X Need to build infrastructure                                            |*
+*|  X Cache invalidation complexity                                           |*
+*|  X Database dependency                                                     |*
+*|  X Polling latency or pub/sub complexity                                   |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Need dynamic updates                                                     |*
@@ -1445,16 +1445,16 @@ SECTION 6: FEATURE FLAG IMPLEMENTATION STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Instant propagation (watch/push)                                        |*
-*|  [x] Highly available                                                        |*
-*|  [x] Consistent across services                                              |*
-*|  [x] Already used for service discovery                                      |*
+*|  Y Instant propagation (watch/push)                                        |*
+*|  Y Highly available                                                        |*
+*|  Y Consistent across services                                              |*
+*|  Y Already used for service discovery                                      |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Additional infrastructure                                               |*
-*|  [ ] Limited querying capabilities                                           |*
-*|  [ ] No built-in targeting                                                   |*
-*|  [ ] No analytics                                                            |*
+*|  X Additional infrastructure                                               |*
+*|  X Limited querying capabilities                                           |*
+*|  X No built-in targeting                                                   |*
+*|  X No analytics                                                            |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Already using Consul/etcd for service discovery                         |*
@@ -1513,17 +1513,17 @@ SECTION 6: FEATURE FLAG IMPLEMENTATION STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Full-featured (targeting, analytics, audit)                             |*
-*|  [x] SDKs for all languages                                                  |*
-*|  [x] Real-time updates                                                       |*
-*|  [x] A/B testing built-in                                                    |*
-*|  [x] Excellent UI/UX                                                         |*
-*|  [x] Minimal latency (local evaluation)                                      |*
+*|  Y Full-featured (targeting, analytics, audit)                             |*
+*|  Y SDKs for all languages                                                  |*
+*|  Y Real-time updates                                                       |*
+*|  Y A/B testing built-in                                                    |*
+*|  Y Excellent UI/UX                                                         |*
+*|  Y Minimal latency (local evaluation)                                      |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Cost (SaaS can be expensive at scale)                                   |*
-*|  [ ] External dependency                                                     |*
-*|  [ ] Vendor lock-in (SaaS)                                                   |*
+*|  X Cost (SaaS can be expensive at scale)                                   |*
+*|  X External dependency                                                     |*
+*|  X Vendor lock-in (SaaS)                                                   |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Need full feature management                                             |*
@@ -1565,11 +1565,11 @@ SECTION 7: CUTOVER STRATEGIES
 *|  WHAT IS A CUTOVER?                                                    |*
 *|                                                                         |*
 *|  Transitioning from one system/version to another:                     |*
-*|  * Old system -> New system                                             |*
-*|  * Legacy database -> New database                                      |*
-*|  * Monolith -> Microservices                                            |*
-*|  * On-prem -> Cloud                                                     |*
-*|  * Vendor A -> Vendor B                                                 |*
+*|  * Old system > New system                                             |*
+*|  * Legacy database > New database                                      |*
+*|  * Monolith > Microservices                                            |*
+*|  * On-prem > Cloud                                                     |*
+*|  * Vendor A > Vendor B                                                 |*
 *|                                                                         |*
 *|  Key concern: Minimize risk and downtime                               |*
 *|                                                                         |*
@@ -1603,17 +1603,17 @@ SECTION 7: CUTOVER STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Simple to plan and execute                                              |*
-*|  [x] Clean break (no dual running)                                           |*
-*|  [x] No data sync complexity                                                 |*
-*|  [x] Clear rollback point                                                    |*
+*|  Y Simple to plan and execute                                              |*
+*|  Y Clean break (no dual running)                                           |*
+*|  Y No data sync complexity                                                 |*
+*|  Y Clear rollback point                                                    |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] DOWNTIME required                                                       |*
-*|  [ ] High risk (all or nothing)                                              |*
-*|  [ ] Long maintenance window                                                 |*
-*|  [ ] Rollback is painful                                                     |*
-*|  [ ] All issues found in production at once                                  |*
+*|  X DOWNTIME required                                                       |*
+*|  X High risk (all or nothing)                                              |*
+*|  X Long maintenance window                                                 |*
+*|  X Rollback is painful                                                     |*
+*|  X All issues found in production at once                                  |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Downtime is acceptable                                                   |*
@@ -1650,11 +1650,11 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |  |                                                                 |  | |*
 *|  |  +-----------------------------------------------------------------+  | |*
 *|  |                                                                        | |*
-*|  |  Cutover: Switch load balancer from Blue -> Green                     | |*
+*|  |  Cutover: Switch load balancer from Blue > Green                     | |*
 *|  |                                                                        | |*
 *|  |  Timeline:                                                            | |*
 *|  |  1. Deploy new system alongside old                                  | |*
-*|  |  2. Set up data sync (old -> new)                                    | |*
+*|  |  2. Set up data sync (old > new)                                    | |*
 *|  |  3. Verify new system works                                          | |*
 *|  |  4. Switch traffic (instant)                                         | |*
 *|  |  5. Monitor                                                           | |*
@@ -1663,16 +1663,16 @@ SECTION 7: CUTOVER STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Zero/minimal downtime                                                   |*
-*|  [x] Instant rollback (switch back)                                          |*
-*|  [x] Test new system with real data                                          |*
-*|  [x] Confidence before cutover                                               |*
+*|  Y Zero/minimal downtime                                                   |*
+*|  Y Instant rollback (switch back)                                          |*
+*|  Y Test new system with real data                                          |*
+*|  Y Confidence before cutover                                               |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] 2x infrastructure cost                                                  |*
-*|  [ ] Data sync complexity                                                    |*
-*|  [ ] Both systems must be compatible with data                              |*
-*|  [ ] Sync lag during cutover                                                 |*
+*|  X 2x infrastructure cost                                                  |*
+*|  X Data sync complexity                                                    |*
+*|  X Both systems must be compatible with data                              |*
+*|  X Sync lag during cutover                                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Zero downtime required                                                   |*
@@ -1695,9 +1695,9 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |         +-----------------------------------------+                   | |*
 *|  |         |            FACADE / PROXY               |                   | |*
 *|  |         |                                         |                   | |*
-*|  |         |   /users   -> Old System                |                   | |*
-*|  |         |   /orders  -> Old System                |                   | |*
-*|  |         |   /products-> Old System                |                   | |*
+*|  |         |   /users   > Old System                |                   | |*
+*|  |         |   /orders  > Old System                |                   | |*
+*|  |         |   /products> Old System                |                   | |*
 *|  |         |                                         |                   | |*
 *|  |         +-----------------------------------------+                   | |*
 *|  |                                                                        | |*
@@ -1707,9 +1707,9 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |         +-----------------------------------------+                   | |*
 *|  |         |            FACADE / PROXY               |                   | |*
 *|  |         |                                         |                   | |*
-*|  |         |   /users   -> NEW System [x]              |                   | |*
-*|  |         |   /orders  -> Old System                |                   | |*
-*|  |         |   /products-> Old System                |                   | |*
+*|  |         |   /users   > NEW System Y              |                   | |*
+*|  |         |   /orders  > Old System                |                   | |*
+*|  |         |   /products> Old System                |                   | |*
 *|  |         |                                         |                   | |*
 *|  |         +-----------------------------------------+                   | |*
 *|  |                                                                        | |*
@@ -1719,9 +1719,9 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |         +-----------------------------------------+                   | |*
 *|  |         |            FACADE / PROXY               |                   | |*
 *|  |         |                                         |                   | |*
-*|  |         |   /users   -> NEW System [x]              |                   | |*
-*|  |         |   /orders  -> NEW System [x]              |                   | |*
-*|  |         |   /products-> Old System                |                   | |*
+*|  |         |   /users   > NEW System Y              |                   | |*
+*|  |         |   /orders  > NEW System Y              |                   | |*
+*|  |         |   /products> Old System                |                   | |*
 *|  |         |                                         |                   | |*
 *|  |         +-----------------------------------------+                   | |*
 *|  |                                                                        | |*
@@ -1731,9 +1731,9 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |         +-----------------------------------------+                   | |*
 *|  |         |            NEW SYSTEM                   |                   | |*
 *|  |         |                                         |                   | |*
-*|  |         |   /users   -> New                       |                   | |*
-*|  |         |   /orders  -> New                       |                   | |*
-*|  |         |   /products-> New                       |                   | |*
+*|  |         |   /users   > New                       |                   | |*
+*|  |         |   /orders  > New                       |                   | |*
+*|  |         |   /products> New                       |                   | |*
 *|  |         |                                         |                   | |*
 *|  |         +-----------------------------------------+                   | |*
 *|  |                                                                        | |*
@@ -1742,19 +1742,19 @@ SECTION 7: CUTOVER STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Minimal risk (small changes)                                            |*
-*|  [x] Zero downtime                                                           |*
-*|  [x] Continuous delivery                                                     |*
-*|  [x] Learn and adapt as you go                                               |*
-*|  [x] Can pause or rollback any piece                                         |*
-*|  [x] Team can work incrementally                                             |*
+*|  Y Minimal risk (small changes)                                            |*
+*|  Y Zero downtime                                                           |*
+*|  Y Continuous delivery                                                     |*
+*|  Y Learn and adapt as you go                                               |*
+*|  Y Can pause or rollback any piece                                         |*
+*|  Y Team can work incrementally                                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Long migration timeline                                                 |*
-*|  [ ] Complexity of running both systems                                      |*
-*|  [ ] Data sync between old and new                                           |*
-*|  [ ] Facade/proxy adds latency                                               |*
-*|  [ ] Feature parity pressure                                                 |*
+*|  X Long migration timeline                                                 |*
+*|  X Complexity of running both systems                                      |*
+*|  X Data sync between old and new                                           |*
+*|  X Facade/proxy adds latency                                               |*
+*|  X Feature parity pressure                                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Monolith to microservices migration                                      |*
@@ -1771,37 +1771,37 @@ SECTION 7: CUTOVER STRATEGIES
 *|  |                                                                        | |*
 *|  |  Route small percentage of traffic to new system, gradually increase | |*
 *|  |                                                                        | |*
-*|  |  Stage 1:  5% -> New System                                           | |*
-*|  |           95% -> Old System                                            | |*
+*|  |  Stage 1:  5% > New System                                           | |*
+*|  |           95% > Old System                                            | |*
 *|  |           Monitor metrics...                                          | |*
 *|  |                                                                        | |*
-*|  |  Stage 2: 25% -> New System                                           | |*
-*|  |           75% -> Old System                                            | |*
+*|  |  Stage 2: 25% > New System                                           | |*
+*|  |           75% > Old System                                            | |*
 *|  |           Monitor metrics...                                          | |*
 *|  |                                                                        | |*
-*|  |  Stage 3: 50% -> New System                                           | |*
-*|  |           50% -> Old System                                            | |*
+*|  |  Stage 3: 50% > New System                                           | |*
+*|  |           50% > Old System                                            | |*
 *|  |           Monitor metrics...                                          | |*
 *|  |                                                                        | |*
-*|  |  Stage 4: 100% -> New System                                          | |*
-*|  |             0% -> Old System (standby for rollback)                   | |*
+*|  |  Stage 4: 100% > New System                                          | |*
+*|  |             0% > Old System (standby for rollback)                   | |*
 *|  |                                                                        | |*
 *|  |  Important: Data must be synchronized between systems!               | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Low risk (small blast radius)                                           |*
-*|  [x] Real traffic testing                                                    |*
-*|  [x] Gradual confidence building                                             |*
-*|  [x] Quick rollback (route 100% to old)                                      |*
-*|  [x] Metrics-driven decisions                                                |*
+*|  Y Low risk (small blast radius)                                           |*
+*|  Y Real traffic testing                                                    |*
+*|  Y Gradual confidence building                                             |*
+*|  Y Quick rollback (route 100% to old)                                      |*
+*|  Y Metrics-driven decisions                                                |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Data sync complexity (both systems need same data)                      |*
-*|  [ ] Longer cutover period                                                   |*
-*|  [ ] User experience may differ by system                                    |*
-*|  [ ] Some users hit bugs early                                               |*
+*|  X Data sync complexity (both systems need same data)                      |*
+*|  X Longer cutover period                                                   |*
+*|  X User experience may differ by system                                    |*
+*|  X Some users hit bugs early                                               |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * High-risk migration                                                      |*
@@ -1848,17 +1848,17 @@ SECTION 7: CUTOVER STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Zero user impact                                                        |*
-*|  [x] Test with real production traffic                                       |*
-*|  [x] Compare old vs new responses                                            |*
-*|  [x] Find bugs before any user sees them                                     |*
-*|  [x] Performance validation                                                  |*
+*|  Y Zero user impact                                                        |*
+*|  Y Test with real production traffic                                       |*
+*|  Y Compare old vs new responses                                            |*
+*|  Y Find bugs before any user sees them                                     |*
+*|  Y Performance validation                                                  |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] 2x load on infrastructure                                               |*
-*|  [ ] Complex for write operations (can't actually write)                    |*
-*|  [ ] Doesn't test user-facing behavior                                       |*
-*|  [ ] Response comparison logic needed                                        |*
+*|  X 2x load on infrastructure                                               |*
+*|  X Complex for write operations (can't actually write)                    |*
+*|  X Doesn't test user-facing behavior                                       |*
+*|  X Response comparison logic needed                                        |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Major refactoring (same API, new implementation)                        |*
@@ -1898,17 +1898,17 @@ SECTION 7: CUTOVER STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Instant rollback (flip flag)                                            |*
-*|  [x] No infrastructure changes                                               |*
-*|  [x] Per-user/segment control                                                |*
-*|  [x] Can A/B test old vs new                                                 |*
-*|  [x] Gradual rollout                                                         |*
+*|  Y Instant rollback (flip flag)                                            |*
+*|  Y No infrastructure changes                                               |*
+*|  Y Per-user/segment control                                                |*
+*|  Y Can A/B test old vs new                                                 |*
+*|  Y Gradual rollout                                                         |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Both code paths must coexist                                            |*
-*|  [ ] Technical debt (if not cleaned up)                                      |*
-*|  [ ] Testing complexity                                                      |*
-*|  [ ] Data model must support both                                            |*
+*|  X Both code paths must coexist                                            |*
+*|  X Technical debt (if not cleaned up)                                      |*
+*|  X Testing complexity                                                      |*
+*|  X Data model must support both                                            |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Code-level changes (not infrastructure)                                  |*
@@ -1943,7 +1943,7 @@ SECTION 7: CUTOVER STRATEGIES
 *|                                                                              |*
 *|  * Simple migration, downtime OK: Big Bang                                  |*
 *|  * Zero downtime, quick cutover: Blue-Green                                |*
-*|  * Monolith -> Microservices: Strangler Fig                                 |*
+*|  * Monolith > Microservices: Strangler Fig                                 |*
 *|  * Database migration: Shadow + Canary                                      |*
 *|  * Code refactoring: Feature Flag                                           |*
 *|  * Vendor migration: Blue-Green or Canary                                   |*

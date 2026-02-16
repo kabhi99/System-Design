@@ -482,7 +482,7 @@ SECTION 7: FINDING DUE JOBS (The Core Problem)
 *|  |                                                                 |  |*
 *|  |  Imagine a clock with buckets:                                |  |*
 *|  |                                                                 |  |*
-*|  |       [0] [1] [2] [3] [4] [5] ... [59]   <- Seconds wheel      |  |*
+*|  |       [0] [1] [2] [3] [4] [5] ... [59]   < Seconds wheel      |  |*
 *|  |              ^                                                 |  |*
 *|  |           pointer                                              |  |*
 *|  |                                                                 |  |*
@@ -524,7 +524,7 @@ SECTION 8: EXACTLY-ONCE EXECUTION
 *|  |  3. Scheduler CRASHES before updating next_run_time            |  |*
 *|  |  4. New scheduler leader takes over                           |  |*
 *|  |  5. New scheduler finds SAME job due (not updated!)           |  |*
-*|  |  6. Same job enqueued AGAIN -> DUPLICATE!                      |  |*
+*|  |  6. Same job enqueued AGAIN > DUPLICATE!                      |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -547,8 +547,8 @@ SECTION 8: EXACTLY-ONCE EXECUTION
 *|  |    AND next_run_time <= NOW()                                 |  |*
 *|  |    AND version = {current_version};                           |  |*
 *|  |                                                                 |  |*
-*|  |  -- If 0 rows affected -> someone else got it                  |  |*
-*|  |  -- If 1 row affected -> we got the lock, proceed             |  |*
+*|  |  -- If 0 rows affected > someone else got it                  |  |*
+*|  |  -- If 1 row affected > we got the lock, proceed             |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -563,8 +563,8 @@ SECTION 8: EXACTLY-ONCE EXECUTION
 *|  |      NX                    -- Only if not exists              |  |*
 *|  |      EX 300                -- Expire in 5 minutes             |  |*
 *|  |                                                                 |  |*
-*|  |  If SET returns OK -> we got the lock, execute                 |  |*
-*|  |  If SET returns nil -> another worker has it, skip             |  |*
+*|  |  If SET returns OK > we got the lock, execute                 |  |*
+*|  |  If SET returns nil > another worker has it, skip             |  |*
 *|  |                                                                 |  |*
 *|  |  Key includes execution_time to allow re-execution            |  |*
 *|  |  if same job is due again later.                              |  |*
@@ -637,7 +637,7 @@ SECTION 9: LEADER ELECTION FOR SCHEDULER
 *|  |  +-----------+   +-----------+   +-----------+                |  |*
 *|  |  | Scheduler |   | Scheduler |   | Scheduler |                |  |*
 *|  |  |  Node 1   |   |  Node 2   |   |  Node 3   |                |  |*
-*|  |  |  LEADER [x] |   |  Standby  |   |  Standby  |                |  |*
+*|  |  |  LEADER Y |   |  Standby  |   |  Standby  |                |  |*
 *|  |  +-----+-----+   +-----+-----+   +-----+-----+                |  |*
 *|  |        |               |               |                       |  |*
 *|  |        +---------------+---------------+                       |  |*
@@ -821,7 +821,7 @@ SECTION 10: WORKER DESIGN
 *|  |  Attempt N: capped at 1 hour                                  |  |*
 *|  |                                                                 |  |*
 *|  |  After max_retries: Mark job as FAILED_PERMANENT              |  |*
-*|  |  -> Alert, move to dead letter queue                          |  |*
+*|  |  > Alert, move to dead letter queue                          |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -959,7 +959,7 @@ SECTION 10: WORKER DESIGN
 *|  |       +---------+   +---------+   +---------+                 |  |*
 *|  |                                                                 |  |*
 *|  |  Naturally load-balanced:                                     |  |*
-*|  |  * Faster workers finish jobs -> fetch more jobs              |  |*
+*|  |  * Faster workers finish jobs > fetch more jobs              |  |*
 *|  |  * Slower/busier workers naturally get fewer jobs            |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -981,8 +981,8 @@ SECTION 10: WORKER DESIGN
 *|  |                                                                 |  |*
 *|  |  2. AUTO-SCALING WORKERS                                      |  |*
 *|  |     * Monitor queue depth                                     |  |*
-*|  |     * If depth > threshold -> spin up more workers           |  |*
-*|  |     * If depth < threshold -> scale down                     |  |*
+*|  |     * If depth > threshold > spin up more workers           |  |*
+*|  |     * If depth < threshold > scale down                     |  |*
 *|  |                                                                 |  |*
 *|  |     if queue_depth > 10000 and workers < max_workers:        |  |*
 *|  |         scale_up_workers(count=2)                            |  |*
@@ -1018,8 +1018,8 @@ SECTION 10: WORKER DESIGN
 *|  |  | (empty) |           | (busy)  |           |         |     |  |*
 *|  |  +---------+           +---------+           +---------+     |  |*
 *|  |                                                                 |  |*
-*|  |  Worker 1 is idle -> looks at other workers' queues           |  |*
-*|  |  Worker 2 has jobs -> Worker 1 steals one                     |  |*
+*|  |  Worker 1 is idle > looks at other workers' queues           |  |*
+*|  |  Worker 2 has jobs > Worker 1 steals one                     |  |*
 *|  |                                                                 |  |*
 *|  |  Implementation:                                               |  |*
 *|  |  * Each worker exposes local queue via RPC/Redis             |  |*
@@ -1295,7 +1295,7 @@ SECTION 13: INTERVIEW QUICK REFERENCE
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Client -> API -> Job Store (MySQL)                             |  |*
+*|  |  Client > API > Job Store (MySQL)                             |  |*
 *|  |                      v                                         |  |*
 *|  |            Scheduler (Leader Election)                        |  |*
 *|  |                      v                                         |  |*

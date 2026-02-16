@@ -455,8 +455,8 @@ WHAT HAPPENS:
 |  ---------------                                                       |
 |  Map port from host to container                                      |
 |  Format: hostPort:containerPort                                       |
-|  docker run -p 8080:80 nginx         # host:8080 -> container:80      |
-|  docker run -p 80 nginx              # Random host port -> 80         |
+|  docker run -p 8080:80 nginx         # host:8080 > container:80      |
+|  docker run -p 80 nginx              # Random host port > 80         |
 |  docker run -p 127.0.0.1:8080:80     # Only localhost access         |
 |                                                                         |
 |  -v, --volume                                                          |

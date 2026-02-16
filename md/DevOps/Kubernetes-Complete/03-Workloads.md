@@ -21,11 +21,11 @@ workload resources: ReplicaSets and Deployments.
 |  PROBLEMS:                                                             |
 |                                                                         |
 |  1. NO AUTO-RESTART                                                    |
-|     Pod crashes -> Pod gone forever                                    |
-|     Node fails -> Pod lost                                             |
+|     Pod crashes > Pod gone forever                                    |
+|     Node fails > Pod lost                                             |
 |                                                                         |
 |  2. NO SCALING                                                         |
-|     Traffic increases -> Can't add more pods easily                    |
+|     Traffic increases > Can't add more pods easily                    |
 |                                                                         |
 |  3. NO ROLLING UPDATES                                                 |
 |     New version? Delete old pod, create new one                       |
@@ -67,7 +67,7 @@ A ReplicaSet ensures a specified number of pod replicas are running:
 |  SELF-HEALING:                                                         |
 |                                                                         |
 |  Pod 2 crashes...                                                      |
-|  +---------+         [ ]           +---------+                          |
+|  +---------+         X           +---------+                          |
 |  |  Pod 1  |                     |  Pod 3  |                          |
 |  +---------+                     +---------+                          |
 |                                                                         |
@@ -140,7 +140,7 @@ A Deployment manages ReplicaSets and provides declarative updates:
 |  |                                                                  |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
-|  YOU -> Deployment -> ReplicaSet -> Pods                                 |
+|  YOU > Deployment > ReplicaSet > Pods                                 |
 |        (manage)     (manages)    (manages)                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -188,7 +188,7 @@ When you update a Deployment, Kubernetes performs a rolling update:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ROLLING UPDATE: nginx:1.21 -> nginx:1.22                              |
+|  ROLLING UPDATE: nginx:1.21 > nginx:1.22                              |
 |                                                                         |
 |  STEP 1: Initial State (all v1.21)                                    |
 |  ---------------------------------                                     |
@@ -201,7 +201,7 @@ When you update a Deployment, Kubernetes performs a rolling update:
 |  ----------------------------------------                              |
 |  ReplicaSet-OLD (3)           ReplicaSet-NEW (1)                      |
 |  +---------+ +---------+ +---------+    +---------+                 |
-|  |  v1.21  | |  v1.21  | |  v1.21  |    |  v1.22  | <- New           |
+|  |  v1.21  | |  v1.21  | |  v1.21  |    |  v1.22  | < New           |
 |  +---------+ +---------+ +---------+    +---------+                 |
 |                                                                         |
 |  STEP 3: Scale down old by 1, scale up new by 1                       |

@@ -73,7 +73,7 @@ by examining its outputs. The three pillars: Metrics, Logs, and Traces.
 |  Use for: Request counts, error counts, bytes transferred            |
 |                                                                         |
 |  To get rate: rate(http_requests_total[5m])                          |
-|  -> Requests per second over last 5 minutes                           |
+|  > Requests per second over last 5 minutes                           |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -210,17 +210,17 @@ by examining its outputs. The three pillars: Metrics, Logs, and Traces.
 |  WHAT TO LOG                                                           |
 |                                                                         |
 |  DO LOG:                                                               |
-|  [x] Request start/end with duration                                   |
-|  [x] Business events (order created, payment processed)               |
-|  [x] Errors with stack traces                                         |
-|  [x] External service calls                                           |
-|  [x] Decision points (why a branch was taken)                         |
+|  Y Request start/end with duration                                   |
+|  Y Business events (order created, payment processed)               |
+|  Y Errors with stack traces                                         |
+|  Y External service calls                                           |
+|  Y Decision points (why a branch was taken)                         |
 |                                                                         |
 |  DON'T LOG:                                                            |
-|  [ ] Passwords or secrets                                              |
-|  [ ] PII (credit cards, SSN) unless required                          |
-|  [ ] Every loop iteration                                              |
-|  [ ] Large payloads (log IDs, not full objects)                       |
+|  X Passwords or secrets                                              |
+|  X PII (credit cards, SSN) unless required                          |
+|  X Every loop iteration                                              |
+|  X Large payloads (log IDs, not full objects)                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -383,8 +383,8 @@ by examining its outputs. The three pillars: Metrics, Logs, and Traces.
 |                                                                         |
 |  1. ALERT ON SYMPTOMS, NOT CAUSES                                     |
 |  ---------------------------------                                      |
-|  [ ] Alert: CPU > 80%                                                  |
-|  [x] Alert: Error rate > 1% or Latency P99 > 500ms                    |
+|  X Alert: CPU > 80%                                                  |
+|  Y Alert: Error rate > 1% or Latency P99 > 500ms                    |
 |                                                                         |
 |  Users care about: Can they use the service?                         |
 |  Not: How busy is the CPU?                                           |

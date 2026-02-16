@@ -211,7 +211,7 @@ SECTION 1: API GATEWAY
 *|  |  * Call user-service.example.com                               |  |*
 *|  |  * Call order-service.example.com                              |  |*
 *|  |  * Call payment-service.example.com                            |  |*
-*|  |  -> Complex, coupled, security nightmare                        |  |*
+*|  |  > Complex, coupled, security nightmare                        |  |*
 *|  |                                                                 |  |*
 *|  |  WITH API GATEWAY:                                             |  |*
 *|  |                                                                 |  |*
@@ -219,7 +219,7 @@ SECTION 1: API GATEWAY
 *|  |  * api.example.com/users                                       |  |*
 *|  |  * api.example.com/orders                                      |  |*
 *|  |  * api.example.com/payments                                    |  |*
-*|  |  -> Gateway routes to appropriate service                       |  |*
+*|  |  > Gateway routes to appropriate service                       |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -232,8 +232,8 @@ SECTION 1: API GATEWAY
 *|  |                                                                 |  |*
 *|  |  1. REQUEST ROUTING                                            |  |*
 *|  |     * Route based on URL path, method, headers                 |  |*
-*|  |     * /api/v1/users -> User Service                            |  |*
-*|  |     * /api/v1/orders -> Order Service                          |  |*
+*|  |     * /api/v1/users > User Service                            |  |*
+*|  |     * /api/v1/orders > Order Service                          |  |*
 *|  |                                                                 |  |*
 *|  |  2. AUTHENTICATION & AUTHORIZATION                             |  |*
 *|  |     * Validate JWT tokens                                      |  |*
@@ -466,7 +466,7 @@ SECTION 2: SERVICE DISCOVERY
 *|  |  3. Send heartbeats every N seconds                            |  |*
 *|  |  4. On shutdown: Deregister                                    |  |*
 *|  |                                                                 |  |*
-*|  |  If heartbeat stops -> Registry removes instance                |  |*
+*|  |  If heartbeat stops > Registry removes instance                |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -609,7 +609,7 @@ SECTION 3: CONFIGURATION MANAGEMENT
 *|  |  Toggle features without code deployment                        |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASES:                                                     |  |*
-*|  |  * Gradual rollout (10% -> 50% -> 100% of users)                 |  |*
+*|  |  * Gradual rollout (10% > 50% > 100% of users)                 |  |*
 *|  |  * A/B testing                                                  |  |*
 *|  |  * Kill switch for problematic features                        |  |*
 *|  |  * Beta features for specific users                            |  |*

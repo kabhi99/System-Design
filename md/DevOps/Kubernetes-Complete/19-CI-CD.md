@@ -167,9 +167,9 @@ CI/CD pipelines and GitOps practices.
 |        selfHeal: true      # Revert manual changes                  |
 |                                                                         |
 |  WORKFLOW:                                                             |
-|  1. Developer pushes code -> CI builds image                         |
+|  1. Developer pushes code > CI builds image                         |
 |  2. CI updates manifest repo with new image tag                     |
-|  3. ArgoCD detects change -> syncs to cluster                        |
+|  3. ArgoCD detects change > syncs to cluster                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

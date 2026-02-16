@@ -101,7 +101,7 @@ you must choose between Consistency and Availability.
 |  |     Client A                              Client B              |  |
 |  |         |                                     |                 |  |
 |  |         v                                     v                 |  |
-|  |    +------------+         [ ] [ ] [ ] [ ]        +------------+       |  |
+|  |    +------------+         X X X X        +------------+       |  |
 |  |    |  Node 1    |<---- Can't talk ---->  |  Node 2    |       |  |
 |  |    | balance=100|                        | balance=100|       |  |
 |  |    +------------+                        +------------+       |  |
@@ -115,8 +115,8 @@ you must choose between Consistency and Availability.
 |  ---------------------------------                                     |
 |  Node 1 refuses to process request until it can verify with Node 2   |
 |  "Sorry, service unavailable during partition"                        |
-|  [x] Data is consistent                                                 |
-|  [ ] System is unavailable                                              |
+|  Y Data is consistent                                                 |
+|  X System is unavailable                                              |
 |                                                                         |
 |  CHOICE 2: CHOOSE AVAILABILITY (AP)                                   |
 |  --------------------------------                                      |
@@ -124,8 +124,8 @@ you must choose between Consistency and Availability.
 |  Node 1: balance = 100 - 50 = 50                                      |
 |  Node 2: balance = 100 - 50 = 50                                      |
 |  After partition heals: balance = 50? (should be 0!)                  |
-|  [x] System is available                                                |
-|  [ ] Data is inconsistent                                               |
+|  Y System is available                                                |
+|  X Data is inconsistent                                               |
 |                                                                         |
 |  THERE IS NO THIRD OPTION DURING A PARTITION!                        |
 |                                                                         |
@@ -239,14 +239,14 @@ CAP only describes behavior during partitions. PACELC extends this:
 |  EXAMPLE: Synchronous vs Asynchronous Replication                    |
 |                                                                         |
 |  Synchronous (EC):                                                    |
-|  Client -> Write -> Primary -> Wait for replica ACK -> Return            |
+|  Client > Write > Primary > Wait for replica ACK > Return            |
 |  Latency: 50ms + 20ms replication = 70ms                             |
-|  [x] Strong consistency                                                 |
+|  Y Strong consistency                                                 |
 |                                                                         |
 |  Asynchronous (EL):                                                   |
-|  Client -> Write -> Primary -> Return (replica updated later)          |
+|  Client > Write > Primary > Return (replica updated later)          |
 |  Latency: 50ms                                                        |
-|  [x] Lower latency, [ ] eventual consistency                             |
+|  Y Lower latency, X eventual consistency                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -257,7 +257,7 @@ CAP only describes behavior during partitions. PACELC extends this:
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  STRONGEST <------------------------------------------> WEAKEST       |
-|  Linearizable -> Sequential -> Causal -> Eventual                        |
+|  Linearizable > Sequential > Causal > Eventual                        |
 |  (Slower, costly)                        (Faster, cheap)              |
 |                                                                         |
 |  ====================================================================  |
@@ -286,7 +286,7 @@ CAP only describes behavior during partitions. PACELC extends this:
 |  ---------                                                              |
 |  * Cause-effect order preserved; concurrent ops can be in any order  |
 |  * Causally related = same client ops, read-then-write, transitive   |
-|  * Example: Post "I love pizza!" -> Comment "Me too!"                 |
+|  * Example: Post "I love pizza!" > Comment "Me too!"                 |
 |    Everyone MUST see post before comment                              |
 |    But unrelated Post 2 can appear in any position                   |
 |  * How: Vector clocks / version vectors                              |
@@ -474,7 +474,7 @@ A practical pattern that's often needed:
 |  W = Write acknowledgment requirement                                  |
 |  R = Read acknowledgment requirement                                   |
 |                                                                         |
-|  RULE: W + R > N -> Strong consistency                                 |
+|  RULE: W + R > N > Strong consistency                                 |
 |        (At least one node overlaps between read and write)           |
 |                                                                         |
 |  EXAMPLE (N=3):                                                        |
@@ -503,13 +503,13 @@ A practical pattern that's often needed:
 |  COMMON PATTERNS:                                                      |
 |                                                                         |
 |  Write: QUORUM, Read: QUORUM                                         |
-|  -> Strong consistency with good availability                         |
+|  > Strong consistency with good availability                         |
 |                                                                         |
 |  Write: LOCAL_QUORUM, Read: LOCAL_QUORUM                             |
-|  -> Strong consistency within datacenter, eventually between DCs     |
+|  > Strong consistency within datacenter, eventually between DCs     |
 |                                                                         |
 |  Write: ONE, Read: ONE                                                |
-|  -> Fastest, but may read stale data                                  |
+|  > Fastest, but may read stale data                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -560,14 +560,14 @@ How distributed systems agree on values:
 |  |  LEADER ELECTION:                                               |  |
 |  |  1. Follower times out (no heartbeat from leader)              |  |
 |  |  2. Becomes candidate, requests votes                          |  |
-|  |  3. Gets majority votes -> becomes leader                       |  |
+|  |  3. Gets majority votes > becomes leader                       |  |
 |  |  4. Sends heartbeats to maintain leadership                    |  |
 |  |                                                                 |  |
 |  |  LOG REPLICATION:                                               |  |
 |  |  1. Client sends request to leader                             |  |
 |  |  2. Leader appends to local log                                |  |
 |  |  3. Leader sends to followers                                  |  |
-|  |  4. Majority acknowledge -> committed                           |  |
+|  |  4. Majority acknowledge > committed                           |  |
 |  |  5. Leader responds to client                                  |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -652,7 +652,7 @@ Time is surprisingly hard in distributed systems:
 |                                                                         |
 |  EXAMPLE:                                                              |
 |  A: [2,0,0]  B: [0,1,0]                                              |
-|  Neither is greater -> concurrent events (potential conflict!)        |
+|  Neither is greater > concurrent events (potential conflict!)        |
 |                                                                         |
 |  Used by: DynamoDB (version vectors), Riak                           |
 |                                                                         |
@@ -718,7 +718,7 @@ With eventual consistency, conflicts will happen. How do we resolve them?
 |                                                                         |
 |  G-COUNTER (Grow-only counter):                                       |
 |  Each node has own counter, sum all for total                        |
-|  Node A: 5, Node B: 3, Node C: 7 -> Total: 15                        |
+|  Node A: 5, Node B: 3, Node C: 7 > Total: 15                        |
 |  Always eventually consistent!                                        |
 |                                                                         |
 |  G-SET (Grow-only set):                                               |
@@ -781,21 +781,21 @@ With eventual consistency, conflicts will happen. How do we resolve them?
 |  INTERVIEW FRAMEWORK FOR CONSISTENCY DECISIONS:                       |
 |                                                                         |
 |  1. "What's the cost of showing stale data?"                         |
-|     * Financial loss? -> Strong                                       |
-|     * User annoyance? -> Read-your-writes                            |
-|     * Acceptable? -> Eventual                                        |
+|     * Financial loss? > Strong                                       |
+|     * User annoyance? > Read-your-writes                            |
+|     * Acceptable? > Eventual                                        |
 |                                                                         |
 |  2. "What's the cost of being unavailable?"                          |
-|     * Revenue loss per minute? -> Favor availability                 |
-|     * Can users retry later? -> Favor consistency                    |
+|     * Revenue loss per minute? > Favor availability                 |
+|     * Can users retry later? > Favor consistency                    |
 |                                                                         |
 |  3. "Can we resolve conflicts automatically?"                        |
-|     * Yes (counters, sets) -> Eventual with CRDTs                    |
-|     * No (money transfers) -> Strong consistency                     |
+|     * Yes (counters, sets) > Eventual with CRDTs                    |
+|     * No (money transfers) > Strong consistency                     |
 |                                                                         |
 |  4. "What are the latency requirements?"                             |
-|     * Sub-100ms? -> May need eventual for geographic distribution    |
-|     * Seconds OK? -> Strong consistency might work                   |
+|     * Sub-100ms? > May need eventual for geographic distribution    |
+|     * Seconds OK? > Strong consistency might work                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -819,7 +819,7 @@ With eventual consistency, conflicts will happen. How do we resolve them?
 |  * Extends CAP: Even without partitions, latency vs consistency     |
 |  * Most systems trade latency for consistency in normal operation   |
 |                                                                         |
-|  CONSISTENCY MODELS (Strong -> Weak)                                   |
+|  CONSISTENCY MODELS (Strong > Weak)                                   |
 |  -------------------------------------                                  |
 |  * Linearizable: Real-time ordering (most expensive)                 |
 |  * Sequential: Total order preserved                                 |

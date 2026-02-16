@@ -71,7 +71,7 @@ Relational databases guarantee ACID properties for transactions:
 |    UPDATE accounts SET balance = balance + 100 WHERE id = 2;          |
 |  COMMIT;                                                               |
 |                                                                         |
-|  If second UPDATE fails -> first UPDATE is also rolled back           |
+|  If second UPDATE fails > first UPDATE is also rolled back           |
 |                                                                         |
 |  IMPLEMENTATION: Write-Ahead Log (WAL)                                |
 |  Changes logged before applying. On crash, replay or rollback log.   |
@@ -84,7 +84,7 @@ Relational databases guarantee ACID properties for transactions:
 |  (foreign keys, unique, check) are always satisfied.                  |
 |                                                                         |
 |  INSERT INTO orders (user_id, total) VALUES (999, 100);               |
-|  -> FAILS if user_id 999 doesn't exist (foreign key constraint)       |
+|  > FAILS if user_id 999 doesn't exist (foreign key constraint)       |
 |                                                                         |
 |  TYPES OF CONSTRAINTS:                                                 |
 |  * PRIMARY KEY: Unique, non-null identifier                          |
@@ -102,7 +102,7 @@ Relational databases guarantee ACID properties for transactions:
 |                                                                         |
 |  Transaction A: Reading user balance                                  |
 |  Transaction B: Updating user balance                                 |
-|  -> A sees consistent balance (before or after B, not partial)        |
+|  > A sees consistent balance (before or after B, not partial)        |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -110,7 +110,7 @@ Relational databases guarantee ACID properties for transactions:
 |  -------------                                                          |
 |  Once committed, data survives crashes. Written to disk.              |
 |                                                                         |
-|  COMMIT succeeds -> Data is on disk -> Survives power failure          |
+|  COMMIT succeeds > Data is on disk > Survives power failure          |
 |                                                                         |
 |  IMPLEMENTATION: fsync() after WAL writes, checkpointing             |
 |                                                                         |
@@ -131,23 +131,23 @@ Relational databases guarantee ACID properties for transactions:
 |     Reading uncommitted changes from another transaction              |
 |                                                                         |
 |     Txn A: UPDATE balance = 100 (not committed)                       |
-|     Txn B: SELECT balance -> sees 100                                  |
+|     Txn B: SELECT balance > sees 100                                  |
 |     Txn A: ROLLBACK                                                    |
-|     -> B read data that never existed!                                 |
+|     > B read data that never existed!                                 |
 |                                                                         |
 |  2. NON-REPEATABLE READ                                                |
 |     Same query returns different values within transaction            |
 |                                                                         |
-|     Txn A: SELECT balance -> 100                                       |
+|     Txn A: SELECT balance > 100                                       |
 |     Txn B: UPDATE balance = 200, COMMIT                               |
-|     Txn A: SELECT balance -> 200 (different!)                          |
+|     Txn A: SELECT balance > 200 (different!)                          |
 |                                                                         |
 |  3. PHANTOM READ                                                       |
 |     New rows appear in repeated query                                 |
 |                                                                         |
-|     Txn A: SELECT * WHERE age > 18 -> 100 rows                        |
+|     Txn A: SELECT * WHERE age > 18 > 100 rows                        |
 |     Txn B: INSERT row with age = 25, COMMIT                          |
-|     Txn A: SELECT * WHERE age > 18 -> 101 rows (phantom!)             |
+|     Txn A: SELECT * WHERE age > 18 > 101 rows (phantom!)             |
 |                                                                         |
 |  4. LOST UPDATE                                                        |
 |     Two transactions overwrite each other                             |
@@ -156,15 +156,15 @@ Relational databases guarantee ACID properties for transactions:
 |     Txn B: Read balance = 100                                         |
 |     Txn A: Write balance = 150 (+50)                                  |
 |     Txn B: Write balance = 130 (+30)                                  |
-|     -> A's update is lost! Final = 130, should be 180                 |
+|     > A's update is lost! Final = 130, should be 180                 |
 |                                                                         |
 |  5. WRITE SKEW                                                         |
 |     Two transactions read same data, make decisions, write different |
 |                                                                         |
 |     Rule: At least 1 doctor must be on-call                          |
-|     Txn A: 2 doctors on-call, remove self (1 left) -> OK              |
-|     Txn B: 2 doctors on-call, remove self (1 left) -> OK              |
-|     -> Both commit: 0 doctors on-call! (constraint violated)          |
+|     Txn A: 2 doctors on-call, remove self (1 left) > OK              |
+|     Txn B: 2 doctors on-call, remove self (1 left) > OK              |
+|     > Both commit: 0 doctors on-call! (constraint violated)          |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -245,7 +245,7 @@ Relational databases guarantee ACID properties for transactions:
 |  DEADLOCK:                                                             |
 |  Txn A: Lock row 1, waiting for row 2                                |
 |  Txn B: Lock row 2, waiting for row 1                                |
-|  -> Both waiting forever!                                              |
+|  > Both waiting forever!                                              |
 |                                                                         |
 |  SOLUTION: Database detects and kills one transaction               |
 |                                                                         |
@@ -272,7 +272,7 @@ Relational databases guarantee ACID properties for transactions:
 |  SET quantity = 9, version = version + 1                             |
 |  WHERE id = 1 AND version = 5;                                       |
 |                                                                         |
-|  -- If 0 rows affected -> someone else modified!                      |
+|  -- If 0 rows affected > someone else modified!                      |
 |  -- Retry the operation                                               |
 |                                                                         |
 |  APPROACH 2: TIMESTAMP                                                 |
@@ -332,12 +332,12 @@ NoSQL databases sacrifice some SQL features for scale and flexibility.
 |  |                                                                 |  |
 |  |  1. KEY-VALUE STORES                                           |  |
 |  |  ---------------------                                          |  |
-|  |  Simple key -> value mapping. O(1) lookups.                     |  |
+|  |  Simple key > value mapping. O(1) lookups.                     |  |
 |  |                                                                 |  |
 |  |  Examples: Redis, DynamoDB, Riak, Memcached                   |  |
 |  |                                                                 |  |
-|  |  "user:123" -> { "name": "Alice", "email": "alice@ex.com" }    |  |
-|  |  "session:abc" -> { "userId": 123, "expires": "..." }          |  |
+|  |  "user:123" > { "name": "Alice", "email": "alice@ex.com" }    |  |
+|  |  "session:abc" > { "userId": 123, "expires": "..." }          |  |
 |  |                                                                 |  |
 |  |  OPERATIONS: GET, SET, DELETE, EXISTS                         |  |
 |  |  DATA MODEL: Opaque blobs (value not inspected)               |  |
@@ -511,7 +511,7 @@ Understanding internal data structures helps you make better design decisions.
 |  |  |   | A | B | D | F | G | K | M | Z |  (sorted)        |   |  |
 |  |  |   +---+---+---+---+---+---+---+---+                   |   |  |
 |  |  |                                                         |   |  |
-|  |  |   When full (e.g., 64MB) -> flush to disk as SSTable    |   |  |
+|  |  |   When full (e.g., 64MB) > flush to disk as SSTable    |   |  |
 |  |  +---------------------------------------------------------+   |  |
 |  |                          |                                      |  |
 |  |                          | Flush (sequential write)            |  |
@@ -540,7 +540,7 @@ Understanding internal data structures helps you make better design decisions.
 |  1. Write to WAL (Write-Ahead Log) - durability                      |
 |  2. Write to Memtable (in-memory sorted structure)                   |
 |  3. ACK to client (write complete!)                                  |
-|  4. When Memtable full -> flush to SSTable on disk                   |
+|  4. When Memtable full > flush to SSTable on disk                   |
 |                                                                         |
 |  WHY SO FAST:                                                          |
 |  * Memory write = microseconds                                       |
@@ -558,7 +558,7 @@ Understanding internal data structures helps you make better design decisions.
 |  OPTIMIZATION - BLOOM FILTERS:                                        |
 |  Each SSTable has a Bloom filter                                     |
 |  "Is key possibly in this SSTable?"                                  |
-|  If NO -> skip reading this file entirely                             |
+|  If NO > skip reading this file entirely                             |
 |  Reduces disk reads dramatically!                                    |
 |                                                                         |
 |  ==================================================================== |
@@ -623,9 +623,9 @@ Understanding internal data structures helps you make better design decisions.
 |  |                                                                 |  |
 |  |  +-----------------------------------------------------------+|  |
 |  |  |                    INDEX BLOCK                            ||  |
-|  |  |  A -> Block 1 offset                                      ||  |
-|  |  |  F -> Block 2 offset                                      ||  |
-|  |  |  K -> Block 3 offset                                      ||  |
+|  |  |  A > Block 1 offset                                      ||  |
+|  |  |  F > Block 2 offset                                      ||  |
+|  |  |  K > Block 3 offset                                      ||  |
 |  |  |  (Sparse index - first key of each block)                ||  |
 |  |  +-----------------------------------------------------------+|  |
 |  |                                                                 |  |
@@ -643,7 +643,7 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  FINDING A KEY:                                                        |
 |  1. Check Bloom filter: "Is key G possibly here?"                    |
-|  2. Binary search index: G is between F and K -> Block 2             |
+|  2. Binary search index: G is between F and K > Block 2             |
 |  3. Read Block 2, scan for G                                         |
 |  4. Return value (7)                                                 |
 |                                                                         |
@@ -675,7 +675,7 @@ Understanding internal data structures helps you make better design decisions.
 |  |              CONSISTENT HASHING RING                           |  |
 |  |  +-----------------------------------------------------------+|  |
 |  |  |                                                           ||  |
-|  |  |     Partition Key -> Hash -> Position on Ring              ||  |
+|  |  |     Partition Key > Hash > Position on Ring              ||  |
 |  |  |                                                           ||  |
 |  |  |              ●-------●-------●                            ||  |
 |  |  |            /                   \                          ||  |
@@ -733,8 +733,8 @@ Understanding internal data structures helps you make better design decisions.
 |  |  +----------------+----------------+-----------------------+  |  |
 |  |                                                                 |  |
 |  |  Query: Get all orders for user_123                           |  |
-|  |  -> Hits single partition, scans by sort key                   |  |
-|  |  -> Very efficient!                                            |  |
+|  |  > Hits single partition, scans by sort key                   |  |
+|  |  > Very efficient!                                            |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -743,11 +743,11 @@ Understanding internal data structures helps you make better design decisions.
 |  WRITE PATH IN DYNAMODB                                               |
 |                                                                         |
 |  1. Request arrives at Request Router                                |
-|  2. Router hashes partition key -> finds partition                   |
+|  2. Router hashes partition key > finds partition                   |
 |  3. Route to leader node for that partition                         |
 |  4. Leader writes to local storage                                   |
 |  5. Leader replicates to 2 replicas                                 |
-|  6. Wait for quorum (2 of 3) -> ACK to client                       |
+|  6. Wait for quorum (2 of 3) > ACK to client                       |
 |                                                                         |
 |  WRITE OPTIONS:                                                        |
 |  * Eventually consistent: ACK after leader write (fastest)          |
@@ -820,9 +820,9 @@ Understanding internal data structures helps you make better design decisions.
 |  WRITE PATH (with Replication Factor = 3):                           |
 |                                                                         |
 |  1. Client writes to any node (becomes coordinator)                  |
-|  2. Coordinator hashes partition key -> finds owning nodes           |
+|  2. Coordinator hashes partition key > finds owning nodes           |
 |  3. Coordinator sends write to all 3 replica nodes                  |
-|  4. Each node: Write to CommitLog -> Memtable -> ACK                  |
+|  4. Each node: Write to CommitLog > Memtable > ACK                  |
 |  5. Coordinator waits for W acks (configurable)                     |
 |  6. Return success to client                                         |
 |                                                                         |
@@ -838,7 +838,7 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  STRONG CONSISTENCY:                                                   |
 |  W + R > N (write consistency + read consistency > replication)     |
-|  Example: W=QUORUM, R=QUORUM with N=3 -> 2+2 > 3 [x]                  |
+|  Example: W=QUORUM, R=QUORUM with N=3 > 2+2 > 3 Y                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -911,11 +911,11 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  CHOOSE SQL WHEN:                                                      |
 |  -----------------                                                     |
-|  [x] Data has clear relationships                                       |
-|  [x] You need complex queries (JOINs, aggregations)                    |
-|  [x] ACID transactions are required                                     |
-|  [x] Data integrity is critical                                         |
-|  [x] Schema is well-defined and stable                                 |
+|  Y Data has clear relationships                                       |
+|  Y You need complex queries (JOINs, aggregations)                    |
+|  Y ACID transactions are required                                     |
+|  Y Data integrity is critical                                         |
+|  Y Schema is well-defined and stable                                 |
 |                                                                         |
 |  Examples:                                                             |
 |  * Banking and financial systems                                      |
@@ -928,11 +928,11 @@ Understanding internal data structures helps you make better design decisions.
 |                                                                         |
 |  CHOOSE NOSQL WHEN:                                                    |
 |  ------------------                                                    |
-|  [x] You need massive horizontal scale                                  |
-|  [x] Schema is evolving or unknown                                      |
-|  [x] Access patterns are simple and well-defined                        |
-|  [x] Eventual consistency is acceptable                                 |
-|  [x] High write throughput is needed                                    |
+|  Y You need massive horizontal scale                                  |
+|  Y Schema is evolving or unknown                                      |
+|  Y Access patterns are simple and well-defined                        |
+|  Y Eventual consistency is acceptable                                 |
+|  Y High write throughput is needed                                    |
 |                                                                         |
 |  Examples:                                                             |
 |  * Session storage (key-value: Redis)                                |
@@ -1002,10 +1002,10 @@ Indexes make queries fast. Understanding them is crucial.
 |  |                                      (pointers to rows)       |  |
 |  |                                                                 |  |
 |  |  Looking for "G":                                              |  |
-|  |  1. Root: G > D, G < M -> go right                             |  |
-|  |  2. Internal: F < G < H -> middle branch                       |  |
+|  |  1. Root: G > D, G < M > go right                             |  |
+|  |  2. Internal: F < G < H > middle branch                       |  |
 |  |  3. Leaf: Find G, get row pointer                             |  |
-|  |  -> 3 node accesses instead of scanning all rows!              |  |
+|  |  > 3 node accesses instead of scanning all rows!              |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -1031,11 +1031,11 @@ Indexes make queries fast. Understanding them is crucial.
 |  CREATE INDEX idx_email ON users(email);                              |
 |                                                                         |
 |  Supports:                                                             |
-|  * email = 'alice@example.com'      [x] equality                       |
-|  * email LIKE 'alice%'              [x] prefix                         |
-|  * email > 'a' AND email < 'b'      [x] range                         |
-|  * ORDER BY email                    [x] sorting                       |
-|  * email LIKE '%alice%'             [ ] suffix (full scan)            |
+|  * email = 'alice@example.com'      Y equality                       |
+|  * email LIKE 'alice%'              Y prefix                         |
+|  * email > 'a' AND email < 'b'      Y range                         |
+|  * ORDER BY email                    Y sorting                       |
+|  * email LIKE '%alice%'             X suffix (full scan)            |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -1046,9 +1046,9 @@ Indexes make queries fast. Understanding them is crucial.
 |  CREATE INDEX idx_id ON users USING HASH(id);                         |
 |                                                                         |
 |  Supports:                                                             |
-|  * id = 123                          [x]                                |
-|  * id > 100                          [ ] (no range)                    |
-|  * ORDER BY id                       [ ] (no ordering)                 |
+|  * id = 123                          Y                                |
+|  * id > 100                          X (no range)                    |
+|  * ORDER BY id                       X (no ordering)                 |
 |                                                                         |
 |  USE WHEN: Only need exact matches                                    |
 |                                                                         |
@@ -1062,10 +1062,10 @@ Indexes make queries fast. Understanding them is crucial.
 |  Index can be used for queries starting with leftmost columns        |
 |                                                                         |
 |  Index on (a, b, c) supports:                                         |
-|  * WHERE a = 1                               [x]                        |
-|  * WHERE a = 1 AND b = 2                     [x]                        |
-|  * WHERE a = 1 AND b = 2 AND c = 3           [x]                        |
-|  * WHERE b = 2                               [ ] (a missing)           |
+|  * WHERE a = 1                               Y                        |
+|  * WHERE a = 1 AND b = 2                     Y                        |
+|  * WHERE a = 1 AND b = 2 AND c = 3           Y                        |
+|  * WHERE b = 2                               X (a missing)           |
 |  * WHERE a = 1 AND c = 3                     partial (a only)        |
 |                                                                         |
 |  COLUMN ORDER MATTERS:                                                 |
@@ -1081,7 +1081,7 @@ Indexes make queries fast. Understanding them is crucial.
 |  CREATE INDEX idx_covering ON users(email) INCLUDE (name, created_at);|
 |                                                                         |
 |  Query: SELECT name, email FROM users WHERE email = '...'            |
-|  -> Answered entirely from index, no table lookup!                    |
+|  > Answered entirely from index, no table lookup!                    |
 |                                                                         |
 |  HUGE performance boost for frequently run queries                   |
 |                                                                         |
@@ -1117,7 +1117,7 @@ Indexes make queries fast. Understanding them is crucial.
 |  CREATE INDEX idx_location ON places USING GIST(location);           |
 |                                                                         |
 |  Query: WHERE ST_DWithin(location, point, 1000)                      |
-|  -> Find all places within 1km of point                               |
+|  > Find all places within 1km of point                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1155,33 +1155,33 @@ Indexes make queries fast. Understanding them is crucial.
 |  =========================                                              |
 |                                                                         |
 |  PROBLEM: Function on indexed column                                  |
-|  [ ] WHERE YEAR(created_at) = 2024                                     |
-|    -> Can't use index on created_at                                   |
-|  [x] WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01'   |
-|    -> Uses index                                                       |
+|  X WHERE YEAR(created_at) = 2024                                     |
+|    > Can't use index on created_at                                   |
+|  Y WHERE created_at >= '2024-01-01' AND created_at < '2025-01-01'   |
+|    > Uses index                                                       |
 |                                                                         |
 |  PROBLEM: Type mismatch                                               |
-|  [ ] WHERE user_id = '123'  (user_id is INTEGER)                      |
-|    -> Implicit cast, may not use index                                |
-|  [x] WHERE user_id = 123                                               |
+|  X WHERE user_id = '123'  (user_id is INTEGER)                      |
+|    > Implicit cast, may not use index                                |
+|  Y WHERE user_id = 123                                               |
 |                                                                         |
 |  PROBLEM: LIKE with leading wildcard                                  |
-|  [ ] WHERE name LIKE '%smith'                                          |
-|    -> Full table scan                                                 |
-|  [x] WHERE name LIKE 'smith%'                                          |
-|    -> Uses index (prefix match)                                       |
-|  [x] Use full-text search for arbitrary substring                     |
+|  X WHERE name LIKE '%smith'                                          |
+|    > Full table scan                                                 |
+|  Y WHERE name LIKE 'smith%'                                          |
+|    > Uses index (prefix match)                                       |
+|  Y Use full-text search for arbitrary substring                     |
 |                                                                         |
 |  PROBLEM: OR conditions                                               |
-|  [ ] WHERE status = 'active' OR status = 'pending'                    |
-|    -> May not use index efficiently                                   |
-|  [x] WHERE status IN ('active', 'pending')                            |
+|  X WHERE status = 'active' OR status = 'pending'                    |
+|    > May not use index efficiently                                   |
+|  Y WHERE status IN ('active', 'pending')                            |
 |                                                                         |
 |  PROBLEM: SELECT *                                                    |
-|  [ ] SELECT * FROM users WHERE id = 1                                 |
-|    -> Fetches all columns, prevents index-only scan                  |
-|  [x] SELECT id, name, email FROM users WHERE id = 1                   |
-|    -> Only fetch needed columns                                       |
+|  X SELECT * FROM users WHERE id = 1                                 |
+|    > Fetches all columns, prevents index-only scan                  |
+|  Y SELECT id, name, email FROM users WHERE id = 1                   |
+|    > Only fetch needed columns                                       |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -1191,15 +1191,15 @@ Indexes make queries fast. Understanding them is crucial.
 |  JOIN ORDER MATTERS:                                                   |
 |  Start with smallest result set, filter early                        |
 |                                                                         |
-|  [ ] SELECT * FROM orders o                                            |
+|  X SELECT * FROM orders o                                            |
 |    JOIN users u ON o.user_id = u.id                                  |
 |    WHERE u.status = 'active'                                         |
-|    -> Joins all orders, then filters                                  |
+|    > Joins all orders, then filters                                  |
 |                                                                         |
-|  [x] SELECT * FROM users u                                             |
+|  Y SELECT * FROM users u                                             |
 |    JOIN orders o ON o.user_id = u.id                                 |
 |    WHERE u.status = 'active'                                         |
-|    -> Filters users first, then joins                                 |
+|    > Filters users first, then joins                                 |
 |                                                                         |
 |  INDEX JOIN COLUMNS:                                                   |
 |  CREATE INDEX idx_orders_user ON orders(user_id);                    |
@@ -1210,12 +1210,12 @@ Indexes make queries fast. Understanding them is crucial.
 |  ============================                                           |
 |                                                                         |
 |  PROBLEM: OFFSET is slow for large values                            |
-|  [ ] SELECT * FROM posts ORDER BY id LIMIT 20 OFFSET 10000;           |
-|    -> DB must scan 10,000 rows to skip them                          |
+|  X SELECT * FROM posts ORDER BY id LIMIT 20 OFFSET 10000;           |
+|    > DB must scan 10,000 rows to skip them                          |
 |                                                                         |
 |  SOLUTION: Keyset pagination (cursor-based)                          |
-|  [x] SELECT * FROM posts WHERE id > 10000 ORDER BY id LIMIT 20;       |
-|    -> Uses index, skips nothing                                       |
+|  Y SELECT * FROM posts WHERE id > 10000 ORDER BY id LIMIT 20;       |
+|    > Uses index, skips nothing                                       |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -1231,7 +1231,7 @@ Indexes make queries fast. Understanding them is crucial.
 |                                                                         |
 |  SOLUTIONS:                                                            |
 |  1. Eager loading: User.includes(:orders).all()                      |
-|     -> 2 queries total (users + all orders)                           |
+|     > 2 queries total (users + all orders)                           |
 |                                                                         |
 |  2. JOIN:                                                              |
 |     SELECT u.*, o.* FROM users u                                     |
@@ -1254,10 +1254,10 @@ Indexes make queries fast. Understanding them is crucial.
 |  Examples: CockroachDB, TiDB, Google Spanner, YugabyteDB             |
 |                                                                         |
 |  FEATURES:                                                             |
-|  [x] SQL interface and ACID transactions                               |
-|  [x] Horizontal scalability (like NoSQL)                               |
-|  [x] Distributed architecture                                          |
-|  [x] Strong consistency across regions                                 |
+|  Y SQL interface and ACID transactions                               |
+|  Y Horizontal scalability (like NoSQL)                               |
+|  Y Distributed architecture                                          |
+|  Y Strong consistency across regions                                 |
 |                                                                         |
 |  HOW THEY WORK:                                                        |
 |  * Distributed consensus (Raft/Paxos) for consistency               |
@@ -1382,8 +1382,8 @@ Indexes make queries fast. Understanding them is crucial.
 |  =====================                                                  |
 |  Reuse database connections instead of creating new ones             |
 |                                                                         |
-|  Without pooling: Open connection -> Query -> Close (expensive!)       |
-|  With pooling: Get from pool -> Query -> Return to pool               |
+|  Without pooling: Open connection > Query > Close (expensive!)       |
+|  With pooling: Get from pool > Query > Return to pool               |
 |                                                                         |
 |  +------------------------------------------------------------------+ |
 |  | Application                                                      | |

@@ -19,14 +19,14 @@ routing algorithms, and traffic prediction.
 |                                                                         |
 |  2. DRIVER MATCHING                                                    |
 |     Score drivers by pickup ETA                                      |
-|     Better ETA -> higher matching priority                           |
+|     Better ETA > higher matching priority                           |
 |                                                                         |
 |  3. PRICING                                                            |
 |     Fare = Base + (Rate × Time) + (Rate × Distance)                 |
 |     ETA directly affects pricing display                             |
 |                                                                         |
 |  4. SURGE CALCULATION                                                  |
-|     Areas with high demand + long ETAs -> surge pricing             |
+|     Areas with high demand + long ETAs > surge pricing             |
 |                                                                         |
 |  5. DRIVER INCENTIVES                                                  |
 |     "Complete 10 trips, earn bonus"                                  |
@@ -71,13 +71,13 @@ routing algorithms, and traffic prediction.
 |  * Ignores one-way streets                                           |
 |  * Ignores speed limits                                              |
 |                                                                         |
-|        A ======================= B   <- Straight line: 2km           |
+|        A ======================= B   < Straight line: 2km           |
 |        |                         |                                    |
 |        |    +-----------------+  |                                    |
 |        |    |     RIVER       |  |                                    |
 |        |    +-----------------+  |                                    |
 |        |                         |                                    |
-|        +-------------------------+   <- Actual route: 5km!           |
+|        +-------------------------+   < Actual route: 5km!           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -532,8 +532,8 @@ routing algorithms, and traffic prediction.
 |  ROUTE UPDATES:                                                        |
 |  ---------------                                                        |
 |                                                                         |
-|  * Driver deviates from route -> recalculate                         |
-|  * Traffic changes -> suggest alternative                            |
+|  * Driver deviates from route > recalculate                         |
+|  * Traffic changes > suggest alternative                            |
 |  * Update every 30 seconds during trip                               |
 |                                                                         |
 +-------------------------------------------------------------------------+

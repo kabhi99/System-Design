@@ -54,7 +54,7 @@ covers service types, discovery, and load balancing.
 |  1. API Server assigns a ClusterIP from service CIDR (10.96.0.0/12)  |
 |  2. This IP is VIRTUAL - no network interface has this IP            |
 |  3. kube-proxy on every node creates iptables/IPVS rules             |
-|  4. Rules translate ClusterIP -> actual pod IPs                       |
+|  4. Rules translate ClusterIP > actual pod IPs                       |
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
@@ -65,7 +65,7 @@ covers service types, discovery, and load balancing.
 |  |   +---------------------------------------------------------+  |   |
 |  |   |                  API SERVER                              |  |   |
 |  |   |                                                          |  |   |
-|  |   |  1. Picks IP from 10.96.0.0/12 -> 10.96.45.100          |  |   |
+|  |   |  1. Picks IP from 10.96.0.0/12 > 10.96.45.100          |  |   |
 |  |   |  2. Creates Service object                               |  |   |
 |  |   |  3. Endpoints Controller watches for matching pods       |  |   |
 |  |   |                                                          |  |   |
@@ -81,7 +81,7 @@ covers service types, discovery, and load balancing.
 |  |   | iptables |  | iptables |  | iptables |                    |   |
 |  |   +----------+  +----------+  +----------+                    |   |
 |  |                                                                 |   |
-|  |   Every node now knows: 10.96.45.100 -> pod endpoints          |   |
+|  |   Every node now knows: 10.96.45.100 > pod endpoints          |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -114,9 +114,9 @@ covers service types, discovery, and load balancing.
 |  |   |  "Find all pods with label app=web"                     |  |   |
 |  |   |                                                          |  |   |
 |  |   |  Found:                                                  |  |   |
-|  |   |    Pod-1: 10.244.1.5:8080  (Ready [x])                   |  |   |
-|  |   |    Pod-2: 10.244.2.10:8080 (Ready [x])                   |  |   |
-|  |   |    Pod-3: 10.244.1.20:8080 (NotReady [ ]) <- excluded    |  |   |
+|  |   |    Pod-1: 10.244.1.5:8080  (Ready Y)                   |  |   |
+|  |   |    Pod-2: 10.244.2.10:8080 (Ready Y)                   |  |   |
+|  |   |    Pod-3: 10.244.1.20:8080 (NotReady X) < excluded    |  |   |
 |  |   |                                                          |  |   |
 |  |   +---------------------------------------------------------+  |   |
 |  |                      |                                          |   |
@@ -137,10 +137,10 @@ covers service types, discovery, and load balancing.
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  AUTOMATIC UPDATES:                                                   |
-|  * Pod becomes Ready -> added to Endpoints                            |
-|  * Pod becomes NotReady -> removed from Endpoints                     |
-|  * Pod deleted -> removed from Endpoints                              |
-|  * New pod created -> added when Ready                                |
+|  * Pod becomes Ready > added to Endpoints                            |
+|  * Pod becomes NotReady > removed from Endpoints                     |
+|  * Pod deleted > removed from Endpoints                              |
+|  * New pod created > added when Ready                                |
 |                                                                         |
 |  kube-proxy watches Endpoints and updates iptables rules!            |
 |                                                                         |
@@ -174,7 +174,7 @@ covers service types, discovery, and load balancing.
 |     Pod-4: 10.244.1.15:8080                                          |
 |     Pod-5: 10.244.2.20:8080                                          |
 |                                                                         |
-|  2. Pods pass readiness probe -> become Ready                         |
+|  2. Pods pass readiness probe > become Ready                         |
 |                                                                         |
 |  3. Endpoints Controller detects new pods (label app=web)            |
 |     Updates Endpoints object with 5 IPs                               |
@@ -186,9 +186,9 @@ covers service types, discovery, and load balancing.
 |  IF dest=10.96.45.100:80 THEN DNAT to:                               |
 |    - 10.244.1.5:8080   (20% probability)                             |
 |    - 10.244.2.10:8080  (20% probability)                             |
-|    - 10.244.3.5:8080   (20% probability)  <- NEW                      |
-|    - 10.244.1.15:8080  (20% probability)  <- NEW                      |
-|    - 10.244.2.20:8080  (20% probability)  <- NEW                      |
+|    - 10.244.3.5:8080   (20% probability)  < NEW                      |
+|    - 10.244.1.15:8080  (20% probability)  < NEW                      |
+|    - 10.244.2.20:8080  (20% probability)  < NEW                      |
 |                                                                         |
 |  5. New requests automatically distributed to all 5 pods!            |
 |     NO client changes needed - same Service IP works                 |
@@ -221,7 +221,7 @@ covers service types, discovery, and load balancing.
 |  |  |   Client Pod   |                                            |   |
 |  |  |                |                                            |   |
 |  |  | curl http://   |                                            |   |
-|  |  | 10.96.45.100:80| <- ClusterIP of web-service                |   |
+|  |  | 10.96.45.100:80| < ClusterIP of web-service                |   |
 |  |  |                |                                            |   |
 |  |  +-------+--------+                                            |   |
 |  |          |                                                      |   |
@@ -235,9 +235,9 @@ covers service types, discovery, and load balancing.
 |  |  |    Action: Jump to KUBE-SVC-XXXX                       |   |   |
 |  |  |                                                         |   |   |
 |  |  |  Chain KUBE-SVC-XXXX (web-service):                    |   |   |
-|  |  |    - 33% -> KUBE-SEP-AAA (pod 10.244.1.5)              |   |   |
-|  |  |    - 33% -> KUBE-SEP-BBB (pod 10.244.2.10)             |   |   |
-|  |  |    - 33% -> KUBE-SEP-CCC (pod 10.244.3.5) <- selected   |   |   |
+|  |  |    - 33% > KUBE-SEP-AAA (pod 10.244.1.5)              |   |   |
+|  |  |    - 33% > KUBE-SEP-BBB (pod 10.244.2.10)             |   |   |
+|  |  |    - 33% > KUBE-SEP-CCC (pod 10.244.3.5) < selected   |   |   |
 |  |  |                                                         |   |   |
 |  |  |  Chain KUBE-SEP-CCC:                                   |   |   |
 |  |  |    Action: DNAT to 10.244.3.5:8080                    |   |   |
@@ -248,7 +248,7 @@ covers service types, discovery, and load balancing.
 |  |          | src=10.244.1.5 dst=10.244.3.5:8080                 |   |
 |  |          v                                                      |   |
 |  |                                                                 |   |
-|  |          -> Routes to Node 3 (where 10.244.3.5 is)             |   |
+|  |          > Routes to Node 3 (where 10.244.3.5 is)             |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -266,7 +266,7 @@ covers service types, discovery, and load balancing.
 |  ===================================                                    |
 |                                                                         |
 |  By default, each request can go to different pod.                    |
-|  Sometimes you need requests from same client -> same pod.             |
+|  Sometimes you need requests from same client > same pod.             |
 |                                                                         |
 |  spec:                                                                 |
 |    sessionAffinity: ClientIP        # Sticky by client IP            |
@@ -275,9 +275,9 @@ covers service types, discovery, and load balancing.
 |        timeoutSeconds: 10800        # 3 hours                        |
 |                                                                         |
 |  HOW IT WORKS:                                                        |
-|  1. First request from 192.168.1.50 -> routed to Pod-2               |
-|  2. iptables remembers: 192.168.1.50 -> Pod-2                        |
-|  3. Next requests from same IP -> same Pod-2                         |
+|  1. First request from 192.168.1.50 > routed to Pod-2               |
+|  2. iptables remembers: 192.168.1.50 > Pod-2                        |
+|  3. Next requests from same IP > same Pod-2                         |
 |  4. After timeout, can go to different pod                          |
 |                                                                         |
 |  USE CASES:                                                           |
@@ -300,7 +300,7 @@ covers service types, discovery, and load balancing.
 |          |  User: curl http://a]4d7.elb.amazonaws.com:443             |
 |          v                                                              |
 |  +------------------+                                                  |
-|  |  Cloud LB        |  <- LoadBalancer Service creates this            |
+|  |  Cloud LB        |  < LoadBalancer Service creates this            |
 |  |  Port: 443       |                                                  |
 |  +--------+---------+                                                  |
 |           |                                                             |
@@ -312,7 +312,7 @@ covers service types, discovery, and load balancing.
 |  |  +---------------------------------------------------------+   |   |
 |  |  |  nodePort: 31234                                        |   |   |
 |  |  |                                                         |   |   |
-|  |  |  iptables: port 31234 -> Service ClusterIP:port         |   |   |
+|  |  |  iptables: port 31234 > Service ClusterIP:port         |   |   |
 |  |  +---------------------------------------------------------+   |   |
 |  |           |                                                     |   |
 |  |           v                                                     |   |
@@ -320,14 +320,14 @@ covers service types, discovery, and load balancing.
 |  |  |  ClusterIP: 10.96.45.100                                |   |   |
 |  |  |  port: 443 (service port)                               |   |   |
 |  |  |                                                         |   |   |
-|  |  |  iptables: ClusterIP:443 -> Endpoints                   |   |   |
+|  |  |  iptables: ClusterIP:443 > Endpoints                   |   |   |
 |  |  +---------------------------------------------------------+   |   |
 |  |           |                                                     |   |
 |  |           |  Load balance to one of:                           |   |
 |  |           v                                                     |   |
 |  |  +---------------------------------------------------------+   |   |
 |  |  |  Endpoints (pod IPs):                                   |   |   |
-|  |  |    10.244.1.5:8080  <- targetPort (container port)      |   |   |
+|  |  |    10.244.1.5:8080  < targetPort (container port)      |   |   |
 |  |  |    10.244.2.10:8080                                     |   |   |
 |  |  |    10.244.3.5:8080                                      |   |   |
 |  |  +---------------------------------------------------------+   |   |
@@ -336,7 +336,7 @@ covers service types, discovery, and load balancing.
 |                                                                         |
 |  PORT MAPPING SUMMARY:                                                |
 |  ---------------------                                                 |
-|  CloudLB:443 -> NodePort:31234 -> ClusterIP:443 -> Pod:8080             |
+|  CloudLB:443 > NodePort:31234 > ClusterIP:443 > Pod:8080             |
 |                                                                         |
 |  YAML:                                                                 |
 |  spec:                                                                 |
@@ -505,7 +505,7 @@ USE CASE: Development, testing, bare metal clusters (no cloud LB)
 |  ACCESS OPTIONS:                                                       |
 |  * http://192.168.1.10:30080  (Node 1)                               |
 |  * http://192.168.1.11:30080  (Node 2)                               |
-|  * http://192.168.1.12:30080  (Node 3) <- Any node works!            |
+|  * http://192.168.1.12:30080  (Node 3) < Any node works!            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -559,7 +559,7 @@ REQUIREMENT: Cloud provider (creates actual LB like AWS ELB/ALB)
 |  |   +------------------+  +------------------+                    |   |
 |  |   |     NODE 1       |  |     NODE 2       |                    |   |
 |  |   |                  |  |                  |                    |   |
-|  |   |  NodePort: 31234 |  |  NodePort: 31234 | <- LB sends here   |   |
+|  |   |  NodePort: 31234 |  |  NodePort: 31234 | < LB sends here   |   |
 |  |   |        |         |  |        |         |                    |   |
 |  |   +--------+---------+  +--------+---------+                    |   |
 |  |            |                     |                               |   |
@@ -690,7 +690,7 @@ USE CASE: StatefulSets, when you need to reach specific pods
 |                                     10.0.1.7                          |
 |                            (all pod IPs!)                              |
 |                                                                         |
-|  Client -> Service -> Pod    Client can pick specific pod               |
+|  Client > Service > Pod    Client can pick specific pod               |
 |  (random pod)              postgres-0.postgres-svc                     |
 |                            postgres-1.postgres-svc                     |
 |                                                                         |
@@ -703,7 +703,7 @@ kind: Service
 metadata:
   name: postgres-svc
 spec:
-  clusterIP: None            # <- This makes it headless!
+  clusterIP: None            # < This makes it headless!
   selector:
     app: postgres
   ports:
@@ -738,11 +738,11 @@ spec:
 |                                                                         |
 |  REAL WORLD EXAMPLES:                                                  |
 |                                                                         |
-|  * Backend API -> calls -> Database Service (ClusterIP)                |
-|  * Frontend -> exposed via -> LoadBalancer (users access)              |
-|  * Testing locally -> NodePort (minikube)                             |
-|  * Connect to AWS RDS -> ExternalName                                 |
-|  * PostgreSQL StatefulSet -> Headless Service                         |
+|  * Backend API > calls > Database Service (ClusterIP)                |
+|  * Frontend > exposed via > LoadBalancer (users access)              |
+|  * Testing locally > NodePort (minikube)                             |
+|  * Connect to AWS RDS > ExternalName                                 |
+|  * PostgreSQL StatefulSet > Headless Service                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -777,7 +777,7 @@ ANSWER: kube-proxy on EVERY node maintains iptables rules
 that know ALL pod locations!
 
 ```
-STEP 1: SERVICE CREATED -> KUBE-PROXY NOTIFIED
+STEP 1: SERVICE CREATED > KUBE-PROXY NOTIFIED
 ---------------------------------------------
 
 +-------------------------------------------------------------------------+
@@ -806,7 +806,7 @@ STEP 1: SERVICE CREATED -> KUBE-PROXY NOTIFIED
 |    +--------------+  +--------------+  +--------------+              |
 |                                                                         |
 |    ALL nodes now have iptables rules:                                 |
-|    "Port 30080 -> forward to 10.0.2.5 OR 10.0.2.6"                    |
+|    "Port 30080 > forward to 10.0.2.5 OR 10.0.2.6"                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1030,7 +1030,7 @@ SETUP:
 |  ----------------------------------                                    |
 |                                                                         |
 |     BEFORE:                       AFTER:                              |
-|     Dest: 192.168.1.10:30080  ->  Dest: 10.0.2.5:8080                |
+|     Dest: 192.168.1.10:30080  >  Dest: 10.0.2.5:8080                |
 |     (Node 1 IP:nodePort)          (Pod IP:targetPort)                 |
 |                                                                         |
 |     Source IP remains: 203.0.113.50 (client)                         |
@@ -1040,7 +1040,7 @@ SETUP:
 |  STEP 4: Packet forwarded via cluster network                         |
 |  ---------------------------------------------                         |
 |                                                                         |
-|     Node 1 -> CNI network (flannel/calico) -> Node 2                   |
+|     Node 1 > CNI network (flannel/calico) > Node 2                   |
 |                                                                         |
 |     Packet reaches pod at 10.0.2.5:8080                              |
 |                                                                         |
@@ -1049,7 +1049,7 @@ SETUP:
 |  STEP 5: Response flows back (reverse NAT)                            |
 |  ------------------------------------------                            |
 |                                                                         |
-|     Pod 10.0.2.5 -> Node 2 -> Node 1 -> Client                          |
+|     Pod 10.0.2.5 > Node 2 > Node 1 > Client                          |
 |                                                                         |
 |     iptables connection tracking (conntrack) remembers                |
 |     the original request and reverses the NAT                         |
@@ -1094,7 +1094,7 @@ COMMON SCENARIOS:
 |  ---------------------------------------------                         |
 |  * iptables on Node 1 rewrites dest to pod IP                        |
 |  * Forwards across cluster network to Node 2                         |
-|  * Works perfectly! [x]                                                 |
+|  * Works perfectly! Y                                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1102,7 +1102,7 @@ COMMON SCENARIOS:
 |  --------------------------------------------------                    |
 |  * iptables on Node 2 rewrites dest to pod IP                        |
 |  * Pod is local, traffic stays on Node 2                             |
-|  * Works perfectly! [x]                                                 |
+|  * Works perfectly! Y                                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1110,7 +1110,7 @@ COMMON SCENARIOS:
 |  ------------------------------------------------                      |
 |  * iptables randomly selects one pod from endpoints                  |
 |  * Could be local or remote - doesn't matter                         |
-|  * Built-in load balancing! [x]                                        |
+|  * Built-in load balancing! Y                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1123,17 +1123,17 @@ PORTS CAN BE SAME OR DIFFERENT:
 |                                                                         |
 |  EXAMPLE 1: All ports different (common)                              |
 |                                                                         |
-|     nodePort: 30080   -> Service port: 80   -> targetPort: 8080        |
+|     nodePort: 30080   > Service port: 80   > targetPort: 8080        |
 |                                                                         |
 |     curl http://node-ip:30080                                         |
-|       -> iptables -> 10.96.0.100:80 (clusterIP)                        |
-|       -> endpoints -> 10.0.2.5:8080 (pod)                              |
+|       > iptables > 10.96.0.100:80 (clusterIP)                        |
+|       > endpoints > 10.0.2.5:8080 (pod)                              |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  EXAMPLE 2: All ports same (also valid)                               |
 |                                                                         |
-|     nodePort: 30080   -> Service port: 30080 -> targetPort: 30080      |
+|     nodePort: 30080   > Service port: 30080 > targetPort: 30080      |
 |                                                                         |
 |     Less common, but works fine                                       |
 |                                                                         |
@@ -1141,7 +1141,7 @@ PORTS CAN BE SAME OR DIFFERENT:
 |                                                                         |
 |  EXAMPLE 3: Service port = targetPort (very common for ClusterIP)    |
 |                                                                         |
-|     Service port: 80 -> targetPort: 80                                |
+|     Service port: 80 > targetPort: 80                                |
 |                                                                         |
 |     If ports match, you can omit targetPort:                         |
 |     ports:                                                            |

@@ -54,10 +54,10 @@ covers security best practices from image building to runtime.
 |                                                                         |
 |  Less software = fewer vulnerabilities                               |
 |                                                                         |
-|  [x] Use multi-stage builds                                            |
-|  [x] Use alpine or distroless base images                             |
-|  [x] Remove package manager caches                                     |
-|  [x] Don't install unnecessary packages                               |
+|  Y Use multi-stage builds                                            |
+|  Y Use alpine or distroless base images                             |
+|  Y Remove package manager caches                                     |
+|  Y Don't install unnecessary packages                               |
 |                                                                         |
 |  RUN apt-get update && \                                              |
 |      apt-get install -y --no-install-recommends curl && \            |

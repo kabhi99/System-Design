@@ -81,7 +81,7 @@ commonly asked in system design interviews.
 |   Presentation       Business           Data                           |
 |      Tier              Tier             Tier                           |
 |                                                                         |
-|  Example: Browser -> Node.js -> PostgreSQL                              |
+|  Example: Browser > Node.js > PostgreSQL                              |
 |  Most common web architecture                                         |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -195,7 +195,7 @@ commonly asked in system design interviews.
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  Client -> API Gateway -> Lambda -> DynamoDB                     |  |
+|  |  Client > API Gateway > Lambda > DynamoDB                     |  |
 |  |                                                                 |  |
 |  |  +--------+    +-------------+    +--------+    +----------+ |  |
 |  |  | Mobile |--->| API Gateway |--->| Lambda |--->| DynamoDB | |  |
@@ -210,7 +210,7 @@ commonly asked in system design interviews.
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  S3 Upload -> Lambda -> Process -> Store Result                  |  |
+|  |  S3 Upload > Lambda > Process > Store Result                  |  |
 |  |                                                                 |  |
 |  |  +--------+    +--------+    +--------+    +--------+        |  |
 |  |  | S3     |--->| Lambda |--->|Process |--->| S3 /   |        |  |
@@ -227,7 +227,7 @@ commonly asked in system design interviews.
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  CloudWatch Events -> Lambda (cron)                             |  |
+|  |  CloudWatch Events > Lambda (cron)                             |  |
 |  |                                                                 |  |
 |  |  +----------------+    +--------+                              |  |
 |  |  | EventBridge    |--->| Lambda |--> Send reports, cleanup    |  |
@@ -242,7 +242,7 @@ commonly asked in system design interviews.
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
-|  |  Kinesis/SQS -> Lambda -> Real-time processing                  |  |
+|  |  Kinesis/SQS > Lambda > Real-time processing                  |  |
 |  |                                                                 |  |
 |  |  +---------+    +--------+    +--------+                      |  |
 |  |  | Kinesis |--->| Lambda |--->|Analytics|                     |  |
@@ -262,21 +262,21 @@ commonly asked in system design interviews.
 |  ADVANTAGES                                                             |
 |  ==========                                                             |
 |                                                                         |
-|  [x] NO SERVER MANAGEMENT                                                |
+|  Y NO SERVER MANAGEMENT                                                |
 |    No patching, no capacity planning, no scaling configuration        |
 |                                                                         |
-|  [x] PAY PER USE                                                         |
+|  Y PAY PER USE                                                         |
 |    Billed by execution time (ms) and invocations                      |
 |    Zero cost when idle                                                 |
 |                                                                         |
-|  [x] AUTO-SCALING                                                        |
+|  Y AUTO-SCALING                                                        |
 |    Scales from 0 to thousands of concurrent executions               |
 |    No configuration needed                                            |
 |                                                                         |
-|  [x] FASTER TIME TO MARKET                                               |
+|  Y FASTER TIME TO MARKET                                               |
 |    Focus on code, not infrastructure                                  |
 |                                                                         |
-|  [x] BUILT-IN HIGH AVAILABILITY                                          |
+|  Y BUILT-IN HIGH AVAILABILITY                                          |
 |    Cloud provider handles redundancy                                  |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -284,27 +284,27 @@ commonly asked in system design interviews.
 |  DISADVANTAGES                                                          |
 |  =============                                                          |
 |                                                                         |
-|  [ ] COLD START LATENCY                                                  |
+|  X COLD START LATENCY                                                  |
 |    First request takes longer (100ms - 5s)                            |
 |    VPC-attached functions even slower                                 |
 |                                                                         |
-|  [ ] EXECUTION TIME LIMITS                                               |
+|  X EXECUTION TIME LIMITS                                               |
 |    AWS Lambda: 15 minutes max                                         |
 |    Not for long-running processes                                     |
 |                                                                         |
-|  [ ] VENDOR LOCK-IN                                                      |
+|  X VENDOR LOCK-IN                                                      |
 |    Different APIs across providers                                    |
 |    Migration is painful                                               |
 |                                                                         |
-|  [ ] DEBUGGING DIFFICULTY                                                |
+|  X DEBUGGING DIFFICULTY                                                |
 |    Distributed tracing is harder                                      |
 |    Local testing is limited                                           |
 |                                                                         |
-|  [ ] STATELESS CONSTRAINT                                                |
+|  X STATELESS CONSTRAINT                                                |
 |    No local state between invocations                                 |
 |    Need external storage for state                                    |
 |                                                                         |
-|  [ ] COST AT SCALE                                                       |
+|  X COST AT SCALE                                                       |
 |    Can become expensive with high, consistent traffic                |
 |    24/7 workloads cheaper on containers/VMs                          |
 |                                                                         |
@@ -400,7 +400,7 @@ commonly asked in system design interviews.
 |  |  DHT: Keys mapped to specific nodes using consistent hashing   |  |
 |  |                                                                 |  |
 |  |  key = hash("file.mp3")                                        |  |
-|  |  node = find_successor(key)  -> Route to responsible node      |  |
+|  |  node = find_successor(key)  > Route to responsible node      |  |
 |  |                                                                 |  |
 |  |  Lookup: O(log N) hops instead of O(N) flooding               |  |
 |  |                                                                 |  |
@@ -421,7 +421,7 @@ commonly asked in system design interviews.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |  +------------------+                                          |  |
-|  |  |  Tracker/Index   |  <- Knows who has what files             |  |
+|  |  |  Tracker/Index   |  < Knows who has what files             |  |
 |  |  |     Server       |                                          |  |
 |  |  +--------+---------+                                          |  |
 |  |           | "Who has file X?"                                  |  |
@@ -484,8 +484,8 @@ commonly asked in system design interviews.
 |                                                                         |
 |  WHY P2P IS BRILLIANT FOR FILE SHARING:                                |
 |  * More popular file = more seeders = faster download                 |
-|  * Server cost -> Zero (no central server needed)                      |
-|  * Bandwidth -> Distributed across all peers                           |
+|  * Server cost > Zero (no central server needed)                      |
+|  * Bandwidth > Distributed across all peers                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -528,14 +528,14 @@ commonly asked in system design interviews.
 |  ADVANTAGES                         DISADVANTAGES                       |
 |  ==========                         =============                       |
 |                                                                         |
-|  [x] No single point of failure      [ ] Complex to implement             |
-|  [x] Scales naturally (more peers    [ ] Security challenges              |
+|  Y No single point of failure      X Complex to implement             |
+|  Y Scales naturally (more peers    X Security challenges              |
 |    = more capacity)                   (malicious peers)                |
-|  [x] No central server cost          [ ] NAT traversal issues             |
-|  [x] Censorship resistant            [ ] Inconsistent performance          |
-|  [x] Geographic distribution         [ ] Discovery/coordination            |
+|  Y No central server cost          X NAT traversal issues             |
+|  Y Censorship resistant            X Inconsistent performance          |
+|  Y Geographic distribution         X Discovery/coordination            |
 |                                       is difficult                      |
-|                                     [ ] Legal concerns (piracy)          |
+|                                     X Legal concerns (piracy)          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -567,7 +567,7 @@ commonly asked in system design interviews.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |      +----+                                                    |  |
-|  |      | A* | <- Has new info                                    |  |
+|  |      | A* | < Has new info                                    |  |
 |  |      +----+                                                    |  |
 |  |      /    \                                                    |  |
 |  |   +----+ +----+                                               |  |
@@ -584,12 +584,12 @@ commonly asked in system design interviews.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |      +----+ --gossip--> +----+                                |  |
-|  |      | A* |             | B* | <- Now B has info              |  |
+|  |      | A* |             | B* | < Now B has info              |  |
 |  |      +----+             +----+                                |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
-|  Round 3: A->C, B->D (parallel gossip)                                 |
+|  Round 3: A>C, B>D (parallel gossip)                                 |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |      +----+             +----+                                |  |
@@ -599,7 +599,7 @@ commonly asked in system design interviews.
 |  |      | B* |--gossip-->| D* |                                 |  |
 |  |      +----+             +----+                                |  |
 |  |                                                                 |  |
-|  |  Exponential spread: 1 -> 2 -> 4 -> 8 -> 16...                   |  |
+|  |  Exponential spread: 1 > 2 > 4 > 8 > 16...                   |  |
 |  |  Time to reach all N nodes: O(log N) rounds                  |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -641,9 +641,9 @@ commonly asked in system design interviews.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |  Node A: "New update: key1 = v2"                               |  |
-|  |          -> Tell random peer                                    |  |
-|  |          -> Keep telling until k peers already knew             |  |
-|  |          -> Then stop (rumor is "dead")                        |  |
+|  |          > Tell random peer                                    |  |
+|  |          > Keep telling until k peers already knew             |  |
+|  |          > Then stop (rumor is "dead")                        |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -662,9 +662,9 @@ commonly asked in system design interviews.
 |  |  Node B: "Node C heartbeat: 1705000010"                       |  |
 |  |                                                                 |  |
 |  |  Merge: Use latest heartbeat                                   |  |
-|  |  If heartbeat too old -> Mark node as failed                   |  |
+|  |  If heartbeat too old > Mark node as failed                   |  |
 |  |                                                                 |  |
-|  |  SWIM Protocol: Suspicion -> Confirm -> Remove                  |  |
+|  |  SWIM Protocol: Suspicion > Confirm > Remove                  |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -708,17 +708,17 @@ commonly asked in system design interviews.
 |  ADVANTAGES                         DISADVANTAGES                       |
 |  ==========                         =============                       |
 |                                                                         |
-|  [x] Highly scalable                 [ ] Eventual consistency only        |
+|  Y Highly scalable                 X Eventual consistency only        |
 |    (no central coordinator)          (not immediate)                   |
 |                                                                         |
-|  [x] Fault tolerant                  [ ] Bandwidth overhead               |
+|  Y Fault tolerant                  X Bandwidth overhead               |
 |    (works with failures)             (redundant messages)              |
 |                                                                         |
-|  [x] Simple to implement             [ ] No guaranteed delivery           |
+|  Y Simple to implement             X No guaranteed delivery           |
 |                                       (probabilistic)                   |
-|  [x] Decentralized                                                       |
-|                                     [ ] Convergence time                 |
-|  [x] Robust (works in hostile          uncertain                         |
+|  Y Decentralized                                                       |
+|                                     X Convergence time                 |
+|  Y Robust (works in hostile          uncertain                         |
 |    network conditions)                                                  |
 |                                                                         |
 |  CONVERGENCE TIME:                                                      |

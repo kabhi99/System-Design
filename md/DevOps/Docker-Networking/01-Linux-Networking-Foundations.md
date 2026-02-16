@@ -48,11 +48,11 @@ configuration of other applications.
 A network namespace is a completely isolated copy of the network stack. When you
 create a new network namespace, you get:
 
-[x] Its own set of network interfaces
-[x] Its own routing table
-[x] Its own iptables rules
-[x] Its own socket namespace
-[x] Its own /proc/net directory
+Y Its own set of network interfaces
+Y Its own routing table
+Y Its own iptables rules
+Y Its own socket namespace
+Y Its own /proc/net directory
 
 Think of it like this: A network namespace is like giving each application its
 own private computer, at least from a networking perspective. Each namespace
@@ -489,12 +489,12 @@ INCOMING PACKET (from network):
 |        |                                                                |
 |        v                                                                |
 |   +-------------+                                                      |
-|   | PREROUTING  | <- First stop for all incoming packets                |
+|   | PREROUTING  | < First stop for all incoming packets                |
 |   +------+------+   NAT/DNAT happens here                              |
 |          |                                                              |
 |          v                                                              |
 |   +-------------+                                                      |
-|   |  ROUTING    | <- Kernel decides: Is this for me or should I forward?|
+|   |  ROUTING    | < Kernel decides: Is this for me or should I forward?|
 |   |  DECISION   |                                                      |
 |   +------+------+                                                      |
 |          |                                                              |
@@ -505,7 +505,7 @@ INCOMING PACKET (from network):
 |     |         |                                                        |
 |     v         v                                                        |
 | +-------+  +---------+                                                |
-| | INPUT |  | FORWARD | <- Packets being routed through this host       |
+| | INPUT |  | FORWARD | < Packets being routed through this host       |
 | +---+---+  +----+----+                                                |
 |     |           |                                                      |
 |     v           |                                                      |
@@ -513,14 +513,14 @@ INCOMING PACKET (from network):
 |     |           |                                                      |
 |     v           |                                                      |
 | +--------+      |                                                      |
-| | OUTPUT |      |  <- Packets generated locally                        |
+| | OUTPUT |      |  < Packets generated locally                        |
 | +---+----+      |                                                      |
 |     |           |                                                      |
 |     +-----+-----+                                                      |
 |           |                                                            |
 |           v                                                            |
 |   +--------------+                                                     |
-|   | POSTROUTING  | <- Last stop before leaving                         |
+|   | POSTROUTING  | < Last stop before leaving                         |
 |   +------+-------+   SNAT/MASQUERADE happens here                     |
 |          |                                                              |
 |          v                                                              |
@@ -752,7 +752,7 @@ Docker does ALL of the following automatically:
 4. Attaches other end to docker0 bridge
 5. Assigns IP from 172.17.0.0/16 subnet via DHCP
 6. Sets container's default gateway to 172.17.0.1 (docker0)
-7. Creates DNAT rule: host:8080 -> container:80
+7. Creates DNAT rule: host:8080 > container:80
 8. MASQUERADE rule already exists for outbound traffic
 
 All the complexity we explored manually—Docker handles it in milliseconds!
@@ -789,7 +789,7 @@ All the complexity we explored manually—Docker handles it in milliseconds!
 |  |                                                                 |   |
 |  |   IPTABLES/NAT                                                  |   |
 |  |   * MASQUERADE: Containers reach internet                      |   |
-|  |   * DNAT: Port forwarding (host:port -> container:port)        |   |
+|  |   * DNAT: Port forwarding (host:port > container:port)        |   |
 |  |   * Firewall rules for isolation                              |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |

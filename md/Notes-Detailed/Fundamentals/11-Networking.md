@@ -93,7 +93,7 @@ to WebSocket connections, every system depends on the network.
 |  SERVICE DISCOVERY WITH DNS                                           |
 |                                                                         |
 |  Internal services register with DNS:                                |
-|  order-service.internal.example.com -> 10.1.0.5                      |
+|  order-service.internal.example.com > 10.1.0.5                      |
 |                                                                         |
 |  Tools: Consul, AWS Cloud Map, Kubernetes CoreDNS                    |
 |                                                                         |
@@ -121,10 +121,10 @@ to WebSocket connections, every system depends on the network.
 |     |                   |                                              |
 |                                                                         |
 |  TCP FEATURES:                                                         |
-|  [x] Reliable delivery (retransmits lost packets)                      |
-|  [x] Ordered (packets reassembled in order)                            |
-|  [x] Flow control (don't overwhelm receiver)                           |
-|  [x] Congestion control (adapt to network conditions)                  |
+|  Y Reliable delivery (retransmits lost packets)                      |
+|  Y Ordered (packets reassembled in order)                            |
+|  Y Flow control (don't overwhelm receiver)                           |
+|  Y Congestion control (adapt to network conditions)                  |
 |                                                                         |
 |  OVERHEAD:                                                             |
 |  * 3-way handshake adds latency                                      |
@@ -145,11 +145,11 @@ to WebSocket connections, every system depends on the network.
 |     |                   |                                              |
 |                                                                         |
 |  UDP FEATURES:                                                         |
-|  [x] No connection setup (immediate send)                              |
-|  [x] Low latency                                                       |
-|  [x] Supports broadcast/multicast                                      |
-|  [ ] No reliability (packets can be lost)                              |
-|  [ ] No ordering (packets can arrive out of order)                     |
+|  Y No connection setup (immediate send)                              |
+|  Y Low latency                                                       |
+|  Y Supports broadcast/multicast                                      |
+|  X No reliability (packets can be lost)                              |
+|  X No ordering (packets can arrive out of order)                     |
 |                                                                         |
 |  USE FOR: DNS, Video streaming, Gaming, VoIP                         |
 |                                                                         |
@@ -226,7 +226,7 @@ to WebSocket connections, every system depends on the network.
 |                                                                         |
 |  3. SERVER PUSH                                                        |
 |     Server can push resources before client requests                 |
-|     Request HTML -> Server sends HTML + CSS + JS                      |
+|     Request HTML > Server sends HTML + CSS + JS                      |
 |                                                                         |
 |  4. STREAM PRIORITIZATION                                              |
 |     Client indicates which resources are more important              |
@@ -245,7 +245,7 @@ to WebSocket connections, every system depends on the network.
 |  1. QUIC TRANSPORT (UDP-based)                                        |
 |     * 0-RTT connection establishment (vs 3-RTT for TCP+TLS)         |
 |     * No TCP head-of-line blocking                                  |
-|     * Connection migration (WiFi -> cellular)                        |
+|     * Connection migration (WiFi > cellular)                        |
 |                                                                         |
 |  2. INDEPENDENT STREAMS                                                |
 |     Lost packet only affects its stream, not others                  |
@@ -274,7 +274,7 @@ to WebSocket connections, every system depends on the network.
 |                                                                         |
 |  Full-duplex, bidirectional communication over single TCP connection. |
 |                                                                         |
-|  HTTP: Request -> Response (client initiates)                          |
+|  HTTP: Request > Response (client initiates)                          |
 |  WebSocket: Messages flow both ways anytime                          |
 |                                                                         |
 |  WEBSOCKET HANDSHAKE:                                                  |
@@ -313,7 +313,7 @@ to WebSocket connections, every system depends on the network.
 |  Better than polling, but still HTTP overhead                        |
 |                                                                         |
 |  SERVER-SENT EVENTS (SSE):                                            |
-|  Server -> Client only (one-way)                                      |
+|  Server > Client only (one-way)                                      |
 |  Good for feeds, notifications                                       |
 |  Uses regular HTTP, simpler than WebSocket                           |
 |                                                                         |
@@ -324,7 +324,7 @@ to WebSocket connections, every system depends on the network.
 |  +-----------------+----------------+-------------+-----------------+|
 |  | Feature         | Polling        | SSE         | WebSocket       ||
 |  +-----------------+----------------+-------------+-----------------+|
-|  | Direction       | Client->Server  | Server->Cli  | Bidirectional   ||
+|  | Direction       | Client>Server  | Server>Cli  | Bidirectional   ||
 |  | Latency         | High           | Low         | Lowest          ||
 |  | Connection      | Per request    | Persistent  | Persistent      ||
 |  | Complexity      | Low            | Medium      | High            ||
@@ -356,7 +356,7 @@ to WebSocket connections, every system depends on the network.
 |  |  User B connected to Server 2                                  |  |
 |  |  User A sends message to B:                                    |  |
 |  |                                                                 |  |
-|  |  A -> Server 1 -> Redis Pub/Sub -> Server 2 -> B                  |  |
+|  |  A > Server 1 > Redis Pub/Sub > Server 2 > B                  |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -426,13 +426,13 @@ to WebSocket connections, every system depends on the network.
 |  CACHE-CONTROL HEADERS:                                                |
 |                                                                         |
 |  Cache-Control: public, max-age=31536000                             |
-|  -> Cache for 1 year (immutable assets with hash in filename)        |
+|  > Cache for 1 year (immutable assets with hash in filename)        |
 |                                                                         |
 |  Cache-Control: private, no-cache                                     |
-|  -> Don't cache in CDN, always validate                               |
+|  > Don't cache in CDN, always validate                               |
 |                                                                         |
 |  Cache-Control: s-maxage=3600, max-age=60                            |
-|  -> CDN caches 1 hour, browser caches 1 minute                        |
+|  > CDN caches 1 hour, browser caches 1 minute                        |
 |                                                                         |
 |  CACHE INVALIDATION:                                                   |
 |  * Purge: Clear specific URLs from cache                            |
@@ -470,7 +470,7 @@ to WebSocket connections, every system depends on the network.
 |  REAL-TIME COMMUNICATION                                               |
 |  -----------------------                                                |
 |  * Polling: Simple but wasteful                                      |
-|  * SSE: Server -> Client only                                        |
+|  * SSE: Server > Client only                                        |
 |  * WebSocket: Full duplex, lowest latency                           |
 |                                                                         |
 |  CDN                                                                   |

@@ -156,8 +156,8 @@
 |  * Processor availability                                             |
 |                                                                         |
 |  SMART ROUTING:                                                        |
-|  * Primary processor down? -> Failover to secondary                   |
-|  * High decline rate? -> Try different acquirer                       |
+|  * Primary processor down? > Failover to secondary                   |
+|  * High decline rate? > Try different acquirer                       |
 |  * Cost optimization based on interchange fees                       |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -373,7 +373,7 @@
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFIT: Merchant app never handles raw card data                    |
-|  -> Reduced PCI scope (SAQ A vs SAQ D)                                |
+|  > Reduced PCI scope (SAQ A vs SAQ D)                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -25,7 +25,7 @@ works, and when to use it.
 |         <----------- (50-100ms)               |                        |
 |                                               v                        |
 |  Every request hits database.             +-------+                    |
-|  Database under heavy load.               | Cache | <--- Hit: <1ms     |
+|  Database under heavy load.               | Cache | <-- Hit: <1ms     |
 |                                           +---+---+                    |
 |                                               | Miss                   |
 |                                               v                        |
@@ -51,8 +51,8 @@ works, and when to use it.
 |  CACHE HIT vs MISS                                                     |
 |  =================                                                      |
 |                                                                         |
-|  Cache Hit: Data found in cache -> return immediately                 |
-|  Cache Miss: Data not in cache -> fetch from source, store in cache  |
+|  Cache Hit: Data found in cache > return immediately                 |
+|  Cache Miss: Data not in cache > fetch from source, store in cache  |
 |                                                                         |
 |  Hit Rate = Cache Hits / (Cache Hits + Cache Misses)                 |
 |                                                                         |
@@ -120,13 +120,13 @@ works, and when to use it.
 |      cache.delete(f"user:{user_id}")  # Invalidate cache            |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Only requested data is cached                                     |
-|  [x] Cache failures don't break the system                            |
-|  [x] Simple to implement                                               |
+|  Y Only requested data is cached                                     |
+|  Y Cache failures don't break the system                            |
+|  Y Simple to implement                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] First request is always slow (cache miss)                        |
-|  [ ] Stale data possible if invalidation fails                        |
+|  X First request is always slow (cache miss)                        |
+|  X Stale data possible if invalidation fails                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -158,12 +158,12 @@ works, and when to use it.
 |  * Read-through: Cache fetches from DB on miss                       |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simpler application code                                          |
-|  [x] Cache handles loading logic                                       |
+|  Y Simpler application code                                          |
+|  Y Cache handles loading logic                                       |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] First request still slow                                          |
-|  [ ] Cache must understand how to load data                           |
+|  X First request still slow                                          |
+|  X Cache must understand how to load data                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -188,12 +188,12 @@ works, and when to use it.
 |        |   Ack (both done) |                   |                      |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Cache always consistent with DB                                   |
-|  [x] Subsequent reads are always cache hits                           |
+|  Y Cache always consistent with DB                                   |
+|  Y Subsequent reads are always cache hits                           |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Higher write latency (write to both)                             |
-|  [ ] Cache fills with data that may never be read                     |
+|  X Higher write latency (write to both)                             |
+|  X Cache fills with data that may never be read                     |
 |                                                                         |
 |  BEST FOR:                                                             |
 |  * Data that is read immediately after write                        |
@@ -223,14 +223,14 @@ works, and when to use it.
 |        |                   |                   |                      |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Very fast writes (only cache)                                     |
-|  [x] Can batch writes to database                                      |
-|  [x] Reduces database load                                             |
+|  Y Very fast writes (only cache)                                     |
+|  Y Can batch writes to database                                      |
+|  Y Reduces database load                                             |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Risk of data loss if cache fails before DB write                 |
-|  [ ] Eventual consistency (DB may be stale temporarily)               |
-|  [ ] More complex recovery                                             |
+|  X Risk of data loss if cache fails before DB write                 |
+|  X Eventual consistency (DB may be stale temporarily)               |
+|  X More complex recovery                                             |
 |                                                                         |
 |  BEST FOR:                                                             |
 |  * High write throughput requirements                                |
@@ -261,7 +261,7 @@ works, and when to use it.
 |  Access order: A, B, C, D, E                                          |
 |  Cache (size 4): [E, D, C, B]  (most recent first)                   |
 |                                                                         |
-|  Access A -> Cache full, evict B (least recent)                       |
+|  Access A > Cache full, evict B (least recent)                       |
 |  Cache: [A, E, D, C]                                                  |
 |                                                                         |
 |  IMPLEMENTATION:                                                       |
@@ -439,8 +439,8 @@ works, and when to use it.
 |     * Use cache invalidation channel (Redis Pub/Sub)                |
 |                                                                         |
 |  2. DERIVED DATA                                                       |
-|     * Product changes -> category listing stale                      |
-|     * User changes -> team membership stale                          |
+|     * Product changes > category listing stale                      |
+|     * User changes > team membership stale                          |
 |     * Track dependencies, cascade invalidations                     |
 |                                                                         |
 |  3. RACE CONDITIONS                                                    |

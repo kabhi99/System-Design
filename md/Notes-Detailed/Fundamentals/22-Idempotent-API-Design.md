@@ -20,15 +20,15 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |                                                                 |  |
 |  |  NATURALLY IDEMPOTENT:                                         |  |
 |  |                                                                 |  |
-|  |  GET /users/123           -> Always returns same user          |  |
-|  |  PUT /users/123 {name}    -> Sets name to same value           |  |
-|  |  DELETE /users/123        -> User gone (already gone = same)   |  |
+|  |  GET /users/123           > Always returns same user          |  |
+|  |  PUT /users/123 {name}    > Sets name to same value           |  |
+|  |  DELETE /users/123        > User gone (already gone = same)   |  |
 |  |                                                                 |  |
 |  |  NOT NATURALLY IDEMPOTENT:                                     |  |
 |  |                                                                 |  |
-|  |  POST /orders             -> Creates NEW order each time!      |  |
-|  |  POST /payments           -> Charges card each time!           |  |
-|  |  POST /emails/send        -> Sends duplicate emails!           |  |
+|  |  POST /orders             > Creates NEW order each time!      |  |
+|  |  POST /payments           > Charges card each time!           |  |
+|  |  POST /emails/send        > Sends duplicate emails!           |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -60,7 +60,7 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |                                                                 |  |
 |  |  Client ---- POST /payments ----> Server                       |  |
 |  |     |                               |                           |  |
-|  |     |                               | (processes payment [x])    |  |
+|  |     |                               | (processes payment Y)    |  |
 |  |     |                               |                           |  |
 |  |     | <---- TIMEOUT --------------- | (response lost!)        |  |
 |  |     |                                                           |  |
@@ -101,16 +101,16 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |  Idempotency-Key: ord_123_pay_1                                |  |
 |  |  { "amount": 100, "card": "..." }                              |  |
 |  |                                                                 |  |
-|  |  Server: Key not seen -> Process payment -> Return 200           |  |
+|  |  Server: Key not seen > Process payment > Return 200           |  |
 |  |                                                                 |  |
 |  |  ----------------------------------------------------------    |  |
 |  |                                                                 |  |
 |  |  REQUEST 2 (retry, same key):                                  |  |
 |  |  POST /payments                                                 |  |
-|  |  Idempotency-Key: ord_123_pay_1  <- SAME KEY                    |  |
+|  |  Idempotency-Key: ord_123_pay_1  < SAME KEY                    |  |
 |  |  { "amount": 100, "card": "..." }                              |  |
 |  |                                                                 |  |
-|  |  Server: Key exists -> Return cached 200 (no reprocessing!)    |  |
+|  |  Server: Key exists > Return cached 200 (no reprocessing!)    |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -262,20 +262,20 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |                                                                 |  |
 |  |  GOOD KEYS (Tied to business intent):                          |  |
 |  |                                                                 |  |
-|  |  order_123_payment_1       -> Order + attempt number           |  |
-|  |  cart_abc_checkout         -> Cart session                      |  |
-|  |  invoice_456               -> Invoice ID                        |  |
-|  |  user_789_order_20240115   -> User + date (daily limit)        |  |
-|  |  txn_uuid-v4               -> Client-generated UUID            |  |
+|  |  order_123_payment_1       > Order + attempt number           |  |
+|  |  cart_abc_checkout         > Cart session                      |  |
+|  |  invoice_456               > Invoice ID                        |  |
+|  |  user_789_order_20240115   > User + date (daily limit)        |  |
+|  |  txn_uuid-v4               > Client-generated UUID            |  |
 |  |                                                                 |  |
 |  |  ----------------------------------------------------------    |  |
 |  |                                                                 |  |
 |  |  BAD KEYS:                                                      |  |
 |  |                                                                 |  |
-|  |  uuid-v4 (new each request) -> Defeats the purpose!            |  |
-|  |  1705312345 (timestamp)     -> Not unique enough               |  |
-|  |  user_123 (user ID only)    -> User has multiple orders        |  |
-|  |  random_string              -> Can't correlate retries         |  |
+|  |  uuid-v4 (new each request) > Defeats the purpose!            |  |
+|  |  1705312345 (timestamp)     > Not unique enough               |  |
+|  |  user_123 (user ID only)    > User has multiple orders        |  |
+|  |  random_string              > Can't correlate retries         |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -334,8 +334,8 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |  First Request Result    |  Retry Behavior                    |   |
 |  |  -----------------------------------------------------------  |   |
 |  |                                                                |   |
-|  |  200 Success            |  Return cached 200 [x]               |   |
-|  |  201 Created            |  Return cached 201 [x]               |   |
+|  |  200 Success            |  Return cached 200 Y               |   |
+|  |  201 Created            |  Return cached 201 Y               |   |
 |  |                                                                |   |
 |  |  400 Bad Request        |  Process again (fix and retry)     |   |
 |  |  401 Unauthorized       |  Process again                     |   |
@@ -350,9 +350,9 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  +----------------------------------------------------------------+   |
 |                                                                         |
 |  RULE: Only cache SUCCESSFUL terminal states                          |
-|  * Success (2xx) -> Cache                                              |
-|  * Client error (4xx) -> Don't cache (let them fix and retry)         |
-|  * Server error (5xx) -> Don't cache (transient, retry may work)      |
+|  * Success (2xx) > Cache                                              |
+|  * Client error (4xx) > Don't cache (let them fix and retry)         |
+|  * Server error (5xx) > Don't cache (transient, retry may work)      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -384,7 +384,7 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  On retry, verify parameters match.                                   |
 |                                                                         |
 |  Retry with SAME key but DIFFERENT parameters?                        |
-|  -> Return 422 "Idempotency key reused with different parameters"     |
+|  > Return 422 "Idempotency key reused with different parameters"     |
 |                                                                         |
 |  def check_params(idem_key, request_body):                            |
 |      stored_hash = redis.hget(f"idem:{idem_key}", "request_hash")    |
@@ -499,7 +499,7 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  |  stripe.PaymentIntent.create(                                  |  |
 |  |      amount=10000,                                              |  |
 |  |      currency='usd',                                            |  |
-|  |      idempotency_key='ord_123_pay_1'  <- Same key!             |  |
+|  |      idempotency_key='ord_123_pay_1'  < Same key!             |  |
 |  |  )                                                               |  |
 |  |                                                                 |  |
 |  |  Now if your retry hits Stripe again, Stripe returns           |  |
@@ -548,7 +548,7 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  3. CONDITIONAL REQUESTS (ETags)                                       |
 |  ---------------------------------                                      |
 |  PUT /users/123                                                        |
-|  If-Match: "etag_abc"    <- Only update if version matches            |
+|  If-Match: "etag_abc"    < Only update if version matches            |
 |                                                                         |
 |  Prevents lost updates from concurrent modifications                 |
 |                                                                         |
@@ -562,7 +562,7 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |      id SERIAL PRIMARY KEY,                                           |
 |      user_id INT,                                                      |
 |      cart_id VARCHAR(100),                                            |
-|      UNIQUE(user_id, cart_id)  <- One order per cart                  |
+|      UNIQUE(user_id, cart_id)  < One order per cart                  |
 |  );                                                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -579,9 +579,9 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |  ------------                                                           |
 |  1. Client sends Idempotency-Key header                               |
 |  2. Server checks Redis: key exists?                                  |
-|     * Yes + complete -> Return cached response                        |
-|     * Yes + processing -> Return 409 Conflict                         |
-|     * No -> SET NX, process, cache result                             |
+|     * Yes + complete > Return cached response                        |
+|     * Yes + processing > Return 409 Conflict                         |
+|     * No > SET NX, process, cache result                             |
 |                                                                         |
 |  KEY DESIGN:                                                           |
 |  ------------                                                           |
@@ -591,9 +591,9 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 |                                                                         |
 |  CACHING RULES:                                                        |
 |  ---------------                                                        |
-|  * 2xx -> Cache (success is terminal)                                 |
-|  * 4xx -> Don't cache (let client fix and retry)                     |
-|  * 5xx -> Don't cache (transient, retry may work)                    |
+|  * 2xx > Cache (success is terminal)                                 |
+|  * 4xx > Don't cache (let client fix and retry)                     |
+|  * 5xx > Don't cache (transient, retry may work)                    |
 |                                                                         |
 |  IMPLEMENTATION:                                                       |
 |  ----------------                                                       |

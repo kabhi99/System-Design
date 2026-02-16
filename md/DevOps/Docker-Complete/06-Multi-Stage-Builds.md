@@ -279,9 +279,9 @@ separating build-time dependencies from runtime requirements.
 |                                                                         |
 |  1. USE SMALLER BASE IMAGES                                            |
 |     ------------------------                                            |
-|     node:20         -> 1.1GB                                           |
-|     node:20-slim    -> 200MB                                           |
-|     node:20-alpine  -> 130MB                                           |
+|     node:20         > 1.1GB                                           |
+|     node:20-slim    > 200MB                                           |
+|     node:20-alpine  > 130MB                                           |
 |                                                                         |
 |  2. MINIMIZE LAYERS                                                    |
 |     -----------------                                                   |

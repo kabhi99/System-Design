@@ -9,9 +9,9 @@ Part 2: High-Level Architecture
 2.1 System Architecture Diagram
 2.2 Microservices Breakdown
 2.3 Technology Choices & Rationale
-2.4 Security Model (Authentication & Authorization)    <- NEW
-2.5 Public vs Private (Internal) APIs                  <- NEW
-2.6 Database-to-Service Ownership Mapping              <- NEW
+2.4 Security Model (Authentication & Authorization)    < NEW
+2.5 Public vs Private (Internal) APIs                  < NEW
+2.6 Database-to-Service Ownership Mapping              < NEW
 
 Part 3: Theater & Show Management
 Part 4: Seat Selection & Booking (The Hard Problem)
@@ -21,7 +21,7 @@ Part 5: Distributed Locking for Seats
 5.3 Safe Lock Release
 5.4 Pessimistic vs Optimistic Locking
 5.5 Complete Booking Sequence
-5.6 Redlock Algorithm (Advanced Distributed Locking)   <- NEW
+5.6 Redlock Algorithm (Advanced Distributed Locking)   < NEW
 
 Part 6: Payment Processing & Idempotency
 Part 7: Search & Discovery
@@ -33,8 +33,8 @@ Part 12: Scaling & Performance
 Part 13: Trade-offs & Decisions
 Part 14: Interview Follow-ups
 14.1 Common Interview Questions (Q1-Q8)
-14.1+ Additional Questions (Q9-Q16)                    <- NEW
-14.2 Deep Dive Interview Questions (Q17-Q20)           <- NEW
+14.1+ Additional Questions (Q9-Q16)                    < NEW
+14.2 Deep Dive Interview Questions (Q17-Q20)           < NEW
 14.3 Homework Assignments
 
 Part 15: Theoretical Foundations
@@ -135,7 +135,7 @@ USERS (Customers):
 |                    TRAFFIC ESTIMATION                                   |
 |                                                                         |
 |  DAILY ACTIVE USERS:                                                   |
-|  * 50M MAU -> ~5M DAU (10% daily active)                               |
+|  * 50M MAU > ~5M DAU (10% daily active)                               |
 |                                                                         |
 |  BOOKINGS:                                                             |
 |  * 5M bookings/day                                                     |
@@ -199,14 +199,14 @@ USERS (Customers):
 |                                                                         |
 |  User A                              User B                            |
 |  ---------                           ---------                         |
-|  T1: Check seat F-12 available? [x]                                     |
-|                                      T2: Check seat F-12 available? [x] |
+|  T1: Check seat F-12 available? Y                                     |
+|                                      T2: Check seat F-12 available? Y |
 |  T3: Lock seat F-12                                                   |
 |                                      T4: Lock seat F-12               |
 |  T5: Complete payment                                                 |
 |                                      T6: Complete payment             |
-|  T7: Book seat F-12 [x]                                                 |
-|                                      T8: Book seat F-12 [x] <- PROBLEM!  |
+|  T7: Book seat F-12 Y                                                 |
+|                                      T8: Book seat F-12 Y < PROBLEM!  |
 |                                                                         |
 |  Both users paid, both got confirmation — but only ONE seat exists!   |
 |                                                                         |
@@ -288,7 +288,7 @@ USERS (Customers):
 |  User A is viewing seat map                                           |
 |  User B books seat F-12                                               |
 |  User A's screen still shows F-12 as available                        |
-|  User A clicks F-12 -> Error!                                          |
+|  User A clicks F-12 > Error!                                          |
 |                                                                         |
 |  BAD USER EXPERIENCE                                                   |
 |                                                                         |
@@ -315,15 +315,15 @@ USERS (Customers):
 |  4. Did the payment succeed or fail?                                  |
 |                                                                         |
 |  SCENARIOS:                                                            |
-|  * Money deducted but booking not confirmed -> User angry              |
-|  * Booking confirmed but money not deducted -> Revenue loss            |
-|  * User retries, double payment -> Refund nightmare                    |
+|  * Money deducted but booking not confirmed > User angry              |
+|  * Booking confirmed but money not deducted > Revenue loss            |
+|  * User retries, double payment > Refund nightmare                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  SOLUTIONS:                                                            |
 |  * Idempotency keys for payment requests                              |
-|  * Two-phase: Reserve seats -> Charge -> Confirm                        |
+|  * Two-phase: Reserve seats > Charge > Confirm                        |
 |  * Payment status polling                                             |
 |  * Compensation (Saga pattern) for failures                           |
 |                                                                         |
@@ -613,7 +613,7 @@ SEAT_INVENTORY (Per Show):
 |  -------------------------------------------                           |
 |  Key:    seats_available:{show_id}                                    |
 |  Type:   Hash                                                          |
-|  Fields: seat_number -> status (0=available, 1=locked, 2=booked)       |
+|  Fields: seat_number > status (0=available, 1=locked, 2=booked)       |
 |                                                                         |
 |  Example:                                                              |
 |  HSET seats_available:show_abc A-1 0 A-2 1 A-3 2                      |
@@ -1060,7 +1060,7 @@ SEAT_INVENTORY (Per Show):
 |  +----------------+-----------------+--------------------------------+ |
 |  | Communication  | Protocol        | Why                            | |
 |  +----------------+-----------------+--------------------------------+ |
-|  | Client -> API   | HTTPS/REST      | Browser/mobile compatibility  | |
+|  | Client > API   | HTTPS/REST      | Browser/mobile compatibility  | |
 |  |                |                 | Cacheable responses           | |
 |  |                |                 | Widely understood             | |
 |  +----------------+-----------------+--------------------------------+ |
@@ -1198,10 +1198,10 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  Client                Auth Service            User DB                  |
 |    |                       |                      |                     |
-|    |--POST /auth/login----->|                      |                     |
+|    |--POST /auth/login---->|                      |                     |
 |    |  {email, password}    |                      |                     |
-|    |                       |--Verify credentials--->|                     |
-|    |                       |<--User record---------|                     |
+|    |                       |--Verify credentials-->|                     |
+|    |                       |<-User record---------|                     |
 |    |                       |                      |                     |
 |    |                       | +------------------+ |                     |
 |    |                       | |Generate JWT:     | |                     |
@@ -1210,7 +1210,7 @@ SEAT_INVENTORY (Per Show):
 |    |                       | |* Set expiry      | |                     |
 |    |                       | +------------------+ |                     |
 |    |                       |                      |                     |
-|    |<--{accessToken, expiresIn}                   |                     |
+|    |<-{accessToken, expiresIn}                   |                     |
 |    |                       |                      |                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -1245,7 +1245,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  Client             API Gateway          Booking Service               |
 |    |                     |                      |                       |
-|    |--POST /reservations-->|                      |                       |
+|    |--POST /reservations->|                      |                       |
 |    |  Authorization:     |                      |                       |
 |    |  Bearer eyJhbG...   |                      |                       |
 |    |                     |                      |                       |
@@ -1258,12 +1258,12 @@ SEAT_INVENTORY (Per Show):
 |    |                     | +------------------+ |                       |
 |    |                     |                      |                       |
 |    |                     |  (If valid)         |                       |
-|    |                     |--Forward + userId---->|                       |
-|    |                     |<--Reservation result--|                       |
-|    |<--Response-----------|                      |                       |
+|    |                     |--Forward + userId--->|                       |
+|    |                     |<-Reservation result--|                       |
+|    |<-Response-----------|                      |                       |
 |    |                     |                      |                       |
 |    |                     |  (If invalid)       |                       |
-|    |<--401 Unauthorized---|                      |                       |
+|    |<-401 Unauthorized---|                      |                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1358,7 +1358,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  FLOW:                                                                 |
 |  ------                                                                |
-|  1. User logs in -> Gets access + refresh tokens                       |
+|  1. User logs in > Gets access + refresh tokens                       |
 |  2. Access token expires after 1 hour                                 |
 |  3. Client sends refresh token to /auth/refresh                       |
 |  4. Server validates refresh token                                    |
@@ -1509,11 +1509,11 @@ SEAT_INVENTORY (Per Show):
 +-------------------------------------------------------------------------+
 
 +-------------------------------------------------------------------------+
-|                    SERVICE -> DATABASE MAPPING                          |
+|                    SERVICE > DATABASE MAPPING                          |
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  AUTH SERVICE -> Auth DB (PostgreSQL)                           |   |
+|  |  AUTH SERVICE > Auth DB (PostgreSQL)                           |   |
 |  |  ------------------------------------                          |   |
 |  |  Tables:                                                       |   |
 |  |    * users (user_id, email, password_hash, created_at)        |   |
@@ -1526,7 +1526,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  EVENT SERVICE -> Events DB (PostgreSQL)                        |   |
+|  |  EVENT SERVICE > Events DB (PostgreSQL)                        |   |
 |  |  -------------------------------------                         |   |
 |  |  Tables:                                                       |   |
 |  |    * movies (movie_id, title, genre, language, duration)      |   |
@@ -1541,7 +1541,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  INVENTORY SERVICE -> Inventory DB (PostgreSQL)                 |   |
+|  |  INVENTORY SERVICE > Inventory DB (PostgreSQL)                 |   |
 |  |  --------------------------------------------                  |   |
 |  |  Tables:                                                       |   |
 |  |    * seats (seat_id, show_id, seat_number, status, price,     |   |
@@ -1557,7 +1557,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  BOOKING SERVICE -> Bookings DB (PostgreSQL)                    |   |
+|  |  BOOKING SERVICE > Bookings DB (PostgreSQL)                    |   |
 |  |  -----------------------------------------                     |   |
 |  |  Tables:                                                       |   |
 |  |    * bookings (booking_id, user_id, show_id, total_amount,    |   |
@@ -1572,7 +1572,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  SEARCH SERVICE -> Elasticsearch / OpenSearch                   |   |
+|  |  SEARCH SERVICE > Elasticsearch / OpenSearch                   |   |
 |  |  -------------------------------------------                   |   |
 |  |  Indexes:                                                      |   |
 |  |    * movies_index (denormalized movie + show data)            |   |
@@ -1585,7 +1585,7 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
-|  |  NOTIFICATION SERVICE -> Notifications DB (PostgreSQL/NoSQL)    |   |
+|  |  NOTIFICATION SERVICE > Notifications DB (PostgreSQL/NoSQL)    |   |
 |  |  ---------------------------------------------------------     |   |
 |  |  Tables:                                                       |   |
 |  |    * notification_templates (template_id, type, content)      |   |
@@ -1601,14 +1601,14 @@ SEAT_INVENTORY (Per Show):
 |                                                                         |
 |                                                                         |
 |    +--------------+                        +--------------+            |
-|    | Events DB    |--CDC (Debezium)-------->| Search Index |            |
+|    | Events DB    |--CDC (Debezium)------->| Search Index |            |
 |    | (PostgreSQL) |                        | (OpenSearch) |            |
 |    +--------------+                        +--------------+            |
 |           |                                                            |
 |           | show_id reference                                         |
 |           v                                                            |
 |    +--------------+                        +--------------+            |
-|    | Inventory DB |<-- API call -----------|   Booking    |            |
+|    | Inventory DB |<- API call -----------|   Booking    |            |
 |    |  (Seats)     |   (lock/release)      |   Service    |            |
 |    +--------------+                        +--------------+            |
 |           |                                       |                    |
@@ -1859,8 +1859,8 @@ Step 3: LOCK SEATS (Critical!)
 ------------------------------
 - User clicks "Book Now"
 - System attempts to LOCK all selected seats atomically
-- If ANY seat unavailable -> FAIL entire request
-- If success -> Start 10-minute countdown
+- If ANY seat unavailable > FAIL entire request
+- If success > Start 10-minute countdown
 - Seats now show as LOCKED to other users
 
 Step 4: PAYMENT
@@ -1895,17 +1895,17 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  User A                              User B                            |
 |  ---------                           ---------                         |
 |  T1: Is F-12 available?                                               |
-|      -> Query DB: status = AVAILABLE                                   |
-|      -> Yes!                                                           |
+|      > Query DB: status = AVAILABLE                                   |
+|      > Yes!                                                           |
 |                                      T2: Is F-12 available?           |
-|                                          -> Query DB: status = AVAILABLE|
-|                                          -> Yes!                       |
+|                                          > Query DB: status = AVAILABLE|
+|                                          > Yes!                       |
 |  T3: Lock F-12                                                        |
-|      -> UPDATE status = LOCKED                                         |
-|      -> Success                                                        |
+|      > UPDATE status = LOCKED                                         |
+|      > Success                                                        |
 |                                      T4: Lock F-12                    |
-|                                          -> UPDATE status = LOCKED     |
-|                                          -> Success <- PROBLEM!         |
+|                                          > UPDATE status = LOCKED     |
+|                                          > Success < PROBLEM!         |
 |                                                                         |
 |  Both users think they have the seat! When they pay, one will fail.  |
 |  BAD USER EXPERIENCE.                                                 |
@@ -1937,7 +1937,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |                                                                         |
 |  SELECT * FROM seat_inventory                                          |
 |  WHERE show_id = 'xyz' AND seat_number IN ('A-1', 'A-2')              |
-|  FOR UPDATE;          <- Locks these rows!                             |
+|  FOR UPDATE;          < Locks these rows!                             |
 |                                                                         |
 |  -- Other transactions trying to SELECT FOR UPDATE same rows          |
 |  -- will WAIT until this transaction commits/rollbacks                |
@@ -1947,20 +1947,20 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |      SET status = 'LOCKED', locked_by = ?, locked_until = ?           |
 |      WHERE show_id = 'xyz' AND seat_number IN ('A-1', 'A-2');         |
 |                                                                         |
-|  COMMIT;               <- Releases locks                                |
+|  COMMIT;               < Releases locks                                |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Database handles locking — simple to implement                     |
-|  [x] ACID guarantees                                                    |
-|  [x] No external dependencies (no Redis needed)                         |
+|  Y Database handles locking — simple to implement                     |
+|  Y ACID guarantees                                                    |
+|  Y No external dependencies (no Redis needed)                         |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Database becomes bottleneck under high load                        |
-|  [ ] Row locks held for entire transaction duration                     |
-|  [ ] Potential for deadlocks with multiple seats                        |
-|  [ ] Doesn't scale well horizontally                                    |
+|  X Database becomes bottleneck under high load                        |
+|  X Row locks held for entire transaction duration                     |
+|  X Potential for deadlocks with multiple seats                        |
+|  X Doesn't scale well horizontally                                    |
 |                                                                         |
 |  VERDICT: Works for moderate scale, not for 100K concurrent users     |
 |                                                                         |
@@ -1981,29 +1981,29 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  1. Read seat with version number:                                    |
 |     SELECT seat_number, status, version FROM seat_inventory           |
 |     WHERE show_id = ? AND seat_number = 'A-1'                         |
-|     -> Returns: status = AVAILABLE, version = 5                        |
+|     > Returns: status = AVAILABLE, version = 5                        |
 |                                                                         |
 |  2. Attempt update with version check:                                |
 |     UPDATE seat_inventory                                              |
 |     SET status = 'LOCKED', version = 6                                |
 |     WHERE show_id = ? AND seat_number = 'A-1'                         |
-|       AND version = 5;    <- Only if version unchanged!               |
+|       AND version = 5;    < Only if version unchanged!               |
 |                                                                         |
 |  3. Check rows affected:                                              |
-|     - If 1 row affected -> Success, we got the lock                    |
-|     - If 0 rows affected -> Someone else modified, RETRY or FAIL       |
+|     - If 1 row affected > Success, we got the lock                    |
+|     - If 0 rows affected > Someone else modified, RETRY or FAIL       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] No blocking — high concurrency                                     |
-|  [x] Simple implementation                                              |
-|  [x] No deadlock risk                                                   |
+|  Y No blocking — high concurrency                                     |
+|  Y Simple implementation                                              |
+|  Y No deadlock risk                                                   |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] High retry rate under contention (popular shows)                   |
-|  [ ] Still hits database for every attempt                              |
-|  [ ] Multiple seats = multiple queries (or complex batch)               |
+|  X High retry rate under contention (popular shows)                   |
+|  X Still hits database for every attempt                              |
+|  X Multiple seats = multiple queries (or complex batch)               |
 |                                                                         |
 |  VERDICT: Good for low-medium contention, struggles with hot shows   |
 |                                                                         |
@@ -2036,8 +2036,8 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  EX 600 = Expire after 600 seconds                                    |
 |                                                                         |
 |  Response:                                                             |
-|  * "OK" -> Lock acquired!                                              |
-|  * nil  -> Seat already locked by someone else                         |
+|  * "OK" > Lock acquired!                                              |
+|  * nil  > Seat already locked by someone else                         |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2045,7 +2045,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  ------------------------------------                                  |
 |  THE PROBLEM: User selects 3 seats. What if 2 succeed and 1 fails?   |
 |                                                                         |
-|  BAD: Lock A-1 [x], Lock A-2 [x], Lock A-3 [ ]                              |
+|  BAD: Lock A-1 Y, Lock A-2 Y, Lock A-3 X                              |
 |       User has partial lock — confusing!                              |
 |                                                                         |
 |  SOLUTION: Use Redis Lua script for atomic multi-key operation        |
@@ -2056,23 +2056,23 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |                                                                         |
 |  ALGORITHM:                                                            |
 |  1. For each seat, check if key exists                                |
-|  2. If ANY key exists -> Return failure (seats not available)          |
-|  3. If ALL keys absent -> Set all keys atomically                     |
+|  2. If ANY key exists > Return failure (seats not available)          |
+|  3. If ALL keys absent > Set all keys atomically                     |
 |  4. Return success with lock token                                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Sub-millisecond latency                                            |
-|  [x] Handles massive concurrency                                        |
-|  [x] Atomic multi-seat locking via Lua                                  |
-|  [x] Automatic expiry (TTL) — no cleanup needed                         |
-|  [x] Horizontally scalable (Redis Cluster)                              |
+|  Y Sub-millisecond latency                                            |
+|  Y Handles massive concurrency                                        |
+|  Y Atomic multi-seat locking via Lua                                  |
+|  Y Automatic expiry (TTL) — no cleanup needed                         |
+|  Y Horizontally scalable (Redis Cluster)                              |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Redis is an additional component to manage                         |
-|  [ ] Need to sync with database eventually                              |
-|  [ ] Redis failure = booking failure (need HA setup)                    |
+|  X Redis is an additional component to manage                         |
+|  X Need to sync with database eventually                              |
+|  X Redis failure = booking failure (need HA setup)                    |
 |                                                                         |
 |  VERDICT: Best approach for high-scale systems like BookMyShow        |
 |                                                                         |
@@ -2104,7 +2104,7 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |                                                                         |
 |  TOO SHORT (2 minutes):                                               |
 |  * User doesn't have time to enter payment details                    |
-|  * Lock expires mid-payment -> booking fails                           |
+|  * Lock expires mid-payment > booking fails                           |
 |  * Frustrating user experience                                        |
 |                                                                         |
 |  TOO LONG (30 minutes):                                               |
@@ -2154,10 +2154,10 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  EXAMPLE:                                                              |
 |                                                                         |
 |  Thread A: SET seat:A-1 "userA" NX EX 600                             |
-|            -> Response: "OK" (key didn't exist, now set)               |
+|            > Response: "OK" (key didn't exist, now set)               |
 |                                                                         |
 |  Thread B: SET seat:A-1 "userB" NX EX 600                             |
-|            -> Response: nil (key exists, NOT set)                      |
+|            > Response: nil (key exists, NOT set)                      |
 |                                                                         |
 |  Even if both commands arrive at the "same time", Redis processes    |
 |  them sequentially. ONE will succeed, ONE will fail.                  |
@@ -2185,13 +2185,13 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  User wants to book seats: A-1, A-2, A-3                              |
 |                                                                         |
 |  NAIVE APPROACH:                                                       |
-|  Lock A-1 -> Success [x]                                                 |
-|  Lock A-2 -> Success [x]                                                 |
-|  Lock A-3 -> FAIL [ ] (someone else has it)                              |
+|  Lock A-1 > Success Y                                                 |
+|  Lock A-2 > Success Y                                                 |
+|  Lock A-3 > FAIL X (someone else has it)                              |
 |                                                                         |
 |  PROBLEM:                                                              |
 |  User now has partial lock (A-1, A-2 locked, A-3 not)                 |
-|  Need to rollback A-1 and A-2 -> Complex!                              |
+|  Need to rollback A-1 and A-2 > Complex!                              |
 |  Race condition during rollback!                                      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -2206,11 +2206,11 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |  1. Input: List of seat keys to lock                                  |
 |  2. For each key, check if EXISTS                                     |
 |  3. If ANY key exists:                                                |
-|     -> Return which seats are unavailable                              |
-|     -> Lock NOTHING                                                    |
+|     > Return which seats are unavailable                              |
+|     > Lock NOTHING                                                    |
 |  4. If ALL keys absent:                                               |
-|     -> SET all keys with same TTL                                      |
-|     -> Return success                                                  |
+|     > SET all keys with same TTL                                      |
+|     > Return success                                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2356,8 +2356,8 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |                                                                         |
 |  User        API         Redis        Database       Payment           |
 |   |           |            |             |             |                |
-|   |--Select seats-->       |             |             |                |
-|   |           |--Lock seats (Lua)-->    |             |                |
+|   |--Select seats->       |             |             |                |
+|   |           |--Lock seats (Lua)->    |             |                |
 |   |           |           |             |             |                |
 |   |           |  +--------+--------+   |             |                |
 |   |           |  | For each seat:  |   |             |                |
@@ -2365,27 +2365,27 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |   |           |  | SET with TTL    |   |             |                |
 |   |           |  +--------+--------+   |             |                |
 |   |           |           |             |             |                |
-|   |           |<--Lock result (OK)--    |             |                |
-|   |<--Seats locked, 10 min timer-       |             |                |
+|   |           |<-Lock result (OK)--    |             |                |
+|   |<-Seats locked, 10 min timer-       |             |                |
 |   |           |            |            |             |                |
 |   | (User enters payment details - takes 2-3 minutes)                  |
 |   |           |            |            |             |                |
-|   |--Submit payment-->     |            |             |                |
-|   |           |--Verify lock-->        |             |                |
-|   |           |<--Still locked, valid--|             |                |
+|   |--Submit payment->     |            |             |                |
+|   |           |--Verify lock->        |             |                |
+|   |           |<-Still locked, valid--|             |                |
 |   |           |            |            |             |                |
-|   |           |----------Create pending booking--->   |                |
-|   |           |            |            |<-(booking_id)|                |
+|   |           |----------Create pending booking-->   |                |
+|   |           |            |            |<(booking_id)|                |
 |   |           |            |            |             |                |
-|   |           |------------Initiate payment---------->|                |
+|   |           |------------Initiate payment--------->|                |
 |   |           |            |            |             |                |
-|   |           |<------------Payment success-----------|                |
+|   |           |<-----------Payment success-----------|                |
 |   |           |            |            |             |                |
-|   |           |--Update booking CONFIRMED--->        |                |
-|   |           |--Update seats BOOKED--->            |                |
-|   |           |--Release Redis locks-->             |                |
+|   |           |--Update booking CONFIRMED-->        |                |
+|   |           |--Update seats BOOKED-->            |                |
+|   |           |--Release Redis locks->             |                |
 |   |           |            |            |             |                |
-|   |<--Booking confirmed + ticket-       |             |                |
+|   |<-Booking confirmed + ticket-       |             |                |
 |   |           |            |            |             |                |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -2463,17 +2463,17 @@ Step 5B: PAYMENT FAILURE / TIMEOUT
 |                                                                         |
 |  Client attempts to lock "seat:A-1" on 5 Redis masters:               |
 |                                                                         |
-|    Redis-1: SET seat:A-1 "uuid123" NX EX 30 -> OK [x]                    |
-|    Redis-2: SET seat:A-1 "uuid123" NX EX 30 -> OK [x]                    |
-|    Redis-3: SET seat:A-1 "uuid123" NX EX 30 -> TIMEOUT [ ]              |
-|    Redis-4: SET seat:A-1 "uuid123" NX EX 30 -> OK [x]                    |
-|    Redis-5: SET seat:A-1 "uuid123" NX EX 30 -> FAIL [ ]                 |
+|    Redis-1: SET seat:A-1 "uuid123" NX EX 30 > OK Y                    |
+|    Redis-2: SET seat:A-1 "uuid123" NX EX 30 > OK Y                    |
+|    Redis-3: SET seat:A-1 "uuid123" NX EX 30 > TIMEOUT X              |
+|    Redis-4: SET seat:A-1 "uuid123" NX EX 30 > OK Y                    |
+|    Redis-5: SET seat:A-1 "uuid123" NX EX 30 > FAIL X                 |
 |                                                                         |
 |  Acquired: 3 out of 5 (majority = 3)                                  |
 |  Elapsed: 50ms                                                        |
 |  Validity: 30000ms - 50ms - 100ms(drift) = 29850ms                   |
 |                                                                         |
-|  Result: LOCK ACQUIRED [x]                                              |
+|  Result: LOCK ACQUIRED Y                                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2748,9 +2748,9 @@ WHAT IS IDEMPOTENCY?
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  FOR PAYMENTS:                                                         |
-|  * First "Pay" request -> Charge the user                              |
-|  * Second "Pay" request (retry) -> Return previous result              |
-|  * Third "Pay" request (retry) -> Return previous result               |
+|  * First "Pay" request > Charge the user                              |
+|  * Second "Pay" request (retry) > Return previous result              |
+|  * Third "Pay" request (retry) > Return previous result               |
 |                                                                         |
 |  User is only charged ONCE, no matter how many retries.               |
 |                                                                         |
@@ -2787,17 +2787,17 @@ WHAT IS IDEMPOTENCY?
 |  Request 1 (Original):                                                |
 |  POST /api/payments                                                   |
 |  Idempotency-Key: pay_abc123                                          |
-|  -> Check DB: No record with key pay_abc123                            |
-|  -> Process payment with gateway                                       |
-|  -> Store: {key: pay_abc123, status: SUCCESS, txn_id: txn_456}        |
-|  -> Return: {status: SUCCESS, txn_id: txn_456}                         |
+|  > Check DB: No record with key pay_abc123                            |
+|  > Process payment with gateway                                       |
+|  > Store: {key: pay_abc123, status: SUCCESS, txn_id: txn_456}        |
+|  > Return: {status: SUCCESS, txn_id: txn_456}                         |
 |                                                                         |
 |  Request 2 (Retry):                                                   |
 |  POST /api/payments                                                   |
 |  Idempotency-Key: pay_abc123  (same key!)                             |
-|  -> Check DB: Found record with key pay_abc123                         |
-|  -> DO NOT call payment gateway                                        |
-|  -> Return cached: {status: SUCCESS, txn_id: txn_456}                  |
+|  > Check DB: Found record with key pay_abc123                         |
+|  > DO NOT call payment gateway                                        |
+|  > Return cached: {status: SUCCESS, txn_id: txn_456}                  |
 |                                                                         |
 |  User sees success, charged only once!                                |
 |                                                                         |
@@ -2815,16 +2815,16 @@ WHAT IS IDEMPOTENCY?
 |  CREATE TABLE payments (                                               |
 |      id                UUID PRIMARY KEY,                               |
 |      booking_id        UUID NOT NULL,                                  |
-|      idempotency_key   VARCHAR(255) UNIQUE,  <- Database enforced!     |
+|      idempotency_key   VARCHAR(255) UNIQUE,  < Database enforced!     |
 |      amount            DECIMAL(10,2),                                  |
 |      status            VARCHAR(20),                                    |
 |      ...                                                               |
 |  );                                                                    |
 |                                                                         |
 |  If two concurrent requests try to insert same idempotency_key:       |
-|  -> One succeeds, one fails with UNIQUE VIOLATION                      |
-|  -> Application catches error, queries existing record                 |
-|  -> Returns cached result                                              |
+|  > One succeeds, one fails with UNIQUE VIOLATION                      |
+|  > Application catches error, queries existing record                 |
+|  > Returns cached result                                              |
 |                                                                         |
 |  DEFENSE IN DEPTH:                                                     |
 |  Application check + Database constraint = No double charges          |
@@ -2902,7 +2902,7 @@ WHAT IS IDEMPOTENCY?
 |                    BOOKING AS A DISTRIBUTED TRANSACTION                |
 |                                                                         |
 |  A booking involves multiple services:                                 |
-|  1. Seat Service: Lock -> Book seats                                   |
+|  1. Seat Service: Lock > Book seats                                   |
 |  2. Payment Service: Charge user                                      |
 |  3. Notification Service: Send confirmation                           |
 |  4. Analytics Service: Record booking                                 |
@@ -2940,27 +2940,27 @@ WHAT IS IDEMPOTENCY?
 |  HAPPY PATH:                                                           |
 |  ------------                                                          |
 |  1. Orchestrator: "Reserve seats"                                     |
-|     Seat Service: Seats reserved [x]                                    |
+|     Seat Service: Seats reserved Y                                    |
 |                                                                         |
 |  2. Orchestrator: "Charge payment"                                    |
-|     Payment Service: Payment successful [x]                             |
+|     Payment Service: Payment successful Y                             |
 |                                                                         |
 |  3. Orchestrator: "Confirm seats"                                     |
-|     Seat Service: Seats booked [x]                                      |
+|     Seat Service: Seats booked Y                                      |
 |                                                                         |
 |  4. Orchestrator: "Send notification"                                 |
-|     Notification Service: Email/SMS sent [x]                            |
+|     Notification Service: Email/SMS sent Y                            |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  COMPENSATION (Payment Fails):                                         |
 |  ------------------------------                                        |
-|  1. Orchestrator: "Reserve seats" -> [x]                                 |
-|  2. Orchestrator: "Charge payment" -> [ ] FAILED                         |
+|  1. Orchestrator: "Reserve seats" > Y                                 |
+|  2. Orchestrator: "Charge payment" > X FAILED                         |
 |                                                                         |
 |  Now we need to UNDO step 1:                                          |
 |  3. Orchestrator: "Release seats" (compensating action)               |
-|     Seat Service: Seats released [x]                                    |
+|     Seat Service: Seats released Y                                    |
 |                                                                         |
 |  Every action has a compensating action.                              |
 |  Orchestrator tracks state and triggers compensations on failure.    |
@@ -3009,8 +3009,8 @@ WHAT IS IDEMPOTENCY?
 |                    SEARCH USE CASES                                    |
 |                                                                         |
 |  1. MOVIE SEARCH                                                       |
-|     * "Avengers" -> Avengers: Endgame, Avengers: Infinity War          |
-|     * Typo tolerance: "Avangers" -> Avengers                           |
+|     * "Avengers" > Avengers: Endgame, Avengers: Infinity War          |
+|     * Typo tolerance: "Avangers" > Avengers                           |
 |     * By actor: "Shah Rukh Khan movies"                               |
 |     * By genre: "Action movies this week"                             |
 |                                                                         |
@@ -3020,7 +3020,7 @@ WHAT IS IDEMPOTENCY?
 |     * Geolocation-based sorting                                       |
 |                                                                         |
 |  3. AUTOCOMPLETE                                                       |
-|     * User types "Av" -> Suggest "Avatar", "Avengers"                  |
+|     * User types "Av" > Suggest "Avatar", "Avengers"                  |
 |     * Fast (< 100ms)                                                  |
 |     * Prefix matching                                                 |
 |                                                                         |
@@ -3041,12 +3041,12 @@ WHAT IS IDEMPOTENCY?
 |                                                                         |
 |  PostgreSQL has full-text search, but Elasticsearch is better for:    |
 |                                                                         |
-|  [x] Fuzzy matching (typo tolerance)                                    |
-|  [x] Relevance scoring                                                  |
-|  [x] Faceted search (filters + counts)                                  |
-|  [x] Autocomplete / suggestions                                         |
-|  [x] Geospatial queries (nearby theaters)                               |
-|  [x] Horizontal scaling for search load                                 |
+|  Y Fuzzy matching (typo tolerance)                                    |
+|  Y Relevance scoring                                                  |
+|  Y Faceted search (filters + counts)                                  |
+|  Y Autocomplete / suggestions                                         |
+|  Y Geospatial queries (nearby theaters)                               |
+|  Y Horizontal scaling for search load                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3105,7 +3105,7 @@ WHAT IS IDEMPOTENCY?
 +-------------------------------------------------------------------------+
 |                    DATA SYNC STRATEGIES                                |
 |                                                                         |
-|  PostgreSQL (Source of Truth) -> Elasticsearch (Search Index)          |
+|  PostgreSQL (Source of Truth) > Elasticsearch (Search Index)          |
 |                                                                         |
 |  APPROACH 1: DUAL WRITE (Not Recommended)                              |
 |  -----------------------------------------                             |
@@ -3117,7 +3117,7 @@ WHAT IS IDEMPOTENCY?
 |  Use Debezium to stream changes from PostgreSQL WAL.                  |
 |  Changes flow through Kafka to Elasticsearch.                         |
 |                                                                         |
-|  PostgreSQL -> Debezium -> Kafka -> ES Connector -> Elasticsearch         |
+|  PostgreSQL > Debezium > Kafka > ES Connector > Elasticsearch         |
 |                                                                         |
 |  Benefits:                                                             |
 |  * Decoupled (main write path not affected)                          |
@@ -3175,8 +3175,8 @@ WHAT IS IDEMPOTENCY?
 |                                                                         |
 |  1. Application receives request for movie details                    |
 |  2. Check Redis cache:                                                |
-|     - Cache HIT -> Return cached data                                  |
-|     - Cache MISS -> Continue to step 3                                 |
+|     - Cache HIT > Return cached data                                  |
+|     - Cache MISS > Continue to step 3                                 |
 |  3. Query PostgreSQL                                                  |
 |  4. Store result in Redis with TTL                                    |
 |  5. Return data                                                       |
@@ -3215,9 +3215,9 @@ WHAT IS IDEMPOTENCY?
 |                                                                         |
 |  Key: seats:{show_id}                                                 |
 |  Fields:                                                               |
-|    A-1 -> "available"                                                  |
-|    A-2 -> "locked:user123:expire1705312345"                           |
-|    A-3 -> "booked:booking456"                                         |
+|    A-1 > "available"                                                  |
+|    A-2 > "locked:user123:expire1705312345"                           |
+|    A-3 > "booked:booking456"                                         |
 |    ...                                                                 |
 |                                                                         |
 |  Single HGETALL returns entire seat map.                              |
@@ -3245,7 +3245,7 @@ WHAT IS IDEMPOTENCY?
 |  * 10,000 users request movie list at 10:00:01 AM                     |
 |  * All 10,000 requests find cache MISS                                |
 |  * All 10,000 requests hit DATABASE simultaneously                    |
-|  * Database overwhelmed -> slow/crash                                  |
+|  * Database overwhelmed > slow/crash                                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3279,17 +3279,17 @@ WHY DOES THIS HAPPEN?
 |  CAUSE 1: FIXED TTL                                                    |
 |  ---------------------                                                 |
 |  All cache entries set with same TTL (e.g., 1 hour)                   |
-|  If set at same time -> expire at same time                            |
+|  If set at same time > expire at same time                            |
 |                                                                         |
 |  CAUSE 2: MASS INVALIDATION                                            |
 |  --------------------------                                            |
-|  Admin updates movie data -> invalidates all movie caches              |
+|  Admin updates movie data > invalidates all movie caches              |
 |  All users' next requests hit database                                |
 |                                                                         |
 |  CAUSE 3: CACHE RESTART                                                |
 |  ---------------------                                                 |
 |  Redis restarts (maintenance, crash)                                  |
-|  All cached data lost -> everything hits database                      |
+|  All cached data lost > everything hits database                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3345,19 +3345,19 @@ WHY DOES THIS HAPPEN?
 |  FLOW:                                                                 |
 |                                                                         |
 |  Request 1: Cache miss                                                |
-|             -> Try to acquire rebuild lock                             |
-|             -> Lock acquired! [x]                                        |
-|             -> Query database                                          |
-|             -> Store in cache                                          |
-|             -> Release lock                                            |
-|             -> Return data                                             |
+|             > Try to acquire rebuild lock                             |
+|             > Lock acquired! Y                                        |
+|             > Query database                                          |
+|             > Store in cache                                          |
+|             > Release lock                                            |
+|             > Return data                                             |
 |                                                                         |
 |  Request 2-10,000: Cache miss                                         |
-|             -> Try to acquire rebuild lock                             |
-|             -> Lock NOT available (Request 1 holds it)                 |
-|             -> WAIT (sleep 50ms, retry)                                |
-|             -> Eventually cache is populated                           |
-|             -> Return cached data                                      |
+|             > Try to acquire rebuild lock                             |
+|             > Lock NOT available (Request 1 holds it)                 |
+|             > WAIT (sleep 50ms, retry)                                |
+|             > Eventually cache is populated                           |
+|             > Return cached data                                      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3414,8 +3414,8 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |  On read:                                                              |
 |  * If current_time > refresh_at AND < expires_at:                    |
-|    -> Return stale value to user (fast!)                              |
-|    -> Trigger async background refresh                                |
+|    > Return stale value to user (fast!)                              |
+|    > Trigger async background refresh                                |
 |  * Next request gets fresh data                                      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -3834,20 +3834,20 @@ WHY DOES THIS HAPPEN?
 |  JOB 1: PAYMENT-BOOKING RECONCILIATION                                 |
 |  -------------------------------------                                 |
 |  Find mismatches:                                                     |
-|  * Payment SUCCESS but Booking PENDING -> Complete booking            |
-|  * Payment PENDING for > 1 hour -> Query gateway, update status       |
-|  * Booking CONFIRMED but no Payment -> Flag for review                |
+|  * Payment SUCCESS but Booking PENDING > Complete booking            |
+|  * Payment PENDING for > 1 hour > Query gateway, update status       |
+|  * Booking CONFIRMED but no Payment > Flag for review                |
 |                                                                         |
 |  JOB 2: REDIS-DB SYNC                                                  |
 |  ---------------------                                                 |
 |  * Compare Redis seat status with DB                                 |
-|  * If Redis shows BOOKED but DB doesn't -> Something wrong            |
+|  * If Redis shows BOOKED but DB doesn't > Something wrong            |
 |  * Rebuild Redis from DB if significant drift                        |
 |                                                                         |
 |  JOB 3: EXPIRED LOCK CLEANUP                                           |
 |  -----------------------------                                         |
 |  * Redis TTL handles this automatically                              |
-|  * But verify: If DB shows LOCKED with old timestamp -> Release       |
+|  * But verify: If DB shows LOCKED with old timestamp > Release       |
 |                                                                         |
 |  JOB 4: ORPHAN BOOKING CLEANUP                                         |
 |  -------------------------------                                       |
@@ -4075,7 +4075,7 @@ WHY DOES THIS HAPPEN?
 |  -----------------------------------------                             |
 |  A: Unique idempotency key generated at lock time.                    |
 |     Store in payments table with UNIQUE constraint.                   |
-|     On retry, check if key exists -> return cached result.            |
+|     On retry, check if key exists > return cached result.            |
 |     Never call payment gateway twice for same idempotency key.       |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -4085,7 +4085,7 @@ WHY DOES THIS HAPPEN?
 |  A: WebSocket connection from client to server.                       |
 |     Redis Pub/Sub for broadcasting seat changes.                      |
 |     Client subscribes to channel: seats:{show_id}.                   |
-|     On lock/book, publish event -> all viewers see update.            |
+|     On lock/book, publish event > all viewers see update.            |
 |     Fallback: polling every 5 seconds.                               |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -4188,19 +4188,19 @@ WHY DOES THIS HAPPEN?
 |  ------------------------------------------------------                |
 |  A: Each service owns its database (no shared tables):               |
 |                                                                         |
-|     AUTH SERVICE -> Auth DB:                                           |
+|     AUTH SERVICE > Auth DB:                                           |
 |     * users, roles, refresh_tokens                                   |
 |                                                                         |
-|     EVENT SERVICE -> Events DB:                                        |
+|     EVENT SERVICE > Events DB:                                        |
 |     * movies, theaters, shows, pricing_rules                         |
 |                                                                         |
-|     INVENTORY SERVICE -> Inventory DB:                                 |
+|     INVENTORY SERVICE > Inventory DB:                                 |
 |     * seats, reservations (HOT PATH)                                 |
 |                                                                         |
-|     BOOKING SERVICE -> Bookings DB:                                    |
+|     BOOKING SERVICE > Bookings DB:                                    |
 |     * bookings, booking_seats, payments                              |
 |                                                                         |
-|     SEARCH SERVICE -> Elasticsearch:                                   |
+|     SEARCH SERVICE > Elasticsearch:                                   |
 |     * Denormalized indexes (synced via CDC)                          |
 |                                                                         |
 |     KEY PRINCIPLES:                                                   |
@@ -4214,7 +4214,7 @@ WHY DOES THIS HAPPEN?
 |  --------------------------------------------------------------        |
 |  A: SAGA PATTERN with compensating transactions:                      |
 |                                                                         |
-|     1. Payment succeeds -> Record payment_id                          |
+|     1. Payment succeeds > Record payment_id                          |
 |     2. Attempt booking confirmation                                  |
 |     3. If confirmation fails:                                        |
 |        a. Log the failure                                            |
@@ -4225,7 +4225,7 @@ WHY DOES THIS HAPPEN?
 |     IDEMPOTENCY PROTECTION:                                           |
 |     * Idempotency key generated at reservation time                  |
 |     * Stored with booking attempt                                    |
-|     * On retry, check if booking already exists -> return cached     |
+|     * On retry, check if booking already exists > return cached     |
 |                                                                         |
 |     RECONCILIATION JOB:                                               |
 |     * Runs every 5 minutes                                           |
@@ -4239,7 +4239,7 @@ WHY DOES THIS HAPPEN?
 |  A: GRACEFUL DEGRADATION strategy:                                    |
 |                                                                         |
 |     DETECTION:                                                        |
-|     * Health checks fail -> Circuit breaker opens                     |
+|     * Health checks fail > Circuit breaker opens                     |
 |     * Stop sending requests to Redis                                 |
 |                                                                         |
 |     FALLBACK OPTIONS:                                                 |
@@ -4309,7 +4309,7 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |     RECONCILIATION:                                                   |
 |     * Hourly reconciliation jobs                                     |
-|     * Payment gateway -> Our DB comparison                            |
+|     * Payment gateway > Our DB comparison                            |
 |     * Alert on any mismatches                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -4331,7 +4331,7 @@ WHY DOES THIS HAPPEN?
 |  * API Gateway: Validate JWT, extract userId                          |
 |  * Rate limiter: Check user hasn't exceeded reservation limit         |
 |                                                                         |
-|  STEP 2: ACQUIRE DISTRIBUTED LOCKS (Booking Service -> Redis)          |
+|  STEP 2: ACQUIRE DISTRIBUTED LOCKS (Booking Service > Redis)          |
 |  ---------------------------------------------------------             |
 |  * Generate lockValue = UUID                                          |
 |  * Sort seats alphabetically (deadlock prevention)                    |
@@ -4340,26 +4340,26 @@ WHY DOES THIS HAPPEN?
 |  * If ANY fails: Release acquired locks, return 409 Conflict          |
 |  * If ALL succeed: Continue                                           |
 |                                                                         |
-|  STEP 3: CREATE RESERVATION (Booking Service -> Inventory DB)          |
+|  STEP 3: CREATE RESERVATION (Booking Service > Inventory DB)          |
 |  --------------------------------------------------------              |
 |  * Insert reservation record (expires_at = now + 10 min)              |
-|  * Update seat status: AVAILABLE -> RESERVED                           |
+|  * Update seat status: AVAILABLE > RESERVED                           |
 |  * Return: reservationId, expiresAt, totalAmount                      |
 |                                                                         |
-|  STEP 4: USER COMPLETES PAYMENT (Client -> Payment Gateway)            |
+|  STEP 4: USER COMPLETES PAYMENT (Client > Payment Gateway)            |
 |  ---------------------------------------------------------             |
 |  * Client receives reservationId, shows payment form                  |
 |  * Timer counting down: "Complete in 9:45..."                        |
 |  * User enters payment details                                        |
 |                                                                         |
-|  STEP 5: CONFIRM BOOKING (Client -> Booking Service)                   |
+|  STEP 5: CONFIRM BOOKING (Client > Booking Service)                   |
 |  ----------------------------------------------------                  |
 |  * Client: POST /api/bookings/confirm {reservationId, paymentToken}  |
 |  * Verify reservation not expired                                     |
 |  * Verify lock still held (GET lock key, check value matches)        |
 |  * Create idempotency key                                             |
 |                                                                         |
-|  STEP 6: PROCESS PAYMENT (Booking Service -> Payment Gateway)          |
+|  STEP 6: PROCESS PAYMENT (Booking Service > Payment Gateway)          |
 |  ---------------------------------------------------------             |
 |  * Call payment gateway with idempotency key                          |
 |  * Wait for response (timeout: 30 seconds)                            |
@@ -4367,19 +4367,19 @@ WHY DOES THIS HAPPEN?
 |  * If success: Continue                                               |
 |  * If failure: Return error, keep reservation (user can retry)        |
 |                                                                         |
-|  STEP 7: FINALIZE BOOKING (Booking Service -> Bookings DB)             |
+|  STEP 7: FINALIZE BOOKING (Booking Service > Bookings DB)             |
 |  ------------------------------------------------------                |
 |  * Create booking record (status: CONFIRMED)                          |
 |  * Create booking_seats records                                       |
-|  * Update seat status: RESERVED -> BOOKED                              |
+|  * Update seat status: RESERVED > BOOKED                              |
 |  * Update event available_seats count (optimistic lock)               |
 |                                                                         |
-|  STEP 8: RELEASE LOCKS (Booking Service -> Redis)                      |
+|  STEP 8: RELEASE LOCKS (Booking Service > Redis)                      |
 |  -------------------------------------------------                     |
 |  * For each seat: DEL lock if value matches (Lua script)              |
 |  * Locks released AFTER database commit                               |
 |                                                                         |
-|  STEP 9: PUBLISH EVENT (Booking Service -> Kafka)                      |
+|  STEP 9: PUBLISH EVENT (Booking Service > Kafka)                      |
 |  -------------------------------------------------                     |
 |  * Event: BOOKING_CONFIRMED {bookingId, userId, seats, amount}       |
 |                                                                         |
@@ -4468,14 +4468,14 @@ WHY DOES THIS HAPPEN?
 |                   +--------------+                                    |
 |                                                                         |
 |  VALID TRANSITIONS:                                                   |
-|  * AVAILABLE -> RESERVED (user locks)                                 |
-|  * RESERVED -> BOOKED (payment success)                               |
-|  * RESERVED -> AVAILABLE (timeout/failure)                            |
-|  * BOOKED -> AVAILABLE (cancellation after grace)                     |
+|  * AVAILABLE > RESERVED (user locks)                                 |
+|  * RESERVED > BOOKED (payment success)                               |
+|  * RESERVED > AVAILABLE (timeout/failure)                            |
+|  * BOOKED > AVAILABLE (cancellation after grace)                     |
 |                                                                         |
 |  INVALID TRANSITIONS (must reject):                                   |
-|  * BOOKED -> RESERVED (can't re-reserve booked seat)                  |
-|  * AVAILABLE -> BOOKED (must go through RESERVED)                     |
+|  * BOOKED > RESERVED (can't re-reserve booked seat)                  |
+|  * AVAILABLE > BOOKED (must go through RESERVED)                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -4486,9 +4486,9 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |  PROBLEM:                                                              |
 |  User wants seats A1, A2, A3                                          |
-|  A1: Lock success [x]                                                   |
-|  A2: Lock success [x]                                                   |
-|  A3: Lock FAIL [ ] (someone else has it)                               |
+|  A1: Lock success Y                                                   |
+|  A2: Lock success Y                                                   |
+|  A3: Lock FAIL X (someone else has it)                               |
 |  Now A1, A2 are locked but user can't book. Bad UX.                  |
 |                                                                         |
 |  SOLUTION: Lua Script (atomic)                                        |
@@ -4646,7 +4646,7 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |  STRONGEST <---------------------------------------------> WEAKEST    |
 |                                                                         |
-|  Linearizable -> Sequential -> Causal -> Eventual -> None                  |
+|  Linearizable > Sequential > Causal > Eventual > None                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -4686,7 +4686,7 @@ WHY DOES THIS HAPPEN?
 |              +---------+---------+                                     |
 |              v         v         v                                     |
 |         +--------++--------++--------+                                |
-|  Reads-> |Follower||Follower||Follower| <-Reads                         |
+|  Reads> |Follower||Follower||Follower| <Reads                         |
 |         +--------++--------++--------+                                |
 |                                                                         |
 |  BOOKING SYSTEM:                                                        |
@@ -4717,7 +4717,7 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |  OPTION 2: Shard by City/Region                                        |
 |  ----------------------------------                                     |
-|  * Mumbai users -> Mumbai shard                                        |
+|  * Mumbai users > Mumbai shard                                        |
 |  * Lower latency                                                       |
 |  * Some cities much busier                                            |
 |                                                                         |
@@ -4744,7 +4744,7 @@ WHY DOES THIS HAPPEN?
 |  CACHE-ASIDE (Lazy Loading):                                            |
 |  -----------------------------                                          |
 |  1. Check cache                                                        |
-|  2. Cache miss -> query DB                                              |
+|  2. Cache miss > query DB                                              |
 |  3. Store in cache                                                     |
 |  4. Return                                                             |
 |                                                                         |
@@ -4787,9 +4787,9 @@ WHY DOES THIS HAPPEN?
 |                    LOAD BALANCING ALGORITHMS                            |
 |                                                                         |
 |  ROUND ROBIN:                                                           |
-|  Request 1 -> Server A                                                  |
-|  Request 2 -> Server B                                                  |
-|  Request 3 -> Server A (repeat)                                         |
+|  Request 1 > Server A                                                  |
+|  Request 2 > Server B                                                  |
+|  Request 3 > Server A (repeat)                                         |
 |                                                                         |
 |  LEAST CONNECTIONS:                                                     |
 |  Route to server with fewest active connections                        |
@@ -4912,12 +4912,12 @@ WHY DOES THIS HAPPEN?
 |                                                                         |
 |  KAFKA PARTITIONS:                                                      |
 |  ------------------                                                     |
-|  * Messages with same key -> same partition -> ordered                  |
-|  * Different keys -> different partitions -> no order guarantee         |
+|  * Messages with same key > same partition > ordered                  |
+|  * Different keys > different partitions > no order guarantee         |
 |                                                                         |
 |  BOOKING SYSTEM:                                                        |
 |  * Partition key = event_id                                           |
-|  * All events for same show -> same partition -> ordered               |
+|  * All events for same show > same partition > ordered               |
 |                                                                         |
 |  Event flow (ordered within partition):                                |
 |  1. SeatReserved (event_123)                                          |
@@ -4954,7 +4954,7 @@ WHY DOES THIS HAPPEN?
 |  UPDATE seats                                                          |
 |  SET status = 'RESERVED', version = version + 1                       |
 |  WHERE id = 1 AND version = 5;                                        |
-|  -- If affected_rows = 0, version changed -> retry                     |
+|  -- If affected_rows = 0, version changed > retry                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |

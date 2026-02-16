@@ -45,10 +45,10 @@ it appear as a physical device on your network.
 |           |                     |                                       |
 |           +---------+-----------+                                      |
 |                     |                                                   |
-|                 docker0              <- NAT Layer                       |
+|                 docker0              < NAT Layer                       |
 |                 172.17.0.1                                             |
 |                     |                                                   |
-|                   eth0               <- Single MAC, Single IP           |
+|                   eth0               < Single MAC, Single IP           |
 |              192.168.1.100                                             |
 |                     |                                                   |
 |              Physical Network                                          |
@@ -147,7 +147,7 @@ interfaces is dropped.
 |  HOST                         Container (Macvlan)                      |
 |  192.168.1.100                192.168.1.201                            |
 |        |                            |                                   |
-|        | ------- BLOCKED ------- [ ] |                                   |
+|        | ------- BLOCKED ------- X |                                   |
 |        |                            |                                   |
 |  Cannot ping 192.168.1.201 from the host!                             |
 |                                                                         |
@@ -320,8 +320,8 @@ The service names become DNS hostnames!
 |  | IP: 172.18.0.2|  | IP: 172.18.0.3|  | IP: 172.18.0.4|              |
 |  +---------------+  +---------------+  +---------------+              |
 |                                                                         |
-|  web can resolve "api" -> 172.18.0.3                                   |
-|  api can resolve "db"  -> 172.18.0.4                                   |
+|  web can resolve "api" > 172.18.0.3                                   |
+|  api can resolve "db"  > 172.18.0.4                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -485,7 +485,7 @@ EXTERNAL REQUEST TO HOST:8080
 |     Packet modified: Dst: 172.17.0.2:80                               |
 |                                                                         |
 |  3. Routing decision                                                    |
-|     Destination 172.17.0.2 -> forward through docker0                  |
+|     Destination 172.17.0.2 > forward through docker0                  |
 |                                                                         |
 |  4. iptables FORWARD (filter table)                                    |
 |     Rule: ACCEPT for docker traffic                                    |
@@ -494,7 +494,7 @@ EXTERNAL REQUEST TO HOST:8080
 |     Container sees: Dst: 172.17.0.2:80                                |
 |                                                                         |
 |  6. Container responds                                                  |
-|     Src: 172.17.0.2:80 -> 192.168.1.100:8080                          |
+|     Src: 172.17.0.2:80 > 192.168.1.100:8080                          |
 |     MASQUERADE translates back                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -514,11 +514,11 @@ WHY TWO MECHANISMS?
 
 iptables (kernel):
 - Fast, handles most traffic
-- Works for external -> container traffic
+- Works for external > container traffic
 
 docker-proxy (userland):
-- Handles localhost -> container traffic
-- Handles hairpin NAT (container -> host:port -> container)
+- Handles localhost > container traffic
+- Handles hairpin NAT (container > host:port > container)
 - Slower but necessary for edge cases
 
 DISABLE USERLAND PROXY (if not needed):
@@ -780,10 +780,10 @@ journalctl -u docker | grep -i network
 |  +------------------------------------------------------------------+   |
 |                                                                         |
 |  SECURITY RULES:                                                       |
-|  * DMZ -> APP: Allowed (specific ports)                                |
-|  * APP -> DATA: Allowed (specific ports)                               |
-|  * DMZ -> DATA: BLOCKED                                                |
-|  * DATA -> Internet: BLOCKED                                           |
+|  * DMZ > APP: Allowed (specific ports)                                |
+|  * APP > DATA: Allowed (specific ports)                               |
+|  * DMZ > DATA: BLOCKED                                                |
+|  * DATA > Internet: BLOCKED                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

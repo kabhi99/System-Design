@@ -359,13 +359,13 @@ with detailed answers and talking points.
 |  -----------------------------                                          |
 |  Need 3/5 successes for lock                                          |
 |                                                                         |
-|  Node 1: SET lock:A5 xyz NX EX 10 -> OK                               |
-|  Node 2: SET lock:A5 xyz NX EX 10 -> OK                               |
-|  Node 3: SET lock:A5 xyz NX EX 10 -> FAIL (already locked)           |
-|  Node 4: SET lock:A5 xyz NX EX 10 -> OK                               |
-|  Node 5: SET lock:A5 xyz NX EX 10 -> FAIL                             |
+|  Node 1: SET lock:A5 xyz NX EX 10 > OK                               |
+|  Node 2: SET lock:A5 xyz NX EX 10 > OK                               |
+|  Node 3: SET lock:A5 xyz NX EX 10 > FAIL (already locked)           |
+|  Node 4: SET lock:A5 xyz NX EX 10 > OK                               |
+|  Node 5: SET lock:A5 xyz NX EX 10 > FAIL                             |
 |                                                                         |
-|  Result: 3 successes -> Lock acquired!                                |
+|  Result: 3 successes > Lock acquired!                                |
 |                                                                         |
 |  CAVEATS:                                                              |
 |  ----------                                                             |
@@ -466,14 +466,14 @@ with detailed answers and talking points.
 |                                                                         |
 |  INTERVIEW PREPARATION CHECKLIST                                      |
 |                                                                         |
-|  [x] Understand the complete booking flow                               |
-|  [x] Explain race conditions and solutions                             |
-|  [x] Know Redis locking with Lua scripts                               |
-|  [x] Discuss database design and indexing                              |
-|  [x] Handle edge cases (payment failures, timeouts)                    |
-|  [x] Explain scaling strategies (replicas, sharding)                   |
-|  [x] Real-time updates with WebSocket                                  |
-|  [x] Flash sale handling                                                |
+|  Y Understand the complete booking flow                               |
+|  Y Explain race conditions and solutions                             |
+|  Y Know Redis locking with Lua scripts                               |
+|  Y Discuss database design and indexing                              |
+|  Y Handle edge cases (payment failures, timeouts)                    |
+|  Y Explain scaling strategies (replicas, sharding)                   |
+|  Y Real-time updates with WebSocket                                  |
+|  Y Flash sale handling                                                |
 |                                                                         |
 |  KEY DIFFERENTIATORS                                                   |
 |  ---------------------                                                 |
@@ -484,10 +484,10 @@ with detailed answers and talking points.
 |                                                                         |
 |  COMMON MISTAKES TO AVOID                                             |
 |  -------------------------                                             |
-|  [ ] Ignoring race conditions                                          |
-|  [ ] Not discussing seat lock expiry                                   |
-|  [ ] Forgetting about payment edge cases                               |
-|  [ ] Over-complicating when simple solution works                     |
+|  X Ignoring race conditions                                          |
+|  X Not discussing seat lock expiry                                   |
+|  X Forgetting about payment edge cases                               |
+|  X Over-complicating when simple solution works                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

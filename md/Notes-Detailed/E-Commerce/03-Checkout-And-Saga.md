@@ -28,9 +28,9 @@ and handling failures gracefully.
 |                                                                         |
 |  Scenario: User buys last item in stock                              |
 |                                                                         |
-|  1. Reserve inventory  [x]                                             |
-|  2. Charge payment     [x]                                             |
-|  3. Create order       [ ] (fails!)                                    |
+|  1. Reserve inventory  Y                                             |
+|  2. Charge payment     Y                                             |
+|  3. Create order       X (fails!)                                    |
 |                                                                         |
 |  NOW WHAT?                                                             |
 |  - Payment is charged but order doesn't exist!                       |
@@ -56,10 +56,10 @@ and handling failures gracefully.
 |  |                                                                |   |
 |  |  FORWARD TRANSACTIONS          COMPENSATING TRANSACTIONS      |   |
 |  |  --------------------          -------------------------      |   |
-|  |  T1: Reserve inventory    <-->   C1: Release inventory          |   |
-|  |  T2: Charge payment       <-->   C2: Refund payment             |   |
-|  |  T3: Create order         <-->   C3: Cancel order               |   |
-|  |  T4: Schedule shipping    <-->   C4: Cancel shipping            |   |
+|  |  T1: Reserve inventory    <>   C1: Release inventory          |   |
+|  |  T2: Charge payment       <>   C2: Refund payment             |   |
+|  |  T3: Create order         <>   C3: Cancel order               |   |
+|  |  T4: Schedule shipping    <>   C4: Cancel shipping            |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
@@ -68,11 +68,11 @@ and handling failures gracefully.
 |                                                                         |
 |  EXAMPLE: T3 (Create order) fails                                     |
 |  ---------------------------------                                      |
-|  1. T1: Reserve inventory   [x]                                        |
-|  2. T2: Charge payment      [x]                                        |
-|  3. T3: Create order        [ ] (FAIL!)                               |
-|  4. C2: Refund payment      [x] (compensate T2)                       |
-|  5. C1: Release inventory   [x] (compensate T1)                       |
+|  1. T1: Reserve inventory   Y                                        |
+|  2. T2: Charge payment      Y                                        |
+|  3. T3: Create order        X (FAIL!)                               |
+|  4. C2: Refund payment      Y (compensate T2)                       |
+|  5. C1: Release inventory   Y (compensate T1)                       |
 |                                                                         |
 |  Result: System returns to consistent state                          |
 |                                                                         |
@@ -111,18 +111,18 @@ and handling failures gracefully.
 |                                                                         |
 |  FAILURE HANDLING:                                                     |
 |  If PaymentFailed event is published:                                 |
-|  - Inventory Service listens -> releases reservation                  |
-|  - Order Service listens -> marks order as failed                     |
+|  - Inventory Service listens > releases reservation                  |
+|  - Order Service listens > marks order as failed                     |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Loose coupling                                                    |
-|  [x] No single point of failure                                        |
-|  [x] Simple for small workflows                                        |
+|  Y Loose coupling                                                    |
+|  Y No single point of failure                                        |
+|  Y Simple for small workflows                                        |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Hard to understand the full flow                                  |
-|  [ ] Cyclic dependencies possible                                      |
-|  [ ] Testing is complex                                                |
+|  X Hard to understand the full flow                                  |
+|  X Cyclic dependencies possible                                      |
+|  X Testing is complex                                                |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -145,20 +145,20 @@ and handling failures gracefully.
 |  |                                                                |   |
 |  |  Orchestrator:                                                 |   |
 |  |  1. Call Inventory.reserve()                                  |   |
-|  |  2. If success -> Call Payment.charge()                       |   |
-|  |  3. If success -> Call Order.create()                         |   |
-|  |  4. If any fails -> Call compensations in reverse             |   |
+|  |  2. If success > Call Payment.charge()                       |   |
+|  |  3. If success > Call Order.create()                         |   |
+|  |  4. If any fails > Call compensations in reverse             |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Easy to understand the flow                                       |
-|  [x] Easier to test                                                    |
-|  [x] Better for complex workflows                                      |
+|  Y Easy to understand the flow                                       |
+|  Y Easier to test                                                    |
+|  Y Better for complex workflows                                      |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Orchestrator can be bottleneck                                    |
-|  [ ] More coupling to orchestrator                                     |
+|  X Orchestrator can be bottleneck                                    |
+|  X More coupling to orchestrator                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -350,9 +350,9 @@ and handling failures gracefully.
 |  Solution:                                                             |
 |  1. Mark saga as PENDING_PAYMENT                                      |
 |  2. Background job queries payment gateway for status                |
-|  3. If SUCCESS -> continue saga                                       |
-|  4. If FAILED -> compensate                                           |
-|  5. If STILL_UNKNOWN after timeout -> mark for manual review         |
+|  3. If SUCCESS > continue saga                                       |
+|  4. If FAILED > compensate                                           |
+|  5. If STILL_UNKNOWN after timeout > mark for manual review         |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |

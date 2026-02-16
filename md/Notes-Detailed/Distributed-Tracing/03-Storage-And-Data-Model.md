@@ -285,7 +285,7 @@ SECTION 3.2: STORAGE SCHEMA (CASSANDRA)
 *|  |    PRIMARY KEY (ts_bucket, parent, child)                     |  |*
 *|  |  );                                                              |  |*
 *|  |                                                                 |  |*
-*|  |  -- Aggregated from spans: parent_service -> child_service    |  |*
+*|  |  -- Aggregated from spans: parent_service > child_service    |  |*
 *|  |  -- Updated by Spark/Flink job processing spans              |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -397,7 +397,7 @@ SECTION 3.3: INDEXING STRATEGY (ELASTICSEARCH)
 *|  |                                                                 |  |*
 *|  |  jaeger-span-2024-01-01                                       |  |*
 *|  |  jaeger-span-2024-01-02                                       |  |*
-*|  |  jaeger-span-2024-01-03  <- current (hot)                     |  |*
+*|  |  jaeger-span-2024-01-03  < current (hot)                     |  |*
 *|  |                                                                 |  |*
 *|  |  Benefits:                                                     |  |*
 *|  |  * Easy time-based queries                                    |  |*
@@ -523,7 +523,7 @@ SECTION 3.4: STORAGE PATTERNS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Spans -> Tempo -> Object Storage (S3/GCS)                      |  |*
+*|  |  Spans > Tempo > Object Storage (S3/GCS)                      |  |*
 *|  |                                                                 |  |*
 *|  |  HOW IT WORKS:                                                 |  |*
 *|  |  1. Buffer spans in memory                                    |  |*

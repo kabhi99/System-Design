@@ -40,7 +40,7 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |      | Waiting...                            | (forever)       |  |*
 *|  |      | (thread blocked forever)              |                 |  |*
 *|  |      v                                                          |  |*
-*|  |  Thread pool exhausted -> Service A dies                        |  |*
+*|  |  Thread pool exhausted > Service A dies                        |  |*
 *|  |                                                                 |  |*
 *|  |  WITH TIMEOUT:                                                  |  |*
 *|  |                                                                 |  |*
@@ -104,10 +104,10 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |                                                                 |  |*
 *|  |  WHY JITTER?                                                   |  |*
 *|  |  Without jitter: 1000 clients retry at exactly 1s, 2s, 4s     |  |*
-*|  |  -> Synchronized retry storm                                    |  |*
+*|  |  > Synchronized retry storm                                    |  |*
 *|  |                                                                 |  |*
 *|  |  With jitter: Retries spread out randomly                      |  |*
-*|  |  -> Smoother load on recovering service                         |  |*
+*|  |  > Smoother load on recovering service                         |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -160,7 +160,7 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |  |  |    Success               Failure                   | ||  |*
 *|  |  |  |         |                     |                    | ||  |*
 *|  |  |  |         v                     v                    | ||  |*
-*|  |  |  |    -> CLOSED             -> OPEN                     | ||  |*
+*|  |  |  |    > CLOSED             > OPEN                     | ||  |*
 *|  |  |  |                                                     | ||  |*
 *|  |  |  +-----------------------------------------------------+ ||  |*
 *|  |  |                                                           ||  |*
@@ -174,7 +174,7 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |  BENEFITS:                                                     |  |*
 *|  |  * Prevents cascading failures                                 |  |*
 *|  |  * Gives failing service time to recover                      |  |*
-*|  |  * Fails fast -> better user experience                        |  |*
+*|  |  * Fails fast > better user experience                        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -195,11 +195,11 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |  |  +-----------------------------------------------------+ ||  |*
 *|  |  |  |            Shared Thread Pool (100 threads)         | ||  |*
 *|  |  |  |                                                     | ||  |*
-*|  |  |  |  Service A calls (slow) -> Uses 80 threads          | ||  |*
-*|  |  |  |  Service B calls -> Uses 15 threads                 | ||  |*
-*|  |  |  |  Service C calls -> Only 5 threads left!            | ||  |*
+*|  |  |  |  Service A calls (slow) > Uses 80 threads          | ||  |*
+*|  |  |  |  Service B calls > Uses 15 threads                 | ||  |*
+*|  |  |  |  Service C calls > Only 5 threads left!            | ||  |*
 *|  |  |  |                                                     | ||  |*
-*|  |  |  |  -> Slow Service A starves Service B and C          | ||  |*
+*|  |  |  |  > Slow Service A starves Service B and C          | ||  |*
 *|  |  |  +-----------------------------------------------------+ ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  WITH BULKHEAD:                                           ||  |*
@@ -210,7 +210,7 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |  |  | (can max out) | | (still works) | | (still works) |||  |*
 *|  |  |  +----------------+ +----------------+ +----------------+||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  -> Slow Service A can only affect its own pool           ||  |*
+*|  |  |  > Slow Service A can only affect its own pool           ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -234,23 +234,23 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |                                                                 |  |*
 *|  |  1. CACHED RESPONSE                                            |  |*
 *|  |     Recommendation Service down?                               |  |*
-*|  |     -> Return cached/popular recommendations                    |  |*
+*|  |     > Return cached/popular recommendations                    |  |*
 *|  |                                                                 |  |*
 *|  |  2. DEFAULT VALUE                                              |  |*
 *|  |     Feature flag service down?                                 |  |*
-*|  |     -> Return default flag values                               |  |*
+*|  |     > Return default flag values                               |  |*
 *|  |                                                                 |  |*
 *|  |  3. ALTERNATIVE SERVICE                                        |  |*
 *|  |     Primary payment processor down?                            |  |*
-*|  |     -> Route to backup processor                                |  |*
+*|  |     > Route to backup processor                                |  |*
 *|  |                                                                 |  |*
 *|  |  4. GRACEFUL DEGRADATION                                       |  |*
 *|  |     Review service down?                                       |  |*
-*|  |     -> Show product page without reviews                        |  |*
+*|  |     > Show product page without reviews                        |  |*
 *|  |                                                                 |  |*
 *|  |  5. QUEUE FOR LATER                                            |  |*
 *|  |     Email service down?                                        |  |*
-*|  |     -> Queue email to send when service recovers                |  |*
+*|  |     > Queue email to send when service recovers                |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -264,17 +264,17 @@ SECTION 1: RESILIENCE PATTERNS
 *|  |  Services expose endpoints for health monitoring                |  |*
 *|  |                                                                 |  |*
 *|  |  LIVENESS CHECK: "Is the service running?"                     |  |*
-*|  |  GET /health/live -> 200 OK or 503 Service Unavailable         |  |*
+*|  |  GET /health/live > 200 OK or 503 Service Unavailable         |  |*
 *|  |  * Simple: Just returns OK if process is alive                 |  |*
 *|  |  * If fails: Kubernetes restarts the container                 |  |*
 *|  |                                                                 |  |*
 *|  |  READINESS CHECK: "Can the service handle traffic?"            |  |*
-*|  |  GET /health/ready -> 200 OK or 503 Service Unavailable        |  |*
+*|  |  GET /health/ready > 200 OK or 503 Service Unavailable        |  |*
 *|  |  * Checks: Database connection, cache, dependencies            |  |*
 *|  |  * If fails: Load balancer stops routing traffic to it        |  |*
 *|  |                                                                 |  |*
 *|  |  DEEP HEALTH CHECK: Detailed status for monitoring             |  |*
-*|  |  GET /health -> Returns JSON with component status             |  |*
+*|  |  GET /health > Returns JSON with component status             |  |*
 *|  |  {                                                              |  |*
 *|  |    "status": "UP",                                             |  |*
 *|  |    "components": {                                              |  |*
@@ -438,7 +438,7 @@ SECTION 3: DEPLOYMENT STRATEGIES
 *|  |  |  |  ACTIVE    |      |   IDLE     |                  |   |  |*
 *|  |  |  +------------+      +------------+                  |   |  |*
 *|  |  |                                                        |   |  |*
-*|  |  |  Deploy v2 to Green -> Test -> Switch traffic to Green  |   |  |*
+*|  |  |  Deploy v2 to Green > Test > Switch traffic to Green  |   |  |*
 *|  |  |                                                        |   |  |*
 *|  |  +--------------------------------------------------------+   |  |*
 *|  |                                                                 |  |*
@@ -453,18 +453,18 @@ SECTION 3: DEPLOYMENT STRATEGIES
 *|  |                                                                 |  |*
 *|  |  Release to small subset first, monitor, then expand          |  |*
 *|  |                                                                 |  |*
-*|  |  Stage 1:  5% traffic -> v2 (canary)                           |  |*
-*|  |           95% traffic -> v1                                     |  |*
+*|  |  Stage 1:  5% traffic > v2 (canary)                           |  |*
+*|  |           95% traffic > v1                                     |  |*
 *|  |           Monitor error rate, latency...                       |  |*
 *|  |                                                                 |  |*
-*|  |  Stage 2:  25% traffic -> v2                                   |  |*
-*|  |           75% traffic -> v1                                     |  |*
+*|  |  Stage 2:  25% traffic > v2                                   |  |*
+*|  |           75% traffic > v1                                     |  |*
 *|  |           Still looks good...                                  |  |*
 *|  |                                                                 |  |*
-*|  |  Stage 3:  50% -> v2                                            |  |*
-*|  |  Stage 4:  100% -> v2                                           |  |*
+*|  |  Stage 3:  50% > v2                                            |  |*
+*|  |  Stage 4:  100% > v2                                           |  |*
 *|  |                                                                 |  |*
-*|  |  If problems detected -> Rollback (shift 100% to v1)           |  |*
+*|  |  If problems detected > Rollback (shift 100% to v1)           |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Minimize blast radius, real traffic testing            |  |*
 *|  |  Cons: Requires traffic splitting, longer rollout              |  |*
@@ -477,9 +477,9 @@ SECTION 3: DEPLOYMENT STRATEGIES
 *|  |                                                                 |  |*
 *|  |  Route specific users/segments to new version                  |  |*
 *|  |                                                                 |  |*
-*|  |  * Users in region=EU -> v2                                    |  |*
-*|  |  * Users with premium subscription -> v2                       |  |*
-*|  |  * Users with user_id % 10 < 2 -> v2                           |  |*
+*|  |  * Users in region=EU > v2                                    |  |*
+*|  |  * Users with premium subscription > v2                       |  |*
+*|  |  * Users with user_id % 10 < 2 > v2                           |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Target specific users, gather feedback                 |  |*
 *|  |  Cons: Complex routing logic, session affinity needed         |  |*
@@ -541,7 +541,7 @@ SECTION 4: CONTAINER ORCHESTRATION (Kubernetes)
 *|  |                                                                 |  |*
 *|  |  INGRESS                                                        |  |*
 *|  |  * External access to services                                |  |*
-*|  |  * URL routing (/api/users -> user-service)                   |  |*
+*|  |  * URL routing (/api/users > user-service)                   |  |*
 *|  |  * TLS termination                                            |  |*
 *|  |                                                                 |  |*
 *|  |  CONFIG MAP & SECRET                                           |  |*
@@ -663,7 +663,7 @@ SECTION 5: INTERVIEW Q&A
 *|  * Service-to-service auth via service accounts/tokens               |*
 *|                                                                         |*
 *|  Pattern:                                                              |*
-*|  Client -> JWT -> Gateway -> validates -> User context headers -> Service |*
+*|  Client > JWT > Gateway > validates > User context headers > Service |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 *+-------------------------------------------------------------------------+*
@@ -676,7 +676,7 @@ SECTION 5: INTERVIEW Q&A
 *|  * Synchronous calls everywhere (tight temporal coupling)             |*
 *|  * Must be updated together (tight API coupling)                      |*
 *|                                                                         |*
-*|  -> Worst of both worlds: complexity of distributed + constraints      |*
+*|  > Worst of both worlds: complexity of distributed + constraints      |*
 *|    of monolith                                                         |*
 *|                                                                         |*
 *|  Solution: True bounded contexts, async communication,                |*

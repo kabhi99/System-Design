@@ -80,7 +80,7 @@ Ingress provides HTTP/HTTPS routing at Layer 7:
 
 1. INGRESS RESOURCE
 - Kubernetes API object
-- Declares routing rules (host, path -> service)
+- Declares routing rules (host, path > service)
 - Just configuration—doesn't do anything by itself
 
 2. INGRESS CONTROLLER
@@ -299,8 +299,8 @@ spec:
 |  Matches based on URL path prefix split by /                          |
 |                                                                         |
 |  path: /api                                                           |
-|  [x] Matches: /api, /api/, /api/users, /api/v1/users                   |
-|  [ ] No match: /apis, /api-v2                                          |
+|  Y Matches: /api, /api/, /api/users, /api/v1/users                   |
+|  X No match: /apis, /api-v2                                          |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -309,8 +309,8 @@ spec:
 |  Matches exact path only                                              |
 |                                                                         |
 |  path: /api                                                           |
-|  [x] Matches: /api                                                     |
-|  [ ] No match: /api/, /api/users                                       |
+|  Y Matches: /api                                                     |
+|  X No match: /api/, /api/users                                       |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |

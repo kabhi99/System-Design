@@ -197,8 +197,8 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    |        |    |  |   env: from Secret --------+-+---+-> db-credentials
 |    |        |    |  |   volume: postgres-pvc ----+-+---+-> PVC
 |    |        |    |  |                            | |   |         |    |
-|    |        |    |  |   [x] Liveness Probe         | |   |         |    |
-|    |        |    |  |   [x] Readiness Probe        | |   |         |    |
+|    |        |    |  |   Y Liveness Probe         | |   |         |    |
+|    |        |    |  |   Y Readiness Probe        | |   |         |    |
 |    |        |    |  +----------------------------+ |   |         |    |
 |    |        |    +---------------------------------+   |         |    |
 |    |        +------------------------------------------+         |    |
@@ -290,7 +290,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    +--------------------------------------------------------------+    |
 |    |         Service: frontend-service                             |    |
 |    |         Type: NodePort                                        |    |
-|    |         Port: 80 -> NodePort: 30080                           |    |
+|    |         Port: 80 > NodePort: 30080                           |    |
 |    +---------------------------+----------------------------------+    |
 |                                |                                        |
 |                    +-----------+-----------+                           |
@@ -369,7 +369,7 @@ microservices. By completing it, you'll learn ALL core Kubernetes concepts.
 |    |                            v                                 |    |
 |    |     Low Load          Normal           High Load             |    |
 |    |     +-----+          +-----++-----+   +-----++-----+...     |    |
-|    |     | pod |    ->     | pod || pod | -> | pod || pod |        |    |
+|    |     | pod |    >     | pod || pod | > | pod || pod |        |    |
 |    |     +-----+          +-----++-----+   +-----++-----+        |    |
 |    |     1 replica        2 replicas       up to 10 replicas     |    |
 |    |                                                               |    |
@@ -545,10 +545,10 @@ kubectl get nodes
 |  $ minikube status                                                      |
 |  minikube                                                               |
 |  type: Control Plane                                                    |
-|  host: Running          <- VM/container is running                      |
-|  kubelet: Running       <- Node agent is running                        |
-|  apiserver: Running     <- API Server is accepting requests             |
-|  kubeconfig: Configured <- kubectl can talk to cluster                  |
+|  host: Running          < VM/container is running                      |
+|  kubelet: Running       < Node agent is running                        |
+|  apiserver: Running     < API Server is accepting requests             |
+|  kubeconfig: Configured < kubectl can talk to cluster                  |
 |                                                                         |
 |  $ kubectl get nodes                                                    |
 |  NAME       STATUS   ROLES           AGE   VERSION                     |
@@ -643,11 +643,11 @@ metadata:
 |  🔍 UNDERSTAND THE YAML                                                 |
 |  ======================                                                  |
 |                                                                         |
-|  apiVersion: v1        <- API version (v1 = core/stable)               |
-|  kind: Namespace       <- Type of object we're creating                |
+|  apiVersion: v1        < API version (v1 = core/stable)               |
+|  kind: Namespace       < Type of object we're creating                |
 |  metadata:                                                              |
-|    name: task-manager  <- Name of the namespace                        |
-|    labels:             <- Key-value tags for organization              |
+|    name: task-manager  < Name of the namespace                        |
+|    labels:             < Key-value tags for organization              |
 |      project: task-manager                                             |
 |      environment: development                                          |
 |                                                                         |
@@ -723,10 +723,10 @@ kubectl config view --minify | grep namespace
 |  kube-node-lease   Active   10m                                         |
 |  kube-public       Active   10m                                         |
 |  kube-system       Active   10m                                         |
-|  task-manager      Active   5s   <- Our new namespace!                  |
+|  task-manager      Active   5s   < Our new namespace!                  |
 |                                                                         |
 |  $ kubectl config view --minify | grep namespace                       |
-|      namespace: task-manager    <- Default is set!                      |
+|      namespace: task-manager    < Default is set!                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -833,17 +833,17 @@ data:
 |  ======================                                                  |
 |                                                                         |
 |  data:                                                                   |
-|    APP_NAME: "Task Manager"   <- Simple key-value                       |
+|    APP_NAME: "Task Manager"   < Simple key-value                       |
 |                                  Will become env var: APP_NAME          |
 |                                                                         |
-|    nginx.conf: |              <- Multi-line value (note the |)          |
+|    nginx.conf: |              < Multi-line value (note the |)          |
 |      server {                   This is an ENTIRE FILE                  |
 |        ...                      Will be mounted as /etc/nginx/nginx.conf|
 |      }                                                                   |
 |                                                                         |
 |  TWO WAYS TO USE ConfigMap:                                            |
 |  1. As environment variables (APP_NAME, LOG_LEVEL)                     |
-|  2. As mounted files (nginx.conf -> /etc/nginx/nginx.conf)              |
+|  2. As mounted files (nginx.conf > /etc/nginx/nginx.conf)              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -906,7 +906,7 @@ kubectl describe configmap app-config
 |                                                                         |
 |  $ kubectl get configmap                                                |
 |  NAME               DATA   AGE                                          |
-|  app-config         4      5s   <- 4 keys (APP_NAME, APP_ENV,           |
+|  app-config         4      5s   < 4 keys (APP_NAME, APP_ENV,           |
 |  kube-root-ca.crt   1      10m     LOG_LEVEL, nginx.conf)              |
 |                                                                         |
 |  $ kubectl describe configmap app-config                               |
@@ -914,7 +914,7 @@ kubectl describe configmap app-config
 |  Namespace:    task-manager                                             |
 |  Data                                                                   |
 |  ====                                                                   |
-|  APP_ENV:       <- Can see all the keys                                 |
+|  APP_ENV:       < Can see all the keys                                 |
 |  ----                                                                   |
 |  development                                                            |
 |  ...                                                                    |
@@ -928,7 +928,7 @@ kubectl describe configmap app-config
 |  # As environment variables:                                           |
 |  envFrom:                                                               |
 |    - configMapRef:                                                      |
-|        name: app-config    <- All keys become env vars                 |
+|        name: app-config    < All keys become env vars                 |
 |                                                                         |
 |  # As mounted file:                                                    |
 |  volumes:                                                               |
@@ -937,7 +937,7 @@ kubectl describe configmap app-config
 |        name: app-config                                                |
 |        items:                                                           |
 |          - key: nginx.conf                                             |
-|            path: nginx.conf  <- Mount as /etc/nginx/nginx.conf         |
+|            path: nginx.conf  < Mount as /etc/nginx/nginx.conf         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1012,15 +1012,15 @@ stringData:
 |  🔍 UNDERSTAND THE YAML                                                 |
 |  ======================                                                  |
 |                                                                         |
-|  type: Opaque          <- Generic secret (most common)                  |
+|  type: Opaque          < Generic secret (most common)                  |
 |                          Other types: kubernetes.io/tls,               |
 |                          kubernetes.io/dockerconfigjson                |
 |                                                                         |
-|  stringData:           <- PLAIN TEXT here, auto-encoded to base64      |
+|  stringData:           < PLAIN TEXT here, auto-encoded to base64      |
 |    POSTGRES_PASSWORD: secretpass123                                    |
 |                                                                         |
 |  Alternative (manual encoding):                                        |
-|  data:                 <- Already base64 encoded                        |
+|  data:                 < Already base64 encoded                        |
 |    POSTGRES_PASSWORD: c2VjcmV0cGFzczEyMw==                            |
 |                                                                         |
 |  USE stringData: It's easier! Let Kubernetes encode for you.          |
@@ -1098,7 +1098,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 |  Type:         Opaque                                                   |
 |  Data                                                                   |
 |  ====                                                                   |
-|  POSTGRES_DB:        6 bytes  <- Values hidden!                         |
+|  POSTGRES_DB:        6 bytes  < Values hidden!                         |
 |  POSTGRES_PASSWORD:  13 bytes                                          |
 |  POSTGRES_USER:      8 bytes                                           |
 |                                                                         |
@@ -1167,7 +1167,7 @@ kubectl get secret db-credentials -o jsonpath='{.data.POSTGRES_PASSWORD}' | base
 |        |                        |                                     |
 |  +---------------+              |                                     |
 |  |  New Pod      |--------------+                                     |
-|  |  (reconnects  |  Data still there! [x]                              |
+|  |  (reconnects  |  Data still there! Y                              |
 |  |   to storage) |                                                     |
 |  +---------------+                                                     |
 |                                                                         |

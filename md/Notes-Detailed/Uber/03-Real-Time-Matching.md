@@ -56,20 +56,20 @@ optimization, and the real-time infrastructure that makes it work.
 |      return min(nearby, key=lambda d: d.eta)                         |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple to implement                                               |
-|  [x] Fast                                                              |
-|  [x] Minimizes rider wait time                                        |
+|  Y Simple to implement                                               |
+|  Y Fast                                                              |
+|  Y Minimizes rider wait time                                        |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Not globally optimal                                              |
-|  [ ] Can be unfair to drivers (same drivers always get rides)        |
-|  [ ] Doesn't consider future demand                                   |
+|  X Not globally optimal                                              |
+|  X Can be unfair to drivers (same drivers always get rides)        |
+|  X Doesn't consider future demand                                   |
 |                                                                         |
 |  EXAMPLE OF WHY IT FAILS:                                             |
 |  --------------------------                                             |
 |                                                                         |
 |       D1 ------- R1 ------- R2 ------- D2                            |
-|       |<--- 2min--|<--- 5min --|<--- 2min -|                            |
+|       |<-- 2min--|<-- 5min --|<-- 2min -|                            |
 |                                                                         |
 |  Nearest matching:                                                     |
 |  * R1 gets D1 (2 min)                                                |
@@ -137,7 +137,7 @@ optimization, and the real-time infrastructure that makes it work.
 |  +-------------------------+                                          |
 |                                                                         |
 |  Nearest matching:                                                     |
-|  R1->D1(2), R2->D2(3), R3->D3(2) = Total 7 min [x] (optimal here)       |
+|  R1>D1(2), R2>D2(3), R3>D3(2) = Total 7 min Y (optimal here)       |
 |                                                                         |
 |  But with more complex scenarios, batching helps!                    |
 |                                                                         |
@@ -263,7 +263,7 @@ optimization, and the real-time infrastructure that makes it work.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  RIDE REQUEST -> DRIVER ASSIGNMENT FLOW                                |
+|  RIDE REQUEST > DRIVER ASSIGNMENT FLOW                                |
 |                                                                         |
 |  Rider     RideSvc    Dispatch    Location    Driver     DriverApp   |
 |    |          |          |           |          |            |        |
@@ -442,7 +442,7 @@ optimization, and the real-time infrastructure that makes it work.
 |  1. Each Gateway subscribes to channel for its connections:          |
 |     SUBSCRIBE gateway:3                                               |
 |                                                                         |
-|  2. Maintain mapping: driver_id -> gateway_id (in Redis)              |
+|  2. Maintain mapping: driver_id > gateway_id (in Redis)              |
 |     SET connection:D1 "gateway:3"                                    |
 |                                                                         |
 |  3. Dispatch publishes to correct channel:                           |
@@ -466,7 +466,7 @@ optimization, and the real-time infrastructure that makes it work.
 |  Time     Rider 1                    Rider 2                          |
 |   |                                                                    |
 |   |   Find nearby drivers           Find nearby drivers              |
-|   |   -> D1, D2, D3                  -> D1, D2, D4                     |
+|   |   > D1, D2, D3                  > D1, D2, D4                     |
 |   |                                                                    |
 |   |   Select best: D1               Select best: D1                  |
 |   |                                                                    |

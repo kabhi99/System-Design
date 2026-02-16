@@ -399,9 +399,9 @@ When container asks to resolve "db":
 |  |                    Docker DNS (127.0.0.11)                       |   |
 |  |                                                                  |   |
 |  |  Maintains mapping:                                              |   |
-|  |  "db"  -> 172.18.0.4                                             |   |
-|  |  "web" -> 172.18.0.2                                             |   |
-|  |  "api" -> 172.18.0.3                                             |   |
+|  |  "db"  > 172.18.0.4                                             |   |
+|  |  "web" > 172.18.0.2                                             |   |
+|  |  "api" > 172.18.0.3                                             |   |
 |  |                                                                  |   |
 |  +----------+------------------------------------------------------+   |
 |             | 3. Returns 172.18.0.4                                    |
@@ -473,7 +473,7 @@ WHAT HAPPENS:
 |                              |                                          |
 |                         +----+----+                                    |
 |                         |  eth0   |                                    |
-|                         |  :80    |  <- nginx directly on host:80      |
+|                         |  :80    |  < nginx directly on host:80      |
 |                         +---------+                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -506,9 +506,9 @@ WHAT HAPPENS:
 |      |   lo: 127.0.0.1                                          |     |
 |      |                                                           |     |
 |      |   Cannot reach:                                          |     |
-|      |   [ ] Other containers                                    |     |
-|      |   [ ] The host                                            |     |
-|      |   [ ] The internet                                        |     |
+|      |   X Other containers                                    |     |
+|      |   X The host                                            |     |
+|      |   X The internet                                        |     |
 |      |                                                           |     |
 |      +-----------------------------------------------------------+     |
 |                                                                         |
@@ -533,7 +533,7 @@ on multiple hosts that need to communicate?
 HOST 1                              HOST 2
 +---------------------+            +---------------------+
 |  Container A        |            |  Container B        |
-|  172.17.0.2         |            |  172.17.0.2  <- Same IP!|
+|  172.17.0.2         |            |  172.17.0.2  < Same IP!|
 |                     |            |                     |
 |  docker0 bridge     |            |  docker0 bridge     |
 |  172.17.0.1         |            |  172.17.0.1         |
@@ -570,7 +570,7 @@ HOST 1                              HOST 2
 
 Container A sends packet to 10.0.0.3:
 1. Packet: Src: 10.0.0.2, Dst: 10.0.0.3
-2. VXLAN encapsulates: Outer: 192.168.1.10 -> 192.168.1.11
+2. VXLAN encapsulates: Outer: 192.168.1.10 > 192.168.1.11
 3. Travels over physical network
 4. HOST 2 decapsulates
 5. Delivers to Container B

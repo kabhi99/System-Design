@@ -20,12 +20,12 @@ compounds over time.
 |  GET /orders should too.                                               |
 |                                                                         |
 |  GOOD:                                                                  |
-|  GET /users         -> { "data": [...], "meta": {...} }               |
-|  GET /orders        -> { "data": [...], "meta": {...} }               |
+|  GET /users         > { "data": [...], "meta": {...} }               |
+|  GET /orders        > { "data": [...], "meta": {...} }               |
 |                                                                         |
 |  BAD:                                                                   |
-|  GET /users         -> { "users": [...] }                              |
-|  GET /orders        -> { "data": [...], "total": 100 }                |
+|  GET /users         > { "users": [...] }                              |
+|  GET /orders        > { "data": [...], "total": 100 }                |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -146,21 +146,21 @@ REST (Representational State Transfer) is the most common API style.
 |  URL DESIGN BEST PRACTICES                                            |
 |                                                                         |
 |  USE NOUNS, NOT VERBS                                                  |
-|  [x] POST /users                                                        |
-|  [ ] POST /createUser                                                   |
-|  [ ] GET  /getUsers                                                     |
+|  Y POST /users                                                        |
+|  X POST /createUser                                                   |
+|  X GET  /getUsers                                                     |
 |                                                                         |
 |  PLURAL NOUNS FOR COLLECTIONS                                          |
-|  [x] /users, /orders, /products                                        |
-|  [ ] /user, /order, /product                                           |
+|  Y /users, /orders, /products                                        |
+|  X /user, /order, /product                                           |
 |                                                                         |
 |  KEBAB-CASE FOR MULTI-WORD                                             |
-|  [x] /user-profiles                                                     |
-|  [ ] /userProfiles, /user_profiles                                     |
+|  Y /user-profiles                                                     |
+|  X /userProfiles, /user_profiles                                     |
 |                                                                         |
 |  AVOID DEEP NESTING (Max 2-3 levels)                                  |
-|  [ ] /users/123/orders/456/items/789/reviews                           |
-|  [x] /order-items/789/reviews                                           |
+|  X /users/123/orders/456/items/789/reviews                           |
+|  Y /order-items/789/reviews                                           |
 |                                                                         |
 |  USE QUERY PARAMS FOR FILTERING                                        |
 |  GET /users?role=admin&status=active&sort=-created_at                |
@@ -210,15 +210,15 @@ REST (Representational State Transfer) is the most common API style.
 |                                                                         |
 |  COMMON MISTAKES                                                       |
 |                                                                         |
-|  [ ] Returning 200 with error in body                                  |
+|  X Returning 200 with error in body                                  |
 |    { "status": 200, "error": "User not found" }                      |
 |                                                                         |
-|  [x] Return proper status code                                          |
+|  Y Return proper status code                                          |
 |    HTTP 404                                                            |
 |    { "error": "User not found" }                                     |
 |                                                                         |
-|  [ ] Using 500 for validation errors                                   |
-|  [x] Use 400 or 422 for validation errors                              |
+|  X Using 500 for validation errors                                   |
+|  Y Use 400 or 422 for validation errors                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -656,9 +656,9 @@ REST (Representational State Transfer) is the most common API style.
 |  -----------------                                                      |
 |  Count requests in fixed time windows (e.g., per minute).            |
 |                                                                         |
-|  Window: 10:00-10:01 -> 100 requests allowed                         |
+|  Window: 10:00-10:01 > 100 requests allowed                         |
 |  If 100 hit at 10:00:59, another 100 at 10:01:01                    |
-|  -> 200 requests in 2 seconds (burst at boundary!)                   |
+|  > 200 requests in 2 seconds (burst at boundary!)                   |
 |                                                                         |
 |  PROS: Simple                                                         |
 |  CONS: Boundary burst problem                                        |
@@ -812,7 +812,7 @@ REST (Representational State Transfer) is the most common API style.
 |  |  Your App -- "Any new orders?" --> Payment Service             |  |
 |  |  Your App -- "Any new orders?" --> "Yes, here's one!"          |  |
 |  |                                                                 |  |
-|  |  -> Wasteful, most requests return nothing                      |  |
+|  |  > Wasteful, most requests return nothing                      |  |
 |  |                                                                 |  |
 |  |  ------------------------------------------------------------  |  |
 |  |                                                                 |  |
@@ -825,7 +825,7 @@ REST (Representational State Transfer) is the most common API style.
 |  |  Payment Service -- POST /webhooks/payment --> Your App       |  |
 |  |  { "event": "payment.completed", "data": {...} }              |  |
 |  |                                                                 |  |
-|  |  -> Efficient, only notified when something happens            |  |
+|  |  > Efficient, only notified when something happens            |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -938,10 +938,10 @@ REST (Representational State Transfer) is the most common API style.
 |     Do heavy processing asynchronously                                |
 |                                                                         |
 |     DO:                                                                 |
-|     receive webhook -> queue for processing -> return 200              |
+|     receive webhook > queue for processing > return 200              |
 |                                                                         |
 |     DON'T:                                                              |
-|     receive webhook -> process for 60 seconds -> return 200            |
+|     receive webhook > process for 60 seconds > return 200            |
 |                                                                         |
 |  2. HANDLE DUPLICATES (Idempotency)                                   |
 |     Store event_id in database                                        |
@@ -1004,15 +1004,15 @@ REST (Representational State Transfer) is the most common API style.
 |  +----------------------------------------------------------------+   |
 |                                                                         |
 |  WHEN TO USE WEBHOOKS:                                                  |
-|  [x] Infrequent events                                                  |
-|  [x] Server-to-server communication                                     |
-|  [x] Third-party integrations                                           |
-|  [x] Loosely coupled systems                                            |
+|  Y Infrequent events                                                  |
+|  Y Server-to-server communication                                     |
+|  Y Third-party integrations                                           |
+|  Y Loosely coupled systems                                            |
 |                                                                         |
 |  WHEN TO USE ALTERNATIVES:                                              |
-|  * High-frequency events -> Message Queue                              |
-|  * Browser/mobile real-time -> WebSockets                              |
-|  * Simple, low volume -> Polling                                       |
+|  * High-frequency events > Message Queue                              |
+|  * Browser/mobile real-time > WebSockets                              |
+|  * Simple, low volume > Polling                                       |
 |                                                                         |
 |  POPULAR WEBHOOK PROVIDERS:                                             |
 |  Stripe, GitHub, Shopify, Twilio, Slack, AWS SNS                      |

@@ -58,15 +58,15 @@ users, teams, or applications.
 |  |  +-------------+  +-------------+  +-------------+            |   |
 |  |  |     dev     |  |   staging   |  |    prod     |            |   |
 |  |  |             |  |             |  |             |            |   |
-|  |  | * mysql     |  | * mysql     |  | * mysql     | <- Same    |   |
+|  |  | * mysql     |  | * mysql     |  | * mysql     | < Same    |   |
 |  |  | * redis     |  | * redis     |  | * redis     |   names!  |   |
 |  |  | * backend   |  | * backend   |  | * backend   |            |   |
 |  |  |             |  |             |  |             |            |   |
-|  |  | CPU: 10     |  | CPU: 20     |  | CPU: 100    | <- Quotas  |   |
+|  |  | CPU: 10     |  | CPU: 20     |  | CPU: 100    | < Quotas  |   |
 |  |  | Mem: 20Gi   |  | Mem: 40Gi   |  | Mem: 200Gi  |            |   |
 |  |  |             |  |             |  |             |            |   |
 |  |  | Users:      |  | Users:      |  | Users:      |            |   |
-|  |  | dev-team    |  | qa-team     |  | ops-team    | <- RBAC    |   |
+|  |  | dev-team    |  | qa-team     |  | ops-team    | < RBAC    |   |
 |  |  +-------------+  +-------------+  +-------------+            |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |

@@ -240,7 +240,7 @@ with nearby drivers, and provide accurate ETAs.
 |  Data per update: 100 bytes                                           |
 |  Daily storage: 21.6B × 100 = 2.16 TB/day                            |
 |                                                                         |
-|  Retention: 30 days -> 65 TB                                           |
+|  Retention: 30 days > 65 TB                                           |
 |  (Can use time-series DB with auto-expiry)                           |
 |                                                                         |
 |  RIDE DATA                                                             |

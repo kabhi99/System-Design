@@ -48,8 +48,8 @@ indexing techniques and location service design.
 |                                                                         |
 |  EXAMPLE:                                                              |
 |  ---------                                                              |
-|  San Francisco: 37.7749, -122.4194 -> "9q8yyk"                        |
-|  Nearby point:  37.7750, -122.4195 -> "9q8yym"                        |
+|  San Francisco: 37.7749, -122.4194 > "9q8yyk"                        |
+|  Nearby point:  37.7750, -122.4195 > "9q8yym"                        |
 |                                       ^^^^^^                           |
 |                                       Same prefix!                     |
 |                                                                         |
@@ -82,14 +82,14 @@ indexing techniques and location service design.
 |     ...;                                                               |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple string prefix matching                                     |
-|  [x] Can use standard B-tree index                                     |
-|  [x] Easy to understand                                                |
+|  Y Simple string prefix matching                                     |
+|  Y Can use standard B-tree index                                     |
+|  Y Easy to understand                                                |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Edge effects (need to check neighbors)                            |
-|  [ ] Uneven cell sizes at different latitudes                         |
-|  [ ] Multiple queries for neighbors                                    |
+|  X Edge effects (need to check neighbors)                            |
+|  X Uneven cell sizes at different latitudes                         |
+|  X Multiple queries for neighbors                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -102,7 +102,7 @@ indexing techniques and location service design.
 |  QUADTREE                                                              |
 |                                                                         |
 |  Recursively divide space into 4 quadrants.                           |
-|  More points in an area -> more subdivisions.                         |
+|  More points in an area > more subdivisions.                         |
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
@@ -111,12 +111,12 @@ indexing techniques and location service design.
 |  |  +-----------------+      +--------+--------+                  |  |
 |  |  |                 |      |   NW   |   NE   |                  |  |
 |  |  |                 |      | (empty)| (dense)|                  |  |
-|  |  |    ● ● ●        |  ->   +--------+--------+                  |  |
+|  |  |    ● ● ●        |  >   +--------+--------+                  |  |
 |  |  |  ● ● ● ●        |      |   SW   |   SE   |                  |  |
 |  |  |    ● ●          |      |(sparse)|(sparse)|                  |  |
 |  |  +-----------------+      +--------+--------+                  |  |
 |  |                                                                 |  |
-|  |  NE quadrant is dense -> subdivide further:                     |  |
+|  |  NE quadrant is dense > subdivide further:                     |  |
 |  |                                                                 |  |
 |  |  +--------+--------+                                           |  |
 |  |  |        |        |                                           |  |
@@ -138,13 +138,13 @@ indexing techniques and location service design.
 |  4. Return points within radius                                      |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Adapts to data density (more detail where needed)                |
-|  [x] Efficient for non-uniform distributions                          |
+|  Y Adapts to data density (more detail where needed)                |
+|  Y Efficient for non-uniform distributions                          |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] More complex implementation                                       |
-|  [ ] Rebalancing needed when points move                              |
-|  [ ] Memory overhead for tree structure                               |
+|  X More complex implementation                                       |
+|  X Rebalancing needed when points move                              |
+|  X Memory overhead for tree structure                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -162,7 +162,7 @@ indexing techniques and location service design.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |        Earth                    Cube Projection                |  |
-|  |          🌍             ->       +----------+                    |  |
+|  |          🌍             >       +----------+                    |  |
 |  |                                |    +---+  |                    |  |
 |  |                                |    |   |  |                    |  |
 |  |                                |    +---+  |                    |  |
@@ -192,13 +192,13 @@ indexing techniques and location service design.
 |  For any shape (circle, polygon), S2 finds minimum set of cells     |
 |  that cover it completely.                                           |
 |                                                                         |
-|  "3km radius around point" -> [cell1, cell2, cell3, ...]             |
+|  "3km radius around point" > [cell1, cell2, cell3, ...]             |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Uniform cell sizes globally                                       |
-|  [x] Efficient range queries                                           |
-|  [x] Works with any shape (not just circles)                          |
-|  [x] Battle-tested at Google/Uber scale                               |
+|  Y Uniform cell sizes globally                                       |
+|  Y Efficient range queries                                           |
+|  Y Works with any shape (not just circles)                          |
+|  Y Battle-tested at Google/Uber scale                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -270,15 +270,15 @@ indexing techniques and location service design.
 |  GEOADD drivers -122.4095 37.7849 "driver_456"                       |
 |                                                                         |
 |  GEORADIUS drivers -122.4194 37.7749 3 km WITHDIST                   |
-|  -> Returns drivers within 3km with distances                         |
+|  > Returns drivers within 3km with distances                         |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Built-in, no custom code                                          |
-|  [x] Fast (O(N+log(M)) for N results, M total items)                  |
+|  Y Built-in, no custom code                                          |
+|  Y Fast (O(N+log(M)) for N results, M total items)                  |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] All data in one sorted set (memory bound)                        |
-|  [ ] Can't filter by driver status easily                             |
+|  X All data in one sorted set (memory bound)                        |
+|  X Can't filter by driver status easily                             |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -290,11 +290,11 @@ indexing techniques and location service design.
 |  Key: cell:{s2_cell_id}                                               |
 |  Value: Set of driver IDs in that cell                                |
 |                                                                         |
-|  cell:89c25a  -> {driver_123, driver_456, driver_789}                 |
-|  cell:89c25b  -> {driver_111, driver_222}                             |
+|  cell:89c25a  > {driver_123, driver_456, driver_789}                 |
+|  cell:89c25b  > {driver_111, driver_222}                             |
 |                                                                         |
 |  Each driver also has:                                                |
-|  driver:{driver_id}:location -> { lat, lng, status, timestamp }       |
+|  driver:{driver_id}:location > { lat, lng, status, timestamp }       |
 |                                                                         |
 |  QUERY FLOW:                                                           |
 |  1. Calculate S2 covering cells for search area                      |
@@ -312,9 +312,9 @@ indexing techniques and location service design.
 |  4. Update driver:{id}:location                                      |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Can filter by any attribute (status, vehicle type)               |
-|  [x] Scales better (smaller sets)                                      |
-|  [x] Can shard across multiple Redis instances                        |
+|  Y Can filter by any attribute (status, vehicle type)               |
+|  Y Scales better (smaller sets)                                      |
+|  Y Can shard across multiple Redis instances                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

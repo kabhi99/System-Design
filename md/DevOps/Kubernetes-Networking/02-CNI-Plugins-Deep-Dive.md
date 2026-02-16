@@ -123,12 +123,12 @@ CNI configuration lives in /etc/cni/net.d/:
   "name": "mynet",
   "plugins": [
     {
-      "type": "bridge",              <- Main network plugin
+      "type": "bridge",              < Main network plugin
       "bridge": "cni0",
       "isGateway": true,
       "ipMasq": true,
       "ipam": {
-        "type": "host-local",        <- IP address allocation
+        "type": "host-local",        < IP address allocation
         "subnet": "10.244.0.0/16",
         "routes": [
           {"dst": "0.0.0.0/0"}
@@ -136,7 +136,7 @@ CNI configuration lives in /etc/cni/net.d/:
       }
     },
     {
-      "type": "portmap",             <- Port mapping plugin
+      "type": "portmap",             < Port mapping plugin
       "capabilities": {
         "portMappings": true
       }
@@ -247,7 +247,7 @@ Overlay networks create a virtual network "on top of" the physical network:
 |                                                                         |
 |  AFTER ENCAPSULATION:                                                  |
 |  +------------------------------------------------------------------+ |
-|  | Outer IP: 192.168.1.10 -> 192.168.1.11                           | |
+|  | Outer IP: 192.168.1.10 > 192.168.1.11                           | |
 |  | UDP Port: 4789 (VXLAN)                                           | |
 |  | +------------------------------------------+                    | |
 |  | | Src: 10.244.0.2  Dst: 10.244.1.2  Data  |  (Original packet) | |
@@ -279,9 +279,9 @@ Routing-based CNIs advertise pod routes directly:
 |   |   direct veth pairs        |       |   direct veth pairs        |  |
 |   |                            |       |                            |  |
 |   |   ROUTING TABLE:           |       |   ROUTING TABLE:           |  |
-|   |   10.244.0.2 -> caliXXX     |       |   10.244.1.2 -> caliYYY     |  |
-|   |   10.244.0.3 -> caliZZZ     |       |   10.244.1.3 -> caliWWW     |  |
-|   |   10.244.1.0/24 ->          |       |   10.244.0.0/24 ->          |  |
+|   |   10.244.0.2 > caliXXX     |       |   10.244.1.2 > caliYYY     |  |
+|   |   10.244.0.3 > caliZZZ     |       |   10.244.1.3 > caliWWW     |  |
+|   |   10.244.1.0/24 >          |       |   10.244.0.0/24 >          |  |
 |   |     via 192.168.1.11       |       |     via 192.168.1.10       |  |
 |   |                            |       |                            |  |
 |   +-------------+--------------+       +-------------+--------------+  |
@@ -340,14 +340,14 @@ ARCHITECTURE:
 +-------------------------------------------------------------------------+
 
 PROS:
-[x] Simple—easy to deploy and understand
-[x] Reliable—mature and battle-tested
-[x] Low resource usage
+Y Simple—easy to deploy and understand
+Y Reliable—mature and battle-tested
+Y Low resource usage
 
 CONS:
-[ ] No network policies (use with Calico for policies)
-[ ] No advanced features
-[ ] VXLAN overhead
+X No network policies (use with Calico for policies)
+X No advanced features
+X VXLAN overhead
 
 BEST FOR:
 * Simple clusters
@@ -411,15 +411,15 @@ spec:
   egress: []
 
 PROS:
-[x] Excellent performance (especially BGP mode)
-[x] Full network policy support
-[x] Flexible—works in any environment
-[x] Strong security features
+Y Excellent performance (especially BGP mode)
+Y Full network policy support
+Y Flexible—works in any environment
+Y Strong security features
 
 CONS:
-[ ] More complex to configure
-[ ] BGP requires some networking knowledge
-[ ] More resource usage than Flannel
+X More complex to configure
+X BGP requires some networking knowledge
+X More resource usage than Flannel
 
 BEST FOR:
 * Production clusters
@@ -442,14 +442,14 @@ this for networking, security, and observability.
 |  TRADITIONAL CNI vs CILIUM (eBPF)                                      |
 |                                                                         |
 |  TRADITIONAL:                                                          |
-|  Packet -> iptables -> routing -> bridge -> deliver                       |
+|  Packet > iptables > routing > bridge > deliver                       |
 |           |         |         |                                        |
 |           +---------+---------+-- Multiple kernel subsystems          |
 |                                   Context switches                     |
 |                                   Rule traversal                       |
 |                                                                         |
 |  CILIUM (eBPF):                                                        |
-|  Packet -> eBPF program -> deliver                                      |
+|  Packet > eBPF program > deliver                                      |
 |           |                                                            |
 |           +-- Single efficient program in kernel                      |
 |               Direct routing decisions                                |
@@ -496,15 +496,15 @@ CILIUM FEATURES:
    * Flow logs without packet capture
 
 PROS:
-[x] Highest performance
-[x] L7-aware network policies
-[x] Built-in observability (Hubble)
-[x] Can replace kube-proxy
+Y Highest performance
+Y L7-aware network policies
+Y Built-in observability (Hubble)
+Y Can replace kube-proxy
 
 CONS:
-[ ] Requires newer kernels (4.9+, 5.10+ for all features)
-[ ] More complex
-[ ] Heavier resource usage
+X Requires newer kernels (4.9+, 5.10+ for all features)
+X More complex
+X Heavier resource usage
 
 BEST FOR:
 * High-performance requirements
@@ -555,15 +555,15 @@ The AWS VPC CNI gives pods real VPC IP addresses:
 ```
 
 PROS:
-[x] Native VPC performance
-[x] Security groups work on pods!
-[x] No overlay overhead
-[x] Pods visible in VPC flow logs
+Y Native VPC performance
+Y Security groups work on pods!
+Y No overlay overhead
+Y Pods visible in VPC flow logs
 
 CONS:
-[ ] IP address exhaustion (pods consume VPC IPs)
-[ ] Limited pods per node (based on ENI limits)
-[ ] AWS-specific
+X IP address exhaustion (pods consume VPC IPs)
+X Limited pods per node (based on ENI limits)
+X AWS-specific
 
 IP ADDRESS PLANNING:
 Instance type limits how many pods can run:

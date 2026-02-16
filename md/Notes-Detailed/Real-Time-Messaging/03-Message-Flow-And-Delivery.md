@@ -44,7 +44,7 @@ SECTION 1: ONE-TO-ONE MESSAGE FLOW
 *|  |  |    v                                                    |  |  |*
 *|  |  |  Chat Server A                                         |  |  |*
 *|  |  |    |                                                    |  |  |*
-*|  |  |    | 2. Lookup B -> NOT FOUND in Redis                 |  |  |*
+*|  |  |    | 2. Lookup B > NOT FOUND in Redis                 |  |  |*
 *|  |  |    |                                                    |  |  |*
 *|  |  |    | 3. Publish to Kafka (messages.store)             |  |  |*
 *|  |  |    | 4. Publish to Kafka (notifications)              |  |  |*
@@ -52,8 +52,8 @@ SECTION 1: ONE-TO-ONE MESSAGE FLOW
 *|  |  |    | 5. Return "sent" ACK to User A                   |  |  |*
 *|  |  |    |                                                    |  |  |*
 *|  |  |    v                                                    |  |  |*
-*|  |  |  Kafka -> Storage Worker -> Cassandra (persist)         |  |  |*
-*|  |  |  Kafka -> Push Service -> APNs/FCM -> User B's phone    |  |  |*
+*|  |  |  Kafka > Storage Worker > Cassandra (persist)         |  |  |*
+*|  |  |  Kafka > Push Service > APNs/FCM > User B's phone    |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  |  Later: User B comes online                            |  |  |*
 *|  |  |    |                                                    |  |  |*
@@ -85,7 +85,7 @@ SECTION 2: GROUP MESSAGE FLOW
 *|  |    | 3. Publish to Kafka: messages.group.{group_id}           |  |*
 *|  |    |                                                            |  |*
 *|  |    v                                                            |  |*
-*|  |  Kafka -> Group Message Worker                                  |  |*
+*|  |  Kafka > Group Message Worker                                  |  |*
 *|  |    |                                                            |  |*
 *|  |    | 4. Fan out to each member:                               |  |*
 *|  |    |    For each member_id in group.members:                  |  |*
@@ -132,15 +132,15 @@ SECTION 3: MESSAGE STATUS TRACKING
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  SENT (Single checkmark [x])                                    |  |*
+*|  |  SENT (Single checkmark Y)                                    |  |*
 *|  |    | Message reached server and stored                        |  |*
 *|  |    |                                                           |  |*
 *|  |    v                                                           |  |*
-*|  |  DELIVERED (Double checkmark [x][x])                              |  |*
+*|  |  DELIVERED (Double checkmark YY)                              |  |*
 *|  |    | Message received by recipient's device                  |  |*
 *|  |    |                                                           |  |*
 *|  |    v                                                           |  |*
-*|  |  READ (Blue checkmarks [x][x])                                    |  |*
+*|  |  READ (Blue checkmarks YY)                                    |  |*
 *|  |      Recipient opened the conversation                        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -153,12 +153,12 @@ SECTION 3: MESSAGE STATUS TRACKING
 *|  |                                                                 |  |*
 *|  |  SENT:                                                         |  |*
 *|  |  * Server ACKs message receipt                                |  |*
-*|  |  * Client updates UI to show [x]                               |  |*
+*|  |  * Client updates UI to show Y                               |  |*
 *|  |                                                                 |  |*
 *|  |  DELIVERED:                                                    |  |*
 *|  |  * Recipient's device sends delivery_receipt                  |  |*
 *|  |  * Server routes receipt to sender                            |  |*
-*|  |  * Sender's client updates UI to show [x][x]                     |  |*
+*|  |  * Sender's client updates UI to show YY                     |  |*
 *|  |                                                                 |  |*
 *|  |  {                                                              |  |*
 *|  |    "type": "delivery_receipt",                                |  |*
@@ -221,11 +221,11 @@ SECTION 4: DELIVERY GUARANTEES
 *|  |                                                                 |  |*
 *|  |  Client sends message                                          |  |*
 *|  |    |                                                           |  |*
-*|  |    +-> If ACK received within 5 seconds -> Done               |  |*
+*|  |    +-> If ACK received within 5 seconds > Done               |  |*
 *|  |    |                                                           |  |*
-*|  |    +-> If no ACK -> Retry (up to 3 times)                     |  |*
+*|  |    +-> If no ACK > Retry (up to 3 times)                     |  |*
 *|  |           |                                                    |  |*
-*|  |           +-> If still fails -> Queue locally, retry later    |  |*
+*|  |           +-> If still fails > Queue locally, retry later    |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -289,28 +289,28 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |                                                                 |  |*
 *|  |  WITHOUT QUEUE:                                                |  |*
 *|  |                                                                 |  |*
-*|  |  User A -> Chat Server 1 -> (direct to) Chat Server 42 -> User B |  |*
+*|  |  User A > Chat Server 1 > (direct to) Chat Server 42 > User B |  |*
 *|  |                                                                 |  |*
 *|  |  Problems:                                                     |  |*
-*|  |  * If Server 42 is down -> message lost!                       |  |*
-*|  |  * If Server 42 is slow -> Server 1 blocks                    |  |*
-*|  |  * Burst traffic -> Server 1 overwhelmed                      |  |*
+*|  |  * If Server 42 is down > message lost!                       |  |*
+*|  |  * If Server 42 is slow > Server 1 blocks                    |  |*
+*|  |  * Burst traffic > Server 1 overwhelmed                      |  |*
 *|  |  * No replay if something fails                               |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
 *|  |  WITH QUEUE:                                                   |  |*
 *|  |                                                                 |  |*
-*|  |  User A -> Chat Server 1 -> KAFKA -> Chat Server 42 -> User B    |  |*
+*|  |  User A > Chat Server 1 > KAFKA > Chat Server 42 > User B    |  |*
 *|  |                            ^                                   |  |*
 *|  |                            |                                   |  |*
 *|  |                    (persisted to disk)                        |  |*
 *|  |                                                                 |  |*
 *|  |  Benefits:                                                     |  |*
-*|  |  [x] Durability: Messages persisted, never lost                |  |*
-*|  |  [x] Decoupling: Servers don't need direct connection         |  |*
-*|  |  [x] Buffering: Handle traffic spikes                         |  |*
-*|  |  [x] Replay: Can reprocess messages on failure                |  |*
+*|  |  Y Durability: Messages persisted, never lost                |  |*
+*|  |  Y Decoupling: Servers don't need direct connection         |  |*
+*|  |  Y Buffering: Handle traffic spikes                         |  |*
+*|  |  Y Replay: Can reprocess messages on failure                |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -383,7 +383,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |                "retry_count": 0                          ||  |*
 *|  |  |              }                                           ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  Return ACK to User A: "Message sent [x]"                 ||  |*
+*|  |  |  Return ACK to User A: "Message sent Y"                 ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -460,7 +460,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |       v                                                   ||  |*
 *|  |  |  Attempt delivery                                        ||  |*
 *|  |  |       |                                                   ||  |*
-*|  |  |       +-- Success --> Commit offset, done [x]             ||  |*
+*|  |  |       +-- Success --> Commit offset, done Y             ||  |*
 *|  |  |       |                                                   ||  |*
 *|  |  |       +-- Failure                                        ||  |*
 *|  |  |              |                                            ||  |*
@@ -584,7 +584,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |  messages.retry.30s  --> Consumer built-in 30s delay     ||  |*
 *|  |  |  messages.retry.5m   --> Consumer built-in 5m delay      ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  On failure -> route to appropriate delay topic           ||  |*
+*|  |  |  On failure > route to appropriate delay topic           ||  |*
 *|  |  |  Consumer sleeps for delay duration before processing    ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
@@ -665,7 +665,7 @@ SECTION 4.5: MESSAGE QUEUES & DEAD LETTER QUEUES (DLQ)
 *|  |  |  |                                v                   | ||  |*
 *|  |  |  |                          Retry Workers             | ||  |*
 *|  |  |  |                                |                   | ||  |*
-*|  |  |  |                                +-- Success --> [x]  | ||  |*
+*|  |  |  |                                +-- Success --> Y  | ||  |*
 *|  |  |  |                                |                   | ||  |*
 *|  |  |  |                                +-- Max retries    | ||  |*
 *|  |  |  |                                       |            | ||  |*
@@ -836,8 +836,8 @@ SECTION 6: OFFLINE MESSAGE SYNC
 *|  |  | 123         | web        | msg-480             |           |  |*
 *|  |  +-------------+------------+---------------------+           |  |*
 *|  |                                                                 |  |*
-*|  |  Desktop connects -> sync from msg-450                         |  |*
-*|  |  Phone connects -> sync from msg-500                           |  |*
+*|  |  Desktop connects > sync from msg-450                         |  |*
+*|  |  Phone connects > sync from msg-500                           |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*

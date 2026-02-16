@@ -54,7 +54,7 @@ SECTION 2.1: SYSTEM OVERVIEW
 *|  |        v                                   |                 |  |*
 *|  |  +-----------+                            |                 |  |*
 *|  |  |  Ingester |                            |                 |  |*
-*|  |  |  (Kafka->  |                            |                 |  |*
+*|  |  |  (Kafka>  |                            |                 |  |*
 *|  |  |  Storage) |                            |                 |  |*
 *|  |  +-----+-----+                            |                 |  |*
 *|  |        |                                   |                 |  |*
@@ -221,13 +221,13 @@ SECTION 2.2: CORE COMPONENTS
 *|  Purpose: Buffer between collectors and storage                       |*
 *|                                                                         |*
 *|  WITHOUT KAFKA:                                                        |*
-*|  Collectors -> Storage (direct write)                                 |*
+*|  Collectors > Storage (direct write)                                 |*
 *|  * Simple                                                             |*
 *|  * Storage backpressure affects collectors                          |*
 *|  * Potential data loss if storage is slow                           |*
 *|                                                                         |*
 *|  WITH KAFKA:                                                           |*
-*|  Collectors -> Kafka -> Ingesters -> Storage                            |*
+*|  Collectors > Kafka > Ingesters > Storage                            |*
 *|  * Decouples ingestion from storage                                 |*
 *|  * Handles traffic spikes gracefully                                |*
 *|  * Enables replay/reprocessing                                       |*
@@ -238,7 +238,7 @@ SECTION 2.2: CORE COMPONENTS
 *|  |                                                                 |  |*
 *|  |  Topic: jaeger-spans                                           |  |*
 *|  |  Partitions: 32 (based on throughput needs)                   |  |*
-*|  |  Partition Key: trace_id (spans of same trace -> same partition)|  |*
+*|  |  Partition Key: trace_id (spans of same trace > same partition)|  |*
 *|  |  Retention: 24-48 hours (buffer for reprocessing)             |  |*
 *|  |                                                                 |  |*
 *|  |  Why partition by trace_id?                                    |  |*
@@ -350,7 +350,7 @@ SECTION 2.3: DATA FLOW
 *|  |                                                                 |  |*
 *|  |  1. REQUEST ARRIVES                                            |  |*
 *|  |     |                                                          |  |*
-*|  |     |  User request -> Service A                               |  |*
+*|  |     |  User request > Service A                               |  |*
 *|  |     |  SDK creates root span (start timer)                    |  |*
 *|  |     v                                                          |  |*
 *|  |  2. CONTEXT PROPAGATION                                        |  |*
@@ -374,7 +374,7 @@ SECTION 2.3: DATA FLOW
 *|  |  5. AGENT BATCHING                                             |  |*
 *|  |     |                                                          |  |*
 *|  |     |  Agent collects spans in memory                        |  |*
-*|  |     |  Every 100ms or 100 spans -> send batch to collector    |  |*
+*|  |     |  Every 100ms or 100 spans > send batch to collector    |  |*
 *|  |     |  Uses gRPC (more reliable than UDP)                    |  |*
 *|  |     v                                                          |  |*
 *|  |  6. COLLECTOR PROCESSING                                       |  |*
@@ -389,7 +389,7 @@ SECTION 2.3: DATA FLOW
 *|  |     |  - Write to kafka topic                                 |  |*
 *|  |     |  - Partition by traceId                                 |  |*
 *|  |     v                                                          |  |*
-*|  |  8. INGESTER -> STORAGE                                         |  |*
+*|  |  8. INGESTER > STORAGE                                         |  |*
 *|  |                                                                 |  |*
 *|  |     - Consume from Kafka                                      |  |*
 *|  |     - Batch write to Cassandra/ES                            |  |*
@@ -405,7 +405,7 @@ SECTION 2.3: DATA FLOW
 *|  |                                                                 |  |*
 *|  |  1. USER QUERY                                                  |  |*
 *|  |     |                                                          |  |*
-*|  |     |  Jaeger UI -> Query Service                              |  |*
+*|  |     |  Jaeger UI > Query Service                              |  |*
 *|  |     |  "Find traces for order-service with error=true"       |  |*
 *|  |     v                                                          |  |*
 *|  |  2. INDEX LOOKUP                                               |  |*
@@ -537,8 +537,8 @@ SECTION 2.4: DEPLOYMENT ARCHITECTURES
 *|  |  Query via: Grafana (Tempo datasource)                        |  |*
 *|  |                                                                 |  |*
 *|  |  Search via:                                                   |  |*
-*|  |  - Exemplars (metrics -> traces)                              |  |*
-*|  |  - Logs (log -> trace ID -> full trace)                        |  |*
+*|  |  - Exemplars (metrics > traces)                              |  |*
+*|  |  - Logs (log > trace ID > full trace)                        |  |*
 *|  |  - TraceQL (Tempo's query language)                          |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Very cost-effective, scales infinitely               |  |*

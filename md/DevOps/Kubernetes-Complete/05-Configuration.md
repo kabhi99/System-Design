@@ -68,7 +68,7 @@ different environments.
 |  |    +--------------+         |  DB_HOST=prod-db |               |   |
 |  |                             +------------------+               |   |
 |  |                                                                 |   |
-|  |  ONE image -> THREE environments!                               |   |
+|  |  ONE image > THREE environments!                               |   |
 |  |  Config injected at RUNTIME, not BUILDTIME                    |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
@@ -94,8 +94,8 @@ different environments.
 |  +--------------------+---------------------+------------------------+ |
 |                                                                         |
 |  RULE OF THUMB:                                                        |
-|  * Would you commit this to Git? -> ConfigMap                          |
-|  * Would it be a security issue if leaked? -> Secret                   |
+|  * Would you commit this to Git? > ConfigMap                          |
+|  * Would it be a security issue if leaked? > Secret                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

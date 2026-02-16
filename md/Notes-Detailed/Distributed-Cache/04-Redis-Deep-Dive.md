@@ -62,14 +62,14 @@ covers Redis internals, data structures, persistence, and best practices.
 |  Basic key-value storage. Binary-safe (can store images, JSON, etc.)|
 |                                                                         |
 |  SET user:123 "John Doe"                                              |
-|  GET user:123  -> "John Doe"                                          |
+|  GET user:123  > "John Doe"                                          |
 |                                                                         |
 |  SET counter 0                                                         |
-|  INCR counter  -> 1                                                    |
-|  INCRBY counter 5  -> 6                                               |
+|  INCR counter  > 1                                                    |
+|  INCRBY counter 5  > 6                                               |
 |                                                                         |
-|  SETNX key value  -> Set only if not exists (for locking)            |
-|  SETEX key 60 value  -> Set with 60 second expiry                    |
+|  SETNX key value  > Set only if not exists (for locking)            |
+|  SETEX key 60 value  > Set with 60 second expiry                    |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Session storage                                                    |
@@ -86,11 +86,11 @@ covers Redis internals, data structures, persistence, and best practices.
 |                                                                         |
 |  LPUSH mylist "world"                                                  |
 |  LPUSH mylist "hello"                                                  |
-|  LRANGE mylist 0 -1  -> ["hello", "world"]                            |
+|  LRANGE mylist 0 -1  > ["hello", "world"]                            |
 |                                                                         |
-|  RPUSH mylist "!"  -> Add to right                                    |
-|  LPOP mylist       -> Remove from left                                |
-|  BRPOP mylist 30   -> Blocking pop (wait up to 30s)                  |
+|  RPUSH mylist "!"  > Add to right                                    |
+|  LPOP mylist       > Remove from left                                |
+|  BRPOP mylist 30   > Blocking pop (wait up to 30s)                  |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Message queues (LPUSH + BRPOP)                                    |
@@ -106,12 +106,12 @@ covers Redis internals, data structures, persistence, and best practices.
 |                                                                         |
 |  SADD myset "apple"                                                    |
 |  SADD myset "banana"                                                   |
-|  SADD myset "apple"  -> 0 (already exists)                            |
-|  SMEMBERS myset  -> {"apple", "banana"}                               |
+|  SADD myset "apple"  > 0 (already exists)                            |
+|  SMEMBERS myset  > {"apple", "banana"}                               |
 |                                                                         |
-|  SISMEMBER myset "apple"  -> 1 (true)                                 |
-|  SINTER set1 set2  -> Intersection                                    |
-|  SUNION set1 set2  -> Union                                           |
+|  SISMEMBER myset "apple"  > 1 (true)                                 |
+|  SINTER set1 set2  > Intersection                                    |
+|  SUNION set1 set2  > Union                                           |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Tags                                                               |
@@ -131,11 +131,11 @@ covers Redis internals, data structures, persistence, and best practices.
 |  ZADD leaderboard 150 "player3"                                       |
 |                                                                         |
 |  ZRANGE leaderboard 0 -1 WITHSCORES                                   |
-|  -> [("player1", 100), ("player3", 150), ("player2", 200)]           |
+|  > [("player1", 100), ("player3", 150), ("player2", 200)]           |
 |                                                                         |
-|  ZREVRANGE leaderboard 0 2  -> Top 3 (descending)                     |
-|  ZRANK leaderboard "player3"  -> 1 (0-indexed position)              |
-|  ZINCRBY leaderboard 50 "player1"  -> 150                            |
+|  ZREVRANGE leaderboard 0 2  > Top 3 (descending)                     |
+|  ZRANK leaderboard "player3"  > 1 (0-indexed position)              |
+|  ZINCRBY leaderboard 50 "player1"  > 150                            |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Leaderboards                                                       |
@@ -151,10 +151,10 @@ covers Redis internals, data structures, persistence, and best practices.
 |  Maps of field-value pairs. Like objects/dictionaries.              |
 |                                                                         |
 |  HSET user:123 name "John" age 30 email "john@example.com"          |
-|  HGET user:123 name  -> "John"                                        |
-|  HGETALL user:123  -> {name: "John", age: "30", ...}                 |
+|  HGET user:123 name  > "John"                                        |
+|  HGETALL user:123  > {name: "John", age: "30", ...}                 |
 |                                                                         |
-|  HINCRBY user:123 age 1  -> 31                                        |
+|  HINCRBY user:123 age 1  > 31                                        |
 |  HDEL user:123 email                                                  |
 |                                                                         |
 |  USE CASES:                                                            |
@@ -173,9 +173,9 @@ covers Redis internals, data structures, persistence, and best practices.
 |  GEOADD drivers -122.4094 37.7849 "driver2"                          |
 |                                                                         |
 |  GEORADIUS drivers -122.4194 37.7749 5 km                            |
-|  -> ["driver1", "driver2"]                                            |
+|  > ["driver1", "driver2"]                                            |
 |                                                                         |
-|  GEODIST drivers "driver1" "driver2" km  -> 1.23                     |
+|  GEODIST drivers "driver1" "driver2" km  > 1.23                     |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Find nearby (drivers, restaurants, stores)                       |
@@ -190,10 +190,10 @@ covers Redis internals, data structures, persistence, and best practices.
 |  Like Kafka, but simpler.                                             |
 |                                                                         |
 |  XADD mystream * name "John" action "login"                          |
-|  -> "1609459200000-0" (auto-generated ID)                             |
+|  > "1609459200000-0" (auto-generated ID)                             |
 |                                                                         |
-|  XREAD COUNT 10 STREAMS mystream 0  -> Read from beginning           |
-|  XREAD BLOCK 5000 STREAMS mystream $  -> Block, wait for new         |
+|  XREAD COUNT 10 STREAMS mystream 0  > Read from beginning           |
+|  XREAD BLOCK 5000 STREAMS mystream $  > Block, wait for new         |
 |                                                                         |
 |  Consumer groups for parallel processing:                            |
 |  XGROUP CREATE mystream mygroup $                                     |
@@ -238,14 +238,14 @@ covers Redis internals, data structures, persistence, and best practices.
 |  4. Child replaces old RDB file with new one                        |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Compact single file                                               |
-|  [x] Perfect for backups                                               |
-|  [x] Fast restart (just load file)                                    |
-|  [x] Minimal impact on performance                                    |
+|  Y Compact single file                                               |
+|  Y Perfect for backups                                               |
+|  Y Fast restart (just load file)                                    |
+|  Y Minimal impact on performance                                    |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Data loss between snapshots                                       |
-|  [ ] Fork can be slow with large datasets                             |
+|  X Data loss between snapshots                                       |
+|  X Fork can be slow with large datasets                             |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -274,17 +274,17 @@ covers Redis internals, data structures, persistence, and best practices.
 |                                                                         |
 |  AOF REWRITE:                                                          |
 |  * AOF grows large over time                                         |
-|  * Rewrite compacts (SET key 1, SET key 2 -> SET key 2)             |
+|  * Rewrite compacts (SET key 1, SET key 2 > SET key 2)             |
 |  * Automatic or manual (BGREWRITEAOF)                               |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Minimal data loss (1 second with everysec)                       |
-|  [x] Human-readable format                                             |
-|  [x] Can edit/repair manually                                          |
+|  Y Minimal data loss (1 second with everysec)                       |
+|  Y Human-readable format                                             |
+|  Y Can edit/repair manually                                          |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Larger files than RDB                                             |
-|  [ ] Slower restart (replay all commands)                             |
+|  X Larger files than RDB                                             |
+|  X Slower restart (replay all commands)                             |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -329,7 +329,7 @@ covers Redis internals, data structures, persistence, and best practices.
 |  val = val + 1                                                         |
 |  MULTI                                                                 |
 |  SET mykey val                                                         |
-|  EXEC  -> Returns nil if mykey changed since WATCH                   |
+|  EXEC  > Returns nil if mykey changed since WATCH                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -354,7 +354,7 @@ covers Redis internals, data structures, persistence, and best practices.
 |  return 1  -- Allowed                                                  |
 |                                                                         |
 |  EVAL script 1 rate:user:123 60 100                                   |
-|  -> Returns 1 if under 100 requests/minute, else 0                   |
+|  > Returns 1 if under 100 requests/minute, else 0                   |
 |                                                                         |
 |  EXAMPLE: Safe Lock Release                                           |
 |  ---------------------------                                            |
@@ -383,18 +383,18 @@ covers Redis internals, data structures, persistence, and best practices.
 |  =======================                                                |
 |                                                                         |
 |  Use colons as separators:                                            |
-|  [x] user:123:profile                                                  |
-|  [x] product:456:inventory                                             |
-|  [x] session:abc123                                                    |
+|  Y user:123:profile                                                  |
+|  Y product:456:inventory                                             |
+|  Y session:abc123                                                    |
 |                                                                         |
 |  Include type/namespace:                                              |
-|  [x] cache:user:123                                                    |
-|  [x] lock:order:789                                                    |
-|  [x] rate:api:key:xyz                                                  |
+|  Y cache:user:123                                                    |
+|  Y lock:order:789                                                    |
+|  Y rate:api:key:xyz                                                  |
 |                                                                         |
 |  Keep keys short (memory matters):                                   |
-|  [ ] this_is_a_very_long_key_name_that_wastes_memory                  |
-|  [x] u:123:p                                                           |
+|  X this_is_a_very_long_key_name_that_wastes_memory                  |
+|  Y u:123:p                                                           |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -409,7 +409,7 @@ covers Redis internals, data structures, persistence, and best practices.
 |     SET key value EX 3600  -- Always expire!                        |
 |                                                                         |
 |  3. Use OBJECT ENCODING to check                                     |
-|     OBJECT ENCODING mykey  -> "ziplist" (efficient)                  |
+|     OBJECT ENCODING mykey  > "ziplist" (efficient)                  |
 |                                                                         |
 |  4. Monitor memory                                                    |
 |     INFO memory                                                        |

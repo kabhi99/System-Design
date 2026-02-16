@@ -111,7 +111,7 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                    (cables, radio)                                      |
 |                                                                         |
 |  ENCAPSULATION (Sending):                                              |
-|  Each layer adds its header -> Data becomes larger                      |
+|  Each layer adds its header > Data becomes larger                      |
 |                                                                         |
 |  [App Data]                                                            |
 |  [Transport Header | App Data]                                         |
@@ -119,7 +119,7 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |  [Data Link Header | Network | Transport | App Data | Trailer]        |
 |                                                                         |
 |  DECAPSULATION (Receiving):                                            |
-|  Each layer removes its header -> Data becomes smaller                  |
+|  Each layer removes its header > Data becomes smaller                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -361,9 +361,9 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  NAT TYPES:                                                             |
 |                                                                         |
-|  SNAT (Source NAT): Private -> Public (outbound)                       |
-|  DNAT (Destination NAT): Public -> Private (inbound, port forwarding)  |
-|  PAT (Port Address Translation): Many private -> one public (common)   |
+|  SNAT (Source NAT): Private > Public (outbound)                       |
+|  DNAT (Destination NAT): Public > Private (inbound, port forwarding)  |
+|  PAT (Port Address Translation): Many private > one public (common)   |
 |                                                                         |
 |  WHY NAT?                                                               |
 |  * Conserves IPv4 addresses                                           |
@@ -520,7 +520,7 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |                                                                         |
 |  5. DEDUPLICATION                                                       |
 |     * Content-addressable storage (use hash as key)                  |
-|     * Same content -> same hash -> store once                          |
+|     * Same content > same hash > store once                          |
 |                                                                         |
 |  EXAMPLE: S3 Upload with Integrity                                      |
 |                                                                         |
@@ -530,7 +530,7 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |  Content-Length: 10485760                                              |
 |  [file data]                                                            |
 |                                                                         |
-|  S3 verifies checksums match -> rejects if corrupted                   |
+|  S3 verifies checksums match > rejects if corrupted                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -556,7 +556,7 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 |  |     (ARP Reply - unicast back to A)                            |  |
 |  |                                                                 |  |
 |  |  3. Computer A caches this mapping                             |  |
-|  |     (ARP Cache: 192.168.1.20 -> AA:BB:CC:DD:EE:FF)             |  |
+|  |     (ARP Cache: 192.168.1.20 > AA:BB:CC:DD:EE:FF)             |  |
 |  |                                                                 |  |
 |  |  4. Now A can send Ethernet frames to B                       |  |
 |  |                                                                 |  |

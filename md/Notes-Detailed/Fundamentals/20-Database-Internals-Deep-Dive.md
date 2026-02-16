@@ -122,7 +122,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  Page 2: [Row 8][Row 1][Row 15]                               |  |
 |  |  Page 3: [Row 7][Row 9][Row 2]                                |  |
 |  |                                                                 |  |
-|  |  Index stores: key -> (page_id, row_offset)                    |  |
+|  |  Index stores: key > (page_id, row_offset)                    |  |
 |  |                                                                 |  |
 |  |  PROS: Fast inserts (append anywhere)                         |  |
 |  |  CONS: Index lookup + heap lookup (two I/O operations)       |  |
@@ -140,10 +140,10 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                    /        |        \                         |  |
 |  |           [1-49]       [50-99]      [100-150]                  |  |
 |  |              v            v             v                       |  |
-|  |          [Full Row]  [Full Row]   [Full Row]  <- Data in leaves |  |
+|  |          [Full Row]  [Full Row]   [Full Row]  < Data in leaves |  |
 |  |                                                                 |  |
 |  |  Primary key lookup: Single B+Tree traversal                  |  |
-|  |  Secondary index: key -> primary_key -> data (double lookup)    |  |
+|  |  Secondary index: key > primary_key > data (double lookup)    |  |
 |  |                                                                 |  |
 |  |  PROS: Primary key lookups very fast                         |  |
 |  |  CONS: Sequential inserts ideal, random inserts cause splits |  |
@@ -215,8 +215,8 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                    ^                ^              ^            |  |
 |  |              Read full row    Read full row  Read full row     |  |
 |  |                                                                 |  |
-|  |  -> Reads ALL columns even though we only need age & city      |  |
-|  |  -> If row is 1KB, reads 1KB × N rows                         |  |
+|  |  > Reads ALL columns even though we only need age & city      |  |
+|  |  > If row is 1KB, reads 1KB × N rows                         |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -227,9 +227,9 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  age column:  [30][25][35]                                    |  |
 |  |  city column: [NYC][LA][Chicago]                              |  |
 |  |                                                                 |  |
-|  |  -> Only 2 columns, not all columns                            |  |
-|  |  -> Sequential reads (very fast)                               |  |
-|  |  -> Better compression (similar values together)               |  |
+|  |  > Only 2 columns, not all columns                            |  |
+|  |  > Sequential reads (very fast)                               |  |
+|  |  > Better compression (similar values together)               |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -328,7 +328,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |                    +--------------+                             |  |
-|  |                    | [30] [50]    |   <- Keys + Data at ALL     |  |
+|  |                    | [30] [50]    |   < Keys + Data at ALL     |  |
 |  |                    |  v     v     |     levels                  |  |
 |  |                    | data  data   |                             |  |
 |  |                    +--------------+                             |  |
@@ -338,8 +338,8 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |         data data     data data    data data                   |  |
 |  |                                                                 |  |
 |  |  LIMITATION: Data scattered across all levels                 |  |
-|  |  -> Range queries must traverse up and down                    |  |
-|  |  -> Less keys per node (data takes space)                      |  |
+|  |  > Range queries must traverse up and down                    |  |
+|  |  > Less keys per node (data takes space)                      |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -347,18 +347,18 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |                    +--------------+                             |  |
-|  |                    | [30] [50]    |  <- Internal: Keys ONLY     |  |
+|  |                    | [30] [50]    |  < Internal: Keys ONLY     |  |
 |  |                    | (no data)    |                             |  |
 |  |                    +--------------+                             |  |
 |  |               /          |          \                           |  |
-|  |         [10,20,30]   [35,45,50]   [60,70,80]  <- Leaf: Keys+Data|  |
+|  |         [10,20,30]   [35,45,50]   [60,70,80]  < Leaf: Keys+Data|  |
 |  |              |           |             |         (or pointers)  |  |
 |  |         <----+-----------+-------------+---->  Linked list!    |  |
 |  |                                                                 |  |
 |  |  ADVANTAGES:                                                    |  |
 |  |  * Internal nodes fit more keys (no data = higher fan-out)   |  |
 |  |  * All data at leaf level (predictable I/O)                  |  |
-|  |  * Leaves linked -> Range scans are sequential!               |  |
+|  |  * Leaves linked > Range scans are sequential!               |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -376,7 +376,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  Find key 45:                                                  |  |
 |  |                                                                 |  |
 |  |  1. Start at root [30, 60]                                    |  |
-|  |  2. 45 > 30 and 45 < 60 -> middle child                       |  |
+|  |  2. 45 > 30 and 45 < 60 > middle child                       |  |
 |  |  3. Child node [35, 45, 55]                                   |  |
 |  |  4. Follow to leaf, find 45                                   |  |
 |  |                                                                 |  |
@@ -391,10 +391,10 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                                                                 |  |
 |  |  1. Find leaf where 42 belongs                                |  |
 |  |  2. Insert in sorted order                                    |  |
-|  |  3. If leaf full -> SPLIT:                                     |  |
+|  |  3. If leaf full > SPLIT:                                     |  |
 |  |     * Split leaf into two                                     |  |
 |  |     * Promote middle key to parent                            |  |
-|  |     * If parent full -> split propagates up                   |  |
+|  |     * If parent full > split propagates up                   |  |
 |  |                                                                 |  |
 |  |  PAGE SPLITS: Expensive! Require multiple writes              |  |
 |  |                                                                 |  |
@@ -439,8 +439,8 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  BENEFIT: No index maintenance when rows move                |  |
 |  |                                                                 |  |
 |  |  Random UUID PK = DISASTER                                    |  |
-|  |  -> Inserts cause random page splits                          |  |
-|  |  -> Index size balloons                                        |  |
+|  |  > Inserts cause random page splits                          |  |
+|  |  > Index size balloons                                        |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -480,12 +480,12 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                                                                 |  |
 |  |  Inserts always go to rightmost leaf:                         |  |
 |  |                                                                 |  |
-|  |  [1,2,3] -> [4,5,6] -> [7,8,9] -> [10,11,12] <- NEW               |  |
+|  |  [1,2,3] > [4,5,6] > [7,8,9] > [10,11,12] < NEW               |  |
 |  |                                                                 |  |
-|  |  [x] Sequential writes (one page at a time)                     |  |
-|  |  [x] Pages fill up completely (no waste)                        |  |
-|  |  [x] Pages cached in memory (recently written)                  |  |
-|  |  [x] Minimal page splits                                        |  |
+|  |  Y Sequential writes (one page at a time)                     |  |
+|  |  Y Pages fill up completely (no waste)                        |  |
+|  |  Y Pages cached in memory (recently written)                  |  |
+|  |  Y Minimal page splits                                        |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -494,16 +494,16 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                                                                 |  |
 |  |  Inserts scattered randomly:                                   |  |
 |  |                                                                 |  |
-|  |  Insert UUID starting with "1..." -> page 3                    |  |
-|  |  Insert UUID starting with "a..." -> page 47                   |  |
-|  |  Insert UUID starting with "5..." -> page 21                   |  |
-|  |  Insert UUID starting with "f..." -> page 89                   |  |
+|  |  Insert UUID starting with "1..." > page 3                    |  |
+|  |  Insert UUID starting with "a..." > page 47                   |  |
+|  |  Insert UUID starting with "5..." > page 21                   |  |
+|  |  Insert UUID starting with "f..." > page 89                   |  |
 |  |                                                                 |  |
-|  |  [ ] Random writes (different page each time)                   |  |
-|  |  [ ] Every insert needs different page loaded                   |  |
-|  |  [ ] More page splits (inserting into full pages)              |  |
-|  |  [ ] Index fragmentation (50% page fill typical)               |  |
-|  |  [ ] Terrible cache hit rate                                    |  |
+|  |  X Random writes (different page each time)                   |  |
+|  |  X Every insert needs different page loaded                   |  |
+|  |  X More page splits (inserting into full pages)              |  |
+|  |  X Index fragmentation (50% page fill typical)               |  |
+|  |  X Terrible cache hit rate                                    |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -624,8 +624,8 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  Covering index: CREATE INDEX idx ON users(email) INCLUDE (name);    |
 |  Query: SELECT email, name FROM users WHERE email = '...'            |
 |                                                                         |
-|  -> Answered entirely from index pages                                |
-|  -> FASTEST option when applicable                                    |
+|  > Answered entirely from index pages                                |
+|  > FASTEST option when applicable                                    |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -655,7 +655,7 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  * WHERE status = 'active' AND age > 25                              |
 |                                                                         |
 |  BITMAP AND/OR: Can combine multiple indexes                         |
-|  -> Bitmap on idx_status AND bitmap on idx_age                       |
+|  > Bitmap on idx_status AND bitmap on idx_age                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -762,9 +762,9 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |                                                                 |  |
 |  |  Example: SELECT ... FOR SHARE;                               |  |
 |  |                                                                 |  |
-|  |  Txn A: S-Lock on row 1 [x]                                     |  |
-|  |  Txn B: S-Lock on row 1 [x] (allowed, both reading)            |  |
-|  |  Txn C: X-Lock on row 1 [ ] (blocked, waiting)                 |  |
+|  |  Txn A: S-Lock on row 1 Y                                     |  |
+|  |  Txn B: S-Lock on row 1 Y (allowed, both reading)            |  |
+|  |  Txn C: X-Lock on row 1 X (blocked, waiting)                 |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -779,9 +779,9 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |  Example: SELECT ... FOR UPDATE;                              |  |
 |  |           UPDATE / DELETE statements                          |  |
 |  |                                                                 |  |
-|  |  Txn A: X-Lock on row 1 [x]                                     |  |
-|  |  Txn B: S-Lock on row 1 [ ] (blocked)                          |  |
-|  |  Txn C: X-Lock on row 1 [ ] (blocked)                          |  |
+|  |  Txn A: X-Lock on row 1 Y                                     |  |
+|  |  Txn B: S-Lock on row 1 X (blocked)                          |  |
+|  |  Txn C: X-Lock on row 1 X (blocked)                          |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -791,10 +791,10 @@ interviews: storage engines, B+Trees, query planning, and concurrency control.
 |  |              +-------------+-------------+                    |   |
 |  |              |   Shared    |  Exclusive  |                    |   |
 |  |  +-----------+-------------+-------------+                    |   |
-|  |  |  Shared   |   [x] Grant   |   [ ] Wait   |                    |   |
+|  |  |  Shared   |   Y Grant   |   X Wait   |                    |   |
 |  |  |  Held     |             |             |                    |   |
 |  |  +-----------+-------------+-------------+                    |   |
-|  |  | Exclusive |   [ ] Wait   |   [ ] Wait   |                    |   |
+|  |  | Exclusive |   X Wait   |   X Wait   |                    |   |
 |  |  |  Held     |             |             |                    |   |
 |  |  +-----------+-------------+-------------+                    |   |
 |  +---------------------------------------------------------------+   |
@@ -815,7 +815,7 @@ DEADLOCKS
 |  |  Time    Transaction A              Transaction B              |  |
 |  |  ----    -------------              -------------              |  |
 |  |  T1      BEGIN                      BEGIN                      |  |
-|  |  T2      UPDATE row 1 (X-Lock) [x]    UPDATE row 2 (X-Lock) [x]   |  |
+|  |  T2      UPDATE row 1 (X-Lock) Y    UPDATE row 2 (X-Lock) Y   |  |
 |  |  T3      UPDATE row 2 ... WAIT      UPDATE row 1 ... WAIT     |  |
 |  |          ^ waiting for B            ^ waiting for A            |  |
 |  |                                                                 |  |
@@ -981,7 +981,7 @@ DEADLOCKS
 |  |  For SSD (effective spindle = 0):                             |  |
 |  |  connections ≈ core_count * 2                                  |  |
 |  |                                                                 |  |
-|  |  Example: 4 core server -> ~8-10 connections optimal           |  |
+|  |  Example: 4 core server > ~8-10 connections optimal           |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -1078,11 +1078,11 @@ DEADLOCKS
 |  |  * Writes: OK (not blocked!)                                  |  |
 |  |                                                                 |  |
 |  |  TRADE-OFFS:                                                    |  |
-|  |  [x] No write blocking                                          |  |
-|  |  [ ] Takes 2-3x longer                                          |  |
-|  |  [ ] More I/O                                                   |  |
-|  |  [ ] Cannot run in transaction                                  |  |
-|  |  [ ] If fails, leaves invalid index (must drop manually)       |  |
+|  |  Y No write blocking                                          |  |
+|  |  X Takes 2-3x longer                                          |  |
+|  |  X More I/O                                                   |  |
+|  |  X Cannot run in transaction                                  |  |
+|  |  X If fails, leaves invalid index (must drop manually)       |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |

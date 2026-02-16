@@ -15,7 +15,7 @@ SECTION 1.1: PROBLEM STATEMENT
 *|  WHY DISTRIBUTED TRACING?                                              |*
 *|                                                                         |*
 *|  In a microservices architecture:                                      |*
-*|  * Single request -> touches 10-100+ services                          |*
+*|  * Single request > touches 10-100+ services                          |*
 *|  * Each service has its own logs                                       |*
 *|  * Debugging is like finding a needle in a haystack                   |*
 *|                                                                         |*
@@ -28,7 +28,7 @@ SECTION 1.1: PROBLEM STATEMENT
 *|  Without tracing:                                                      |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Request -> API Gateway -> Order Service -> Payment Service       |  |*
+*|  |  Request > API Gateway > Order Service > Payment Service       |  |*
 *|  |              |               |                |                 |  |*
 *|  |              |               |                +-- Error here?   |  |*
 *|  |              |               +-- Or here?                       |  |*
@@ -51,9 +51,9 @@ SECTION 1.1: PROBLEM STATEMENT
 *|  |  +----------------------------------------------------------+  |  |*
 *|  |  | API Gateway [span-1]                                     |  |  |*
 *|  |  | +-- Order Service [span-2]                              |  |  |*
-*|  |  | |   +-- Inventory Check [span-3]    [x] 45ms             |  |  |*
-*|  |  | |   +-- Payment Service [span-4]   [ ] ERROR - Timeout  |  |  |*
-*|  |  | |   |   +-- Stripe API [span-5]    [ ] 30s timeout       |  |  |*
+*|  |  | |   +-- Inventory Check [span-3]    Y 45ms             |  |  |*
+*|  |  | |   +-- Payment Service [span-4]   X ERROR - Timeout  |  |  |*
+*|  |  | |   |   +-- Stripe API [span-5]    X 30s timeout       |  |  |*
 *|  |  | |   +-- (cancelled)                                     |  |  |*
 *|  |  | +-- 502 Bad Gateway                                      |  |  |*
 *|  |  +----------------------------------------------------------+  |  |*
@@ -209,7 +209,7 @@ SECTION 1.4: SCALE ESTIMATION
 *|                                                                         |*
 *|  NETWORK BANDWIDTH                                                     |*
 *|                                                                         |*
-*|  Spans from services -> Collectors:                                    |*
+*|  Spans from services > Collectors:                                    |*
 *|  200,000 spans/s × 500 bytes = 100 MB/s                              |*
 *|                                                                         |*
 *|  With protocol overhead and retries: ~150 MB/s                       |*
@@ -298,11 +298,11 @@ SECTION 1.5: CORE CONCEPTS
 *|                                                                         |*
 *|  1. CHILD_OF (most common)                                            |*
 *|     Parent waits for child to complete                                |*
-*|     Example: HTTP handler -> Database query                           |*
+*|     Example: HTTP handler > Database query                           |*
 *|                                                                         |*
 *|  2. FOLLOWS_FROM                                                       |*
 *|     Parent does not wait (async)                                      |*
-*|     Example: Request -> Queue message -> Async processor               |*
+*|     Example: Request > Queue message > Async processor               |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*

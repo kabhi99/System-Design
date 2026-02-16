@@ -54,14 +54,14 @@ distributed systems and microservices architectures.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Simple programming model                                           |
-|  [x] Easy to understand and debug                                       |
-|  [x] Immediate error feedback                                           |
+|  Y Simple programming model                                           |
+|  Y Easy to understand and debug                                       |
+|  Y Immediate error feedback                                           |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Thread blocked during request                                      |
-|  [ ] Cascading latency (A->B->C->D adds up)                               |
-|  [ ] Poor resource utilization                                          |
+|  X Thread blocked during request                                      |
+|  X Cascading latency (A>B>C>D adds up)                               |
+|  X Poor resource utilization                                          |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -85,14 +85,14 @@ distributed systems and microservices architectures.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Better resource utilization                                        |
-|  [x] Can handle many concurrent requests                                |
-|  [x] Non-blocking I/O                                                   |
+|  Y Better resource utilization                                        |
+|  Y Can handle many concurrent requests                                |
+|  Y Non-blocking I/O                                                   |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] More complex programming model                                     |
-|  [ ] Callback hell (if not using async/await)                          |
-|  [ ] Harder to debug                                                    |
+|  X More complex programming model                                     |
+|  X Callback hell (if not using async/await)                          |
+|  X Harder to debug                                                    |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -287,7 +287,7 @@ distributed systems and microservices architectures.
 |                                                                         |
 |  3. SERVER PUSH                                                        |
 |     Server can push resources before client requests                  |
-|     Request HTML -> Server pushes CSS, JS proactively                 |
+|     Request HTML > Server pushes CSS, JS proactively                 |
 |                                                                         |
 |  4. STREAM PRIORITIZATION                                              |
 |     Mark some streams as higher priority                              |
@@ -491,14 +491,14 @@ distributed systems and microservices architectures.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Simple to implement                                                |
-|  [x] Works with all backends                                            |
-|  [x] Easy load balancing (round-robin connections)                      |
+|  Y Simple to implement                                                |
+|  Y Works with all backends                                            |
+|  Y Easy load balancing (round-robin connections)                      |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Many TCP connections                                               |
-|  [ ] Connection overhead                                                |
-|  [ ] HOL blocking on backend connections                                |
+|  X Many TCP connections                                               |
+|  X Connection overhead                                                |
+|  X HOL blocking on backend connections                                |
 |                                                                         |
 |  EXAMPLE: Nginx, HAProxy (default mode)                               |
 |                                                                         |
@@ -528,14 +528,14 @@ distributed systems and microservices architectures.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                  |
-|  [x] Fewer connections (1 per backend)                                  |
-|  [x] Better resource utilization                                        |
-|  [x] Multiplexing benefits end-to-end                                   |
+|  Y Fewer connections (1 per backend)                                  |
+|  Y Better resource utilization                                        |
+|  Y Multiplexing benefits end-to-end                                   |
 |                                                                         |
 |  CONS:                                                                  |
-|  [ ] Load balancing challenge (single conn = same backend)              |
-|  [ ] TCP HOL blocking still exists                                      |
-|  [ ] Backend must support HTTP/2                                        |
+|  X Load balancing challenge (single conn = same backend)              |
+|  X TCP HOL blocking still exists                                      |
+|  X Backend must support HTTP/2                                        |
 |                                                                         |
 |  EXAMPLE: Envoy, gRPC load balancing                                  |
 |                                                                         |
@@ -785,19 +785,19 @@ distributed systems and microservices architectures.
 |  ADVANTAGES                                                             |
 |  ==========                                                             |
 |                                                                         |
-|  [x] SEPARATION OF CONCERNS                                              |
+|  Y SEPARATION OF CONCERNS                                              |
 |    Application code stays clean, focuses on business logic            |
 |                                                                         |
-|  [x] LANGUAGE AGNOSTIC                                                   |
+|  Y LANGUAGE AGNOSTIC                                                   |
 |    Same sidecar works with Java, Go, Python, Node apps                |
 |                                                                         |
-|  [x] INDEPENDENT UPDATES                                                 |
+|  Y INDEPENDENT UPDATES                                                 |
 |    Update sidecar without changing application                        |
 |                                                                         |
-|  [x] CONSISTENT BEHAVIOR                                                 |
+|  Y CONSISTENT BEHAVIOR                                                 |
 |    All services get same networking features                          |
 |                                                                         |
-|  [x] NO CODE CHANGES                                                     |
+|  Y NO CODE CHANGES                                                     |
 |    App talks to localhost, doesn't know about mesh                   |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -805,19 +805,19 @@ distributed systems and microservices architectures.
 |  DISADVANTAGES                                                          |
 |  =============                                                          |
 |                                                                         |
-|  [ ] RESOURCE OVERHEAD                                                   |
+|  X RESOURCE OVERHEAD                                                   |
 |    Each pod needs extra memory/CPU for sidecar                        |
 |    Envoy: ~50-100MB RAM, some CPU                                     |
 |                                                                         |
-|  [ ] LATENCY OVERHEAD                                                    |
+|  X LATENCY OVERHEAD                                                    |
 |    Extra hop through sidecar (~1ms typically)                         |
 |    localhost but still process boundary                               |
 |                                                                         |
-|  [ ] COMPLEXITY                                                          |
+|  X COMPLEXITY                                                          |
 |    More moving parts to manage                                        |
 |    Debugging requires understanding mesh                              |
 |                                                                         |
-|  [ ] LIFECYCLE MANAGEMENT                                                |
+|  X LIFECYCLE MANAGEMENT                                                |
 |    Sidecar must start before app, stop after                         |
 |    Race conditions possible                                           |
 |                                                                         |
@@ -842,7 +842,7 @@ distributed systems and microservices architectures.
 |  |                                                                |   |
 |  |  Long Polling      Pull         Medium      Fallback RT       |   |
 |  |                                                                |   |
-|  |  SSE               Push         Low         Server->Client     |   |
+|  |  SSE               Push         Low         Server>Client     |   |
 |  |                    (1-way)                  notifications     |   |
 |  |                                                                |   |
 |  |  WebSocket         Bidir        Low         Real-time chat,   |   |

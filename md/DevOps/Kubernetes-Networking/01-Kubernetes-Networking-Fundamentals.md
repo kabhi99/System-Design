@@ -144,7 +144,7 @@ STEP 2: Create app containers with shared namespace
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
 |  |       +------------+                                           |   |
-|  |       |   PAUSE    | <- Holds network namespace                |   |
+|  |       |   PAUSE    | < Holds network namespace                |   |
 |  |       | container  |   Extremely lightweight                  |   |
 |  |       |            |   Runs: /pause (or equivalent)           |   |
 |  |       +------+-----+                                           |   |
@@ -235,9 +235,9 @@ Kubernetes requires a "flat" network where all pods can reach all pods:
 |               +-------------+-------------------+                      |
 |                             |                                          |
 |  REQUIREMENTS:                                                         |
-|  [x] Pod A (10.0.1.2) can reach Pod D (10.0.2.3) directly              |
-|  [x] No NAT - Pod D sees source IP as 10.0.1.2                         |
-|  [x] All pods have routable IPs within cluster                         |
+|  Y Pod A (10.0.1.2) can reach Pod D (10.0.2.3) directly              |
+|  Y No NAT - Pod D sees source IP as 10.0.1.2                         |
+|  Y All pods have routable IPs within cluster                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -425,8 +425,8 @@ Let's visualize the complete networking model:
 |  +-------------------------------------------------------------------+ |
 |  |  INGRESS CONTROLLER                                               | |
 |  |  Routes HTTP/HTTPS traffic to services                           | |
-|  |  * Path-based routing (/api -> api-service)                       | |
-|  |  * Host-based routing (api.example.com -> api-service)           | |
+|  |  * Path-based routing (/api > api-service)                       | |
+|  |  * Host-based routing (api.example.com > api-service)           | |
 |  |  * TLS termination                                               | |
 |  +----------------------------+--------------------------------------+ |
 |                               |                                        |
@@ -501,9 +501,9 @@ A typical Kubernetes cluster has THREE distinct IP ranges:
 |                                                                         |
 |  THESE RANGES MUST NOT OVERLAP!                                       |
 |                                                                         |
-|  Node IPs:    192.168.1.0/24    [x]                                     |
-|  Pod IPs:     10.244.0.0/16     [x] (no overlap)                        |
-|  Service IPs: 10.96.0.0/12      [x] (no overlap)                        |
+|  Node IPs:    192.168.1.0/24    Y                                     |
+|  Pod IPs:     10.244.0.0/16     Y (no overlap)                        |
+|  Service IPs: 10.96.0.0/12      Y (no overlap)                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -581,7 +581,7 @@ DNS provides stable names that resolve to current pod IPs.
 
 Every Kubernetes cluster runs CoreDNS, which provides:
 
-- Service discovery (service names -> IPs)
+- Service discovery (service names > IPs)
 - Pod DNS records
 - External DNS forwarding
 
@@ -602,7 +602,7 @@ Every pod gets DNS automatically configured:
 # Inside a pod:
 cat /etc/resolv.conf
 
-nameserver 10.96.0.10          <- CoreDNS service IP
+nameserver 10.96.0.10          < CoreDNS service IP
 search default.svc.cluster.local svc.cluster.local cluster.local
 options ndots:5
 
@@ -663,7 +663,7 @@ kind: Service
 metadata:
   name: mysql
 spec:
-  clusterIP: None  # <- This makes it headless
+  clusterIP: None  # < This makes it headless
   selector:
     app: mysql
   ports:
@@ -678,9 +678,9 @@ dig mysql.default.svc.cluster.local
 # mysql.default.svc.cluster.local. IN A 10.244.2.7
 
 # Individual pods get DNS names too:
-# mysql-0.mysql.default.svc.cluster.local -> 10.244.0.5
-# mysql-1.mysql.default.svc.cluster.local -> 10.244.1.3
-# mysql-2.mysql.default.svc.cluster.local -> 10.244.2.7
+# mysql-0.mysql.default.svc.cluster.local > 10.244.0.5
+# mysql-1.mysql.default.svc.cluster.local > 10.244.1.3
+# mysql-2.mysql.default.svc.cluster.local > 10.244.2.7
 ```
 
 ## CHAPTER SUMMARY

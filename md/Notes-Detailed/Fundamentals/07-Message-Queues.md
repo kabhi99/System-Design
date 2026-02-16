@@ -67,11 +67,11 @@ distributed applications.
 |  +------------------------------------------------------------------+ |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Fast response to user                                             |
-|  [x] Services work independently                                       |
-|  [x] Queue buffers traffic spikes                                      |
-|  [x] Failed service can retry later                                    |
-|  [x] Loose coupling                                                    |
+|  Y Fast response to user                                             |
+|  Y Services work independently                                       |
+|  Y Queue buffers traffic spikes                                      |
+|  Y Failed service can retry later                                    |
+|  Y Loose coupling                                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -210,7 +210,7 @@ distributed applications.
 |                        |                |                              |
 |                        +-- Message deleted before confirmed            |
 |                                         |                              |
-|                                      Lost! [ ]                          |
+|                                      Lost! X                          |
 |                                                                         |
 |  HOW: Fire and forget, no acknowledgment                             |
 |  USE CASE: Metrics, logs (where losing some is okay)                 |
@@ -296,7 +296,7 @@ distributed applications.
 |                                                                         |
 |  Producer sends: M1, M2, M3                                           |
 |  Consumer A gets M1 (takes 5 seconds)                                 |
-|  Consumer B gets M2 (takes 1 second) -> finishes first!               |
+|  Consumer B gets M2 (takes 1 second) > finishes first!               |
 |  Consumer C gets M3 (takes 2 seconds)                                 |
 |                                                                         |
 |  Processing order: M2, M3, M1 (not M1, M2, M3!)                       |
@@ -305,7 +305,7 @@ distributed applications.
 |                                                                         |
 |  SOLUTION 1: SINGLE CONSUMER                                          |
 |  ----------------------------                                           |
-|  Only one consumer -> guaranteed order                                 |
+|  Only one consumer > guaranteed order                                 |
 |  But: No parallelism, can't scale                                    |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -321,7 +321,7 @@ distributed applications.
 |  |  +--------------------+  +--------------------+               |  |
 |  |  |    Partition 0     |  |    Partition 1     |               |  |
 |  |  |  [User A orders]   |  |  [User B orders]   |               |  |
-|  |  |  M1 -> M3 -> M5      |  |  M2 -> M4 -> M6      |               |  |
+|  |  |  M1 > M3 > M5      |  |  M2 > M4 > M6      |               |  |
 |  |  |      v             |  |      v             |               |  |
 |  |  |  Consumer 1        |  |  Consumer 2        |               |  |
 |  |  |  (processes in     |  |  (processes in     |               |  |
@@ -329,8 +329,8 @@ distributed applications.
 |  |  +--------------------+  +--------------------+               |  |
 |  |                                                                 |  |
 |  |  Partition key: user_id                                        |  |
-|  |  All orders for User A -> Partition 0 -> Same consumer          |  |
-|  |  All orders for User B -> Partition 1 -> Same consumer          |  |
+|  |  All orders for User A > Partition 0 > Same consumer          |  |
+|  |  All orders for User B > Partition 1 > Same consumer          |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -349,9 +349,9 @@ distributed applications.
 |                                                                         |
 |  Consumer:                                                             |
 |  - Expected: 5                                                        |
-|  - Received: 7 -> buffer, wait for 5 and 6                            |
-|  - Received: 5 -> process                                             |
-|  - Received: 6 -> process, then process buffered 7                    |
+|  - Received: 7 > buffer, wait for 5 and 6                            |
+|  - Received: 5 > process                                             |
+|  - Received: 6 > process, then process buffered 7                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -385,11 +385,11 @@ distributed applications.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  KEY FEATURES:                                                         |
-|  [x] Very high throughput (millions of messages/sec)                   |
-|  [x] Durable (messages persisted to disk)                              |
-|  [x] Scalable (add partitions and brokers)                            |
-|  [x] Message replay (reprocess historical data)                        |
-|  [x] Exactly-once semantics (with transactions)                        |
+|  Y Very high throughput (millions of messages/sec)                   |
+|  Y Durable (messages persisted to disk)                              |
+|  Y Scalable (add partitions and brokers)                            |
+|  Y Message replay (reprocess historical data)                        |
+|  Y Exactly-once semantics (with transactions)                        |
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Event sourcing                                                     |
@@ -405,11 +405,11 @@ distributed applications.
 |  Traditional message broker. Easy to use.                             |
 |                                                                         |
 |  KEY FEATURES:                                                         |
-|  [x] Multiple protocols (AMQP, MQTT, STOMP)                            |
-|  [x] Flexible routing (exchanges, bindings)                            |
-|  [x] Message acknowledgment                                            |
-|  [x] Dead letter queues                                                |
-|  [x] Plugins ecosystem                                                 |
+|  Y Multiple protocols (AMQP, MQTT, STOMP)                            |
+|  Y Flexible routing (exchanges, bindings)                            |
+|  Y Message acknowledgment                                            |
+|  Y Dead letter queues                                                |
+|  Y Plugins ecosystem                                                 |
 |                                                                         |
 |  ROUTING TYPES:                                                        |
 |  * Direct: Route to specific queue                                   |
@@ -430,12 +430,12 @@ distributed applications.
 |  Fully managed queue service.                                         |
 |                                                                         |
 |  KEY FEATURES:                                                         |
-|  [x] Fully managed (no infrastructure)                                 |
-|  [x] Automatic scaling                                                 |
-|  [x] High availability                                                 |
-|  [x] Standard and FIFO queues                                          |
-|  [x] Dead letter queues                                                |
-|  [x] Long polling                                                      |
+|  Y Fully managed (no infrastructure)                                 |
+|  Y Automatic scaling                                                 |
+|  Y High availability                                                 |
+|  Y Standard and FIFO queues                                          |
+|  Y Dead letter queues                                                |
+|  Y Long polling                                                      |
 |                                                                         |
 |  STANDARD vs FIFO:                                                     |
 |  * Standard: At-least-once, unlimited throughput                    |
@@ -468,11 +468,11 @@ distributed applications.
 |  * AWS MSK, Confluent Cloud offer managed Kafka                       |
 |                                                                         |
 |  QUICK DECISION:                                                       |
-|  * Need message replay? -> Kafka                                       |
-|  * Need complex routing? -> RabbitMQ                                   |
-|  * On AWS, want managed? -> SQS                                        |
-|  * High throughput streaming? -> Kafka                                 |
-|  * Simple task queue? -> RabbitMQ or SQS                              |
+|  * Need message replay? > Kafka                                       |
+|  * Need complex routing? > RabbitMQ                                   |
+|  * On AWS, want managed? > SQS                                        |
+|  * High throughput streaming? > Kafka                                 |
+|  * Simple task queue? > RabbitMQ or SQS                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -508,9 +508,9 @@ distributed applications.
 |  Ensure database update and message publish happen atomically.        |
 |                                                                         |
 |  PROBLEM:                                                              |
-|  1. Update database  [x]                                               |
-|  2. Publish message  [ ] (fails)                                       |
-|  -> Database updated but message never sent!                          |
+|  1. Update database  Y                                               |
+|  2. Publish message  X (fails)                                       |
+|  > Database updated but message never sent!                          |
 |                                                                         |
 |  SOLUTION:                                                             |
 |  +-----------------------------------------------------------------+  |
@@ -533,7 +533,7 @@ distributed applications.
 |  Distributed transaction using compensating actions.                  |
 |  (Covered in detail in Distributed Transactions chapter)             |
 |                                                                         |
-|  Order created -> Inventory reserved -> Payment charged                 |
+|  Order created > Inventory reserved > Payment charged                 |
 |       v               v                    v                          |
 |  (If payment fails, compensate: release inventory)                   |
 |                                                                         |
@@ -577,17 +577,17 @@ distributed applications.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Complete audit trail                                              |
-|  [x] Temporal queries ("balance at 3pm yesterday")                    |
-|  [x] Debug by replaying events                                        |
-|  [x] Rebuild state from scratch                                       |
-|  [x] Event replay for new features                                    |
+|  Y Complete audit trail                                              |
+|  Y Temporal queries ("balance at 3pm yesterday")                    |
+|  Y Debug by replaying events                                        |
+|  Y Rebuild state from scratch                                       |
+|  Y Event replay for new features                                    |
 |                                                                         |
 |  CHALLENGES:                                                           |
-|  [ ] Replay can be slow (use snapshots)                               |
-|  [ ] Schema evolution (event versioning)                              |
-|  [ ] Eventual consistency                                             |
-|  [ ] More complex queries                                             |
+|  X Replay can be slow (use snapshots)                               |
+|  X Schema evolution (event versioning)                              |
+|  X Eventual consistency                                             |
+|  X More complex queries                                             |
 |                                                                         |
 |  SNAPSHOTS:                                                            |
 |  Periodically save current state to avoid full replay                |
@@ -654,10 +654,10 @@ distributed applications.
 |  * Eventual consistency (not immediate)                              |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Optimize reads and writes independently                          |
-|  [x] Scale read and write separately                                  |
-|  [x] Simpler models (each does one thing)                             |
-|  [x] Different storage tech for different needs                       |
+|  Y Optimize reads and writes independently                          |
+|  Y Scale read and write separately                                  |
+|  Y Simpler models (each does one thing)                             |
+|  Y Different storage tech for different needs                       |
 |                                                                         |
 |  WHEN TO USE:                                                          |
 |  * Read and write patterns are very different                        |
@@ -684,7 +684,7 @@ distributed applications.
 |  |                         GROWING!                                |  |
 |  |                    [][][][][][][][][]...                       |  |
 |  |                                                                 |  |
-|  |  Queue grows -> Memory exhausted -> System crash!               |  |
+|  |  Queue grows > Memory exhausted > System crash!               |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -694,7 +694,7 @@ distributed applications.
 |  --------------------                                                   |
 |  When queue full, reject new messages.                               |
 |                                                                         |
-|  Producer receives error -> Can retry or give up                      |
+|  Producer receives error > Can retry or give up                      |
 |                                                                         |
 |  Good for: Non-critical data (metrics, logs)                        |
 |                                                                         |

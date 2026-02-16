@@ -348,10 +348,10 @@ SECTION 5: COMPONENT DEEP DIVE
 *|  |  2. Batch notifications by platform (iOS/Android)            |  |*
 *|  |  3. Send to APNs (iOS) or FCM (Android)                      |  |*
 *|  |  4. Handle responses:                                         |  |*
-*|  |     * Success -> Update status                                |  |*
-*|  |     * Invalid token -> Remove token from user profile        |  |*
-*|  |     * Rate limited -> Retry with backoff                     |  |*
-*|  |     * Server error -> Retry with backoff                     |  |*
+*|  |     * Success > Update status                                |  |*
+*|  |     * Invalid token > Remove token from user profile        |  |*
+*|  |     * Rate limited > Retry with backoff                     |  |*
+*|  |     * Server error > Retry with backoff                     |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -383,7 +383,7 @@ SECTION 5: COMPONENT DEEP DIVE
 *|  |                                                                 |  |*
 *|  |  1. Consume from Kafka                                        |  |*
 *|  |  2. Store in database (Cassandra/Redis)                      |  |*
-*|  |  3. If user online -> push via WebSocket                     |  |*
+*|  |  3. If user online > push via WebSocket                     |  |*
 *|  |  4. Update unread count                                      |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -727,11 +727,11 @@ SECTION 8: PUSH NOTIFICATION DEEP DIVE
 *|  |                                                                 |  |*
 *|  |  Token lifecycle:                                              |  |*
 *|  |                                                                 |  |*
-*|  |  1. App installed -> Register token with APNs/FCM              |  |*
+*|  |  1. App installed > Register token with APNs/FCM              |  |*
 *|  |  2. Send token to your server                                 |  |*
 *|  |  3. Store: (user_id, token, platform, timestamp)             |  |*
 *|  |  4. Token can change! (app update, reinstall)                |  |*
-*|  |  5. On push failure "invalid token" -> delete from DB         |  |*
+*|  |  5. On push failure "invalid token" > delete from DB         |  |*
 *|  |                                                                 |  |*
 *|  |  Multiple devices per user:                                    |  |*
 *|  |  * User may have iPhone + iPad + Android                     |  |*
@@ -786,7 +786,7 @@ SECTION 9: RELIABILITY & RETRY HANDLING
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
-*|  |  |  Main Queue -> Worker -> [Fail] -> Retry Queue              ||  |*
+*|  |  |  Main Queue > Worker > [Fail] > Retry Queue              ||  |*
 *|  |  |                                     |                     ||  |*
 *|  |  |                                     | (after max retries) ||  |*
 *|  |  |                                     v                     ||  |*
@@ -967,7 +967,7 @@ SECTION 11: ANALYTICS & TRACKING
 *|  |  |  { notification_id, link_url, timestamp }               |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
-*|  |  All events -> Kafka -> Analytics DB (ClickHouse/BigQuery)      |  |*
+*|  |  All events > Kafka > Analytics DB (ClickHouse/BigQuery)      |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -1159,14 +1159,14 @@ SECTION 13: INTERVIEW QUICK REFERENCE
 *|     * Different SLAs and costs per channel                           |*
 *|                                                                         |*
 *|  2. ARCHITECTURE                                                       |*
-*|     * API -> Kafka (priority queues) -> Channel Workers -> Providers   |*
+*|     * API > Kafka (priority queues) > Channel Workers > Providers   |*
 *|     * Separate topics by priority and channel                        |*
 *|                                                                         |*
 *|  3. RELIABILITY                                                        |*
 *|     * At-least-once delivery via Kafka                               |*
 *|     * Retry with exponential backoff                                 |*
 *|     * Dead Letter Queue for failed messages                          |*
-*|     * Provider fallback (Twilio -> Nexmo -> SNS)                      |*
+*|     * Provider fallback (Twilio > Nexmo > SNS)                      |*
 *|                                                                         |*
 *|  4. USER PREFERENCES                                                   |*
 *|     * Opt-in/out per channel and category                           |*
@@ -1212,8 +1212,8 @@ SECTION 13: INTERVIEW QUICK REFERENCE
 *|                                                                         |*
 *|  ARCHITECTURE SUMMARY                                                  |*
 *|                                                                         |*
-*|  Internal Services -> Notification API -> Kafka (priority queues)     |*
-*|      -> Channel Workers -> External Providers (APNs, FCM, Twilio)    |*
+*|  Internal Services > Notification API > Kafka (priority queues)     |*
+*|      > Channel Workers > External Providers (APNs, FCM, Twilio)    |*
 *|                                                                         |*
 *|  Key Components:                                                       |*
 *|  * Notification API: Validation, preferences, templates, enqueue   |*

@@ -52,7 +52,7 @@ SECTION 4.1: WHY SAMPLING?
 *|  HEAD-BASED SAMPLING:                                                  |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Request arrives -> Decide NOW -> All downstream follows        |  |*
+*|  |  Request arrives > Decide NOW > All downstream follows        |  |*
 *|  |                                                                 |  |*
 *|  |  Decision at: Root span creation                               |  |*
 *|  |  Propagated via: Trace flags in context                       |  |*
@@ -72,7 +72,7 @@ SECTION 4.1: WHY SAMPLING?
 *|  TAIL-BASED SAMPLING:                                                  |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Collect all spans -> Wait for trace complete -> Then decide   |  |*
+*|  |  Collect all spans > Wait for trace complete > Then decide   |  |*
 *|  |                                                                 |  |*
 *|  |  Decision at: After all spans received                        |  |*
 *|  |  Requires: Centralized collector                              |  |*
@@ -108,7 +108,7 @@ SECTION 4.2: SAMPLING STRATEGIES
 *|  |      threshold = rate * 10000  # 1% = 100                     |  |*
 *|  |      return hash_value < threshold                            |  |*
 *|  |                                                                 |  |*
-*|  |  # Same trace_id -> same decision in all services             |  |*
+*|  |  # Same trace_id > same decision in all services             |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -179,9 +179,9 @@ SECTION 4.2: SAMPLING STRATEGIES
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Traffic: LOW (100 req/s)   -> Sample 10%                      |  |*
-*|  |  Traffic: MEDIUM (1K req/s) -> Sample 1%                       |  |*
-*|  |  Traffic: HIGH (10K req/s)  -> Sample 0.1%                     |  |*
+*|  |  Traffic: LOW (100 req/s)   > Sample 10%                      |  |*
+*|  |  Traffic: MEDIUM (1K req/s) > Sample 1%                       |  |*
+*|  |  Traffic: HIGH (10K req/s)  > Sample 0.1%                     |  |*
 *|  |                                                                 |  |*
 *|  |  Result: Roughly constant volume of sampled traces            |  |*
 *|  |                                                                 |  |*
@@ -536,10 +536,10 @@ SECTION 4.5: TAIL-BASED SAMPLING
 *|  |  |     * Expected span count reached                     |   |  |*
 *|  |  |                                                         |   |  |*
 *|  |  |  3. EVALUATE SAMPLING POLICIES                         |   |  |*
-*|  |  |     * Has error? -> SAMPLE                             |   |  |*
-*|  |  |     * Duration > 5s? -> SAMPLE                         |   |  |*
-*|  |  |     * Status code 5xx? -> SAMPLE                       |   |  |*
-*|  |  |     * Random 1%? -> SAMPLE                             |   |  |*
+*|  |  |     * Has error? > SAMPLE                             |   |  |*
+*|  |  |     * Duration > 5s? > SAMPLE                         |   |  |*
+*|  |  |     * Status code 5xx? > SAMPLE                       |   |  |*
+*|  |  |     * Random 1%? > SAMPLE                             |   |  |*
 *|  |  |                                                         |   |  |*
 *|  |  |  4. EMIT OR DROP                                        |   |  |*
 *|  |  |     If sampled: emit all spans to storage             |   |  |*
@@ -592,12 +592,12 @@ SECTION 4.5: TAIL-BASED SAMPLING
 *|  |  When is a trace "complete"?                                  |  |*
 *|  |                                                                 |  |*
 *|  |  STRATEGY 1: Timeout-based                                    |  |*
-*|  |  No new spans for X seconds -> consider complete              |  |*
+*|  |  No new spans for X seconds > consider complete              |  |*
 *|  |  Pro: Simple                                                   |  |*
 *|  |  Con: Slow, delays sampling decision                         |  |*
 *|  |                                                                 |  |*
 *|  |  STRATEGY 2: Root span ended                                  |  |*
-*|  |  Root span has duration set -> trace complete                 |  |*
+*|  |  Root span has duration set > trace complete                 |  |*
 *|  |  Pro: Fast decision                                           |  |*
 *|  |  Con: May miss late-arriving child spans                     |  |*
 *|  |                                                                 |  |*

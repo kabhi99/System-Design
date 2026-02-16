@@ -75,22 +75,22 @@ SECTION 1: WHAT ARE MICROSERVICES?
 *|  |                                                                 |  |*
 *|  |  USE MICROSERVICES WHEN:                                       |  |*
 *|  |                                                                 |  |*
-*|  |  [x] Large, complex application with multiple teams              |  |*
-*|  |  [x] Need to scale different parts independently                 |  |*
-*|  |  [x] Require fault isolation (one failure shouldn't crash all)  |  |*
-*|  |  [x] Teams need autonomy to choose tech stack                    |  |*
-*|  |  [x] Frequent deployments needed for specific features           |  |*
-*|  |  [x] Organization structure supports distributed teams           |  |*
+*|  |  Y Large, complex application with multiple teams              |  |*
+*|  |  Y Need to scale different parts independently                 |  |*
+*|  |  Y Require fault isolation (one failure shouldn't crash all)  |  |*
+*|  |  Y Teams need autonomy to choose tech stack                    |  |*
+*|  |  Y Frequent deployments needed for specific features           |  |*
+*|  |  Y Organization structure supports distributed teams           |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
 *|  |  AVOID MICROSERVICES WHEN:                                     |  |*
 *|  |                                                                 |  |*
-*|  |  [ ] Small team (< 10 developers)                               |  |*
-*|  |  [ ] Simple domain with few features                             |  |*
-*|  |  [ ] Startup phase (domain not well understood)                  |  |*
-*|  |  [ ] Tight deadlines with limited DevOps maturity                |  |*
-*|  |  [ ] Strong data consistency requirements                        |  |*
+*|  |  X Small team (< 10 developers)                               |  |*
+*|  |  X Simple domain with few features                             |  |*
+*|  |  X Startup phase (domain not well understood)                  |  |*
+*|  |  X Tight deadlines with limited DevOps maturity                |  |*
+*|  |  X Strong data consistency requirements                        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -107,18 +107,18 @@ SECTION 2: SERVICE DECOMPOSITION
 *|  |                                                                 |  |*
 *|  |  E-Commerce Example:                                            |  |*
 *|  |                                                                 |  |*
-*|  |  Business Capabilities -> Services                              |  |*
+*|  |  Business Capabilities > Services                              |  |*
 *|  |                                                                 |  |*
-*|  |  * User Management      -> User Service                         |  |*
-*|  |  * Product Catalog      -> Product Service                      |  |*
-*|  |  * Shopping Cart        -> Cart Service                         |  |*
-*|  |  * Order Processing     -> Order Service                        |  |*
-*|  |  * Payment Processing   -> Payment Service                      |  |*
-*|  |  * Inventory Management -> Inventory Service                    |  |*
-*|  |  * Shipping/Delivery    -> Shipping Service                     |  |*
-*|  |  * Notifications        -> Notification Service                 |  |*
-*|  |  * Search               -> Search Service                       |  |*
-*|  |  * Recommendations      -> Recommendation Service               |  |*
+*|  |  * User Management      > User Service                         |  |*
+*|  |  * Product Catalog      > Product Service                      |  |*
+*|  |  * Shopping Cart        > Cart Service                         |  |*
+*|  |  * Order Processing     > Order Service                        |  |*
+*|  |  * Payment Processing   > Payment Service                      |  |*
+*|  |  * Inventory Management > Inventory Service                    |  |*
+*|  |  * Shipping/Delivery    > Shipping Service                     |  |*
+*|  |  * Notifications        > Notification Service                 |  |*
+*|  |  * Search               > Search Service                       |  |*
+*|  |  * Recommendations      > Recommendation Service               |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -247,7 +247,7 @@ SECTION 3: KEY DESIGN PRINCIPLES
 *|  |  * Complex routing logic in middleware                         |  |*
 *|  |  * Message transformation in bus                               |  |*
 *|  |  * Orchestration in middleware                                 |  |*
-*|  |  -> Creates central bottleneck and coupling                    |  |*
+*|  |  > Creates central bottleneck and coupling                    |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -398,8 +398,8 @@ SECTION 5: DATA CONSISTENCY PATTERNS
 *|  |  In monolith: Single database, ACID transactions                |  |*
 *|  |                                                                 |  |*
 *|  |  In microservices: Each service has own DB                     |  |*
-*|  |  -> No distributed transactions (2PC is impractical)            |  |*
-*|  |  -> Need eventual consistency patterns                           |  |*
+*|  |  > No distributed transactions (2PC is impractical)            |  |*
+*|  |  > Need eventual consistency patterns                           |  |*
 *|  |                                                                 |  |*
 *|  |  EXAMPLE PROBLEM:                                               |  |*
 *|  |                                                                 |  |*
@@ -462,9 +462,9 @@ SECTION 5: DATA CONSISTENCY PATTERNS
 *|  |    +-----------+  +-----------+  +-----------+                |  |*
 *|  |                                                                 |  |*
 *|  |  Orchestrator coordinates the flow:                            |  |*
-*|  |  1. Call Order Service -> Create Order                         |  |*
-*|  |  2. Call Inventory Service -> Reserve                          |  |*
-*|  |  3. Call Payment Service -> Charge                             |  |*
+*|  |  1. Call Order Service > Create Order                         |  |*
+*|  |  2. Call Inventory Service > Reserve                          |  |*
+*|  |  3. Call Payment Service > Charge                             |  |*
 *|  |  On failure: Orchestrator calls compensating actions           |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Easy to understand flow, centralized logic             |  |*
@@ -483,7 +483,7 @@ SECTION 5: DATA CONSISTENCY PATTERNS
 *|  |                                                                 |  |*
 *|  |  Naive approach fails:                                          |  |*
 *|  |  1. Update database                                            |  |*
-*|  |  2. Publish to Kafka <- What if this fails? Data inconsistent! |  |*
+*|  |  2. Publish to Kafka < What if this fails? Data inconsistent! |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*

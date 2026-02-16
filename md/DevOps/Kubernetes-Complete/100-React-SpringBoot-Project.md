@@ -218,7 +218,7 @@ docker run -p 3000:80 react-frontend:v1.0
 |  ⚠️  REMEMBER: In Kubernetes YAML, you MUST add:                       |
 |                                                                         |
 |  image: react-frontend:v1.0                                            |
-|  imagePullPolicy: Never     <- CRITICAL! Don't try to pull             |
+|  imagePullPolicy: Never     < CRITICAL! Don't try to pull             |
 |                                                                         |
 |  Without "imagePullPolicy: Never", Kubernetes will try to pull        |
 |  from Docker Hub and FAIL (image doesn't exist there).               |
@@ -314,7 +314,7 @@ docker images | grep springboot-api
 |  ⚠️  REMEMBER: In Kubernetes YAML, you MUST add:                       |
 |                                                                         |
 |  image: springboot-api:v1.0                                            |
-|  imagePullPolicy: Never     <- CRITICAL! Don't try to pull             |
+|  imagePullPolicy: Never     < CRITICAL! Don't try to pull             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -535,7 +535,7 @@ spec:
       containers:
         - name: api
           image: springboot-api:v1.0           # Local image name
-          imagePullPolicy: Never               # <- CRITICAL for local!
+          imagePullPolicy: Never               # < CRITICAL for local!
           ports:
             - containerPort: 8080
           envFrom:
@@ -585,9 +585,9 @@ spec:
 |                                                                         |
 |  envFrom:                                                               |
 |    - configMapRef:                                                      |
-|        name: app-config     <- DB_HOST, DB_PORT become env vars         |
+|        name: app-config     < DB_HOST, DB_PORT become env vars         |
 |    - secretRef:                                                         |
-|        name: db-secret      <- DB_USER, DB_PASSWORD become env vars     |
+|        name: db-secret      < DB_USER, DB_PASSWORD become env vars     |
 |                                                                         |
 |  Spring Boot application.properties uses:                              |
 |    spring.datasource.url=jdbc:postgresql://${DB_HOST}:${DB_PORT}/...  |
@@ -651,7 +651,7 @@ spec:
       containers:
         - name: frontend
           image: react-frontend:v1.0           # Local image name
-          imagePullPolicy: Never               # <- CRITICAL for local!
+          imagePullPolicy: Never               # < CRITICAL for local!
           ports:
             - containerPort: 80
           resources:
@@ -735,10 +735,10 @@ kubectl get pods
 |  |  Path starts with /api?                                          |  |
 |  |       |                                                           |  |
 |  |       +-- YES --> Route to springboot-service:8080              |  |
-|  |       |           (request: /api/users -> backend gets /api/users)|  |
+|  |       |           (request: /api/users > backend gets /api/users)|  |
 |  |       |                                                           |  |
 |  |       +-- NO ---> Route to frontend-service:80                   |  |
-|  |                   (request: / -> React app)                       |  |
+|  |                   (request: / > React app)                       |  |
 |  |                                                                   |  |
 |  +------------------------------------------------------------------+  |
 |                                                                         |
@@ -760,7 +760,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - host: myapp.local    # <- Change to your domain in production
+    - host: myapp.local    # < Change to your domain in production
       http:
         paths:
           # API routes to backend

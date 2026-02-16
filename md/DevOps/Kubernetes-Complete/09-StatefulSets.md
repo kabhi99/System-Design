@@ -20,8 +20,8 @@ identities, persistent storage, and ordered deployment.
 |                                                                         |
 |  Shared storage or none          Each pod gets own storage             |
 |                                                                         |
-|  Scale in any order              Scale in order (0->1->2)               |
-|                                   Delete in reverse (2->1->0)           |
+|  Scale in any order              Scale in order (0>1>2)               |
+|                                   Delete in reverse (2>1>0)           |
 |                                                                         |
 |  USE FOR:                        USE FOR:                              |
 |  * Web servers                   * Databases (MySQL, Postgres)        |
@@ -119,14 +119,14 @@ identities, persistent storage, and ordered deployment.
 |      Client                                                             |
 |         |                                                               |
 |         |  nslookup web-svc                                            |
-|         |  -> Returns: 10.96.0.100 (Service IP)                        |
+|         |  > Returns: 10.96.0.100 (Service IP)                        |
 |         v                                                               |
 |   +-----------------------+                                            |
 |   |      SERVICE          |                                            |
-|   |   ClusterIP:          |  <- Traffic goes HERE first                |
+|   |   ClusterIP:          |  < Traffic goes HERE first                |
 |   |   10.96.0.100         |                                            |
 |   |                       |                                            |
-|   |   Load balances       |  <- Randomly picks a pod                   |
+|   |   Load balances       |  < Randomly picks a pod                   |
 |   +-----------+-----------+                                            |
 |               |                                                         |
 |       +-------+-------+                                                |
@@ -145,10 +145,10 @@ identities, persistent storage, and ordered deployment.
 |      Client                                                             |
 |         |                                                               |
 |         |  nslookup mysql                                              |
-|         |  -> Returns: 10.0.2.5, 10.0.2.6, 10.0.2.7 (Pod IPs!)        |
+|         |  > Returns: 10.0.2.5, 10.0.2.6, 10.0.2.7 (Pod IPs!)        |
 |         |                                                               |
 |         |  nslookup mysql-0.mysql                                      |
-|         |  -> Returns: 10.0.2.5 (Specific Pod!)                        |
+|         |  > Returns: 10.0.2.5 (Specific Pod!)                        |
 |         |                                                               |
 |         |          NO Service IP in the middle!                        |
 |         |          Goes DIRECTLY to pods                               |
@@ -176,11 +176,11 @@ identities, persistent storage, and ordered deployment.
 |                                                                         |
 |  Each pod gets its own DNS name that NEVER changes                    |
 |                                                                         |
-|  mysql-0.mysql.default.svc.cluster.local -> always mysql-0            |
-|  mysql-1.mysql.default.svc.cluster.local -> always mysql-1            |
-|  mysql-2.mysql.default.svc.cluster.local -> always mysql-2            |
+|  mysql-0.mysql.default.svc.cluster.local > always mysql-0            |
+|  mysql-1.mysql.default.svc.cluster.local > always mysql-1            |
+|  mysql-2.mysql.default.svc.cluster.local > always mysql-2            |
 |                                                                         |
-|  Even if pod restarts -> same DNS -> clients can reconnect!            |
+|  Even if pod restarts > same DNS > clients can reconnect!            |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -192,7 +192,7 @@ identities, persistent storage, and ordered deployment.
 |  * Can't use random load balancing!                                   |
 |                                                                         |
 |     +--------------+                                                   |
-|     |   mysql-0    |  <- MASTER                                        |
+|     |   mysql-0    |  < MASTER                                        |
 |     |   (Primary)  |                                                   |
 |     +------+-------+                                                   |
 |            |                                                            |
@@ -201,7 +201,7 @@ identities, persistent storage, and ordered deployment.
 |     |             |                                                    |
 |     v             v                                                    |
 | +----------+ +----------+                                             |
-| | mysql-1  | | mysql-2  |  <- REPLICAS                                |
+| | mysql-1  | | mysql-2  |  < REPLICAS                                |
 | | (Replica)| | (Replica)|                                             |
 | +----------+ +----------+                                             |
 |                                                                         |
@@ -211,16 +211,16 @@ identities, persistent storage, and ordered deployment.
 |  ================================================                       |
 |                                                                         |
 |  Application can decide:                                               |
-|  * Write operations -> mysql-0 (master)                                |
-|  * Read operations  -> mysql-1 or mysql-2 (replicas)                  |
+|  * Write operations > mysql-0 (master)                                |
+|  * Read operations  > mysql-1 or mysql-2 (replicas)                  |
 |                                                                         |
 |  This is READ/WRITE SPLITTING for performance!                        |
 |                                                                         |
 |     Application                                                        |
 |         |                                                               |
-|         +-- INSERT/UPDATE -> mysql-0.mysql (master)                   |
+|         +-- INSERT/UPDATE > mysql-0.mysql (master)                   |
 |         |                                                               |
-|         +-- SELECT        -> mysql-1.mysql (replica)                  |
+|         +-- SELECT        > mysql-1.mysql (replica)                  |
 |                            or mysql-2.mysql (replica)                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -260,20 +260,20 @@ identities, persistent storage, and ordered deployment.
 |  POD-LEVEL DNS (returns SPECIFIC pod IP)                              |
 |  =======================================                                |
 |                                                                         |
-|  mysql-0.mysql.default.svc.cluster.local -> 10.0.2.5                  |
+|  mysql-0.mysql.default.svc.cluster.local > 10.0.2.5                  |
 |  +--+--+ +-+-+                                                         |
 |   pod    service                                                        |
 |   name   name                                                           |
 |                                                                         |
-|  mysql-1.mysql.default.svc.cluster.local -> 10.0.2.6                  |
-|  mysql-2.mysql.default.svc.cluster.local -> 10.0.2.7                  |
+|  mysql-1.mysql.default.svc.cluster.local > 10.0.2.6                  |
+|  mysql-2.mysql.default.svc.cluster.local > 10.0.2.7                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  SHORTHAND DNS (within same namespace)                                |
 |  =====================================                                  |
 |                                                                         |
-|  mysql-0.mysql   <- Short form, works within namespace                |
+|  mysql-0.mysql   < Short form, works within namespace                |
 |  mysql-1.mysql                                                         |
 |  mysql-2.mysql                                                         |
 |                                                                         |
@@ -294,9 +294,9 @@ identities, persistent storage, and ordered deployment.
 |  +--------------------+---------------------+------------------------+ |
 |  | Load balancing     | Yes (kube-proxy)    | No (client decides)    | |
 |  +--------------------+---------------------+------------------------+ |
-|  | Access specific pod| [ ] NO               | [x] YES (pod-0.svc)     | |
+|  | Access specific pod| X NO               | Y YES (pod-0.svc)     | |
 |  +--------------------+---------------------+------------------------+ |
-|  | Individual pod DNS | [ ] NO               | [x] YES                  | |
+|  | Individual pod DNS | X NO               | Y YES                  | |
 |  +--------------------+---------------------+------------------------+ |
 |  | Use with           | Deployment          | StatefulSet            | |
 |  +--------------------+---------------------+------------------------+ |
@@ -320,7 +320,7 @@ identities, persistent storage, and ordered deployment.
 |  metadata:                                                              |
 |    name: mysql                   # Service name                        |
 |  spec:                                                                  |
-|    clusterIP: None               # <- HEADLESS!                        |
+|    clusterIP: None               # < HEADLESS!                        |
 |    selector:                                                            |
 |      app: mysql                                                        |
 |    ports:                                                               |
@@ -347,13 +347,13 @@ identities, persistent storage, and ordered deployment.
 |  ============================================                           |
 |                                                                         |
 |  CHANGE MASTER TO                                                      |
-|    MASTER_HOST='mysql-0.mysql',   <- Uses headless DNS!               |
+|    MASTER_HOST='mysql-0.mysql',   < Uses headless DNS!               |
 |    MASTER_USER='repl',                                                 |
 |    MASTER_PASSWORD='password';                                        |
 |                                                                         |
 |  If mysql-0 pod restarts:                                             |
 |  * Gets new IP (e.g., 10.0.2.99)                                     |
-|  * DNS mysql-0.mysql -> 10.0.2.99 (auto-updated!)                    |
+|  * DNS mysql-0.mysql > 10.0.2.99 (auto-updated!)                    |
 |  * Replicas reconnect automatically                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -405,10 +405,10 @@ kubectl run test --rm -it --image=busybox -- nslookup mysql-0.mysql
 |  ORDERED OPERATIONS                                                    |
 |  ===================                                                    |
 |                                                                         |
-|  Create: mysql-0 -> mysql-1 -> mysql-2                                 |
+|  Create: mysql-0 > mysql-1 > mysql-2                                 |
 |  (Each pod must be Running before next starts)                       |
 |                                                                         |
-|  Delete: mysql-2 -> mysql-1 -> mysql-0                                 |
+|  Delete: mysql-2 > mysql-1 > mysql-0                                 |
 |  (Reverse order)                                                       |
 |                                                                         |
 |  Scale up: Add mysql-3, mysql-4...                                   |

@@ -21,7 +21,7 @@ vertical scaling.
 |  |   |Pod||Pod||Pod|   ------>     |Pod||Pod||Pod||Pod||Pod|     |  |
 |  |   +---++---++---+               +---++---++---++---++---+     |  |
 |  |                                                                 |  |
-|  |   3 replicas -> HPA scales to -> 5 replicas                     |  |
+|  |   3 replicas > HPA scales to > 5 replicas                     |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |

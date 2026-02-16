@@ -47,7 +47,7 @@ maintaining performance and consistency.
 |  |  +-----------+             +------+ +------+ +------+         |  |
 |  |  |           |             |Node 1| |Node 2| |Node 3|         |  |
 |  |  |  Single   |             | 64GB | | 64GB | | 64GB |         |  |
-|  |  |   Node    |      ->      +------+ +------+ +------+         |  |
+|  |  |   Node    |      >      +------+ +------+ +------+         |  |
 |  |  |  64 GB    |             +------+ +------+ +------+         |  |
 |  |  |           |             |Node 4| |Node 5| |Node 6|         |  |
 |  |  +-----------+             | 64GB | | 64GB | | 64GB |         |  |
@@ -75,17 +75,17 @@ maintaining performance and consistency.
 |  node_index = hash(key) % num_nodes                                   |
 |                                                                         |
 |  With 4 nodes:                                                         |
-|  hash("user:1") % 4 = 2  -> Node 2                                    |
-|  hash("user:2") % 4 = 0  -> Node 0                                    |
-|  hash("user:3") % 4 = 1  -> Node 1                                    |
+|  hash("user:1") % 4 = 2  > Node 2                                    |
+|  hash("user:2") % 4 = 0  > Node 0                                    |
+|  hash("user:3") % 4 = 1  > Node 1                                    |
 |                                                                         |
 |  PROBLEM: ADDING/REMOVING NODES                                       |
 |  -----------------------------                                          |
 |                                                                         |
 |  Add a 5th node:                                                       |
-|  hash("user:1") % 5 = 1  -> Node 1 (was Node 2!)                      |
-|  hash("user:2") % 5 = 3  -> Node 3 (was Node 0!)                      |
-|  hash("user:3") % 5 = 4  -> Node 4 (was Node 1!)                      |
+|  hash("user:1") % 5 = 1  > Node 1 (was Node 2!)                      |
+|  hash("user:2") % 5 = 3  > Node 3 (was Node 0!)                      |
+|  hash("user:3") % 5 = 4  > Node 4 (was Node 1!)                      |
 |                                                                         |
 |  Almost ALL keys move to different nodes!                            |
 |  Massive cache invalidation. 💥                                       |
@@ -114,9 +114,9 @@ maintaining performance and consistency.
 |                ● Key 2 | ● Node C                                     |
 |                        |                                               |
 |                                                                         |
-|  Key 1 -> Node B (first node clockwise)                               |
-|  Key 2 -> Node C                                                       |
-|  Key 3 -> Node A                                                       |
+|  Key 1 > Node B (first node clockwise)                               |
+|  Key 2 > Node C                                                       |
+|  Key 3 > Node A                                                       |
 |                                                                         |
 |  ADD A NODE (D between A and B):                                      |
 |  ---------------------------------                                      |
@@ -133,8 +133,8 @@ maintaining performance and consistency.
 |                                                                         |
 |  Solution: Each physical node gets multiple positions on ring.       |
 |                                                                         |
-|  Node A -> A-1, A-2, A-3, A-4 (4 virtual nodes)                       |
-|  Node B -> B-1, B-2, B-3, B-4                                         |
+|  Node A > A-1, A-2, A-3, A-4 (4 virtual nodes)                       |
+|  Node B > B-1, B-2, B-3, B-4                                         |
 |                                                                         |
 |  More virtual nodes = more even distribution.                        |
 |  Typical: 100-200 virtual nodes per physical node.                   |
@@ -181,9 +181,9 @@ maintaining performance and consistency.
 |                                                                         |
 |  WHY REPLICATION?                                                      |
 |                                                                         |
-|  Node fails -> data lost -> cache miss spike -> database overload       |
+|  Node fails > data lost > cache miss spike > database overload       |
 |                                                                         |
-|  With replication: Node fails -> replica takes over -> no data lost   |
+|  With replication: Node fails > replica takes over > no data lost   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -306,10 +306,10 @@ maintaining performance and consistency.
 |  If key is on different node: return MOVED redirect.                |
 |                                                                         |
 |  GET user:123                                                          |
-|  -> MOVED 12345 192.168.1.3:6379                                      |
+|  > MOVED 12345 192.168.1.3:6379                                      |
 |  (Key is in slot 12345, on node 192.168.1.3)                        |
 |                                                                         |
-|  Smart clients cache slot->node mapping to avoid redirects.          |
+|  Smart clients cache slot>node mapping to avoid redirects.          |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |

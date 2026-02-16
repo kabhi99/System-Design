@@ -300,20 +300,20 @@ Part 14: Theoretical Foundations
 |  CORE DATA STRUCTURE: Hash Table                                       |
 |  ---------------------------------                                     |
 |                                                                         |
-|  Key -> Hash Function -> Bucket Index -> Value                           |
+|  Key > Hash Function > Bucket Index > Value                           |
 |                                                                         |
 |  +---------------------------------------------------------------+     |
 |  |                      HASH TABLE                                |     |
 |  |                                                                |     |
-|  |   Bucket 0: user:123 -> {name: "John", age: 30}                |     |
+|  |   Bucket 0: user:123 > {name: "John", age: 30}                |     |
 |  |                v                                               |     |
-|  |            session:abc -> {token: "xyz"}  (collision chain)    |     |
+|  |            session:abc > {token: "xyz"}  (collision chain)    |     |
 |  |                                                                |     |
-|  |   Bucket 1: product:456 -> {price: 99.99}                      |     |
+|  |   Bucket 1: product:456 > {price: 99.99}                      |     |
 |  |                                                                |     |
 |  |   Bucket 2: (empty)                                           |     |
 |  |                                                                |     |
-|  |   Bucket 3: order:789 -> {items: [...]}                        |     |
+|  |   Bucket 3: order:789 > {items: [...]}                        |     |
 |  |                                                                |     |
 |  |   ...                                                          |     |
 |  +---------------------------------------------------------------+     |
@@ -439,14 +439,14 @@ Part 14: Theoretical Foundations
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Only cache what's actually accessed (no waste)                     |
-|  [x] Cache failures don't break reads (fallback to DB)                  |
-|  [x] Simple to implement                                                |
+|  Y Only cache what's actually accessed (no waste)                     |
+|  Y Cache failures don't break reads (fallback to DB)                  |
+|  Y Simple to implement                                                |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] First request is slow (cache miss)                                 |
-|  [ ] Stale data possible (write-invalidate race)                        |
-|  [ ] Cache stampede on popular keys                                     |
+|  X First request is slow (cache miss)                                 |
+|  X Stale data possible (write-invalidate race)                        |
+|  X Cache stampede on popular keys                                     |
 |                                                                         |
 |  BEST FOR: Most general-purpose caching scenarios                     |
 |                                                                         |
@@ -498,14 +498,14 @@ Part 14: Theoretical Foundations
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simpler application code                                           |
-|  [x] Cache encapsulates loading logic                                   |
-|  [x] Consistent loading behavior                                        |
+|  Y Simpler application code                                           |
+|  Y Cache encapsulates loading logic                                   |
+|  Y Consistent loading behavior                                        |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Cache must know about database                                     |
-|  [ ] More complex cache infrastructure                                  |
-|  [ ] First request still slow (miss)                                    |
+|  X Cache must know about database                                     |
+|  X More complex cache infrastructure                                  |
+|  X First request still slow (miss)                                    |
 |                                                                         |
 |  BEST FOR: When you want to hide caching logic from app              |
 |                                                                         |
@@ -545,19 +545,19 @@ Part 14: Theoretical Foundations
 |  SEQUENCE:                                                             |
 |  1. App writes to cache                                               |
 |  2. Cache writes to database (synchronous)                            |
-|  3. Only when DB confirms -> Cache confirms to app                     |
+|  3. Only when DB confirms > Cache confirms to app                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Cache ALWAYS consistent with database                              |
-|  [x] No stale reads (cache has latest)                                  |
-|  [x] Simplifies read path                                               |
+|  Y Cache ALWAYS consistent with database                              |
+|  Y No stale reads (cache has latest)                                  |
+|  Y Simplifies read path                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Write latency increased (cache + DB)                               |
-|  [ ] If DB fails, write fails (even though cache succeeded)             |
-|  [ ] May cache data that's never read                                   |
+|  X Write latency increased (cache + DB)                               |
+|  X If DB fails, write fails (even though cache succeeded)             |
+|  X May cache data that's never read                                   |
 |                                                                         |
 |  BEST FOR: When consistency is critical, read-heavy workloads        |
 |                                                                         |
@@ -605,14 +605,14 @@ Part 14: Theoretical Foundations
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Extremely fast writes (memory only)                                |
-|  [x] Batching reduces DB load                                           |
-|  [x] App not blocked by slow DB                                         |
+|  Y Extremely fast writes (memory only)                                |
+|  Y Batching reduces DB load                                           |
+|  Y App not blocked by slow DB                                         |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] DATA LOSS RISK if cache crashes before DB write                    |
-|  [ ] Complex failure handling                                           |
-|  [ ] DB might have stale data temporarily                               |
+|  X DATA LOSS RISK if cache crashes before DB write                    |
+|  X Complex failure handling                                           |
+|  X DB might have stale data temporarily                               |
 |                                                                         |
 |  BEST FOR: High write throughput, some data loss acceptable          |
 |            (metrics, logs, counters)                                  |
@@ -669,12 +669,12 @@ When cache is full, we must remove something. WHICH item to remove?
 |                                                                         |
 |  Access sequence: A, B, C, D, A, E                                    |
 |                                                                         |
-|  Step 1: Access A -> Cache: [A]                                        |
-|  Step 2: Access B -> Cache: [A, B]                                     |
-|  Step 3: Access C -> Cache: [A, B, C]                                  |
-|  Step 4: Access D -> Cache: [A, B, C, D] (full)                        |
-|  Step 5: Access A -> Cache: [B, C, D, A] (A moved to end)              |
-|  Step 6: Access E -> Cache: [C, D, A, E] (B evicted, least recent)    |
+|  Step 1: Access A > Cache: [A]                                        |
+|  Step 2: Access B > Cache: [A, B]                                     |
+|  Step 3: Access C > Cache: [A, B, C]                                  |
+|  Step 4: Access D > Cache: [A, B, C, D] (full)                        |
+|  Step 5: Access A > Cache: [B, C, D, A] (A moved to end)              |
+|  Step 6: Access E > Cache: [C, D, A, E] (B evicted, least recent)    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -682,17 +682,17 @@ When cache is full, we must remove something. WHICH item to remove?
 |  ---------------                                                       |
 |  Data structure: HashMap + Doubly Linked List                         |
 |                                                                         |
-|  HashMap: key -> node pointer (O(1) lookup)                            |
+|  HashMap: key > node pointer (O(1) lookup)                            |
 |  LinkedList: maintains access order                                   |
 |                                                                         |
 |       HashMap                   Doubly Linked List                     |
 |    +-----+-----+              +---+  +---+  +---+  +---+              |
-|    | key | ptr |             | B |<-->| C |<-->| D |<-->| A |              |
+|    | key | ptr |             | B |<>| C |<>| D |<>| A |              |
 |    +-----+-----+              +---+  +---+  +---+  +---+              |
-|    |  A  | ------------------------------------------->               |
-|    |  B  | ---->                                                       |
-|    |  C  | ---------->                                                 |
-|    |  D  | ---------------->                                           |
+|    |  A  | ------------------------------------------>               |
+|    |  B  | --->                                                       |
+|    |  C  | --------->                                                 |
+|    |  D  | --------------->                                           |
 |    +-----+-----+              HEAD                  TAIL              |
 |                               (oldest)              (newest)           |
 |                                                                         |
@@ -704,13 +704,13 @@ When cache is full, we must remove something. WHICH item to remove?
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple and intuitive                                               |
-|  [x] Works well for most access patterns                                |
-|  [x] O(1) operations                                                    |
+|  Y Simple and intuitive                                               |
+|  Y Works well for most access patterns                                |
+|  Y O(1) operations                                                    |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Doesn't consider frequency (scan pollution)                        |
-|  [ ] One-time access pushes out frequent items                          |
+|  X Doesn't consider frequency (scan pollution)                        |
+|  X One-time access pushes out frequent items                          |
 |                                                                         |
 |  BEST FOR: General-purpose caching, most common choice               |
 |                                                                         |
@@ -747,7 +747,7 @@ When cache is full, we must remove something. WHICH item to remove?
 |                                                                         |
 |       Frequency Buckets                                                |
 |    +------------------------------------------+                       |
-|    | Freq 1: [D] -> [E]                        | <- Evict from here     |
+|    | Freq 1: [D] > [E]                        | < Evict from here     |
 |    | Freq 2: [C]                              |                       |
 |    | Freq 3: [A]                              |                       |
 |    +------------------------------------------+                       |
@@ -755,13 +755,13 @@ When cache is full, we must remove something. WHICH item to remove?
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Protects frequently accessed "hot" items                           |
-|  [x] Better for skewed access patterns                                  |
+|  Y Protects frequently accessed "hot" items                           |
+|  Y Better for skewed access patterns                                  |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] More complex to implement                                          |
-|  [ ] Old popular items never evicted (cache pollution)                  |
-|  [ ] New items at disadvantage (low frequency)                          |
+|  X More complex to implement                                          |
+|  X Old popular items never evicted (cache pollution)                  |
+|  X New items at disadvantage (low frequency)                          |
 |                                                                         |
 |  BEST FOR: When some items are much more popular than others          |
 |                                                                         |
@@ -785,20 +785,20 @@ When cache is full, we must remove something. WHICH item to remove?
 |  Capacity = 4                                                          |
 |                                                                         |
 |  After D: [A, B, C, D]                                                |
-|  Insert E: Evict A -> [B, C, D, E]                                     |
+|  Insert E: Evict A > [B, C, D, E]                                     |
 |                                                                         |
 |  Even if A was accessed 1000 times, it gets evicted.                  |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Extremely simple to implement                                      |
-|  [x] Predictable behavior                                               |
-|  [x] O(1) operations                                                    |
+|  Y Extremely simple to implement                                      |
+|  Y Predictable behavior                                               |
+|  Y O(1) operations                                                    |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Ignores access patterns completely                                 |
-|  [ ] Poor hit rate for most workloads                                   |
+|  X Ignores access patterns completely                                 |
+|  X Poor hit rate for most workloads                                   |
 |                                                                         |
 |  BEST FOR: When all items equally likely to be accessed               |
 |            (rare in practice)                                         |
@@ -952,8 +952,8 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |          Before: Single Node                                           |
 |                                                                         |
 |          +----------------------------+                                |
-|          |    1 TB of cache data      | <- Memory limit                 |
-|          |    100K ops/sec            | <- CPU limit                    |
+|          |    1 TB of cache data      | < Memory limit                 |
+|          |    100K ops/sec            | < CPU limit                    |
 |          +----------------------------+                                |
 |                                                                         |
 |          After: 4 Shards                                               |
@@ -996,13 +996,13 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  +--------------+  +--------------+  +--------------+                 |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Range queries possible (scan a-d)                                  |
-|  [x] Simple to understand                                               |
+|  Y Range queries possible (scan a-d)                                  |
+|  Y Simple to understand                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] HOT SPOTS: If "user:*" keys are popular, Shard 3 overloaded       |
-|  [ ] Uneven distribution likely                                         |
-|  [ ] Rebalancing is complex                                             |
+|  X HOT SPOTS: If "user:*" keys are popular, Shard 3 overloaded       |
+|  X Uneven distribution likely                                         |
+|  X Rebalancing is complex                                             |
 |                                                                         |
 |  VERDICT: Rarely used for caches                                      |
 |                                                                         |
@@ -1022,17 +1022,17 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  EXAMPLE:                                                              |
 |  3 shards, key = "user:123"                                           |
 |  hash("user:123") = 782345                                            |
-|  shard = 782345 % 3 = 0  -> Shard 0                                    |
+|  shard = 782345 % 3 = 0  > Shard 0                                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Even distribution (if hash is good)                                |
-|  [x] Simple calculation                                                 |
-|  [x] Predictable shard location                                         |
+|  Y Even distribution (if hash is good)                                |
+|  Y Simple calculation                                                 |
+|  Y Predictable shard location                                         |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] REBALANCING NIGHTMARE when adding/removing nodes                   |
+|  X REBALANCING NIGHTMARE when adding/removing nodes                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1040,9 +1040,9 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  --------------------------                                            |
 |                                                                         |
 |  Before: 3 shards                                                     |
-|  hash("key") % 3 = 0 -> Shard 0                                        |
-|  hash("key") % 3 = 1 -> Shard 1                                        |
-|  hash("key") % 3 = 2 -> Shard 2                                        |
+|  hash("key") % 3 = 0 > Shard 0                                        |
+|  hash("key") % 3 = 1 > Shard 1                                        |
+|  hash("key") % 3 = 2 > Shard 2                                        |
 |                                                                         |
 |  After: 4 shards (add one node)                                       |
 |  hash("key") % 4 = ???                                                |
@@ -1108,7 +1108,7 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  Keys in other ranges: UNCHANGED!                                      |
 |                                                                         |
 |  With N nodes, adding 1 node moves only 1/N of keys.                  |
-|  4 nodes -> 25% keys move (vs 75% with simple hash mod)                |
+|  4 nodes > 25% keys move (vs 75% with simple hash mod)                |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1176,9 +1176,9 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  * Sweet spot: 100-200 vnodes per physical node                       |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Even load distribution                                             |
-|  [x] Heterogeneous nodes (powerful nodes get more vnodes)               |
-|  [x] Smoother rebalancing when nodes added/removed                      |
+|  Y Even load distribution                                             |
+|  Y Heterogeneous nodes (powerful nodes get more vnodes)               |
+|  Y Smoother rebalancing when nodes added/removed                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1516,7 +1516,7 @@ When one cache node can't hold all data, we DISTRIBUTE across multiple nodes.
 |  * Partition B can't reach Primary                                    |
 |  * Partition B's Sentinel promotes Replica to new Primary             |
 |  * Now TWO primaries exist!                                           |
-|  * Both accept writes -> DATA CONFLICT                                 |
+|  * Both accept writes > DATA CONFLICT                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -1577,13 +1577,13 @@ and naming things." — Phil Karlton
 |  * Long TTL: Stale data, better hit rate                              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple — no complex invalidation logic                             |
-|  [x] Automatic — no application changes needed                          |
-|  [x] Bounded staleness — data never older than TTL                     |
+|  Y Simple — no complex invalidation logic                             |
+|  Y Automatic — no application changes needed                          |
+|  Y Bounded staleness — data never older than TTL                     |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Data might be stale until TTL expires                              |
-|  [ ] Cache stampede at expiry                                           |
+|  X Data might be stale until TTL expires                              |
+|  X Cache stampede at expiry                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1615,18 +1615,18 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  IMPLEMENTATION OPTIONS:                                               |
 |  -------------------------                                             |
-|  * Database triggers -> Message queue                                  |
+|  * Database triggers > Message queue                                  |
 |  * Change Data Capture (Debezium)                                     |
 |  * Application publishes event after write                            |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Near real-time invalidation                                        |
-|  [x] Only invalidate what changed                                       |
+|  Y Near real-time invalidation                                        |
+|  Y Only invalidate what changed                                       |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] More infrastructure (message bus)                                  |
-|  [ ] Message delivery not guaranteed instantly                          |
-|  [ ] Complexity                                                         |
+|  X More infrastructure (message bus)                                  |
+|  X Message delivery not guaranteed instantly                          |
+|  X Complexity                                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1674,7 +1674,7 @@ and naming things." — Phil Karlton
 |                                    Update cache (version 3)           |
 |                                                                         |
 |  Cache has version 3. But what if Thread A's cache update was slow?  |
-|  Thread A's update might overwrite Thread B's -> version 2 in cache!  |
+|  Thread A's update might overwrite Thread B's > version 2 in cache!  |
 |                                                                         |
 |  SOLUTION: Always DELETE, never UPDATE cache on write.               |
 |                                                                         |
@@ -1689,15 +1689,15 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  CONCEPT:                                                              |
 |  Include version in cache key.                                        |
-|  When data changes, increment version -> old key becomes orphan.      |
+|  When data changes, increment version > old key becomes orphan.      |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  APPROACH 1: Version in key                                           |
 |                                                                         |
 |  Cache keys:                                                           |
-|  user:123:v1 -> {data version 1}                                       |
-|  user:123:v2 -> {data version 2}  (after update)                       |
+|  user:123:v1 > {data version 1}                                       |
+|  user:123:v2 > {data version 2}  (after update)                       |
 |                                                                         |
 |  Application knows current version from DB.                           |
 |  Old versions naturally expire (TTL) or get evicted (LRU).           |
@@ -1710,10 +1710,10 @@ and naming things." — Phil Karlton
 |  All keys: product:{id}:{cache_version}                               |
 |                                                                         |
 |  To invalidate ALL product cache:                                     |
-|  INCR cache_version -> 43                                              |
+|  INCR cache_version > 43                                              |
 |                                                                         |
 |  All old keys (with :42) are now orphaned.                           |
-|  Next reads use :43 -> cache miss -> repopulate                        |
+|  Next reads use :43 > cache miss > repopulate                        |
 |                                                                         |
 |  USEFUL FOR: "Clear all caches" scenarios                             |
 |                                                                         |
@@ -1733,8 +1733,8 @@ and naming things." — Phil Karlton
 |  Simple key-value. Value can be string, number, or serialized data.  |
 |                                                                         |
 |  SET name "Alice"                                                      |
-|  GET name -> "Alice"                                                   |
-|  INCR counter -> 1, 2, 3...                                            |
+|  GET name > "Alice"                                                   |
+|  INCR counter > 1, 2, 3...                                            |
 |  SETEX session:abc 3600 "data"  // With TTL                           |
 |                                                                         |
 |  USE CASES: Caching, counters, session storage                        |
@@ -1746,8 +1746,8 @@ and naming things." — Phil Karlton
 |  Key-value pairs within a key. Like a mini-hashmap.                   |
 |                                                                         |
 |  HSET user:123 name "Alice" age 30 city "NYC"                         |
-|  HGET user:123 name -> "Alice"                                         |
-|  HGETALL user:123 -> {name: Alice, age: 30, city: NYC}                |
+|  HGET user:123 name > "Alice"                                         |
+|  HGETALL user:123 > {name: Alice, age: 30, city: NYC}                |
 |                                                                         |
 |  USE CASES: Object storage, user profiles                             |
 |                                                                         |
@@ -1758,8 +1758,8 @@ and naming things." — Phil Karlton
 |  Ordered collection. Linked list internally.                          |
 |                                                                         |
 |  LPUSH queue:tasks "task1" "task2"                                    |
-|  RPOP queue:tasks -> "task1"                                           |
-|  LRANGE queue:tasks 0 -1 -> ["task2"]                                  |
+|  RPOP queue:tasks > "task1"                                           |
+|  LRANGE queue:tasks 0 -1 > ["task2"]                                  |
 |                                                                         |
 |  USE CASES: Message queues, activity feeds, recent items             |
 |                                                                         |
@@ -1770,8 +1770,8 @@ and naming things." — Phil Karlton
 |  Unordered collection of unique elements.                             |
 |                                                                         |
 |  SADD tags:article:1 "redis" "cache" "database"                       |
-|  SMEMBERS tags:article:1 -> {"redis", "cache", "database"}            |
-|  SINTER tags:article:1 tags:article:2 -> Common tags                  |
+|  SMEMBERS tags:article:1 > {"redis", "cache", "database"}            |
+|  SINTER tags:article:1 tags:article:2 > Common tags                  |
 |                                                                         |
 |  USE CASES: Tags, unique visitors, set operations                     |
 |                                                                         |
@@ -1783,8 +1783,8 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  ZADD leaderboard 100 "alice" 200 "bob" 150 "charlie"                |
 |  ZRANGE leaderboard 0 -1 WITHSCORES                                   |
-|  -> [alice:100, charlie:150, bob:200]                                  |
-|  ZRANK leaderboard "bob" -> 2 (third place, 0-indexed)                |
+|  > [alice:100, charlie:150, bob:200]                                  |
+|  ZRANK leaderboard "bob" > 2 (third place, 0-indexed)                |
 |                                                                         |
 |  USE CASES: Leaderboards, priority queues, time-series               |
 |                                                                         |
@@ -1795,8 +1795,8 @@ and naming things." — Phil Karlton
 |  String treated as array of bits.                                     |
 |                                                                         |
 |  SETBIT active_users:2024-01-15 12345 1   // User 12345 was active   |
-|  GETBIT active_users:2024-01-15 12345 -> 1                            |
-|  BITCOUNT active_users:2024-01-15 -> Number of active users           |
+|  GETBIT active_users:2024-01-15 12345 > 1                            |
+|  BITCOUNT active_users:2024-01-15 > Number of active users           |
 |                                                                         |
 |  USE CASES: User activity tracking, feature flags                     |
 |                                                                         |
@@ -1808,7 +1808,7 @@ and naming things." — Phil Karlton
 |  Very memory efficient (~12KB for billions of elements).             |
 |                                                                         |
 |  PFADD visitors "user1" "user2" "user3"                               |
-|  PFCOUNT visitors -> 3 (approximate count)                             |
+|  PFCOUNT visitors > 3 (approximate count)                             |
 |                                                                         |
 |  USE CASES: Unique visitor count, cardinality estimation              |
 |                                                                         |
@@ -1846,9 +1846,9 @@ and naming things." — Phil Karlton
 |     |               |               |               |                  |
 |  [Memory]       [Memory]        [Memory]        [Memory]              |
 |     |               |               |               |                  |
-|     +--------------->| SAVE          |               |                  |
+|     +-------------->| SAVE          |               |                  |
 |                     v               |               |                  |
-|                 [Disk: dump.rdb]    +--------------->| SAVE            |
+|                 [Disk: dump.rdb]    +-------------->| SAVE            |
 |                                                      v                 |
 |                                                  [Disk: dump.rdb]      |
 |                                                                         |
@@ -1860,13 +1860,13 @@ and naming things." — Phil Karlton
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Compact single file — easy to backup                              |
-|  [x] Fast restart — load binary directly                               |
-|  [x] Good for disaster recovery                                        |
+|  Y Compact single file — easy to backup                              |
+|  Y Fast restart — load binary directly                               |
+|  Y Good for disaster recovery                                        |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] DATA LOSS: Changes since last snapshot lost on crash              |
-|  [ ] Fork overhead for large datasets                                  |
+|  X DATA LOSS: Changes since last snapshot lost on crash              |
+|  X Fork overhead for large datasets                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1916,14 +1916,14 @@ and naming things." — Phil Karlton
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Minimal data loss (up to 1 second with everysec)                  |
-|  [x] Human-readable format                                             |
-|  [x] Automatic rewrite to keep file small                              |
+|  Y Minimal data loss (up to 1 second with everysec)                  |
+|  Y Human-readable format                                             |
+|  Y Automatic rewrite to keep file small                              |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Larger file than RDB                                              |
-|  [ ] Slower restart (replay all commands)                              |
-|  [ ] Slightly slower writes (append overhead)                          |
+|  X Larger file than RDB                                              |
+|  X Slower restart (replay all commands)                              |
+|  X Slightly slower writes (append overhead)                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1946,9 +1946,9 @@ and naming things." — Phil Karlton
 |  [AOF commands from T to now]                                         |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Fast restart (load RDB portion quickly)                           |
-|  [x] Minimal data loss (AOF portion)                                   |
-|  [x] Smaller file than pure AOF                                        |
+|  Y Fast restart (load RDB portion quickly)                           |
+|  Y Minimal data loss (AOF portion)                                   |
+|  Y Smaller file than pure AOF                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -2023,12 +2023,12 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  PROBLEM:                                                              |
 |  Queries for data that DOESN'T EXIST bypass cache.                   |
-|  Every request hits database -> database overload.                    |
+|  Every request hits database > database overload.                    |
 |                                                                         |
 |  Example:                                                              |
 |  Attacker queries user:9999999 (doesn't exist)                       |
-|  Cache miss -> DB query -> Not found -> Return null                     |
-|  Next request for user:9999999 -> Same thing (no caching of null!)    |
+|  Cache miss > DB query > Not found > Return null                     |
+|  Next request for user:9999999 > Same thing (no caching of null!)    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2043,7 +2043,7 @@ and naming things." — Phil Karlton
 |     * Probabilistic data structure                                    |
 |     * Can tell if key DEFINITELY DOESN'T exist                       |
 |     * Check bloom filter before cache/DB query                        |
-|     * If bloom says "not exists" -> return immediately                |
+|     * If bloom says "not exists" > return immediately                |
 |                                                                         |
 |  3. RATE LIMITING                                                      |
 |     * Limit queries for non-existent keys                            |
@@ -2060,10 +2060,10 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  PROBLEM:                                                              |
 |  Cache layer fails entirely (restart, network issue).               |
-|  ALL requests hit database -> database crashes.                       |
+|  ALL requests hit database > database crashes.                       |
 |                                                                         |
 |  Cascading failure:                                                   |
-|  Cache down -> DB overloaded -> DB down -> Everything down              |
+|  Cache down > DB overloaded > DB down > Everything down              |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2266,7 +2266,7 @@ and naming things." — Phil Karlton
 |  REDIS CLUSTER (AP-ish):                                               |
 |  ------------------------                                               |
 |  * Partitioned by key slots                                           |
-|  * Async replication -> potential data loss on failover                |
+|  * Async replication > potential data loss on failover                |
 |  * Prioritizes availability and partition tolerance                   |
 |  * Good for: High-scale caching                                       |
 |                                                                         |
@@ -2401,7 +2401,7 @@ and naming things." — Phil Karlton
 |  PROBLEM:                                                               |
 |  ---------                                                              |
 |  Simple hash: node = hash(key) % num_nodes                             |
-|  Add/remove node -> ALL keys remap! (cache stampede)                   |
+|  Add/remove node > ALL keys remap! (cache stampede)                   |
 |                                                                         |
 |  SOLUTION: CONSISTENT HASHING                                           |
 |  ---------------------------------                                      |
@@ -2413,10 +2413,10 @@ and naming things." — Phil Karlton
 |        Node A                                                          |
 |           ●                                                            |
 |      /         \                                                       |
-|     /    k1●    \    k1 -> Node B (next clockwise)                     |
+|     /    k1●    \    k1 > Node B (next clockwise)                     |
 |    ●             ●                                                     |
 |  Node D         Node B                                                 |
-|     \     k2●   /    k2 -> Node C (next clockwise)                     |
+|     \     k2●   /    k2 > Node C (next clockwise)                     |
 |      \         /                                                       |
 |           ●                                                            |
 |        Node C                                                          |
@@ -2438,9 +2438,9 @@ and naming things." — Phil Karlton
 |  VIRTUAL NODES:                                                         |
 |  ---------------                                                        |
 |  Problem: With few nodes, distribution uneven                          |
-|  Solution: Each physical node -> multiple virtual nodes on ring        |
+|  Solution: Each physical node > multiple virtual nodes on ring        |
 |                                                                         |
-|  Physical Node A -> VNode A1, A2, A3, A4... (spread around ring)       |
+|  Physical Node A > VNode A1, A2, A3, A4... (spread around ring)       |
 |                                                                         |
 |  * Better distribution                                                 |
 |  * Heterogeneous nodes (powerful node = more vnodes)                  |
@@ -2459,7 +2459,7 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  READ:                                                                  |
 |  1. App checks cache                                                   |
-|  2. Cache miss -> App queries DB                                       |
+|  2. Cache miss > App queries DB                                       |
 |  3. App stores result in cache                                        |
 |  4. Return data                                                        |
 |                                                                         |
@@ -2517,7 +2517,7 @@ and naming things." — Phil Karlton
 |                                                                         |
 |  READ (cache handles DB):                                               |
 |  1. App reads from cache                                              |
-|  2. Cache miss -> Cache queries DB                                     |
+|  2. Cache miss > Cache queries DB                                     |
 |  3. Cache stores and returns                                          |
 |                                                                         |
 |  +-----+  Read    +-------+  Auto    +------+                        |
@@ -2542,7 +2542,7 @@ and naming things." — Phil Karlton
 |  2. 1000 requests hit at same time                                    |
 |  3. All see cache miss                                                |
 |  4. All query database simultaneously                                  |
-|  5. Database overwhelmed -> crash                                       |
+|  5. Database overwhelmed > crash                                       |
 |                                                                         |
 |       Requests   Cache Miss!   Database                                |
 |       ●●●●●● ---> ❌ --------> 💥                                     |
@@ -2749,7 +2749,7 @@ and naming things." — Phil Karlton
 |  +------------+  +------------+  +------------+                       |
 |                                                                         |
 |  * 16384 hash slots distributed across masters                        |
-|  * Key -> slot: CRC16(key) % 16384                                    |
+|  * Key > slot: CRC16(key) % 16384                                    |
 |  * Client routes to correct node                                      |
 |  * Good for: Large data, high throughput                             |
 |                                                                         |

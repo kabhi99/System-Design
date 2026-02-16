@@ -45,7 +45,7 @@ flow, race conditions, and locking strategies.
 |  |                                                                 |  |
 |  |  STEP 5: CONFIRM BOOKING                                       |  |
 |  |  -------------------------                                      |  |
-|  |  Payment successful -> Confirm booking                          |  |
+|  |  Payment successful > Confirm booking                          |  |
 |  |  Mark seats as "booked"                                        |  |
 |  |  Generate ticket                                               |  |
 |  |                                                                 |  |
@@ -85,14 +85,14 @@ flow, race conditions, and locking strategies.
 |  |                                                                     |
 |  |  SCENARIO A: Payment successful at T=5min                          |
 |  |  -------------------------------------------                        |
-|  |  -> Convert reservation to booking                                  |
-|  |  -> Seats permanently marked as "booked"                           |
+|  |  > Convert reservation to booking                                  |
+|  |  > Seats permanently marked as "booked"                           |
 |  |                                                                     |
 |  |  SCENARIO B: Payment fails or user abandons                        |
 |  |  ------------------------------------------                         |
-|  |  -> At T=10min, reservation expires                                 |
-|  |  -> Seats released back to "available"                             |
-|  |  -> Other users can now book them                                  |
+|  |  > At T=10min, reservation expires                                 |
+|  |  > Seats released back to "available"                             |
+|  |  > Other users can now book them                                  |
 |  |                                                                     |
 +-------------------------------------------------------------------------+
 ```
@@ -113,7 +113,7 @@ flow, race conditions, and locking strategies.
 |  -----------------------------------------------------------------     |
 |  T=0      SELECT * FROM seats            SELECT * FROM seats          |
 |           WHERE id = 'A5'                WHERE id = 'A5'               |
-|           -> status = 'available'         -> status = 'available'        |
+|           > status = 'available'         > status = 'available'        |
 |                                                                         |
 |  T=1      (sees available)               (sees available)              |
 |           Decides to book                Decides to book               |
@@ -122,7 +122,7 @@ flow, race conditions, and locking strategies.
 |           SET status = 'booked'          SET status = 'booked'         |
 |           WHERE id = 'A5'                WHERE id = 'A5'               |
 |                                                                         |
-|  T=3      -> Success!                     -> Success! (PROBLEM!)        |
+|  T=3      > Success!                     > Success! (PROBLEM!)        |
 |                                                                         |
 |  RESULT: Both users think they booked the seat!                       |
 |          Both get charged!                                             |
@@ -174,7 +174,7 @@ flow, race conditions, and locking strategies.
 |  |  BEGIN;                                                        |  |
 |  |  SELECT * FROM seats                                           |  |
 |  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6')              |  |
-|  |  FOR UPDATE;  -- <- Locks these rows!                          |  |
+|  |  FOR UPDATE;  -- < Locks these rows!                          |  |
 |  |                                                                 |  |
 |  |  -- Rows are now locked                                        |  |
 |  |  -- Check if all seats are available                          |  |
@@ -183,7 +183,7 @@ flow, race conditions, and locking strategies.
 |  |  UPDATE seats SET status = 'locked', locked_by = 'user_A'     |  |
 |  |  WHERE show_id = 123 AND seat_id IN ('A5', 'A6');            |  |
 |  |                                                                 |  |
-|  |  COMMIT;  -- <- Releases locks                                 |  |
+|  |  COMMIT;  -- < Releases locks                                 |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
@@ -211,14 +211,14 @@ flow, race conditions, and locking strategies.
 |  3. Ensures sequential access to same rows                           |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple to implement                                               |
-|  [x] Database handles locking                                          |
-|  [x] ACID guarantees                                                   |
+|  Y Simple to implement                                               |
+|  Y Database handles locking                                          |
+|  Y ACID guarantees                                                   |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Holds database connection during lock                             |
-|  [ ] Can cause contention with many concurrent users                   |
-|  [ ] Deadlock risk (if locks acquired in different order)             |
+|  X Holds database connection during lock                             |
+|  X Can cause contention with many concurrent users                   |
+|  X Deadlock risk (if locks acquired in different order)             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -252,11 +252,11 @@ flow, race conditions, and locking strategies.
 |     SET status = 'locked', version = version + 1                     |
 |     WHERE id = 'A5'                                                  |
 |       AND status = 'available'                                       |
-|       AND version = 1;  -- <- Check version hasn't changed           |
+|       AND version = 1;  -- < Check version hasn't changed           |
 |                                                                         |
 |  3. CHECK rows affected                                               |
-|     If rows_affected = 1 -> Success!                                  |
-|     If rows_affected = 0 -> Someone else modified, RETRY              |
+|     If rows_affected = 1 > Success!                                  |
+|     If rows_affected = 0 > Someone else modified, RETRY              |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -264,19 +264,19 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  User A: READ seat (version=1)                                        |
 |  User B: READ seat (version=1)                                        |
-|  User A: UPDATE WHERE version=1 -> Success! (version now 2)           |
-|  User B: UPDATE WHERE version=1 -> Fails! (version is now 2)          |
+|  User A: UPDATE WHERE version=1 > Success! (version now 2)           |
+|  User B: UPDATE WHERE version=1 > Fails! (version is now 2)          |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] No blocking, better throughput                                    |
-|  [x] Works well with low contention                                    |
-|  [x] No deadlocks                                                      |
+|  Y No blocking, better throughput                                    |
+|  Y Works well with low contention                                    |
+|  Y No deadlocks                                                      |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Requires retry logic                                              |
-|  [ ] Poor performance under high contention (many retries)            |
+|  X Requires retry logic                                              |
+|  X Poor performance under high contention (many retries)            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -305,8 +305,8 @@ flow, race conditions, and locking strategies.
 |  |      +---------------------------------------- Key            |   |
 |  |                                                                |   |
 |  |  Returns:                                                      |   |
-|  |  * "OK" -> Lock acquired                                       |   |
-|  |  * nil  -> Lock already held by someone else                   |   |
+|  |  * "OK" > Lock acquired                                       |   |
+|  |  * nil  > Lock already held by someone else                   |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
@@ -327,7 +327,7 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  WHY LUA SCRIPT?                                                       |
 |  Without it:                                                           |
-|  1. GET key -> returns "my_id"                                        |
+|  1. GET key > returns "my_id"                                        |
 |  2. IF matches, DEL key                                              |
 |  PROBLEM: Between 1 and 2, lock could expire and be acquired        |
 |  by someone else. We'd delete THEIR lock!                            |
@@ -345,7 +345,7 @@ flow, race conditions, and locking strategies.
 |  MULTI-SEAT ATOMIC RESERVATION                                        |
 |                                                                         |
 |  PROBLEM: User wants to book seats A5, A6, A7 together               |
-|  If A5 and A6 lock but A7 fails -> Partial lock (bad UX)             |
+|  If A5 and A6 lock but A7 fails > Partial lock (bad UX)             |
 |  We need ALL-OR-NOTHING semantics                                     |
 |                                                                         |
 |  SOLUTION: Lua Script for Atomic Multi-Key Operation                  |
@@ -421,7 +421,7 @@ flow, race conditions, and locking strategies.
 |  |     |------------->|                 |                 |      |   |
 |  |     |              |                 |                 |      |   |
 |  |     |              | Validate token  |                 |      |   |
-|  |     |              | Rate limit [x]    |                 |      |   |
+|  |     |              | Rate limit Y    |                 |      |   |
 |  |     |              |----------------->                 |      |   |
 |  |     |              |                 |                 |      |   |
 |  |     |              |                 | 1. Generate     |      |   |
@@ -520,7 +520,7 @@ flow, race conditions, and locking strategies.
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PAYMENT -> BOOKING CONFIRMATION FLOW                                  |
+|  PAYMENT > BOOKING CONFIRMATION FLOW                                  |
 |                                                                         |
 |  +----------------------------------------------------------------+   |
 |  |                                                                |   |
@@ -534,9 +534,9 @@ flow, race conditions, and locking strategies.
 |  |                                                                |   |
 |  |  2. Payment Gateway Processing                                |   |
 |  |  -----------------------------                                  |   |
-|  |  -> Redirect to gateway / UPI intent                          |   |
-|  |  -> User completes payment                                     |   |
-|  |  -> Gateway calls webhook                                      |   |
+|  |  > Redirect to gateway / UPI intent                          |   |
+|  |  > User completes payment                                     |   |
+|  |  > Gateway calls webhook                                      |   |
 |  |                                                                |   |
 |  |  3. Payment Callback (Webhook)                                |   |
 |  |  ------------------------------                                |   |
@@ -555,7 +555,7 @@ flow, race conditions, and locking strategies.
 |  |    AND expires_at > NOW()                                     |   |
 |  |  FOR UPDATE;                                                   |   |
 |  |                                                                |   |
-|  |  IF NOT FOUND -> Payment refund, return error                  |   |
+|  |  IF NOT FOUND > Payment refund, return error                  |   |
 |  |                                                                |   |
 |  |  -- Update reservation to confirmed                           |   |
 |  |  UPDATE reservations SET status = 'CONFIRMED'                 |   |
@@ -577,10 +577,10 @@ flow, race conditions, and locking strategies.
 |  |                                                                |   |
 |  |  5. Post-Booking Actions (Async)                              |   |
 |  |  ----------------------------------                             |   |
-|  |  -> Publish BookingConfirmed event to Kafka                   |   |
-|  |  -> Delete Redis locks (cleanup)                               |   |
-|  |  -> Send confirmation email/SMS                                |   |
-|  |  -> Generate e-ticket                                          |   |
+|  |  > Publish BookingConfirmed event to Kafka                   |   |
+|  |  > Delete Redis locks (cleanup)                               |   |
+|  |  > Send confirmation email/SMS                                |   |
+|  |  > Generate e-ticket                                          |   |
 |  |                                                                |   |
 |  +----------------------------------------------------------------+   |
 |                                                                         |
@@ -602,7 +602,7 @@ flow, race conditions, and locking strategies.
 |                                                                         |
 |  Solution:                                                             |
 |  1. Check reservation validity before confirming                     |
-|  2. If expired -> Initiate refund                                     |
+|  2. If expired > Initiate refund                                     |
 |  3. Ask user to re-reserve (if seats still available)               |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -633,9 +633,9 @@ flow, race conditions, and locking strategies.
 |  Solution:                                                             |
 |  1. Query payment gateway for status                                 |
 |  2. Reconciliation job checks pending payments                       |
-|  3. If SUCCESS -> confirm booking                                     |
-|  4. If FAILED -> release reservation                                  |
-|  5. If UNKNOWN -> manual review + customer support                    |
+|  3. If SUCCESS > confirm booking                                     |
+|  4. If FAILED > release reservation                                  |
+|  5. If UNKNOWN > manual review + customer support                    |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |

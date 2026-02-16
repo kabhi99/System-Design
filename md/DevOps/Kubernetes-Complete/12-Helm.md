@@ -46,15 +46,15 @@ of complex applications.
 |     replicas: 10                                                      |
 |     image: myapp:v1.2.3                                               |
 |                                                                         |
-|     -> Need separate YAML files for each environment!                 |
+|     > Need separate YAML files for each environment!                 |
 |                                                                         |
 |  3. NO VERSIONING / ROLLBACK                                          |
 |     "We deployed broken code, how do we go back?"                    |
-|     -> Manually re-apply old YAMLs (if you saved them!)              |
+|     > Manually re-apply old YAMLs (if you saved them!)              |
 |                                                                         |
 |  4. INSTALLING THIRD-PARTY APPS IS HARD                               |
 |     Want to install MySQL? Redis? Prometheus?                        |
-|     -> Find all the YAMLs, understand them, customize them...        |
+|     > Find all the YAMLs, understand them, customize them...        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -109,7 +109,7 @@ of complex applications.
 |  3. VERSIONING & ROLLBACK                                             |
 |     helm upgrade mysql bitnami/mysql --set replicas=5                |
 |     # Oops, something broke!                                          |
-|     helm rollback mysql 1   <- Go back to previous version            |
+|     helm rollback mysql 1   < Go back to previous version            |
 |                                                                         |
 |  4. EASY THIRD-PARTY INSTALLS                                         |
 |     helm install prometheus prometheus-community/prometheus           |
@@ -241,7 +241,7 @@ of complex applications.
 |  |          +----> helm install analytics-db bitnami/mysql        |   |
 |  |                 RELEASE: analytics-db                          |   |
 |  |                                                                 |   |
-|  |   ONE chart -> THREE releases (3 different MySQL instances)    |   |
+|  |   ONE chart > THREE releases (3 different MySQL instances)    |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |

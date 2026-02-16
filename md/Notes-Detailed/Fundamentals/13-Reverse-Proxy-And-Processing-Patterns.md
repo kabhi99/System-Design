@@ -167,13 +167,13 @@ Reverse Proxy, Event-Driven Architecture, and Streaming vs Batch Processing.
 |  6. URL REWRITING / ROUTING                                            |
 |  ===========================                                            |
 |                                                                         |
-|  /api/*        -> API servers                                           |
-|  /static/*     -> Static file servers / CDN                            |
-|  /admin/*      -> Admin servers (with extra auth)                       |
-|  /*            -> Web servers                                            |
+|  /api/*        > API servers                                           |
+|  /static/*     > Static file servers / CDN                            |
+|  /admin/*      > Admin servers (with extra auth)                       |
+|  /*            > Web servers                                            |
 |                                                                         |
 |  Can also rewrite URLs:                                                 |
-|  /old-path -> /new-path (301 redirect)                                 |
+|  /old-path > /new-path (301 redirect)                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -190,15 +190,15 @@ Reverse Proxy, Event-Driven Architecture, and Streaming vs Batch Processing.
 |  |  Feature            Reverse Proxy  API Gateway    Load Balancer  ||
 |  |  ---------------------------------------------------------------  ||
 |  |                                                                   ||
-|  |  SSL Termination    [x]              [x]              [x]              ||
-|  |  Load Balancing     [x]              [x]              [x] (primary)    ||
-|  |  Caching            [x]              Sometimes      [ ]              ||
-|  |  Compression        [x]              [ ]              [ ]              ||
-|  |  Rate Limiting      [x]              [x]              [ ]              ||
-|  |  Authentication     Basic          [x] (OAuth,JWT)  [ ]              ||
-|  |  Request Transform  Basic          [x]              [ ]              ||
-|  |  API Versioning     [ ]              [x]              [ ]              ||
-|  |  Analytics          Basic          [x]              Basic          ||
+|  |  SSL Termination    Y              Y              Y              ||
+|  |  Load Balancing     Y              Y              Y (primary)    ||
+|  |  Caching            Y              Sometimes      X              ||
+|  |  Compression        Y              X              X              ||
+|  |  Rate Limiting      Y              Y              X              ||
+|  |  Authentication     Basic          Y (OAuth,JWT)  X              ||
+|  |  Request Transform  Basic          Y              X              ||
+|  |  API Versioning     X              Y              X              ||
+|  |  Analytics          Basic          Y              Basic          ||
 |  |                                                                   ||
 |  +-------------------------------------------------------------------+|
 |                                                                         |
@@ -369,7 +369,7 @@ Reverse Proxy, Event-Driven Architecture, and Streaming vs Batch Processing.
 |  |      "customer": {                                                    | |
 |  |        "id": "456",                                                   | |
 |  |        "name": "John",                                                | |
-|  |        "email": "john@example.com"  <- Full customer data             | |
+|  |        "email": "john@example.com"  < Full customer data             | |
 |  |      },                                                               | |
 |  |      "items": [...full item details...],                             | |
 |  |      "shipping_address": {...}                                        | |
@@ -462,23 +462,23 @@ Reverse Proxy, Event-Driven Architecture, and Streaming vs Batch Processing.
 |  BENEFITS                                                               |
 |  ========                                                               |
 |                                                                         |
-|  [x] LOOSE COUPLING                                                      |
+|  Y LOOSE COUPLING                                                      |
 |    Services don't know about each other                               |
 |    Add new consumers without changing producers                        |
 |                                                                         |
-|  [x] SCALABILITY                                                         |
+|  Y SCALABILITY                                                         |
 |    Consumers scale independently                                       |
 |    Handle traffic spikes with buffering                               |
 |                                                                         |
-|  [x] RESILIENCE                                                          |
+|  Y RESILIENCE                                                          |
 |    Failed consumer doesn't affect producer                            |
 |    Events persisted, replay on recovery                               |
 |                                                                         |
-|  [x] FLEXIBILITY                                                         |
+|  Y FLEXIBILITY                                                         |
 |    Easy to add new functionality                                      |
 |    Different consumers can process same event differently             |
 |                                                                         |
-|  [x] AUDIT TRAIL                                                         |
+|  Y AUDIT TRAIL                                                         |
 |    Events provide natural history                                     |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -486,23 +486,23 @@ Reverse Proxy, Event-Driven Architecture, and Streaming vs Batch Processing.
 |  CHALLENGES                                                             |
 |  ==========                                                             |
 |                                                                         |
-|  [ ] COMPLEXITY                                                          |
+|  X COMPLEXITY                                                          |
 |    Harder to trace flow through system                                |
 |    Debugging distributed events is difficult                          |
 |                                                                         |
-|  [ ] EVENTUAL CONSISTENCY                                                |
+|  X EVENTUAL CONSISTENCY                                                |
 |    Data may be temporarily inconsistent                               |
 |    Must design for this                                               |
 |                                                                         |
-|  [ ] EVENT ORDERING                                                      |
+|  X EVENT ORDERING                                                      |
 |    Events may arrive out of order                                     |
 |    Need strategies to handle (sequence numbers, timestamps)           |
 |                                                                         |
-|  [ ] IDEMPOTENCY                                                         |
+|  X IDEMPOTENCY                                                         |
 |    Same event may be delivered multiple times                         |
 |    Consumers must handle duplicates                                   |
 |                                                                         |
-|  [ ] SCHEMA EVOLUTION                                                    |
+|  X SCHEMA EVOLUTION                                                    |
 |    Changing event structure is challenging                            |
 |    Backward/forward compatibility needed                              |
 |                                                                         |

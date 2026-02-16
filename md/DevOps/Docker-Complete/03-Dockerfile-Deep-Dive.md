@@ -14,7 +14,7 @@ A Dockerfile is a recipe for creating Docker images:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  DOCKERFILE -> docker build -> IMAGE -> docker run -> CONTAINER           |
+|  DOCKERFILE > docker build > IMAGE > docker run > CONTAINER           |
 |                                                                         |
 |  +----------------+      +----------------+      +----------------+   |
 |  |   Dockerfile   |      |     Image      |      |   Container    |   |
@@ -290,24 +290,24 @@ CMD ["app.py"]       # Default argument
 |  ------------                                                          |
 |  CMD ["python", "app.py"]                                             |
 |                                                                         |
-|  docker run myimage              -> python app.py                      |
-|  docker run myimage bash         -> bash (CMD replaced)                |
+|  docker run myimage              > python app.py                      |
+|  docker run myimage bash         > bash (CMD replaced)                |
 |                                                                         |
 |  ENTRYPOINT ALONE:                                                     |
 |  ------------------                                                    |
 |  ENTRYPOINT ["python"]                                                |
 |                                                                         |
-|  docker run myimage              -> python                             |
-|  docker run myimage app.py       -> python app.py                     |
+|  docker run myimage              > python                             |
+|  docker run myimage app.py       > python app.py                     |
 |                                                                         |
 |  ENTRYPOINT + CMD (recommended):                                       |
 |  -------------------------------                                       |
 |  ENTRYPOINT ["python"]                                                |
 |  CMD ["app.py"]                                                       |
 |                                                                         |
-|  docker run myimage              -> python app.py                      |
-|  docker run myimage other.py     -> python other.py                   |
-|  docker run --entrypoint bash myimage  -> bash (override EP)          |
+|  docker run myimage              > python app.py                      |
+|  docker run myimage other.py     > python other.py                   |
+|  docker run --entrypoint bash myimage  > bash (override EP)          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

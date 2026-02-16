@@ -282,22 +282,22 @@ Every system design discussion should follow this framework:
 |                                                                         |
 |  DO's                                                                  |
 |  ----                                                                  |
-|  [x] Clarify requirements before designing                              |
-|  [x] Think out loud - explain your reasoning                            |
-|  [x] Draw diagrams as you explain                                       |
-|  [x] Discuss trade-offs for every decision                              |
-|  [x] Start simple, then add complexity                                  |
-|  [x] Consider failure scenarios                                         |
-|  [x] Mention monitoring and observability                               |
+|  Y Clarify requirements before designing                              |
+|  Y Think out loud - explain your reasoning                            |
+|  Y Draw diagrams as you explain                                       |
+|  Y Discuss trade-offs for every decision                              |
+|  Y Start simple, then add complexity                                  |
+|  Y Consider failure scenarios                                         |
+|  Y Mention monitoring and observability                               |
 |                                                                         |
 |  DON'Ts                                                                |
 |  ------                                                                |
-|  [ ] Don't jump into solution immediately                               |
-|  [ ] Don't ignore scale requirements                                    |
-|  [ ] Don't over-engineer for small scale                                |
-|  [ ] Don't forget about data consistency                                |
-|  [ ] Don't ignore security considerations                               |
-|  [ ] Don't give one-sided solutions without trade-offs                  |
+|  X Don't jump into solution immediately                               |
+|  X Don't ignore scale requirements                                    |
+|  X Don't over-engineer for small scale                                |
+|  X Don't forget about data consistency                                |
+|  X Don't ignore security considerations                               |
+|  X Don't give one-sided solutions without trade-offs                  |
 |                                                                         |
 |  KEYWORDS TO USE                                                       |
 |  ---------------                                                       |

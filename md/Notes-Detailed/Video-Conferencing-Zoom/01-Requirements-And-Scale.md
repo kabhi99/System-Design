@@ -207,7 +207,7 @@ SECTION 1.4: MEDIA TRANSMISSION APPROACHES
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
-*|  |  2. SFU (Selective Forwarding Unit) <- MOST COMMON            |  |*
+*|  |  2. SFU (Selective Forwarding Unit) < MOST COMMON            |  |*
 *|  |  ===============================================              |  |*
 *|  |                                                                 |  |*
 *|  |       +----+                                                   |  |*

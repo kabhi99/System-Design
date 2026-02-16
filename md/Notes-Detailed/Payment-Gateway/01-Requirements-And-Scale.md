@@ -250,16 +250,16 @@
 |  |  POST /payments                                                 |  |
 |  |  { amount: 100, capture: false }                               |  |
 |  |                                                                 |  |
-|  |  -> Bank reserves $100 on card                                  |  |
-|  |  -> No money moved yet                                          |  |
-|  |  -> Auth valid for 7-30 days                                    |  |
+|  |  > Bank reserves $100 on card                                  |  |
+|  |  > No money moved yet                                          |  |
+|  |  > Auth valid for 7-30 days                                    |  |
 |  |                                                                 |  |
 |  |  Step 2: CAPTURE (Collect funds)                               |  |
 |  |  -------------------------------                                |  |
 |  |  POST /payments/{id}/capture                                   |  |
 |  |  { amount: 100 }  // Can capture less than authorized         |  |
 |  |                                                                 |  |
-|  |  -> Money moves from cardholder to merchant                    |  |
+|  |  > Money moves from cardholder to merchant                    |  |
 |  |                                                                 |  |
 |  |  Alternative: VOID (Cancel authorization)                     |  |
 |  |  POST /payments/{id}/cancel                                    |  |
@@ -274,8 +274,8 @@
 |  POST /payments                                                        |
 |  { amount: 100, capture: true }  // Default                          |
 |                                                                         |
-|  -> Authorize AND capture in single call                              |
-|  -> Money moves immediately                                            |
+|  > Authorize AND capture in single call                              |
+|  > Money moves immediately                                            |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |

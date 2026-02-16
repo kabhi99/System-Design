@@ -154,10 +154,10 @@ you understand why it's structured the way it is.
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Daemon restart doesn't affect running containers                   |
-|  [x] Components can be upgraded independently                           |
-|  [x] containerd can be used without Docker (Kubernetes)                |
-|  [x] Follows Unix philosophy (do one thing well)                       |
+|  Y Daemon restart doesn't affect running containers                   |
+|  Y Components can be upgraded independently                           |
+|  Y containerd can be used without Docker (Kubernetes)                |
+|  Y Follows Unix philosophy (do one thing well)                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

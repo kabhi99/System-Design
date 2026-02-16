@@ -220,13 +220,13 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Allows burst traffic (up to bucket capacity)                      |*
-*|  [x] Memory efficient (just 2 values per user)                         |*
-*|  [x] Widely used (AWS, Stripe)                                         |*
+*|  Y Allows burst traffic (up to bucket capacity)                      |*
+*|  Y Memory efficient (just 2 values per user)                         |*
+*|  Y Widely used (AWS, Stripe)                                         |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Two parameters to tune (capacity + rate)                          |*
-*|  [ ] Hard to set optimal values                                        |*
+*|  X Two parameters to tune (capacity + rate)                          |*
+*|  X Hard to set optimal values                                        |*
 *|                                                                         |*
 *|  USE WHEN: You want to allow bursts but control average rate         |*
 *|                                                                         |*
@@ -250,8 +250,8 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  |                       v  Leak at constant rate                 |  |*
 *|  |                    ■---->  Process 1 req/second                |  |*
 *|  |                                                                 |  |*
-*|  |  If bucket full -> REJECT (overflow)                           |  |*
-*|  |  Else -> Add to queue, process at fixed rate                   |  |*
+*|  |  If bucket full > REJECT (overflow)                           |  |*
+*|  |  Else > Add to queue, process at fixed rate                   |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -287,14 +287,14 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Smooth output rate (no bursts)                                    |*
-*|  [x] Good for rate shaping                                             |*
-*|  [x] Protects downstream services                                      |*
+*|  Y Smooth output rate (no bursts)                                    |*
+*|  Y Good for rate shaping                                             |*
+*|  Y Protects downstream services                                      |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Can queue requests (added latency)                                |*
-*|  [ ] Doesn't handle bursts well                                        |*
-*|  [ ] May need actual queue (memory)                                    |*
+*|  X Can queue requests (added latency)                                |*
+*|  X Doesn't handle bursts well                                        |*
+*|  X May need actual queue (memory)                                    |*
 *|                                                                         |*
 *|  USE WHEN: Need constant processing rate (e.g., message queues)      |*
 *|                                                                         |*
@@ -379,13 +379,13 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Very simple to implement                                          |*
-*|  [x] Memory efficient (1 counter per window)                           |*
-*|  [x] Fast                                                               |*
+*|  Y Very simple to implement                                          |*
+*|  Y Memory efficient (1 counter per window)                           |*
+*|  Y Fast                                                               |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Boundary problem (burst at window edges)                          |*
-*|  [ ] Not truly accurate                                                 |*
+*|  X Boundary problem (burst at window edges)                          |*
+*|  X Not truly accurate                                                 |*
 *|                                                                         |*
 *|  USE WHEN: Simplicity matters more than precision                    |*
 *|                                                                         |*
@@ -413,7 +413,7 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  |                                                                 |  |*
 *|  |  Window: [12:00:30 ---------------------------- 12:01:30]     |  |*
 *|  |                                                                 |  |*
-*|  |  Count = 4 (< 5 limit) -> ALLOW new request                    |  |*
+*|  |  Count = 4 (< 5 limit) > ALLOW new request                    |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -466,13 +466,13 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Very accurate (no boundary issues)                                |*
-*|  [x] True sliding window                                               |*
+*|  Y Very accurate (no boundary issues)                                |*
+*|  Y True sliding window                                               |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Memory intensive (stores every timestamp)                         |*
-*|  [ ] Slower (cleanup operation)                                        |*
-*|  [ ] Doesn't scale for high-volume endpoints                          |*
+*|  X Memory intensive (stores every timestamp)                         |*
+*|  X Slower (cleanup operation)                                        |*
+*|  X Doesn't scale for high-volume endpoints                          |*
 *|                                                                         |*
 *|  USE WHEN: Accuracy critical, low-to-medium volume                   |*
 *|                                                                         |*
@@ -506,7 +506,7 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  |                  = 60 * 0.667 + 15                             |  |*
 *|  |                  = 40 + 15 = 55                                |  |*
 *|  |                                                                 |  |*
-*|  |  55 < 100 -> ALLOW                                             |  |*
+*|  |  55 < 100 > ALLOW                                             |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -585,14 +585,14 @@ SECTION 1.3: RATE LIMITING ALGORITHMS
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Good balance of accuracy and efficiency                          |*
-*|  [x] Memory efficient (2 counters)                                     |*
-*|  [x] Smooth rate limiting (no boundary spikes)                        |*
-*|  [x] Fast                                                               |*
+*|  Y Good balance of accuracy and efficiency                          |*
+*|  Y Memory efficient (2 counters)                                     |*
+*|  Y Smooth rate limiting (no boundary spikes)                        |*
+*|  Y Fast                                                               |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Approximation (not exact)                                         |*
-*|  [ ] Slightly more complex than fixed window                          |*
+*|  X Approximation (not exact)                                         |*
+*|  X Slightly more complex than fixed window                          |*
 *|                                                                         |*
 *|  USE WHEN: Need good accuracy without memory cost                    |*
 *|            (Most common choice in production)                        |*
@@ -671,21 +671,21 @@ SECTION 1.5: CHOOSING THE RIGHT ALGORITHM
 *|  |                                                                 |  |*
 *|  |  Need to allow burst traffic?                                  |  |*
 *|  |       |                                                        |  |*
-*|  |       +-- YES -> Token Bucket                                  |  |*
+*|  |       +-- YES > Token Bucket                                  |  |*
 *|  |       |                                                        |  |*
 *|  |       +-- NO -+-- Need smooth constant rate?                  |  |*
 *|  |               |                                                |  |*
-*|  |               +-- YES -> Leaky Bucket                          |  |*
+*|  |               +-- YES > Leaky Bucket                          |  |*
 *|  |               |                                                |  |*
 *|  |               +-- NO -+-- Need perfect accuracy?              |  |*
 *|  |                       |                                        |  |*
-*|  |                       +-- YES + Low volume -> Sliding Log      |  |*
+*|  |                       +-- YES + Low volume > Sliding Log      |  |*
 *|  |                       |                                        |  |*
 *|  |                       +-- NO -+-- Simplicity priority?        |  |*
 *|  |                               |                                |  |*
-*|  |                               +-- YES -> Fixed Window          |  |*
+*|  |                               +-- YES > Fixed Window          |  |*
 *|  |                               |                                |  |*
-*|  |                               +-- NO -> Sliding Window Counter |  |*
+*|  |                               +-- NO > Sliding Window Counter |  |*
 *|  |                                        (Recommended default)  |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*

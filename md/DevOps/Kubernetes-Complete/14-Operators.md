@@ -17,12 +17,12 @@ management using custom controllers.
 |  |                                                                 |  |
 |  |   User creates:      Operator watches and acts:               |  |
 |  |                                                                 |  |
-|  |   PostgresCluster    -> Create StatefulSet                     |  |
-|  |   replicas: 3        -> Create Services                         |  |
-|  |   version: 14        -> Configure replication                   |  |
-|  |                      -> Handle backups                          |  |
-|  |                      -> Manage upgrades                         |  |
-|  |                      -> Self-healing                            |  |
+|  |   PostgresCluster    > Create StatefulSet                     |  |
+|  |   replicas: 3        > Create Services                         |  |
+|  |   version: 14        > Configure replication                   |  |
+|  |                      > Handle backups                          |  |
+|  |                      > Manage upgrades                         |  |
+|  |                      > Self-healing                            |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |

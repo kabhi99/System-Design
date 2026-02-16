@@ -61,7 +61,7 @@ SECTION 4.1: SCALING THE SFU
 *|  |  |     - If new: pick least loaded SFU, create mapping    |  |  |*
 *|  |  |  3. Client connects to assigned SFU                    |  |  |*
 *|  |  |                                                         |  |  |*
-*|  |  |  Meeting -> SFU mapping stored in:                      |  |  |*
+*|  |  |  Meeting > SFU mapping stored in:                      |  |  |*
 *|  |  |  * Redis (fast lookup)                                 |  |  |*
 *|  |  |  * Consistent hashing for deterministic routing        |  |  |*
 *|  |  |                                                         |  |  |*
@@ -314,7 +314,7 @@ SECTION 4.5: RELIABILITY
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
-*|  |  2. NETWORK SWITCH (Wi-Fi -> LTE)                              |  |*
+*|  |  2. NETWORK SWITCH (Wi-Fi > LTE)                              |  |*
 *|  |                                                                 |  |*
 *|  |  ICE Restart:                                                 |  |*
 *|  |  * Detect network change                                      |  |*

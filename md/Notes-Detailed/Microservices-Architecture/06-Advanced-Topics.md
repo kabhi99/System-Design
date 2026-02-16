@@ -21,8 +21,8 @@ SECTION 1: SERVICE MESH
 *|  |  * Load balancing                                               |  |*
 *|  |  * Metrics collection                                           |  |*
 *|  |                                                                 |  |*
-*|  |  -> Duplicated logic in every service!                          |  |*
-*|  |  -> Different implementations per language                       |  |*
+*|  |  > Duplicated logic in every service!                          |  |*
+*|  |  > Different implementations per language                       |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -108,16 +108,16 @@ SECTION 1: SERVICE MESH
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  WHEN TO USE SERVICE MESH:                                             |*
-*|  [x] Many services (50+)                                                |*
-*|  [x] Need zero-trust security (mTLS everywhere)                         |*
-*|  [x] Complex traffic management                                         |*
-*|  [x] Polyglot environment (multiple languages)                          |*
+*|  Y Many services (50+)                                                |*
+*|  Y Need zero-trust security (mTLS everywhere)                         |*
+*|  Y Complex traffic management                                         |*
+*|  Y Polyglot environment (multiple languages)                          |*
 *|                                                                         |*
 *|  WHEN TO SKIP:                                                         |*
-*|  [ ] Few services (< 10)                                                |*
-*|  [ ] Resource constrained                                               |*
-*|  [ ] Simple networking needs                                            |*
-*|  [ ] Team not ready for complexity                                      |*
+*|  X Few services (< 10)                                                |*
+*|  X Resource constrained                                               |*
+*|  X Simple networking needs                                            |*
+*|  X Team not ready for complexity                                      |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -145,15 +145,15 @@ SECTION 2: API VERSIONING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Very explicit and visible                                               |*
-*|  [x] Easy to route at load balancer                                          |*
-*|  [x] Easy to cache (different URLs)                                          |*
-*|  [x] Simple to understand                                                    |*
+*|  Y Very explicit and visible                                               |*
+*|  Y Easy to route at load balancer                                          |*
+*|  Y Easy to cache (different URLs)                                          |*
+*|  Y Simple to understand                                                    |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] URL pollution                                                           |*
-*|  [ ] Not RESTful (resource URL changes)                                      |*
-*|  [ ] Duplicate routes                                                        |*
+*|  X URL pollution                                                           |*
+*|  X Not RESTful (resource URL changes)                                      |*
+*|  X Duplicate routes                                                        |*
 *|                                                                              |*
 *|  MOST COMMONLY USED                                                         |*
 *|                                                                              |*
@@ -171,14 +171,14 @@ SECTION 2: API VERSIONING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] URL stays clean                                                         |*
-*|  [x] Optional parameter (default version)                                    |*
-*|  [x] Easy to implement                                                       |*
+*|  Y URL stays clean                                                         |*
+*|  Y Optional parameter (default version)                                    |*
+*|  Y Easy to implement                                                       |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Easy to forget parameter                                                |*
-*|  [ ] Caching complexity                                                      |*
-*|  [ ] Routing harder at LB level                                              |*
+*|  X Easy to forget parameter                                                |*
+*|  X Caching complexity                                                      |*
+*|  X Routing harder at LB level                                              |*
 *|                                                                              |*
 *+------------------------------------------------------------------------------+*
 *+------------------------------------------------------------------------------+*
@@ -198,14 +198,14 @@ SECTION 2: API VERSIONING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Clean URLs                                                              |*
-*|  [x] More RESTful                                                            |*
-*|  [x] Content negotiation support                                             |*
+*|  Y Clean URLs                                                              |*
+*|  Y More RESTful                                                            |*
+*|  Y Content negotiation support                                             |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Hidden from URL                                                         |*
-*|  [ ] Harder to test/debug                                                    |*
-*|  [ ] Requires header inspection                                              |*
+*|  X Hidden from URL                                                         |*
+*|  X Harder to test/debug                                                    |*
+*|  X Requires header inspection                                              |*
 *|                                                                              |*
 *+------------------------------------------------------------------------------+*
 *+------------------------------------------------------------------------------+*
@@ -229,14 +229,14 @@ SECTION 2: API VERSIONING STRATEGIES
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] No version management                                                   |*
-*|  [x] One codebase                                                            |*
-*|  [x] Gradual evolution                                                       |*
+*|  Y No version management                                                   |*
+*|  Y One codebase                                                            |*
+*|  Y Gradual evolution                                                       |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Can't make breaking changes                                             |*
-*|  [ ] API bloat over time                                                     |*
-*|  [ ] Requires discipline                                                     |*
+*|  X Can't make breaking changes                                             |*
+*|  X API bloat over time                                                     |*
+*|  X Requires discipline                                                     |*
 *|                                                                              |*
 *+------------------------------------------------------------------------------+*
 *+------------------------------------------------------------------------------+*
@@ -369,7 +369,7 @@ SECTION 3: SECURITY PATTERNS
 *|  |                                                                        | |*
 *|  |  C. OAUTH2 CLIENT CREDENTIALS                                        | |*
 *|  |     Services get tokens from auth server                             | |*
-*|  |     Service A -> Auth Server -> Token -> Service B                     | |*
+*|  |     Service A > Auth Server > Token > Service B                     | |*
 *|  |                                                                        | |*
 *|  |  D. SPIFFE/SPIRE                                                      | |*
 *|  |     Workload identity standard                                       | |*
@@ -436,8 +436,8 @@ SECTION 4: TESTING STRATEGIES
 *|  |  Mock external services (WireMock, MockServer)                       | |*
 *|  |                                                                        | |*
 *|  |  Example:                                                             | |*
-*|  |  Service -> Real PostgreSQL (container) -> Test assertions            | |*
-*|  |  Service -> WireMock (mocked Payment API) -> Test assertions          | |*
+*|  |  Service > Real PostgreSQL (container) > Test assertions            | |*
+*|  |  Service > WireMock (mocked Payment API) > Test assertions          | |*
 *|  |                                                                        | |*
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
@@ -457,7 +457,7 @@ SECTION 4: TESTING STRATEGIES
 *|  |  |  "When I call GET /users/123,                                |   | |*
 *|  |  |   I expect { 'id': 123, 'name': string, 'email': string }"  |   | |*
 *|  |  |                                                               |   | |*
-*|  |  |  This expectation -> CONTRACT (Pact file)                     |   | |*
+*|  |  |  This expectation > CONTRACT (Pact file)                     |   | |*
 *|  |  |                                                               |   | |*
 *|  |  |  --------------------------------------------------------    |   | |*
 *|  |  |                                                               |   | |*
@@ -487,10 +487,10 @@ SECTION 4: TESTING STRATEGIES
 *|  |  Test complete user flows through all services                        | |*
 *|  |                                                                        | |*
 *|  |  Example: Place an order                                             | |*
-*|  |  1. User login -> Auth Service                                        | |*
-*|  |  2. Browse products -> Product Service                                | |*
-*|  |  3. Add to cart -> Cart Service                                       | |*
-*|  |  4. Checkout -> Order Service -> Inventory -> Payment                   | |*
+*|  |  1. User login > Auth Service                                        | |*
+*|  |  2. Browse products > Product Service                                | |*
+*|  |  3. Add to cart > Cart Service                                       | |*
+*|  |  4. Checkout > Order Service > Inventory > Payment                   | |*
 *|  |  5. Verify order created                                             | |*
 *|  |                                                                        | |*
 *|  |  CHALLENGES:                                                          | |*
@@ -544,7 +544,7 @@ SECTION 5: ANTI-PATTERNS TO AVOID
 *|  |  * Tightly coupled APIs                                              | |*
 *|  |  * Can't be developed independently                                  | |*
 *|  |                                                                        | |*
-*|  |  -> Worst of both worlds!                                             | |*
+*|  |  > Worst of both worlds!                                             | |*
 *|  |                                                                        | |*
 *|  |  FIX: True bounded contexts, database per service, async events      | |*
 *|  |                                                                        | |*
@@ -584,7 +584,7 @@ SECTION 5: ANTI-PATTERNS TO AVOID
 *|  |                                                                        | |*
 *|  |  One request requires many inter-service calls                        | |*
 *|  |                                                                        | |*
-*|  |  Client -> A -> B -> C -> D -> E -> F                                      | |*
+*|  |  Client > A > B > C > D > E > F                                      | |*
 *|  |                                                                        | |*
 *|  |  PROBLEMS:                                                            | |*
 *|  |  * Latency adds up                                                   | |*
@@ -689,7 +689,7 @@ SECTION 6: CONWAY'S LAW & TEAM ORGANIZATION
 *|  |  |       v               v               v                  ||  |*
 *|  |  |  [Frontend]      [Backend]        [Database]             ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  -> Changes require 3 teams to coordinate!                ||  |*
+*|  |  |  > Changes require 3 teams to coordinate!                ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  ------------------------------------------------------  ||  |*
 *|  |  |                                                           ||  |*
@@ -700,7 +700,7 @@ SECTION 6: CONWAY'S LAW & TEAM ORGANIZATION
 *|  |  |  [Order Service]   [Payment Service]  [Shipping Service] ||  |*
 *|  |  |  (full stack)      (full stack)       (full stack)       ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  -> Each team owns end-to-end!                            ||  |*
+*|  |  |  > Each team owns end-to-end!                            ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -713,8 +713,8 @@ SECTION 6: CONWAY'S LAW & TEAM ORGANIZATION
 *|                                                                         |*
 *|  Design your org structure to get the architecture you want!           |*
 *|                                                                         |*
-*|  Want microservices? -> Create small, cross-functional teams            |*
-*|  Want fewer services? -> Consolidate teams                              |*
+*|  Want microservices? > Create small, cross-functional teams            |*
+*|  Want fewer services? > Consolidate teams                              |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 *+-------------------------------------------------------------------------+*
@@ -874,7 +874,7 @@ SECTION 9: INTERVIEW QUICK REFERENCE
 *|  A: Services that must be deployed together, share DB, tightly coupled    |*
 *|                                                                              |*
 *|  Q: How do you test microservices?                                         |*
-*|  A: Unit -> Integration -> Contract -> E2E -> Chaos testing                   |*
+*|  A: Unit > Integration > Contract > E2E > Chaos testing                   |*
 *|                                                                              |*
 *+------------------------------------------------------------------------------+*
 

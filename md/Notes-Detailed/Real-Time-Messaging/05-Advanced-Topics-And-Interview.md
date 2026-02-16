@@ -290,7 +290,7 @@ SECTION 2: INTERVIEW QUESTIONS & ANSWERS
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
 *|  |  Q: How do you route messages between chat servers?          |  |*
-*|  |  A: Redis hash maps user_id -> server_id. On send, lookup    |  |*
+*|  |  A: Redis hash maps user_id > server_id. On send, lookup    |  |*
 *|  |     recipient's server, route directly or via Kafka.        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -302,7 +302,7 @@ SECTION 3: QUICK REFERENCE SUMMARY
 *|                                                                         |*
 *|  ARCHITECTURE SUMMARY                                                   |*
 *|                                                                         |*
-*|  Client -> LB (L4) -> Chat Servers (WS) -> Kafka -> Services              |*
+*|  Client > LB (L4) > Chat Servers (WS) > Kafka > Services              |*
 *|                                                                         |*
 *|  KEY COMPONENTS:                                                        |*
 *|  * Chat Servers: WebSocket connections, 50K each                       |*
@@ -418,7 +418,7 @@ COMPLETE ARCHITECTURE DIAGRAM
 *|  |  +----------------------------------------------------------+|  |*
 *|  |  |                    MEDIA PIPELINE                        ||  |*
 *|  |  |                                                          ||  |*
-*|  |  |  Upload API -> S3 -> Lambda (transcode) -> CDN (delivery) ||  |*
+*|  |  |  Upload API > S3 > Lambda (transcode) > CDN (delivery) ||  |*
 *|  |  |                                                          ||  |*
 *|  |  +----------------------------------------------------------+|  |*
 *|  |                                                               |  |*

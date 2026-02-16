@@ -17,11 +17,11 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 |  |                                                                 |   |
 |  |   Junior Developer with kubectl:                               |   |
 |  |                                                                 |   |
-|  |   kubectl delete deployment production-api     <- Oops!        |   |
-|  |   kubectl delete pvc database-storage          <- Data gone!   |   |
-|  |   kubectl exec -it prod-db -- mysql            <- Sees secrets |   |
-|  |   kubectl get secrets --all-namespaces         <- All passwords|   |
-|  |   kubectl create deployment bitcoin-miner...   <- Crypto mining|   |
+|  |   kubectl delete deployment production-api     < Oops!        |   |
+|  |   kubectl delete pvc database-storage          < Data gone!   |   |
+|  |   kubectl exec -it prod-db -- mysql            < Sees secrets |   |
+|  |   kubectl get secrets --all-namespaces         < All passwords|   |
+|  |   kubectl create deployment bitcoin-miner...   < Crypto mining|   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -55,26 +55,26 @@ RBAC (Role-Based Access Control) controls who can do what in Kubernetes.
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
 |  |   Junior Developer:                                            |   |
-|  |   [x] Can view pods in dev namespace                            |   |
-|  |   [x] Can view logs                                              |   |
-|  |   [ ] Cannot delete anything                                     |   |
-|  |   [ ] Cannot access prod namespace                               |   |
-|  |   [ ] Cannot read secrets                                        |   |
+|  |   Y Can view pods in dev namespace                            |   |
+|  |   Y Can view logs                                              |   |
+|  |   X Cannot delete anything                                     |   |
+|  |   X Cannot access prod namespace                               |   |
+|  |   X Cannot read secrets                                        |   |
 |  |                                                                 |   |
 |  |   Senior Developer:                                            |   |
-|  |   [x] Can create/delete in dev namespace                        |   |
-|  |   [x] Can view prod (read-only)                                  |   |
-|  |   [ ] Cannot delete in prod                                      |   |
+|  |   Y Can create/delete in dev namespace                        |   |
+|  |   Y Can view prod (read-only)                                  |   |
+|  |   X Cannot delete in prod                                      |   |
 |  |                                                                 |   |
 |  |   Ops Team:                                                    |   |
-|  |   [x] Full access to prod                                       |   |
-|  |   [x] Can manage nodes                                           |   |
-|  |   [x] Can read secrets                                           |   |
+|  |   Y Full access to prod                                       |   |
+|  |   Y Can manage nodes                                           |   |
+|  |   Y Can read secrets                                           |   |
 |  |                                                                 |   |
 |  |   CI/CD Pipeline (ServiceAccount):                            |   |
-|  |   [x] Can create/update deployments                             |   |
-|  |   [ ] Cannot delete PVCs                                         |   |
-|  |   [ ] Cannot access other namespaces                            |   |
+|  |   Y Can create/update deployments                             |   |
+|  |   X Cannot delete PVCs                                         |   |
+|  |   X Cannot access other namespaces                            |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |

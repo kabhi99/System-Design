@@ -93,11 +93,11 @@ Part 10: CNI Deep Dives
 |  WHY FLAT NETWORK?                                                      |
 |                                                                         |
 |  In Docker (default):                                                  |
-|    Container A (172.17.0.2) -> NAT -> Host IP -> NAT -> Container B       |
+|    Container A (172.17.0.2) > NAT > Host IP > NAT > Container B       |
 |    Complex! Port mappings, NAT traversal issues.                       |
 |                                                                         |
 |  In Kubernetes:                                                         |
-|    Pod A (10.244.1.5) -> directly -> Pod B (10.244.2.10)                |
+|    Pod A (10.244.1.5) > directly > Pod B (10.244.2.10)                |
 |    Simple! Just like VMs on same network.                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -253,7 +253,7 @@ Part 10: CNI Deep Dives
 |  |   |                  10.244.1.1                  |               |  |
 |  |   +----------------------------------------------+               |  |
 |  |                                                                   |  |
-|  |   Pod A -> Pod B:                                                  |  |
+|  |   Pod A > Pod B:                                                  |  |
 |  |   1. Packet leaves Pod A's eth0                                  |  |
 |  |   2. Goes through veth to bridge                                 |  |
 |  |   3. Bridge sees dest 10.244.1.6 is local                       |  |
@@ -423,7 +423,7 @@ Part 10: CNI Deep Dives
 |  +---------------------------+      +---------------------------+      |
 |  |         NODE 1            |      |         NODE 2            |      |
 |  |                           |      |                           |      |
-|  |   Pod A -> Pod B packet:   |      |                           |      |
+|  |   Pod A > Pod B packet:   |      |                           |      |
 |  |   Src: 10.244.1.5         |      |                           |      |
 |  |   Dst: 10.244.2.10        |      |                           |      |
 |  |           |               |      |                           |      |
@@ -464,7 +464,7 @@ Part 10: CNI Deep Dives
 |  |         NODE 1            |      |         NODE 2            |      |
 |  |     10.244.1.0/24         |      |     10.244.2.0/24         |      |
 |  |                           |      |                           |      |
-|  |   Pod A -> Pod B packet:   |      |                           |      |
+|  |   Pod A > Pod B packet:   |      |                           |      |
 |  |   Src: 10.244.1.5         |      |                           |      |
 |  |   Dst: 10.244.2.10        |      |                           |      |
 |  |           |               |      |                           |      |
@@ -519,7 +519,7 @@ Part 10: CNI Deep Dives
 |                                  v                                      |
 |                           +-------------+                              |
 |                           |  Backend    |                              |
-|                           | 10.244.2.8  |  <- NEW IP!                   |
+|                           | 10.244.2.8  |  < NEW IP!                   |
 |                           +-------------+                              |
 |                                                                         |
 |  SOLUTION: SERVICES                                                     |
@@ -853,22 +853,22 @@ spec:
 |                                                                         |
 |  A RECORD (Service):                                                    |
 |  --------------------                                                   |
-|  my-service.default.svc.cluster.local -> 10.96.10.5                    |
+|  my-service.default.svc.cluster.local > 10.96.10.5                    |
 |                                                                         |
 |  A RECORD (Headless Service):                                          |
 |  ----------------------------                                           |
-|  my-service.default.svc.cluster.local -> 10.244.1.5, 10.244.2.3       |
+|  my-service.default.svc.cluster.local > 10.244.1.5, 10.244.2.3       |
 |  (Returns all Pod IPs)                                                 |
 |                                                                         |
 |  A RECORD (StatefulSet Pods):                                          |
 |  -----------------------------                                          |
-|  mysql-0.mysql.default.svc.cluster.local -> 10.244.1.5                 |
-|  mysql-1.mysql.default.svc.cluster.local -> 10.244.2.3                 |
+|  mysql-0.mysql.default.svc.cluster.local > 10.244.1.5                 |
+|  mysql-1.mysql.default.svc.cluster.local > 10.244.2.3                 |
 |                                                                         |
 |  SRV RECORD (Named Ports):                                             |
 |  --------------------------                                             |
 |  _http._tcp.my-service.default.svc.cluster.local                      |
-|  -> 0 0 80 my-service.default.svc.cluster.local                        |
+|  > 0 0 80 my-service.default.svc.cluster.local                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -891,7 +891,7 @@ spec:
 |  1. Watches Kubernetes API for Services and Endpoints                  |
 |  2. When Service created/updated:                                      |
 |     - Programs iptables rules (or IPVS)                               |
-|     - Rules redirect Service IP -> Pod IPs                             |
+|     - Rules redirect Service IP > Pod IPs                             |
 |                                                                         |
 |  +---------------------------------------------------------------+     |
 |  |                         NODE                                   |     |
@@ -1036,8 +1036,8 @@ spec:
 |  ---------------------------------------------------------------------  |
 |                                                                         |
 |  INGRESS FEATURES:                                                      |
-|  * Host-based routing (app1.com -> Service A)                          |
-|  * Path-based routing (/api -> API Service, /web -> Web Service)        |
+|  * Host-based routing (app1.com > Service A)                          |
+|  * Path-based routing (/api > API Service, /web > Web Service)        |
 |  * TLS termination (HTTPS)                                             |
 |  * Load balancing                                                      |
 |  * SSL certificate management                                          |

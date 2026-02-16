@@ -53,13 +53,13 @@ A load balancer sits between clients and servers:
 |                                    +----------+                        |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Distributes load across servers                                    |
-|  [x] No single point of failure (with redundant LBs)                   |
-|  [x] Easy to scale (add more servers)                                  |
-|  [x] Better user experience                                             |
-|  [x] Can do SSL termination, caching, compression                      |
-|  [x] Zero-downtime deployments                                         |
-|  [x] Geographic distribution                                           |
+|  Y Distributes load across servers                                    |
+|  Y No single point of failure (with redundant LBs)                   |
+|  Y Easy to scale (add more servers)                                  |
+|  Y Better user experience                                             |
+|  Y Can do SSL termination, caching, compression                      |
+|  Y Zero-downtime deployments                                         |
+|  Y Geographic distribution                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -105,18 +105,18 @@ Operates at TCP/UDP level. Doesn't look at packet content.
 |  * Great for asymmetric traffic (small request, large response)     |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Very fast (simple header inspection, no content parsing)         |
-|  [x] Protocol agnostic (HTTP, HTTPS, gRPC, database, any TCP/UDP)    |
-|  [x] Lower latency                                                     |
-|  [x] Less CPU intensive                                                |
-|  [x] Can handle millions of connections                               |
+|  Y Very fast (simple header inspection, no content parsing)         |
+|  Y Protocol agnostic (HTTP, HTTPS, gRPC, database, any TCP/UDP)    |
+|  Y Lower latency                                                     |
+|  Y Less CPU intensive                                                |
+|  Y Can handle millions of connections                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Can't make decisions based on content                             |
-|  [ ] Can't do URL-based routing                                        |
-|  [ ] No SSL termination at LB (can't inspect HTTPS)                   |
-|  [ ] No content caching                                                |
-|  [ ] Limited health checking (TCP only)                               |
+|  X Can't make decisions based on content                             |
+|  X Can't do URL-based routing                                        |
+|  X No SSL termination at LB (can't inspect HTTPS)                   |
+|  X No content caching                                                |
+|  X Limited health checking (TCP only)                               |
 |                                                                         |
 |  EXAMPLES:                                                             |
 |  * AWS NLB (Network Load Balancer)                                   |
@@ -155,40 +155,40 @@ Operates at HTTP/HTTPS level. Inspects request content.
 |  |  L7 Load Balancer (inspects all content)                       |  |
 |  |           v                                                     |  |
 |  |  ROUTING RULES:                                                |  |
-|  |  /api/users -> API Servers (v2)                                |  |
-|  |  /api/v1/*  -> API Servers (legacy)                            |  |
-|  |  /static/*  -> CDN/Static Servers                              |  |
-|  |  /admin/*   -> Admin Servers (internal only)                   |  |
-|  |  Host: api-beta.* -> Beta cluster                              |  |
-|  |  Header X-Tenant-ID: premium -> Premium cluster                |  |
+|  |  /api/users > API Servers (v2)                                |  |
+|  |  /api/v1/*  > API Servers (legacy)                            |  |
+|  |  /static/*  > CDN/Static Servers                              |  |
+|  |  /admin/*   > Admin Servers (internal only)                   |  |
+|  |  Host: api-beta.* > Beta cluster                              |  |
+|  |  Header X-Tenant-ID: premium > Premium cluster                |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  CAPABILITIES:                                                         |
 |                                                                         |
-|  * URL/Path routing: /api/* -> API servers                            |
-|  * Header routing: X-Version: 2 -> v2 servers                         |
-|  * Cookie routing: session -> same server (sticky)                    |
+|  * URL/Path routing: /api/* > API servers                            |
+|  * Header routing: X-Version: 2 > v2 servers                         |
+|  * Cookie routing: session > same server (sticky)                    |
 |  * Host routing: api.example.com vs admin.example.com               |
-|  * Query param routing: ?beta=true -> beta servers                   |
-|  * Method routing: GET -> read replicas, POST -> primary              |
+|  * Query param routing: ?beta=true > beta servers                   |
+|  * Method routing: GET > read replicas, POST > primary              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Content-based routing (URL, headers, cookies)                     |
-|  [x] SSL/TLS termination (offload crypto from servers)                |
-|  [x] Response caching                                                  |
-|  [x] Response compression (gzip, brotli)                              |
-|  [x] Request/response manipulation (add headers, rewrite URLs)        |
-|  [x] Advanced health checks (HTTP status, response content)           |
-|  [x] Rate limiting per route/user                                      |
-|  [x] Web Application Firewall (WAF) capabilities                      |
-|  [x] Authentication/Authorization                                      |
+|  Y Content-based routing (URL, headers, cookies)                     |
+|  Y SSL/TLS termination (offload crypto from servers)                |
+|  Y Response caching                                                  |
+|  Y Response compression (gzip, brotli)                              |
+|  Y Request/response manipulation (add headers, rewrite URLs)        |
+|  Y Advanced health checks (HTTP status, response content)           |
+|  Y Rate limiting per route/user                                      |
+|  Y Web Application Firewall (WAF) capabilities                      |
+|  Y Authentication/Authorization                                      |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Slower than L4 (must parse HTTP)                                  |
-|  [ ] More CPU intensive                                                |
-|  [ ] Higher latency                                                    |
-|  [ ] Only works with HTTP/HTTPS (mostly)                              |
-|  [ ] Limited throughput compared to L4                                |
+|  X Slower than L4 (must parse HTTP)                                  |
+|  X More CPU intensive                                                |
+|  X Higher latency                                                    |
+|  X Only works with HTTP/HTTPS (mostly)                              |
+|  X Limited throughput compared to L4                                |
 |                                                                         |
 |  EXAMPLES:                                                             |
 |  * AWS ALB (Application Load Balancer)                               |
@@ -238,7 +238,7 @@ Operates at HTTP/HTTPS level. Inspects request content.
 |                                                                         |
 |  NETFLIX ARCHITECTURE:                                                 |
 |  +-----------------------------------------------------------------+  |
-|  |  Internet -> AWS NLB -> Zuul (L7) -> Microservices                |  |
+|  |  Internet > AWS NLB > Zuul (L7) > Microservices                |  |
 |  |                                                                 |  |
 |  |  NLB: High throughput, handles millions of connections         |  |
 |  |  Zuul: Routing, rate limiting, auth, canary                    |  |
@@ -258,11 +258,11 @@ The simplest algorithm. Rotate through servers sequentially.
 |                                                                         |
 |  ROUND ROBIN                                                           |
 |                                                                         |
-|  Request 1 -> Server A                                                  |
-|  Request 2 -> Server B                                                  |
-|  Request 3 -> Server C                                                  |
-|  Request 4 -> Server A (cycle repeats)                                 |
-|  Request 5 -> Server B                                                  |
+|  Request 1 > Server A                                                  |
+|  Request 2 > Server B                                                  |
+|  Request 3 > Server C                                                  |
+|  Request 4 > Server A (cycle repeats)                                 |
+|  Request 5 > Server B                                                  |
 |  ...                                                                   |
 |                                                                         |
 |  IMPLEMENTATION:                                                       |
@@ -273,16 +273,16 @@ The simplest algorithm. Rotate through servers sequentially.
 |      return server                                                     |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple to implement                                                |
-|  [x] Even distribution (if servers are equal)                          |
-|  [x] No server state tracking needed                                   |
-|  [x] Low overhead                                                       |
+|  Y Simple to implement                                                |
+|  Y Even distribution (if servers are equal)                          |
+|  Y No server state tracking needed                                   |
+|  Y Low overhead                                                       |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Ignores server capacity (some servers may be more powerful)      |
-|  [ ] Ignores current load (server might be busy)                       |
-|  [ ] Long requests can pile up on one server                           |
-|  [ ] Doesn't consider server health                                    |
+|  X Ignores server capacity (some servers may be more powerful)      |
+|  X Ignores current load (server might be busy)                       |
+|  X Long requests can pile up on one server                           |
+|  X Doesn't consider server health                                    |
 |                                                                         |
 |  USE WHEN: Servers are identical and requests are similar            |
 |                                                                         |
@@ -303,10 +303,10 @@ Accounts for different server capacities.
 |  Server C (weight: 2) - smaller server (4 CPU)                        |
 |                                                                         |
 |  Distribution pattern (weights 5:3:2):                                |
-|  Requests 1-5   -> Server A                                            |
-|  Requests 6-8   -> Server B                                            |
-|  Requests 9-10  -> Server C                                            |
-|  Requests 11-15 -> Server A (cycle repeats)                           |
+|  Requests 1-5   > Server A                                            |
+|  Requests 6-8   > Server B                                            |
+|  Requests 9-10  > Server C                                            |
+|  Requests 11-15 > Server A (cycle repeats)                           |
 |  ...                                                                   |
 |                                                                         |
 |  Result: 50% to A, 30% to B, 20% to C                                |
@@ -331,10 +331,10 @@ Send to the server with fewest active connections.
 |                                                                         |
 |  Current state:                                                        |
 |  Server A: 50 active connections                                      |
-|  Server B: 30 active connections  <- Least connections                 |
+|  Server B: 30 active connections  < Least connections                 |
 |  Server C: 80 active connections                                      |
 |                                                                         |
-|  New request -> Server B (has least connections)                       |
+|  New request > Server B (has least connections)                       |
 |                                                                         |
 |  After routing:                                                        |
 |  Server A: 50 connections                                              |
@@ -342,15 +342,15 @@ Send to the server with fewest active connections.
 |  Server C: 80 connections                                              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Adapts to varying request durations                               |
-|  [x] Better for long-lived connections (WebSockets, streaming)        |
-|  [x] Dynamic load distribution                                          |
-|  [x] Naturally handles slow servers (they accumulate connections)     |
+|  Y Adapts to varying request durations                               |
+|  Y Better for long-lived connections (WebSockets, streaming)        |
+|  Y Dynamic load distribution                                          |
+|  Y Naturally handles slow servers (they accumulate connections)     |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Requires tracking connection state                                 |
-|  [ ] Slightly more overhead                                             |
-|  [ ] New servers get flooded (0 connections initially)                |
+|  X Requires tracking connection state                                 |
+|  X Slightly more overhead                                             |
+|  X New servers get flooded (0 connections initially)                |
 |                                                                         |
 |  USE WHEN: Requests have variable processing times                    |
 |                                                                         |
@@ -370,11 +370,11 @@ Combines capacity weights with connection count.
 |                                                                         |
 |  Score = active_connections / weight (lower is better)                |
 |                                                                         |
-|  Server A: 100 connections, weight 10 -> Score: 100/10 = 10.0         |
-|  Server B:  30 connections, weight 5  -> Score: 30/5 = 6.0 <- Best!   |
-|  Server C:  80 connections, weight 8  -> Score: 80/8 = 10.0          |
+|  Server A: 100 connections, weight 10 > Score: 100/10 = 10.0         |
+|  Server B:  30 connections, weight 5  > Score: 30/5 = 6.0 < Best!   |
+|  Server C:  80 connections, weight 8  > Score: 80/8 = 10.0          |
 |                                                                         |
-|  New request -> Server B (lowest score)                                |
+|  New request > Server B (lowest score)                                |
 |                                                                         |
 |  USE WHEN: Servers have different capacities AND variable requests   |
 |                                                                         |
@@ -393,22 +393,22 @@ Hash client IP to determine server. Same client always hits same server.
 |                                                                         |
 |  Client IP: 192.168.1.100                                             |
 |  hash("192.168.1.100") % 3 = 1                                        |
-|  -> Always routes to Server B                                          |
+|  > Always routes to Server B                                          |
 |                                                                         |
 |  Client IP: 10.0.0.50                                                 |
 |  hash("10.0.0.50") % 3 = 0                                            |
-|  -> Always routes to Server A                                          |
+|  > Always routes to Server A                                          |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Session stickiness without cookies                                |
-|  [x] Good for stateful applications                                    |
-|  [x] Predictable routing                                               |
+|  Y Session stickiness without cookies                                |
+|  Y Good for stateful applications                                    |
+|  Y Predictable routing                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Uneven distribution if IP distribution is uneven                  |
-|  [ ] Server removal/addition breaks sessions (rehashing)              |
-|  [ ] Clients behind NAT share same server                              |
-|  [ ] Mobile users changing networks lose affinity                     |
+|  X Uneven distribution if IP distribution is uneven                  |
+|  X Server removal/addition breaks sessions (rehashing)              |
+|  X Clients behind NAT share same server                              |
+|  X Mobile users changing networks lose affinity                     |
 |                                                                         |
 |  USE WHEN: Need sticky sessions without cookie support               |
 |                                                                         |
@@ -427,7 +427,7 @@ Route to server with lowest response time + fewest connections.
 |  LEAST RESPONSE TIME                                                   |
 |                                                                         |
 |  Server A: Avg response 50ms, 50 connections                          |
-|  Server B: Avg response 30ms, 30 connections <- Best!                  |
+|  Server B: Avg response 30ms, 30 connections < Best!                  |
 |  Server C: Avg response 40ms, 80 connections                          |
 |                                                                         |
 |  Considers both speed and load.                                       |
@@ -438,14 +438,14 @@ Route to server with lowest response time + fewest connections.
 |  * Just response_time (ignoring connections)                         |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Routes to fastest, healthiest server                              |
-|  [x] Adapts to server performance changes                              |
-|  [x] Great for heterogeneous environments                              |
+|  Y Routes to fastest, healthiest server                              |
+|  Y Adapts to server performance changes                              |
+|  Y Great for heterogeneous environments                              |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Requires response time tracking                                   |
-|  [ ] More complex implementation                                       |
-|  [ ] Response times can be noisy                                       |
+|  X Requires response time tracking                                   |
+|  X More complex implementation                                       |
+|  X Response times can be noisy                                       |
 |                                                                         |
 |  USED BY: Nginx (least_time), HAProxy                                |
 |                                                                         |
@@ -469,14 +469,14 @@ Simple but surprisingly effective for large clusters.
 |  distribution (Law of Large Numbers)                                  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Extremely simple                                                  |
-|  [x] No state tracking                                                 |
-|  [x] No coordination between LB instances                              |
-|  [x] Works well at scale                                               |
+|  Y Extremely simple                                                  |
+|  Y No state tracking                                                 |
+|  Y No coordination between LB instances                              |
+|  Y Works well at scale                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Can be uneven for small request counts                           |
-|  [ ] Ignores server health/capacity                                   |
+|  X Can be uneven for small request counts                           |
+|  X Ignores server health/capacity                                   |
 |                                                                         |
 |  POWER OF TWO CHOICES (Better random):                               |
 |  Pick 2 random servers, choose the one with fewer connections        |
@@ -524,12 +524,12 @@ Load balancers must know if servers are healthy:
 |  --------------------------                                             |
 |  Just check if port is open (TCP handshake succeeds)                  |
 |                                                                         |
-|  LB -> SYN -> Server                                                    |
-|  LB <- SYN-ACK <- Server  (healthy!)                                   |
+|  LB > SYN > Server                                                    |
+|  LB < SYN-ACK < Server  (healthy!)                                   |
 |  or                                                                    |
-|  LB <- timeout (unhealthy!)                                            |
+|  LB < timeout (unhealthy!)                                            |
 |  or                                                                    |
-|  LB <- RST (connection refused - unhealthy!)                          |
+|  LB < RST (connection refused - unhealthy!)                          |
 |                                                                         |
 |  PROS: Fast, simple, works for any TCP service                       |
 |  CONS: Port open ≠ app working (process might be hung)              |
@@ -540,12 +540,12 @@ Load balancers must know if servers are healthy:
 |  ---------------------------                                            |
 |  Make HTTP request to health endpoint                                 |
 |                                                                         |
-|  LB -> GET /health HTTP/1.1                                           |
-|  LB <- 200 OK <- Server  (healthy!)                                    |
+|  LB > GET /health HTTP/1.1                                           |
+|  LB < 200 OK < Server  (healthy!)                                    |
 |  or                                                                    |
-|  LB <- 500 Internal Server Error (unhealthy!)                         |
+|  LB < 500 Internal Server Error (unhealthy!)                         |
 |  or                                                                    |
-|  LB <- timeout (unhealthy!)                                            |
+|  LB < timeout (unhealthy!)                                            |
 |                                                                         |
 |  PROS: Checks application health, not just connectivity              |
 |  CONS: More overhead, only for HTTP services                         |
@@ -559,11 +559,11 @@ Load balancers must know if servers are healthy:
 |  GET /health/deep                                                      |
 |                                                                         |
 |  Health endpoint checks:                                              |
-|  [x] Database connectivity (SELECT 1)                                  |
-|  [x] Redis connectivity (PING)                                         |
-|  [x] Disk space (> 10% free)                                          |
-|  [x] Memory usage (< 90%)                                              |
-|  [x] Critical downstream services                                      |
+|  Y Database connectivity (SELECT 1)                                  |
+|  Y Redis connectivity (PING)                                         |
+|  Y Disk space (> 10% free)                                          |
+|  Y Memory usage (< 90%)                                              |
+|  Y Critical downstream services                                      |
 |                                                                         |
 |  EXAMPLE RESPONSE:                                                     |
 |  {                                                                     |
@@ -647,15 +647,15 @@ Load balancers must know if servers are healthy:
 |  Client --HTTPS--> LB (terminates SSL) --HTTP--> Servers              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Offloads CPU-intensive crypto from app servers                    |
-|  [x] Centralized certificate management                                |
-|  [x] LB can inspect HTTP content for routing                           |
-|  [x] Caching possible                                                  |
-|  [x] Simpler server configuration                                      |
+|  Y Offloads CPU-intensive crypto from app servers                    |
+|  Y Centralized certificate management                                |
+|  Y LB can inspect HTTP content for routing                           |
+|  Y Caching possible                                                  |
+|  Y Simpler server configuration                                      |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Internal traffic is unencrypted (OK in private network)          |
-|  [ ] LB must have access to private keys                               |
+|  X Internal traffic is unencrypted (OK in private network)          |
+|  X LB must have access to private keys                               |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -671,14 +671,14 @@ Load balancers must know if servers are healthy:
 |  Two TLS sessions: client↔LB, LB↔server                              |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Traffic encrypted at all times                                    |
-|  [x] Compliance with strict security requirements                      |
-|  [x] Defense in depth                                                  |
+|  Y Traffic encrypted at all times                                    |
+|  Y Compliance with strict security requirements                      |
+|  Y Defense in depth                                                  |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] More CPU usage (encryption everywhere)                            |
-|  [ ] Certificate management on every server                            |
-|  [ ] No content-based routing with passthrough                        |
+|  X More CPU usage (encryption everywhere)                            |
+|  X Certificate management on every server                            |
+|  X No content-based routing with passthrough                        |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -687,8 +687,8 @@ Load balancers must know if servers are healthy:
 |  Both client AND server present certificates                          |
 |  Used for service-to-service authentication                          |
 |                                                                         |
-|  Client -> presents cert -> Server validates                           |
-|  Server -> presents cert -> Client validates                           |
+|  Client > presents cert > Server validates                           |
+|  Server > presents cert > Client validates                           |
 |                                                                         |
 |  Common in:                                                            |
 |  * Service meshes (Istio, Linkerd)                                   |
@@ -716,10 +716,10 @@ Load balancers must know if servers are healthy:
 |  LB sets a cookie with server identifier                             |
 |                                                                         |
 |  First request:                                                       |
-|  Client -> LB (picks Server A) -> Response + Set-Cookie: SRV=A        |
+|  Client > LB (picks Server A) > Response + Set-Cookie: SRV=A        |
 |                                                                         |
 |  Subsequent requests:                                                 |
-|  Client (Cookie: SRV=A) -> LB -> Server A                              |
+|  Client (Cookie: SRV=A) > LB > Server A                              |
 |                                                                         |
 |  PROS: Survives server IP changes, works across LB instances         |
 |  CONS: Cookie overhead, requires L7 LB                               |
@@ -728,7 +728,7 @@ Load balancers must know if servers are healthy:
 |  -----------------                                                      |
 |  Hash client IP to determine server                                   |
 |                                                                         |
-|  hash(client_ip) % num_servers -> server index                        |
+|  hash(client_ip) % num_servers > server index                        |
 |                                                                         |
 |  PROS: Works at L4, no cookies needed                                |
 |  CONS: NAT issues, mobile users, server changes break sessions       |
@@ -754,10 +754,10 @@ Load balancers must know if servers are healthy:
 |  * Use JWT tokens (stateless)                                        |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Any server can handle any request                                |
-|  [x] Server failures don't lose sessions                              |
-|  [x] Easy scaling (add/remove servers freely)                         |
-|  [x] Better load distribution                                         |
+|  Y Any server can handle any request                                |
+|  Y Server failures don't lose sessions                              |
+|  Y Easy scaling (add/remove servers freely)                         |
+|  Y Better load distribution                                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -835,13 +835,13 @@ The load balancer itself can be a single point of failure:
 |  AWS ALB/NLB, Google Cloud LB, Azure Load Balancer                   |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] Fully managed, HA by default                                     |
-|  [x] Automatically scales with traffic                                 |
-|  [x] Built-in health checks                                            |
-|  [x] No infrastructure to manage                                       |
-|  [x] Multi-AZ redundancy                                               |
-|  [x] DDoS protection                                                   |
-|  [x] Integration with cloud services                                   |
+|  Y Fully managed, HA by default                                     |
+|  Y Automatically scales with traffic                                 |
+|  Y Built-in health checks                                            |
+|  Y No infrastructure to manage                                       |
+|  Y Multi-AZ redundancy                                               |
+|  Y DDoS protection                                                   |
+|  Y Integration with cloud services                                   |
 |                                                                         |
 |  AWS ALB/NLB:                                                          |
 |  * Spans multiple Availability Zones                                 |
@@ -872,9 +872,9 @@ Distribute traffic across multiple geographic regions:
 |  |         +---------- GSLB/DNS ----------+                       |  |
 |  |         |  Intelligent DNS Resolution  |                       |  |
 |  |         |                              |                       |  |
-|  |         |  User in Europe -> EU IP      |                       |  |
-|  |         |  User in Asia -> APAC IP      |                       |  |
-|  |         |  User in US -> US IP          |                       |  |
+|  |         |  User in Europe > EU IP      |                       |  |
+|  |         |  User in Asia > APAC IP      |                       |  |
+|  |         |  User in US > US IP          |                       |  |
 |  |         +------------------------------+                       |  |
 |  |                             |                                   |  |
 |  |              +--------------+--------------+                   |  |
@@ -893,8 +893,8 @@ Distribute traffic across multiple geographic regions:
 |  1. GEOLOCATION                                                       |
 |  -----------------                                                      |
 |  Route based on user's geographic location (IP geo-lookup)           |
-|  User in Paris -> EU datacenter                                       |
-|  User in Tokyo -> APAC datacenter                                     |
+|  User in Paris > EU datacenter                                       |
+|  User in Tokyo > APAC datacenter                                     |
 |                                                                         |
 |  2. LATENCY-BASED                                                     |
 |  -----------------                                                      |
@@ -963,7 +963,7 @@ How do load balancers and services find each other?
 |                                                                         |
 |  Services register with DNS, LB queries DNS                           |
 |                                                                         |
-|  backend.service.local -> [10.0.1.1, 10.0.1.2, 10.0.1.3]             |
+|  backend.service.local > [10.0.1.1, 10.0.1.2, 10.0.1.3]             |
 |                                                                         |
 |  PROS: Simple, universal                                              |
 |  CONS: DNS caching can delay updates                                 |
@@ -1036,7 +1036,7 @@ How do load balancers and services find each other?
 |  ------------------                                                     |
 |  Bucket fills with tokens at fixed rate                              |
 |  Each request consumes a token                                        |
-|  No tokens -> rejected                                                 |
+|  No tokens > rejected                                                 |
 |                                                                         |
 |  Config: 100 tokens/minute, burst of 20                              |
 |  Allows: 100 steady + occasional bursts up to 20 extra               |

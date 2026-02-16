@@ -56,7 +56,7 @@ Data can be cached at multiple levels, each with different latency:
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE CACHE HIERARCHY (Fastest -> Slowest)                              |
+|  THE CACHE HIERARCHY (Fastest > Slowest)                              |
 |                                                                         |
 |  Level                   Latency        Size         Location          |
 |  -----                   -------        ----         --------          |
@@ -195,16 +195,16 @@ The most common pattern. Application manages cache directly.
 |      return user                                                       |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Only caches data that's actually requested                        |
-|  [x] Cache failures don't break the system (fallback to DB)           |
-|  [x] Simple to implement                                                |
-|  [x] Works with any database                                           |
+|  Y Only caches data that's actually requested                        |
+|  Y Cache failures don't break the system (fallback to DB)           |
+|  Y Simple to implement                                                |
+|  Y Works with any database                                           |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] First request is always slow (cache miss)                         |
-|  [ ] Stale data possible (until TTL expires)                           |
-|  [ ] Cache stampede possible (discussed later)                         |
-|  [ ] Application must handle cache logic                               |
+|  X First request is always slow (cache miss)                         |
+|  X Stale data possible (until TTL expires)                           |
+|  X Cache stampede possible (discussed later)                         |
+|  X Application must handle cache logic                               |
 |                                                                         |
 |  USE WHEN: General purpose caching, read-heavy workloads             |
 |                                                                         |
@@ -245,15 +245,15 @@ Cache is responsible for loading data from database.
 |  * Application code is simpler                                       |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simpler application code                                          |
-|  [x] Consistent data loading logic (in cache library)                 |
-|  [x] Cache handles complexity                                          |
+|  Y Simpler application code                                          |
+|  Y Consistent data loading logic (in cache library)                 |
+|  Y Cache handles complexity                                          |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Cache must know how to load data (coupled to schema)             |
-|  [ ] First request still slow                                          |
-|  [ ] More complex cache implementation                                 |
-|  [ ] Less control over loading behavior                               |
+|  X Cache must know how to load data (coupled to schema)             |
+|  X First request still slow                                          |
+|  X More complex cache implementation                                 |
+|  X Less control over loading behavior                               |
 |                                                                         |
 |  IMPLEMENTATIONS:                                                      |
 |  * Hibernate L2 Cache                                                |
@@ -300,16 +300,16 @@ Write to cache AND database synchronously.
 |      return data                                                       |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Cache and database always consistent                              |
-|  [x] No stale data                                                     |
-|  [x] Read-after-write consistency                                      |
-|  [x] Simple mental model                                               |
+|  Y Cache and database always consistent                              |
+|  Y No stale data                                                     |
+|  Y Read-after-write consistency                                      |
+|  Y Simple mental model                                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Higher write latency (must wait for both)                         |
-|  [ ] If database fails, write fails                                    |
-|  [ ] May cache data that's never read                                  |
-|  [ ] Write amplification (every write hits both)                      |
+|  X Higher write latency (must wait for both)                         |
+|  X If database fails, write fails                                    |
+|  X May cache data that's never read                                  |
+|  X Write amplification (every write hits both)                      |
 |                                                                         |
 |  USE WHEN: Data consistency is critical, reads are frequent          |
 |                                                                         |
@@ -345,16 +345,16 @@ Write to cache immediately, database asynchronously.
 |     (batched, with retries)                                          |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Very fast writes (no database wait)                               |
-|  [x] Can batch writes to database (efficiency)                        |
-|  [x] Absorbs write spikes                                              |
-|  [x] Reduces database load                                             |
+|  Y Very fast writes (no database wait)                               |
+|  Y Can batch writes to database (efficiency)                        |
+|  Y Absorbs write spikes                                              |
+|  Y Reduces database load                                             |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Risk of data loss if cache fails before DB write                  |
-|  [ ] Complex failure handling and recovery                             |
-|  [ ] Eventual consistency (database lags behind)                      |
-|  [ ] Complex to implement correctly                                    |
+|  X Risk of data loss if cache fails before DB write                  |
+|  X Complex failure handling and recovery                             |
+|  X Eventual consistency (database lags behind)                      |
+|  X Complex to implement correctly                                    |
 |                                                                         |
 |  USE WHEN:                                                             |
 |  * Write performance is critical                                     |
@@ -406,14 +406,14 @@ Write only to database, let cache expire naturally.
 |      # Next read will reload from DB                                 |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Simple write path                                                 |
-|  [x] Database is source of truth                                       |
-|  [x] Avoids caching data that's never read                            |
-|  [x] Good for write-heavy, read-rarely data                           |
+|  Y Simple write path                                                 |
+|  Y Database is source of truth                                       |
+|  Y Avoids caching data that's never read                            |
+|  Y Good for write-heavy, read-rarely data                           |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Stale reads until invalidation or TTL                            |
-|  [ ] Read-after-write may return old data                              |
+|  X Stale reads until invalidation or TTL                            |
+|  X Read-after-write may return old data                              |
 |                                                                         |
 |  USE WHEN:                                                             |
 |  * Data is written frequently, read rarely                           |
@@ -518,7 +518,7 @@ and naming things." - Phil Karlton
 |      db.update(user_id, data)                                        |
 |      increment_user_version(user_id)  # Now version 8               |
 |      # Old cache key (v7) becomes orphaned                          |
-|      # New reads use v8 key (cache miss -> reload)                  |
+|      # New reads use v8 key (cache miss > reload)                  |
 |                                                                         |
 |  PROS: No explicit invalidation, atomic updates                      |
 |  CONS: Orphaned data (cleaned by TTL), version storage overhead     |
@@ -563,9 +563,9 @@ When cached data expires, all requests hit the database simultaneously.
 |  Time 0:    Cache has "popular_item", serving 10,000 RPS             |
 |  Time 3600: TTL expires, cache entry removed                          |
 |  Time 3600.001: 1000 requests arrive in next 100ms                   |
-|             -> All 1000 check cache -> MISS                             |
-|             -> All 1000 query database simultaneously                 |
-|             -> DATABASE OVERWHELMED!                                   |
+|             > All 1000 check cache > MISS                             |
+|             > All 1000 query database simultaneously                 |
+|             > DATABASE OVERWHELMED!                                   |
 |                                                                         |
 |  +----------------------------------------------------------------+   |
 |  |                     Cache Miss!                                |   |
@@ -658,14 +658,14 @@ Queries for non-existent data bypass cache and hit database.
 |                                                                         |
 |  Attacker or bug queries: GET /user/99999999 (doesn't exist)         |
 |                                                                         |
-|  1. Check cache -> MISS (user doesn't exist in cache)                 |
-|  2. Query database -> No results                                       |
+|  1. Check cache > MISS (user doesn't exist in cache)                 |
+|  2. Query database > No results                                       |
 |  3. Nothing to cache (null result)                                   |
-|  4. Next request -> Same cycle repeats!                                |
+|  4. Next request > Same cycle repeats!                                |
 |                                                                         |
 |  Attack: Send 10,000 requests for random non-existent IDs            |
-|  -> All 10,000 hit database                                            |
-|  -> DATABASE DOS ATTACK!                                               |
+|  > All 10,000 hit database                                            |
+|  > DATABASE DOS ATTACK!                                               |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -767,9 +767,9 @@ One key is accessed much more than others.
 |  Key: "post:celebrity:123"                                            |
 |                                                                         |
 |  All 10M followers request the same key!                              |
-|  -> Single cache node handles all requests                             |
-|  -> Network/CPU overwhelmed on that node                               |
-|  -> Single shard becomes bottleneck                                   |
+|  > Single cache node handles all requests                             |
+|  > Network/CPU overwhelmed on that node                               |
+|  > Single shard becomes bottleneck                                   |
 |                                                                         |
 |  SOLUTIONS:                                                            |
 |                                                                         |
@@ -842,13 +842,13 @@ When cache is full, which items do we remove?
 |                                                                         |
 |  Access pattern: A, B, C, D, A, B, E (cache size = 4)                |
 |                                                                         |
-|  A -> [A]                                                              |
-|  B -> [A, B]                                                           |
-|  C -> [A, B, C]                                                        |
-|  D -> [A, B, C, D]  (full)                                            |
-|  A -> [B, C, D, A]  (A accessed, moved to end)                        |
-|  B -> [C, D, A, B]  (B accessed, moved to end)                        |
-|  E -> [D, A, B, E]  (C evicted as least recently used)               |
+|  A > [A]                                                              |
+|  B > [A, B]                                                           |
+|  C > [A, B, C]                                                        |
+|  D > [A, B, C, D]  (full)                                            |
+|  A > [B, C, D, A]  (A accessed, moved to end)                        |
+|  B > [C, D, A, B]  (B accessed, moved to end)                        |
+|  E > [D, A, B, E]  (C evicted as least recently used)               |
 |                                                                         |
 |  PROS: Good for most workloads, locality-aware                       |
 |  CONS: Scan-resistant issue (one-time scans evict hot items)        |
@@ -862,7 +862,7 @@ When cache is full, which items do we remove?
 |  Evict items accessed least often (lowest count).                    |
 |                                                                         |
 |  Item A: accessed 100 times                                           |
-|  Item B: accessed 2 times   <- Evict this first                       |
+|  Item B: accessed 2 times   < Evict this first                       |
 |  Item C: accessed 50 times                                            |
 |                                                                         |
 |  PROS: Better for skewed access (popular items stay)                 |
@@ -1006,7 +1006,7 @@ Redis is the most popular distributed cache. Know it well.
 |                                                                         |
 |  HyperLogLog: Cardinality estimation (unique counts)                 |
 |  PFADD visitors:today "user1" "user2" "user1"                       |
-|  PFCOUNT visitors:today  -> 2 (approx unique)                        |
+|  PFCOUNT visitors:today  > 2 (approx unique)                        |
 |                                                                         |
 |  Bitmap: Bit operations                                               |
 |  SETBIT user:123:features 7 1   # Set bit 7                         |
@@ -1068,7 +1068,7 @@ Redis is the most popular distributed cache. Know it well.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  * Data sharded across masters using hash slots (16384 slots)        |
-|  * Key -> slot: CRC16(key) % 16384                                    |
+|  * Key > slot: CRC16(key) % 16384                                    |
 |  * Each master has replicas for HA                                   |
 |  * Client redirects to correct shard                                 |
 |                                                                         |
@@ -1101,21 +1101,21 @@ Redis is the most popular distributed cache. Know it well.
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |  Without CDN:                                                   |  |
-|  |  User in Australia -> Request -> US Origin Server                |  |
+|  |  User in Australia > Request > US Origin Server                |  |
 |  |  Latency: 300ms+                                               |  |
 |  |                                                                 |  |
 |  |  With CDN:                                                      |  |
-|  |  User in Australia -> Request -> Sydney Edge Server              |  |
+|  |  User in Australia > Request > Sydney Edge Server              |  |
 |  |  Latency: 20ms                                                 |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  WHAT TO PUT ON CDN:                                                   |
-|  [x] Images, videos, audio                                             |
-|  [x] CSS, JavaScript, fonts                                            |
-|  [x] HTML (for static sites)                                           |
-|  [x] API responses (with careful cache headers)                        |
-|  [x] Downloads, software updates                                       |
+|  Y Images, videos, audio                                             |
+|  Y CSS, JavaScript, fonts                                            |
+|  Y HTML (for static sites)                                           |
+|  Y API responses (with careful cache headers)                        |
+|  Y Downloads, software updates                                       |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -1199,8 +1199,8 @@ Redis is the most popular distributed cache. Know it well.
 |  USE CASE IN CACHING:                                                  |
 |  Before hitting database, check Bloom filter:                        |
 |  "Has this user ID ever existed?"                                    |
-|  If NO -> Don't query DB (save the trip!)                             |
-|  If YES -> Query DB (might exist)                                     |
+|  If NO > Don't query DB (save the trip!)                             |
+|  If YES > Query DB (might exist)                                     |
 |                                                                         |
 |  Perfect for cache penetration prevention!                            |
 |                                                                         |
@@ -1255,21 +1255,21 @@ Redis is the most popular distributed cache. Know it well.
 |  CHECKING MEMBERSHIP                                                   |
 |                                                                         |
 |  Check "apple":                                                        |
-|  h1("apple") = 1 -> bit[1] = 1 [x]                                      |
-|  h2("apple") = 4 -> bit[4] = 1 [x]                                      |
-|  h3("apple") = 7 -> bit[7] = 1 [x]                                      |
-|  All bits are 1 -> "Probably in set" [x]                                |
+|  h1("apple") = 1 > bit[1] = 1 Y                                      |
+|  h2("apple") = 4 > bit[4] = 1 Y                                      |
+|  h3("apple") = 7 > bit[7] = 1 Y                                      |
+|  All bits are 1 > "Probably in set" Y                                |
 |                                                                         |
 |  Check "cherry":                                                       |
-|  h1("cherry") = 1 -> bit[1] = 1 [x]                                     |
-|  h2("cherry") = 5 -> bit[5] = 0 [ ]                                     |
-|  At least one bit is 0 -> "Definitely NOT in set" [x]                   |
+|  h1("cherry") = 1 > bit[1] = 1 Y                                     |
+|  h2("cherry") = 5 > bit[5] = 0 X                                     |
+|  At least one bit is 0 > "Definitely NOT in set" Y                   |
 |                                                                         |
 |  Check "grape":                                                        |
-|  h1("grape") = 2 -> bit[2] = 1 [x]                                      |
-|  h2("grape") = 4 -> bit[4] = 1 [x]                                      |
-|  h3("grape") = 9 -> bit[9] = 1 [x]                                      |
-|  All bits are 1 -> "Probably in set"                                  |
+|  h1("grape") = 2 > bit[2] = 1 Y                                      |
+|  h2("grape") = 4 > bit[4] = 1 Y                                      |
+|  h3("grape") = 9 > bit[9] = 1 Y                                      |
+|  All bits are 1 > "Probably in set"                                  |
 |  BUT "grape" was never added! FALSE POSITIVE                         |
 |                                                                         |
 |  ==================================================================== |
@@ -1355,8 +1355,8 @@ Redis is the most popular distributed cache. Know it well.
 |  Google Chrome: Check URL against malware blacklist                  |
 |  * 1M+ malicious URLs                                                 |
 |  * Bloom filter: 1MB in memory                                       |
-|  * If "definitely not malicious" -> skip server check                |
-|  * If "maybe malicious" -> verify with server                        |
+|  * If "definitely not malicious" > skip server check                |
+|  * If "maybe malicious" > verify with server                        |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -1364,8 +1364,8 @@ Redis is the most popular distributed cache. Know it well.
 |  --------------------------------                                       |
 |  HBase, Cassandra, RocksDB use Bloom filters:                        |
 |  "Is this key possibly in this SSTable file?"                        |
-|  If NO -> skip reading the file entirely                              |
-|  If YES -> read and check                                             |
+|  If NO > skip reading the file entirely                              |
+|  If YES > read and check                                             |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -1393,7 +1393,7 @@ Redis is the most popular distributed cache. Know it well.
 |                                                                         |
 |  1. COUNTING BLOOM FILTER                                             |
 |  --------------------------                                             |
-|  Use counters instead of bits -> supports deletion                    |
+|  Use counters instead of bits > supports deletion                    |
 |                                                                         |
 |  Standard: Can't delete (would affect other elements)                |
 |  Counting: Decrement counters instead of clearing bits               |

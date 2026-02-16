@@ -71,7 +71,7 @@ Replication means keeping copies of data on multiple machines.
 |                                                                         |
 |  SYNCHRONOUS:                                                          |
 |  +------------------------------------------------------------------+ |
-|  | Client -> Write -> Leader                                         | |
+|  | Client > Write > Leader                                         | |
 |  |                     |                                            | |
 |  |                     +--> Follower 1 --> ACK --+                 | |
 |  |                     +--> Follower 2 --> ACK --+                 | |
@@ -85,7 +85,7 @@ Replication means keeping copies of data on multiple machines.
 |                                                                         |
 |  ASYNCHRONOUS:                                                         |
 |  +------------------------------------------------------------------+ |
-|  | Client -> Write -> Leader -> Success immediately                   | |
+|  | Client > Write > Leader > Success immediately                   | |
 |  |                     |                                            | |
 |  |                     +--> Followers (eventually)                 | |
 |  +------------------------------------------------------------------+ |
@@ -126,7 +126,7 @@ Replication means keeping copies of data on multiple machines.
 |  * Leader 1: UPDATE users SET name='Alice' WHERE id=1                |
 |  * Leader 2: UPDATE users SET name='Alicia' WHERE id=1               |
 |  * Both happen simultaneously before replication                      |
-|  -> Which value wins?                                                  |
+|  > Which value wins?                                                  |
 |                                                                         |
 |  CONFLICT RESOLUTION:                                                  |
 |  * Last-Write-Wins (timestamp)                                        |
@@ -169,19 +169,19 @@ Replication means keeping copies of data on multiple machines.
 |                                                                         |
 |  EXAMPLE (N=3):                                                        |
 |  * W=2, R=2: Write to 2 nodes, read from 2 nodes                     |
-|  * At least 1 node overlaps -> guaranteed to see latest value         |
+|  * At least 1 node overlaps > guaranteed to see latest value         |
 |                                                                         |
 |  USED BY: DynamoDB, Cassandra, Riak                                   |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] No single point of failure (no leader election)                   |
-|  [x] High availability                                                 |
-|  [x] Good for write-heavy workloads                                    |
+|  Y No single point of failure (no leader election)                   |
+|  Y High availability                                                 |
+|  Y Good for write-heavy workloads                                    |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Higher read/write latency (multiple nodes)                        |
-|  [ ] More complex consistency handling                                 |
-|  [ ] Conflict resolution needed                                        |
+|  X Higher read/write latency (multiple nodes)                        |
+|  X More complex consistency handling                                 |
+|  X Conflict resolution needed                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -209,7 +209,7 @@ Replication means keeping copies of data on multiple machines.
 |  * Split-brain: Two nodes think they're leader                       |
 |    Solution: Fencing (STONITH), quorum-based decisions               |
 |                                                                         |
-|  * Data loss: Async replication -> unreplicated writes lost           |
+|  * Data loss: Async replication > unreplicated writes lost           |
 |    Solution: Sync replication (at cost of latency)                   |
 |                                                                         |
 |  * Replication lag: New leader may be behind                         |
@@ -276,17 +276,17 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  Assign ranges of keys to each shard.                                 |
 |                                                                         |
-|  user_id 1-1,000,000       -> Shard 1                                  |
-|  user_id 1,000,001-2,000,000 -> Shard 2                                |
-|  user_id 2,000,001-3,000,000 -> Shard 3                                |
+|  user_id 1-1,000,000       > Shard 1                                  |
+|  user_id 1,000,001-2,000,000 > Shard 2                                |
+|  user_id 2,000,001-3,000,000 > Shard 3                                |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Range queries are efficient (all data on one shard)               |
-|  [x] Easy to understand                                                 |
+|  Y Range queries are efficient (all data on one shard)               |
+|  Y Easy to understand                                                 |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Hot spots: Recent users (high IDs) hit one shard                  |
-|  [ ] Uneven distribution if data isn't uniform                         |
+|  X Hot spots: Recent users (high IDs) hit one shard                  |
+|  X Uneven distribution if data isn't uniform                         |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -297,17 +297,17 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  shard = hash(user_id) % num_shards                                   |
 |                                                                         |
-|  user_id 12345 -> hash(12345) = 98765 -> 98765 % 4 = 1 -> Shard 1      |
-|  user_id 67890 -> hash(67890) = 54321 -> 54321 % 4 = 1 -> Shard 1      |
-|  user_id 11111 -> hash(11111) = 22222 -> 22222 % 4 = 2 -> Shard 2      |
+|  user_id 12345 > hash(12345) = 98765 > 98765 % 4 = 1 > Shard 1      |
+|  user_id 67890 > hash(67890) = 54321 > 54321 % 4 = 1 > Shard 1      |
+|  user_id 11111 > hash(11111) = 22222 > 22222 % 4 = 2 > Shard 2      |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Even distribution across shards                                   |
-|  [x] No hot spots                                                       |
+|  Y Even distribution across shards                                   |
+|  Y No hot spots                                                       |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Range queries require hitting all shards                          |
-|  [ ] Adding/removing shards requires resharding (expensive!)           |
+|  X Range queries require hitting all shards                          |
+|  X Adding/removing shards requires resharding (expensive!)           |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -334,8 +334,8 @@ Sharding splits data across multiple databases, each holding a subset.
 |  |  Keys are hashed onto the ring.                               |  |
 |  |  Walk clockwise to find the node that owns the key.           |  |
 |  |                                                                 |  |
-|  |  Key at 45° -> walk clockwise -> Node B (at 90°)               |  |
-|  |  Key at 200° -> walk clockwise -> Node D (at 270°)             |  |
+|  |  Key at 45° > walk clockwise > Node B (at 90°)               |  |
+|  |  Key at 200° > walk clockwise > Node D (at 270°)             |  |
 |  |                                                                 |  |
 |  |  ADDING A NODE:                                                |  |
 |  |  Only keys between previous node and new node need to move    |  |
@@ -360,12 +360,12 @@ Sharding splits data across multiple databases, each holding a subset.
 |  server = hash(key) % N    (N = number of servers)                   |
 |                                                                         |
 |  With 4 servers (N=4):                                                |
-|  hash("user1") = 14 -> 14 % 4 = 2 -> Server 2                         |
-|  hash("user2") = 23 -> 23 % 4 = 3 -> Server 3                         |
+|  hash("user1") = 14 > 14 % 4 = 2 > Server 2                         |
+|  hash("user2") = 23 > 23 % 4 = 3 > Server 3                         |
 |                                                                         |
 |  ADD 1 SERVER (N=5):                                                  |
-|  hash("user1") = 14 -> 14 % 5 = 4 -> Server 4 (MOVED!)               |
-|  hash("user2") = 23 -> 23 % 5 = 3 -> Server 3 (same)                 |
+|  hash("user1") = 14 > 14 % 5 = 4 > Server 4 (MOVED!)               |
+|  hash("user2") = 23 > 23 % 5 = 3 > Server 3 (same)                 |
 |                                                                         |
 |  RESULT: ~80% of keys need to be remapped! (N-1)/N keys move        |
 |                                                                         |
@@ -407,8 +407,8 @@ Sharding splits data across multiple databases, each holding a subset.
 |  Key position = hash(key)                                            |
 |  Walk CLOCKWISE to find owning server                                |
 |                                                                         |
-|  hash("user1") = 700M -> clockwise -> Server B (at 1.5B)              |
-|  hash("user2") = 2.8B -> clockwise -> Server D (at 3B)                |
+|  hash("user1") = 700M > clockwise > Server B (at 1.5B)              |
+|  hash("user2") = 2.8B > clockwise > Server D (at 3B)                |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -417,8 +417,8 @@ Sharding splits data across multiple databases, each holding a subset.
 |  Add Server E at position 2B (between B and C)                       |
 |                                                                         |
 |  BEFORE:                          AFTER:                              |
-|  Keys 1.5B-2.5B -> Server C        Keys 1.5B-2B -> Server E           |
-|                                   Keys 2B-2.5B -> Server C            |
+|  Keys 1.5B-2.5B > Server C        Keys 1.5B-2B > Server E           |
+|                                   Keys 2B-2.5B > Server C            |
 |                                                                         |
 |  Only keys between B (1.5B) and E (2B) move!                        |
 |  = 1/N keys move (not N-1/N)                                        |
@@ -430,14 +430,14 @@ Sharding splits data across multiple databases, each holding a subset.
 |  PROBLEM: With few physical servers, distribution is uneven          |
 |                                                                         |
 |  Server A: 10% of keys                                               |
-|  Server B: 50% of keys  <- HOT SPOT!                                 |
+|  Server B: 50% of keys  < HOT SPOT!                                 |
 |  Server C: 40% of keys                                               |
 |                                                                         |
-|  SOLUTION: Each physical server -> multiple virtual nodes             |
+|  SOLUTION: Each physical server > multiple virtual nodes             |
 |                                                                         |
-|  Physical Server A -> Virtual: A1, A2, A3, A4, A5 (5 positions)      |
-|  Physical Server B -> Virtual: B1, B2, B3, B4, B5 (5 positions)      |
-|  Physical Server C -> Virtual: C1, C2, C3, C4, C5 (5 positions)      |
+|  Physical Server A > Virtual: A1, A2, A3, A4, A5 (5 positions)      |
+|  Physical Server B > Virtual: B1, B2, B3, B4, B5 (5 positions)      |
+|  Physical Server C > Virtual: C1, C2, C3, C4, C5 (5 positions)      |
 |                                                                         |
 |               0                                                        |
 |          B3 --+-- A1                                                  |
@@ -449,9 +449,9 @@ Sharding splits data across multiple databases, each holding a subset.
 |        (15 virtual nodes spread evenly)                              |
 |                                                                         |
 |  BENEFITS:                                                             |
-|  [x] More even distribution                                            |
-|  [x] Smaller servers can have fewer vnodes                            |
-|  [x] When server fails, load spreads to multiple servers              |
+|  Y More even distribution                                            |
+|  Y Smaller servers can have fewer vnodes                            |
+|  Y When server fails, load spreads to multiple servers              |
 |                                                                         |
 |  TYPICAL: 100-200 virtual nodes per physical server                  |
 |                                                                         |
@@ -461,7 +461,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  class ConsistentHash:                                                 |
 |      def __init__(self, nodes, replicas=100):                        |
-|          self.ring = SortedDict()  # position -> node                 |
+|          self.ring = SortedDict()  # position > node                 |
 |          self.replicas = replicas                                     |
 |                                                                         |
 |          for node in nodes:                                           |
@@ -511,7 +511,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |  4. DIRECTORY-BASED SHARDING                                          |
 |  ============================                                           |
 |                                                                         |
-|  A lookup service maintains key -> shard mapping.                      |
+|  A lookup service maintains key > shard mapping.                      |
 |                                                                         |
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
@@ -519,21 +519,21 @@ Sharding splits data across multiple databases, each holding a subset.
 |  |                     |                                           |  |
 |  |                     v                                           |  |
 |  |  +--------------------------------------------------------+    |  |
-|  |  |  user:1 -> Shard A                                      |    |  |
-|  |  |  user:2 -> Shard B                                      |    |  |
-|  |  |  user:3 -> Shard A                                      |    |  |
+|  |  |  user:1 > Shard A                                      |    |  |
+|  |  |  user:2 > Shard B                                      |    |  |
+|  |  |  user:3 > Shard A                                      |    |  |
 |  |  |  ...                                                   |    |  |
 |  |  +--------------------------------------------------------+    |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Maximum flexibility                                               |
-|  [x] Easy to rebalance by updating directory                           |
+|  Y Maximum flexibility                                               |
+|  Y Easy to rebalance by updating directory                           |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Directory is single point of failure                              |
-|  [ ] Extra hop for every request                                       |
+|  X Directory is single point of failure                              |
+|  X Extra hop for every request                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -557,22 +557,22 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  E-COMMERCE (Orders table):                                           |
 |  ---------------------------                                            |
-|  [ ] order_date: Hot spots on recent dates                             |
-|  [ ] status: Only a few values (pending, completed)                    |
-|  [x] user_id: Good distribution, user queries fast                     |
-|  [x] order_id: Even distribution                                        |
+|  X order_date: Hot spots on recent dates                             |
+|  X status: Only a few values (pending, completed)                    |
+|  Y user_id: Good distribution, user queries fast                     |
+|  Y order_id: Even distribution                                        |
 |                                                                         |
 |  SOCIAL MEDIA (Posts table):                                          |
 |  -----------------------------                                          |
-|  [ ] celebrity user_id: Hot spots (millions of posts)                  |
-|  [x] post_id: Even distribution                                         |
-|  [x] Compound: user_id + post_date                                      |
+|  X celebrity user_id: Hot spots (millions of posts)                  |
+|  Y post_id: Even distribution                                         |
+|  Y Compound: user_id + post_date                                      |
 |                                                                         |
 |  AVOID:                                                                |
 |  * Monotonically increasing keys (timestamp, auto-increment)         |
-|    -> All recent writes go to one shard                               |
+|    > All recent writes go to one shard                               |
 |  * Low cardinality keys (country, status)                            |
-|    -> Uneven distribution                                             |
+|    > Uneven distribution                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -689,10 +689,10 @@ Sharding splits data across multiple databases, each holding a subset.
 |  * 2+ followers for reads and failover                               |
 |                                                                         |
 |  Gives you:                                                            |
-|  [x] Write scalability (multiple shards)                               |
-|  [x] Storage scalability (data distributed)                            |
-|  [x] Read scalability (multiple replicas per shard)                    |
-|  [x] High availability (failover within each shard)                    |
+|  Y Write scalability (multiple shards)                               |
+|  Y Storage scalability (data distributed)                            |
+|  Y Read scalability (multiple replicas per shard)                    |
+|  Y High availability (failover within each shard)                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -728,7 +728,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |                                                                         |
 |  USE CASES:                                                            |
 |  * Real-time data sync between systems                               |
-|  * Cache invalidation (DB change -> invalidate cache)                |
+|  * Cache invalidation (DB change > invalidate cache)                |
 |  * Analytics pipelines                                               |
 |  * Event sourcing / CQRS                                            |
 |  * Microservices data sync                                           |
@@ -779,7 +779,7 @@ Sharding splits data across multiple databases, each holding a subset.
 |  LSN = Log Sequence Number (monotonically increasing)                |
 |                                                                         |
 |  REPLICATION USES WAL:                                                 |
-|  Leader -> WAL -> Ship to Followers -> Apply WAL                       |
+|  Leader > WAL > Ship to Followers > Apply WAL                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -463,7 +463,7 @@ This establishes the contract between components.
 |  -------------------------                                             |
 |  Key: connections:drivers                                              |
 |  Type: Hash                                                            |
-|  Field: driver_id -> gateway_hostname                                  |
+|  Field: driver_id > gateway_hostname                                  |
 |                                                                         |
 |  HSET connections:drivers driver_abc gateway-1.uber.internal          |
 |                                                                         |
@@ -471,8 +471,8 @@ This establishes the contract between components.
 |                                                                         |
 |  4. ACTIVE RIDES                                                       |
 |  ------------------                                                    |
-|  Key: rider_active_ride:{rider_id} -> ride_id                          |
-|  Key: driver_active_ride:{driver_id} -> ride_id                        |
+|  Key: rider_active_ride:{rider_id} > ride_id                          |
+|  Key: driver_active_ride:{driver_id} > ride_id                        |
 |  Type: String with TTL                                                 |
 |                                                                         |
 |  SET rider_active_ride:rider123 ride456 EX 7200  (2 hour TTL)         |
@@ -732,7 +732,7 @@ DRIVER APP APIs:
 
 ### 1.7 WEBSOCKET MESSAGE FORMATS
 
-DRIVER -> SERVER (Location Updates):
+DRIVER > SERVER (Location Updates):
 
 ```
 +-------------------------------------------------------------------------+
@@ -760,7 +760,7 @@ DRIVER -> SERVER (Location Updates):
 +-------------------------------------------------------------------------+
 ```
 
-SERVER -> DRIVER (Ride Request):
+SERVER > DRIVER (Ride Request):
 
 ```
 +-------------------------------------------------------------------------+
@@ -799,7 +799,7 @@ SERVER -> DRIVER (Ride Request):
 +-------------------------------------------------------------------------+
 ```
 
-SERVER -> RIDER (Driver Location Updates):
+SERVER > RIDER (Driver Location Updates):
 
 ```
 +-------------------------------------------------------------------------+
@@ -850,7 +850,7 @@ SERVER -> RIDER (Driver Location Updates):
 |  }                                                                     |
 |                                                                         |
 |  Status values:                                                        |
-|  MATCHING -> ACCEPTED -> EN_ROUTE -> ARRIVED -> IN_PROGRESS -> COMPLETED   |
+|  MATCHING > ACCEPTED > EN_ROUTE > ARRIVED > IN_PROGRESS > COMPLETED   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1134,7 +1134,7 @@ a ride request to that driver. But which Gateway server holds the driver's
 WebSocket connection?
 
 We solve this with a Connection Registry — a distributed map of
-driver_id -> gateway_server_id stored in Redis:
+driver_id > gateway_server_id stored in Redis:
 
 ```
 +-------------------------------------------------------------------------+
@@ -1142,10 +1142,10 @@ driver_id -> gateway_server_id stored in Redis:
 |                                                                         |
 |  Redis Hash: driver_connections                                         |
 |  +-----------------------------------------------------------------+    |
-|  |  driver_abc  ->  gateway-1.uber.internal                         |    |
-|  |  driver_def  ->  gateway-3.uber.internal                         |    |
-|  |  driver_ghi  ->  gateway-1.uber.internal                         |    |
-|  |  driver_jkl  ->  gateway-2.uber.internal                         |    |
+|  |  driver_abc  >  gateway-1.uber.internal                         |    |
+|  |  driver_def  >  gateway-3.uber.internal                         |    |
+|  |  driver_ghi  >  gateway-1.uber.internal                         |    |
+|  |  driver_jkl  >  gateway-2.uber.internal                         |    |
 |  |  ...                                                            |    |
 |  +-----------------------------------------------------------------+    |
 |                                                                         |
@@ -1157,7 +1157,7 @@ driver_id -> gateway_server_id stored in Redis:
 |                                                                         |
 |  To find where driver is connected:                                     |
 |  HGET driver_connections driver_abc                                     |
-|  -> "gateway-1.uber.internal"                                            |
+|  > "gateway-1.uber.internal"                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1271,8 +1271,8 @@ Pub/Sub decouples message producers from consumers:
 - Broker (Redis): Routes messages from publishers to subscribers
 
 This is perfect for our use case because:
-1. Driver publishes location -> doesn't care which server rider is on
-2. Rider's server subscribes -> automatically receives updates
+1. Driver publishes location > doesn't care which server rider is on
+2. Rider's server subscribes > automatically receives updates
 3. Redis handles all the routing
 
 **ARCHITECTURE:**
@@ -1301,7 +1301,7 @@ This is perfect for our use case because:
 +-------------------------------------------------------------------------+
 ```
 
-### COMPLETE FLOW: DRIVER LOCATION -> RIDER'S PHONE
+### COMPLETE FLOW: DRIVER LOCATION > RIDER'S PHONE
 
 Step-by-step sequence when driver moves:
 
@@ -1395,7 +1395,7 @@ communication is needed.
 ```
 1. When ride is matched, determine which server the driver is on
 2. When rider needs to track, route them to that same server
-3. Server has BOTH connections locally -> simple in-memory message passing
+3. Server has BOTH connections locally > simple in-memory message passing
 
 +-------------------------------------------------------------------------+
 |                      STICKY SESSIONS                                    |
@@ -1404,7 +1404,7 @@ communication is needed.
 |            |                                                            |
 |            v                                                            |
 |   +-----------------+                                                   |
-|   |    Server 1     |  <- Both driver AND rider for ride_123             |
+|   |    Server 1     |  < Both driver AND rider for ride_123             |
 |   |                 |                                                   |
 |   |  Driver --------|-> Local memory ----> Rider                        |
 |   |  WebSocket      |     (no network)     WebSocket                    |
@@ -1419,7 +1419,7 @@ communication is needed.
 **IMPLEMENTATION:**
 - Load balancer uses "consistent hashing" on ride_id
 - All requests for ride_123 go to same server
-- Rider connects with ride_id -> routed to driver's server
+- Rider connects with ride_id > routed to driver's server
 
 **PROS:**
 + Simplest architecture
@@ -1444,20 +1444,20 @@ which server has the target connection.
 **HOW IT WORKS:**
 ```
 1. Maintain a "Connection Registry" — a distributed map of 
-   {user_id -> server_hostname}
+   {user_id > server_hostname}
 2. When Server A needs to send to User B:
-   a. Lookup: "Which server has User B?" -> Server B
-   b. Make RPC/HTTP call: Server A -> Server B with message
-   c. Server B finds local WebSocket -> delivers message
+   a. Lookup: "Which server has User B?" > Server B
+   b. Make RPC/HTTP call: Server A > Server B with message
+   c. Server B finds local WebSocket > delivers message
 
 +-------------------------------------------------------------------------+
 |                 DIRECT SERVER-TO-SERVER                                 |
 |                                                                         |
 |              Connection Registry (Redis Hash)                           |
 |              +------------------------------+                           |
-|              |  rider_abc -> gateway-2       |                           |
-|              |  rider_def -> gateway-1       |                           |
-|              |  driver_xyz -> gateway-1      |                           |
+|              |  rider_abc > gateway-2       |                           |
+|              |  rider_def > gateway-1       |                           |
+|              |  driver_xyz > gateway-1      |                           |
 |              +------------------------------+                           |
 |                          |                                              |
 |                     +----+----+                                         |
@@ -1788,7 +1788,7 @@ VERDICT: Good for medium scale. Uber likely uses custom implementation.
 |                                                                         |
 |  3. Pub/Sub        ~2-5ms    Excellent    Medium      Large scale,      |
 |     (Redis)                                           real-time         |
-|                                                       streaming [x]       |
+|                                                       streaming Y       |
 |                                                                         |
 |  4. DB Polling     ~1000ms   Poor         Low         Never for         |
 |                              (DB crush)               real-time!        |
@@ -1800,7 +1800,7 @@ VERDICT: Good for medium scale. Uber likely uses custom implementation.
 |                                                                         |
 |  FOR UBER'S LOCATION STREAMING:                                         |
 |                                                                         |
-|  -> Approach 3 (Redis Pub/Sub) is the winner.                            |
+|  > Approach 3 (Redis Pub/Sub) is the winner.                            |
 |                                                                         |
 |  Reasons:                                                               |
 |  * Millions of concurrent rides = need horizontal scaling               |
@@ -1831,7 +1831,7 @@ When rider reconnects, they might land on a DIFFERENT gateway server.
 |   TIME T1: Rider connected to Gateway B                                 |
 |   -------------------------------------                                 |
 |   Gateway B subscribed to "ride:r_123"                                  |
-|   Rider receiving location updates [x]                                    |
+|   Rider receiving location updates Y                                    |
 |                                                                         |
 |   TIME T2: Connection drops (tunnel)                                    |
 |   ------------------------------------                                  |
@@ -1865,9 +1865,9 @@ PRINCIPLE: EXTERNALIZE SESSION STATE
 |   Redis Keys (always up-to-date):                                       |
 |   +---------------------------------------------------------------+     |
 |   |                                                               |     |
-|   |   rider_active_ride:rider_abc  ->  "ride_12345"                |     |
-|   |   ride_driver:ride_12345       ->  "driver_xyz"                |     |
-|   |   driver_location:driver_xyz   ->  {lat, lng, timestamp}       |     |
+|   |   rider_active_ride:rider_abc  >  "ride_12345"                |     |
+|   |   ride_driver:ride_12345       >  "driver_xyz"                |     |
+|   |   driver_location:driver_xyz   >  {lat, lng, timestamp}       |     |
 |   |                                                               |     |
 |   +---------------------------------------------------------------+     |
 |                                                                         |
@@ -1878,7 +1878,7 @@ PRINCIPLE: EXTERNALIZE SESSION STATE
 |   2. Gateway C receives connection with rider_id in auth token          |
 |                                                                         |
 |   3. Gateway C queries: "Does this rider have an active ride?"          |
-|      -> GET rider_active_ride:rider_abc -> "ride_12345"                   |
+|      > GET rider_active_ride:rider_abc > "ride_12345"                   |
 |                                                                         |
 |   4. If active ride exists:                                             |
 |      a. Subscribe to "ride:ride_12345" channel                          |
@@ -1894,7 +1894,7 @@ PRINCIPLE: EXTERNALIZE SESSION STATE
 - ANY gateway can handle ANY rider
 - No sticky sessions required
 - No cross-server coordination needed
-- State is externalized -> servers are stateless
+- State is externalized > servers are stateless
 - If Gateway C dies, Gateway D can take over seamlessly
 
 ### HANDLING OLD SUBSCRIPTIONS (CLEANUP)
@@ -1924,7 +1924,7 @@ subscription. This wastes resources (messages delivered to no one).
 |                                                                         |
 |   * Subscription has TTL (e.g., 60 seconds)                             |
 |   * Client sends periodic heartbeat to refresh TTL                      |
-|   * If no heartbeat -> subscription auto-expires                         |
+|   * If no heartbeat > subscription auto-expires                         |
 |                                                                         |
 |   Pros: Handles undetected disconnects, no false negatives              |
 |   Cons: Wasted resources until TTL expires                              |
@@ -1951,14 +1951,14 @@ subscription. This wastes resources (messages delivered to no one).
 
 ```
 +-------------------------------------------------------------------------+
-|           DRIVER LOCATION -> RIDER'S MAP (COMPLETE PICTURE)              |
+|           DRIVER LOCATION > RIDER'S MAP (COMPLETE PICTURE)              |
 |                                                                         |
 |  +----------+    +----------+    +----------+    +----------+          |
 |  |  Driver  |    | Gateway  |    |  Redis   |    | Gateway  |          |
 |  |  Phone   |    |    A     |    | Cluster  |    |    B     |          |
 |  |          |    |          |    |          |    |          |          |
 |  | GPS chip |    | WebSocket|    | * GEO    |    | Subscr.  |          |
-|  | -> 4s     |--->| Handler  |--->| * Pub/Sub|--->| Listener |          |
+|  | > 4s     |--->| Handler  |--->| * Pub/Sub|--->| Listener |          |
 |  | updates  |    |          |    |          |    |          |          |
 |  +----------+    +----------+    +----------+    +----+-----+          |
 |                                                       |                 |
@@ -1975,9 +1975,9 @@ subscription. This wastes resources (messages delivered to no one).
 |                                                                         |
 |  LATENCY BREAKDOWN:                                                     |
 |  +-- GPS to Driver WebSocket:     ~10ms                                 |
-|  +-- Gateway A -> Redis GEOADD:    ~0.5ms                                |
-|  +-- Redis PUBLISH -> Gateway B:   ~1-2ms                                |
-|  +-- Gateway B -> Rider WebSocket: ~5ms                                  |
+|  +-- Gateway A > Redis GEOADD:    ~0.5ms                                |
+|  +-- Redis PUBLISH > Gateway B:   ~1-2ms                                |
+|  +-- Gateway B > Rider WebSocket: ~5ms                                  |
 |  +-- Render on Rider's map:       ~10ms                                 |
 |  +-- TOTAL:                       ~30-50ms                              |
 |                                                                         |
@@ -2081,8 +2081,8 @@ This creates a recursive spatial partitioning where nearby points often
 |  }                                                                     |
 |                                                                         |
 |  // Example:                                                           |
-|  // encode(37.7749, -122.4194, 5) -> "9q8yy"                           |
-|  // encode(37.7750, -122.4190, 5) -> "9q8yy"  (nearby = same prefix)   |
+|  // encode(37.7749, -122.4194, 5) > "9q8yy"                           |
+|  // encode(37.7750, -122.4190, 5) > "9q8yy"  (nearby = same prefix)   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 
@@ -2198,11 +2198,11 @@ This makes storage and indexing efficient.
 |                                                                         |
 |  # Convert location to H3 cell (resolution 9, ~100m cells)             |
 |  cell_id = h3.latlng_to_cell(37.7749, -122.4194, resolution=9)         |
-|  # -> '89283082837ffff'                                                 |
+|  # > '89283082837ffff'                                                 |
 |                                                                         |
 |  # Get all drivers in this cell and neighbors                          |
 |  cells = h3.grid_disk(cell_id, k=2)  # Cell + 2 rings of neighbors    |
-|  # -> ['89283082837ffff', '89283082833ffff', ...]  (19 cells total)    |
+|  # > ['89283082837ffff', '89283082833ffff', ...]  (19 cells total)    |
 |                                                                         |
 |  # Query Redis for drivers in these cells                              |
 |  for cell in cells:                                                    |
@@ -2246,9 +2246,9 @@ it uses geohash encoding, but the API abstracts this away.
 
 We partition by city to keep each geospatial index manageable:
 
-drivers:sf     -> San Francisco drivers (50K)
-drivers:nyc    -> New York drivers (80K)
-drivers:london -> London drivers (40K)
+drivers:sf     > San Francisco drivers (50K)
+drivers:nyc    > New York drivers (80K)
+drivers:london > London drivers (40K)
 
 This partitioning serves two purposes:
 1. PERFORMANCE: Smaller indexes mean faster queries
@@ -2278,8 +2278,8 @@ multiple constraints and objectives.
 GREEDY APPROACH (Simple):
 For each ride request, immediately match with the closest available driver.
 
-Rider R1 requests at T=0, Driver D1 is 1 min away -> Match R1-D1
-Rider R2 requests at T=0.5, D2 is 3 min away -> Match R2-D2
+Rider R1 requests at T=0, Driver D1 is 1 min away > Match R1-D1
+Rider R2 requests at T=0.5, D2 is 3 min away > Match R2-D2
 
 Problem: What if R2's pickup is on D1's route, and R1's pickup is on D2's
 route? Greedy matching might result in suboptimal total wait time.
@@ -2307,11 +2307,11 @@ the assignment problem globally.
 |  +-----+-----+-----+-----+-----+                                       |
 |                                                                         |
 |  Greedy assignment:                                                    |
-|  R1 -> D1 (closest), R2 -> D2 (closest remaining), R3 -> D3              |
+|  R1 > D1 (closest), R2 > D2 (closest remaining), R3 > D3              |
 |  Total: 2 + 3 + 2 = 7 minutes                                         |
 |                                                                         |
 |  Optimal assignment (Hungarian algorithm):                             |
-|  R1 -> D1 (2), R2 -> D4 (2), R3 -> D3 (2)                                |
+|  R1 > D1 (2), R2 > D4 (2), R3 > D3 (2)                                |
 |  Total: 2 + 2 + 2 = 6 minutes                                         |
 |                                                                         |
 |  Improvement: 14% reduction in total wait time                        |
@@ -2429,8 +2429,8 @@ CONCEPT: Use the database's ACID properties to create a lock table.
 |  INSERT INTO locks (resource_id, owner_id, acquired_at)                |
 |  VALUES ('ride_12345', 'server_A', NOW());                             |
 |                                                                         |
-|  * If INSERT succeeds -> Lock acquired                                  |
-|  * If INSERT fails (duplicate key) -> Lock held by someone else        |
+|  * If INSERT succeeds > Lock acquired                                  |
+|  * If INSERT fails (duplicate key) > Lock held by someone else        |
 |                                                                         |
 |  RELEASE LOCK:                                                         |
 |  DELETE FROM locks WHERE resource_id = 'ride_12345'                    |
@@ -2478,10 +2478,10 @@ Zookeeper is a distributed coordination service that provides:
 |  When a client connects to Zookeeper, it establishes a SESSION.        |
 |  Ephemeral nodes are tied to this session:                             |
 |                                                                         |
-|  * Client connects -> Session created                                   |
-|  * Client creates ephemeral node -> Node tied to session                |
-|  * Client disconnects (crash, network failure) -> Session expires       |
-|  * Session expires -> ALL ephemeral nodes auto-deleted                  |
+|  * Client connects > Session created                                   |
+|  * Client creates ephemeral node > Node tied to session                |
+|  * Client disconnects (crash, network failure) > Session expires       |
+|  * Session expires > ALL ephemeral nodes auto-deleted                  |
 |                                                                         |
 |  This solves the "crash while holding lock" problem automatically!     |
 |                                                                         |
@@ -2489,9 +2489,9 @@ Zookeeper is a distributed coordination service that provides:
 |                                                                         |
 |  LOCK ACQUISITION:                                                     |
 |  1. Try to create ephemeral node: /locks/ride_12345                    |
-|  2. If created -> You have the lock                                     |
-|  3. If exists -> Set a WATCH and wait                                   |
-|  4. When node deleted -> Watch fires, retry from step 1                 |
+|  2. If created > You have the lock                                     |
+|  3. If exists > Set a WATCH and wait                                   |
+|  4. When node deleted > Watch fires, retry from step 1                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -2499,9 +2499,9 @@ Zookeeper is a distributed coordination service that provides:
 |  Instead of all clients fighting for one node, each creates a          |
 |  sequential ephemeral node:                                            |
 |                                                                         |
-|  /locks/ride_12345/lock-0000000001  <- Created by Server A              |
-|  /locks/ride_12345/lock-0000000002  <- Created by Server B              |
-|  /locks/ride_12345/lock-0000000003  <- Created by Server C              |
+|  /locks/ride_12345/lock-0000000001  < Created by Server A              |
+|  /locks/ride_12345/lock-0000000002  < Created by Server B              |
+|  /locks/ride_12345/lock-0000000003  < Created by Server C              |
 |                                                                         |
 |  RULE: The client with the LOWEST sequence number has the lock.        |
 |  Each client watches only the node BEFORE it (prevents herd effect).   |
@@ -2544,16 +2544,16 @@ CONCEPT: Use Redis's atomic operations with TTL for simple, fast locking.
 |                                                                         |
 |  This atomicity is CRITICAL. If check and set were separate:           |
 |                                                                         |
-|  Server A: EXISTS lock?     -> No                                       |
-|  Server B: EXISTS lock?     -> No                                       |
-|  Server A: SET lock = "A"   -> OK                                       |
-|  Server B: SET lock = "B"   -> OK (overwrites A!)                       |
+|  Server A: EXISTS lock?     > No                                       |
+|  Server B: EXISTS lock?     > No                                       |
+|  Server A: SET lock = "A"   > OK                                       |
+|  Server B: SET lock = "B"   > OK (overwrites A!)                       |
 |                                                                         |
 |  Both think they have the lock. Disaster!                              |
 |                                                                         |
 |  With SETNX:                                                           |
-|  Server A: SETNX lock "A"   -> 1 (success, lock acquired)               |
-|  Server B: SETNX lock "B"   -> 0 (failed, lock held by A)               |
+|  Server A: SETNX lock "A"   > 1 (success, lock acquired)               |
+|  Server B: SETNX lock "B"   > 0 (failed, lock held by A)               |
 |                                                                         |
 |  Only one succeeds. Mutual exclusion guaranteed.                       |
 |                                                                         |
@@ -2602,7 +2602,7 @@ CONCEPT: Use Redis's atomic operations with TTL for simple, fast locking.
 |  T=30s:  Lock expires (A took too long!)                              |
 |  T=31s:  Server B acquires the lock                                   |
 |  T=32s:  Server A executes DELETE lock                                |
-|          -> Deletes B's lock! B doesn't know it lost the lock.         |
+|          > Deletes B's lock! B doesn't know it lost the lock.         |
 |                                                                         |
 |  --------------------------------------------------------------------- |
 |                                                                         |
@@ -2767,8 +2767,8 @@ FOR UBER'S RIDE MATCHING, WE LOCK AT THE ROW LEVEL:
 |  LOCK KEY:     "lock:ride:{ride_id}"                                    |
 |                                                                         |
 |  Example:                                                               |
-|  * lock:ride:12345 -> Locks only ride 12345                              |
-|  * lock:ride:67890 -> Locks only ride 67890                              |
+|  * lock:ride:12345 > Locks only ride 12345                              |
+|  * lock:ride:67890 > Locks only ride 67890                              |
 |                                                                         |
 |  These are INDEPENDENT. Two servers can simultaneously:                 |
 |  * Server A works on ride 12345 (holds lock:ride:12345)                 |
@@ -2819,14 +2819,14 @@ DRIVER LOCKING — ALSO ROW LEVEL:
 |  APPROACH 2: Lock the Driver (Correct)                                 |
 |  ------------------------------------                                  |
 |  Lock driver:D1                                                       |
-|    -> Check D1's current assignment                                    |
-|    -> If available, assign to R1                                       |
-|    -> Update D1's status                                               |
+|    > Check D1's current assignment                                    |
+|    > If available, assign to R1                                       |
+|    > Update D1's status                                               |
 |  Unlock driver:D1                                                     |
 |                                                                         |
 |  Now when R2 tries to lock driver:D1:                                 |
-|    -> Lock already held by R1's operation                              |
-|    -> R2 waits or tries different driver                               |
+|    > Lock already held by R1's operation                              |
+|    > R2 waits or tries different driver                               |
 |                                                                         |
 |  LOCK KEY: "lock:driver:{driver_id}"                                  |
 |                                                                         |
@@ -2867,7 +2867,7 @@ understanding the RACE CONDITION you're trying to prevent.
 |                    SCENARIO 1: RIDER REQUESTS A RIDE                    |
 |                                                                         |
 |  What happens:                                                         |
-|  1. Rider requests ride -> system creates ride record                   |
+|  1. Rider requests ride > system creates ride record                   |
 |  2. Matching service finds nearby drivers                              |
 |  3. System needs to assign best driver to this ride                   |
 |                                                                         |
@@ -2877,7 +2877,7 @@ understanding the RACE CONDITION you're trying to prevent.
 |  ----------------------------------------                              |
 |  Two matching servers both pick up ride_123.                          |
 |  Both find drivers, both try to assign.                               |
-|  -> Ride ends up with conflicting driver assignments!                  |
+|  > Ride ends up with conflicting driver assignments!                  |
 |                                                                         |
 |  SOLUTION: Lock the RIDE                                               |
 |  Lock key: "lock:ride:123"                                            |
@@ -2890,8 +2890,8 @@ understanding the RACE CONDITION you're trying to prevent.
 |  ----------------------------------------------------                  |
 |  Ride_123 and Ride_456 are both looking for drivers.                  |
 |  Both identify Driver_D1 as closest.                                  |
-|  Both check: "Is D1 available?" -> Yes (at that moment)               |
-|  Both assign D1 -> D1 has two rides!                                   |
+|  Both check: "Is D1 available?" > Yes (at that moment)               |
+|  Both assign D1 > D1 has two rides!                                   |
 |                                                                         |
 |  SOLUTION: Lock the DRIVER                                             |
 |  Before assigning D1 to a ride:                                       |
@@ -2916,8 +2916,8 @@ understanding the RACE CONDITION you're trying to prevent.
 |                                                                         |
 |  RACE CONDITION: Driver accepts, but ride already cancelled           |
 |  -----------------------------------------------------------           |
-|  T=0: Rider cancels ride (status -> CANCELLED)                         |
-|  T=1: Driver taps Accept (tries to set status -> ACCEPTED)             |
+|  T=0: Rider cancels ride (status > CANCELLED)                         |
+|  T=1: Driver taps Accept (tries to set status > ACCEPTED)             |
 |  Without lock: Accept might overwrite CANCELLED!                      |
 |                                                                         |
 |  SOLUTION: Lock the RIDE                                               |
@@ -2991,18 +2991,18 @@ understanding the RACE CONDITION you're trying to prevent.
 |  |  Q1: What RESOURCE is being modified?                          |   |
 |  |      v                                                          |   |
 |  |  +-----------------------------------------------------------+ |   |
-|  |  | Ride record (status, driver_id)    -> Lock: RIDE           | |   |
-|  |  | Driver availability                -> Lock: DRIVER         | |   |
-|  |  | Payment record                     -> Lock: PAYMENT        | |   |
-|  |  | Both ride AND driver               -> Lock: BOTH           | |   |
+|  |  | Ride record (status, driver_id)    > Lock: RIDE           | |   |
+|  |  | Driver availability                > Lock: DRIVER         | |   |
+|  |  | Payment record                     > Lock: PAYMENT        | |   |
+|  |  | Both ride AND driver               > Lock: BOTH           | |   |
 |  |  +-----------------------------------------------------------+ |   |
 |  |                                                                 |   |
 |  |  Q2: What is being COMPETED FOR?                               |   |
 |  |      v                                                          |   |
 |  |  +-----------------------------------------------------------+ |   |
-|  |  | Two riders want same driver         -> Lock: DRIVER        | |   |
-|  |  | Two servers process same ride       -> Lock: RIDE          | |   |
-|  |  | Two requests charge same payment    -> Lock: PAYMENT       | |   |
+|  |  | Two riders want same driver         > Lock: DRIVER        | |   |
+|  |  | Two servers process same ride       > Lock: RIDE          | |   |
+|  |  | Two requests charge same payment    > Lock: PAYMENT       | |   |
 |  |  +-----------------------------------------------------------+ |   |
 |  |                                                                 |   |
 |  |  Q3: What's the SMALLEST scope that ensures correctness?       |   |
@@ -3094,8 +3094,8 @@ understanding the RACE CONDITION you're trying to prevent.
 |  MISTAKE 1: Locking too broadly                                        |
 |  ---------------------------------                                     |
 |  Lock "lock:all_drivers" when assigning one driver.                   |
-|  -> Only one ride can be matched at a time globally!                   |
-|  -> System throughput: 1 ride per lock duration                        |
+|  > Only one ride can be matched at a time globally!                   |
+|  > System throughput: 1 ride per lock duration                        |
 |                                                                         |
 |  FIX: Lock only "lock:driver:D1" (the specific driver)               |
 |                                                                         |
@@ -3104,8 +3104,8 @@ understanding the RACE CONDITION you're trying to prevent.
 |  MISTAKE 2: Locking the wrong resource                                 |
 |  ------------------------------------                                  |
 |  Two riders want D1. You lock each rider's ride.                      |
-|  -> Both locks acquired, both check D1, both assign D1!               |
-|  -> Race condition not prevented                                       |
+|  > Both locks acquired, both check D1, both assign D1!               |
+|  > Race condition not prevented                                       |
 |                                                                         |
 |  FIX: Lock the DRIVER (the shared resource), not the rides           |
 |                                                                         |
@@ -3114,7 +3114,7 @@ understanding the RACE CONDITION you're trying to prevent.
 |  MISTAKE 3: Not holding lock during check-and-update                  |
 |  -----------------------------------------------------                 |
 |  1. Lock driver:D1                                                    |
-|  2. Check if D1 available -> Yes                                       |
+|  2. Check if D1 available > Yes                                       |
 |  3. Release lock                                                      |
 |  4. Update D1 to assigned                                             |
 |                                                                         |
@@ -3128,7 +3128,7 @@ understanding the RACE CONDITION you're trying to prevent.
 |  ------------------------------------------------                     |
 |  Thread A: Lock ride:123, then driver:D1                              |
 |  Thread B: Lock driver:D1, then ride:123                              |
-|  -> Deadlock!                                                          |
+|  > Deadlock!                                                          |
 |                                                                         |
 |  FIX: Always lock in same order (e.g., driver before ride)           |
 |                                                                         |
@@ -3184,13 +3184,13 @@ the difference and when to use each.
 |                                                                         |
 |  Our distributed lock using Redis SET NX (Set if Not eXists):          |
 |                                                                         |
-|  1. SET lock:driver:D1 "token" NX EX 30   <- ACQUIRE LOCK FIRST         |
+|  1. SET lock:driver:D1 "token" NX EX 30   < ACQUIRE LOCK FIRST         |
 |  2. If acquired:                                                       |
 |     - Read driver status                                               |
 |     - Check availability                                               |
 |     - Assign to ride                                                   |
 |     - Update status                                                    |
-|  3. DEL lock:driver:D1                    <- RELEASE LOCK               |
+|  3. DEL lock:driver:D1                    < RELEASE LOCK               |
 |                                                                         |
 |  This is PESSIMISTIC because:                                          |
 |  * We lock BEFORE doing any work                                      |
@@ -3248,7 +3248,7 @@ the difference and when to use each.
 |       Blocking is better than wasted matching work.                    |
 |                                                                         |
 |  Flow:                                                                 |
-|  1. SET lock:driver:D1 NX EX 30  <- Block other servers                |
+|  1. SET lock:driver:D1 NX EX 30  < Block other servers                |
 |  2. Check driver available                                             |
 |  3. Assign driver                                                      |
 |  4. Release lock                                                       |
@@ -3263,11 +3263,11 @@ the difference and when to use each.
 |       Higher concurrency, no blocking.                                |
 |                                                                         |
 |  Flow:                                                                 |
-|  1. SELECT * FROM rides WHERE id = 123  -> version = 5                 |
+|  1. SELECT * FROM rides WHERE id = 123  > version = 5                 |
 |  2. Do some work (calculate fare, etc.)                               |
 |  3. UPDATE rides SET fare = 20, version = 6                           |
 |     WHERE id = 123 AND version = 5                                    |
-|  4. If 0 rows affected -> Someone else updated! Retry.                 |
+|  4. If 0 rows affected > Someone else updated! Retry.                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3276,13 +3276,13 @@ the difference and when to use each.
 |  For critical operations like driver assignment:                       |
 |                                                                         |
 |  Layer 1: Pessimistic (Redis lock on driver)                          |
-|           -> Blocks most concurrent attempts                           |
+|           > Blocks most concurrent attempts                           |
 |                                                                         |
 |  Layer 2: Optimistic (Database WHERE clause)                          |
-|           -> Catches anything that slipped through                     |
+|           > Catches anything that slipped through                     |
 |           UPDATE drivers SET current_ride = 123                       |
 |           WHERE id = D1 AND current_ride IS NULL                      |
-|           -> If another assignment happened, 0 rows affected           |
+|           > If another assignment happened, 0 rows affected           |
 |                                                                         |
 |  WHY BOTH?                                                             |
 |  * Redis lock might fail (network partition, Redis down)              |
@@ -3309,11 +3309,11 @@ the difference and when to use each.
 |                                                                         |
 |  SERVER A                          SERVER B                            |
 |  ---------                         ---------                           |
-|  T1: SELECT ... -> version = 5      T2: SELECT ... -> version = 5       |
+|  T1: SELECT ... > version = 5      T2: SELECT ... > version = 5       |
 |  T3: Calculate fare = $18          T4: Calculate fare = $20           |
 |  T5: UPDATE ... SET fare=18,       T6: UPDATE ... SET fare=20,        |
 |      version=6 WHERE version=5         version=6 WHERE version=5      |
-|      -> 1 row affected [x]                -> 0 rows affected [ ]            |
+|      > 1 row affected Y                > 0 rows affected X            |
 |                                        (version already changed!)     |
 |                                                                         |
 |  RESULT:                                                               |
@@ -3349,10 +3349,10 @@ the difference and when to use each.
 |                                                                         |
 |  USE PESSIMISTIC (Redis SETNX) WHEN:                                   |
 |  ------------------------------------                                  |
-|  [x] High contention (many requests for same resource)                  |
-|  [x] Retry is expensive (e.g., re-running matching algorithm)           |
-|  [x] Critical section is short (don't hold lock long)                   |
-|  [x] You need to guarantee only one proceeds                            |
+|  Y High contention (many requests for same resource)                  |
+|  Y Retry is expensive (e.g., re-running matching algorithm)           |
+|  Y Critical section is short (don't hold lock long)                   |
+|  Y You need to guarantee only one proceeds                            |
 |                                                                         |
 |  Examples in Uber:                                                     |
 |  * Driver assignment (many rides want popular drivers)                |
@@ -3363,10 +3363,10 @@ the difference and when to use each.
 |                                                                         |
 |  USE OPTIMISTIC (Version Column) WHEN:                                 |
 |  ------------------------------------                                  |
-|  [x] Low contention (conflicts are rare)                                |
-|  [x] Retry is cheap (just read and try again)                          |
-|  [x] Read-heavy workload (many reads, few writes)                       |
-|  [x] Long-running operations (don't want to block others)               |
+|  Y Low contention (conflicts are rare)                                |
+|  Y Retry is cheap (just read and try again)                          |
+|  Y Read-heavy workload (many reads, few writes)                       |
+|  Y Long-running operations (don't want to block others)               |
 |                                                                         |
 |  Examples in Uber:                                                     |
 |  * User profile updates (user updates their own profile)              |
@@ -3377,9 +3377,9 @@ the difference and when to use each.
 |                                                                         |
 |  USE BOTH (Defense in Depth) WHEN:                                     |
 |  --------------------------------                                      |
-|  [x] Data integrity is CRITICAL (payments, driver assignment)           |
-|  [x] Distributed lock might fail (network issues)                       |
-|  [x] You need guarantees at multiple levels                             |
+|  Y Data integrity is CRITICAL (payments, driver assignment)           |
+|  Y Distributed lock might fail (network issues)                       |
+|  Y You need guarantees at multiple levels                             |
 |                                                                         |
 |  Pattern:                                                              |
 |  1. Pessimistic lock (Redis) - first line of defense                  |
@@ -3404,7 +3404,7 @@ COMPOSITE LOCKS — WHEN YOU NEED MULTIPLE RESOURCES:
 |                                                                         |
 |  Server A holds ride:123, waiting for driver:D1                       |
 |  Server B holds driver:D1, waiting for ride:123                       |
-|  -> DEADLOCK! Neither can proceed.                                     |
+|  > DEADLOCK! Neither can proceed.                                     |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -3544,11 +3544,11 @@ A client can BELIEVE it holds the lock when it actually doesn't.
 |     |<-- Lock granted ------|  (token = 43)         |                  |
 |     |                       |                        |                  |
 |     |                       |                        |                  |
-|     |-- Write (token 43) ---------------------------->| [x] Accepted     |
+|     |-- Write (token 43) ---------------------------->| Y Accepted     |
 |     |                       |                        |                  |
 |     |   [A resumes]         |                        |                  |
 |     |                       |                        |                  |
-|     |-- Write (token 42) ---------------------------->| [x] Accepted!    |
+|     |-- Write (token 42) ---------------------------->| Y Accepted!    |
 |     |                       |                        |  CORRUPTION!    |
 |                                                                         |
 |  Both writes succeeded. A's stale write corrupted B's data.            |
@@ -3566,7 +3566,7 @@ SOLUTION: FENCING TOKEN
 |  Every lock acquisition gets a MONOTONICALLY INCREASING number.        |
 |  The database REJECTS writes with old tokens.                          |
 |                                                                         |
-|  Token 42 -> Token 43 -> Token 44 -> ...                                  |
+|  Token 42 > Token 43 > Token 44 > ...                                  |
 |                                                                         |
 |  Each new lock holder gets a HIGHER token than all previous holders.   |
 |                                                                         |
@@ -3578,8 +3578,8 @@ SOLUTION: FENCING TOKEN
 |  The database tracks the highest token it has seen.                    |
 |  It REJECTS any write with a token ≤ the highest seen.                |
 |                                                                         |
-|  Server B writes: token = 43 -> DB accepts, records max_token = 43     |
-|  Server A writes: token = 42 -> DB rejects (42 < 43)                   |
+|  Server B writes: token = 43 > DB accepts, records max_token = 43     |
+|  Server A writes: token = 42 > DB rejects (42 < 43)                   |
 |                                                                         |
 |  A's stale write is BLOCKED, even though A doesn't know the lock      |
 |  expired.                                                               |
@@ -3601,7 +3601,7 @@ SOLUTION: FENCING TOKEN
 |  APPROACH 2: Zookeeper Sequential Nodes                                |
 |  --------------------------------------                                |
 |  Zookeeper's sequential znodes are already monotonically numbered.     |
-|  /locks/ride_12345/lock-0000000042 -> Token is 42                       |
+|  /locks/ride_12345/lock-0000000042 > Token is 42                       |
 |                                                                         |
 |  APPROACH 3: etcd Revision Numbers                                     |
 |  ---------------------------------                                     |
@@ -3611,7 +3611,7 @@ SOLUTION: FENCING TOKEN
 |  APPROACH 4: Redis INCR                                                |
 |  ----------------------                                                |
 |  Before acquiring lock, atomically increment a counter:                |
-|  INCR fencing:ride_12345 -> Returns next token                          |
+|  INCR fencing:ride_12345 > Returns next token                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3655,9 +3655,9 @@ SOLUTION: FENCING TOKEN
 |  T=1:   A pauses (GC)                                                 |
 |  T=31:  Lock expires                                                  |
 |  T=32:  B acquires lock with token = 43                               |
-|  T=33:  B writes with token 43 -> DB accepts, sets fence_token = 43   |
+|  T=33:  B writes with token 43 > DB accepts, sets fence_token = 43   |
 |  T=40:  A resumes, tries to write with token 42                       |
-|  T=41:  DB rejects (42 < 43) -> 0 rows affected                        |
+|  T=41:  DB rejects (42 < 43) > 0 rows affected                        |
 |         A's code sees 0 rows, knows something went wrong              |
 |                                                                         |
 |  DATA INTEGRITY PRESERVED!                                             |
@@ -3686,7 +3686,7 @@ UBER'S DEFENSE-IN-DEPTH STRATEGY:
 |  LAYER 3: Optimistic Locking (WHERE clause)                            |
 |  ----------------------------------------                              |
 |  UPDATE rides SET driver = ? WHERE ride_id = ? AND status = 'PENDING' |
-|  If status changed, 0 rows affected -> operation fails safely.          |
+|  If status changed, 0 rows affected > operation fails safely.          |
 |                                                                         |
 |  LAYER 4: Fencing Token                                                |
 |  ----------------------                                                |
@@ -3714,17 +3714,17 @@ UBER'S DEFENSE-IN-DEPTH STRATEGY:
 |  |           |          | (CP)     |           | ordering, Kafka   |   |
 |  +-----------+----------+----------+-----------+-------------------+   |
 |  | Redis     | <1ms     | Weak     | Low       | High throughput,  |   |
-|  |           |          | (AP)     |           | verify in DB  [x]   |   |
+|  |           |          | (AP)     |           | verify in DB  Y   |   |
 |  +-----------+----------+----------+-----------+-------------------+   |
 |  | etcd      | 5-10ms   | Strong   | Medium    | Kubernetes-style  |   |
 |  |           |          | (CP)     |           | coordination      |   |
 |  +-----------+----------+----------+-----------+-------------------+   |
 |                                                                         |
 |  FOR UBER:                                                             |
-|  -> Redis lock for speed                                                |
-|  -> Verify in database before write                                     |
-|  -> Fencing tokens for safety net                                       |
-|  -> Database optimistic locking as final check                          |
+|  > Redis lock for speed                                                |
+|  > Verify in database before write                                     |
+|  > Fencing tokens for safety net                                       |
+|  > Database optimistic locking as final check                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -3841,9 +3841,9 @@ We model the road network as a weighted directed graph:
 |            v        4 min     v                                        |
 |            C ---------------> D                                        |
 |                                                                         |
-|  Path A -> D options:                                                   |
-|  * A -> B -> D: 2 + 1 = 3 min                                           |
-|  * A -> C -> D: 3 + 4 = 7 min                                           |
+|  Path A > D options:                                                   |
+|  * A > B > D: 2 + 1 = 3 min                                           |
+|  * A > C > D: 3 + 4 = 7 min                                           |
 |                                                                         |
 |  Edge weight varies by:                                                |
 |  * Base travel time (distance ÷ speed limit)                          |
@@ -3888,7 +3888,7 @@ shortcuts for these common paths.
 |        +--- F -----+                                                   |
 |                                                                         |
 |  After contraction (shortcuts added):                                  |
-|  A --------------------------- E  (shortcut: A->E in 1 hop)            |
+|  A --------------------------- E  (shortcut: A>E in 1 hop)            |
 |  A --- B --- C --- D --- E                                            |
 |        |           |                                                   |
 |        +--- F -----+                                                   |
@@ -4206,12 +4206,12 @@ When a ride completes, multiple services must act together:
 +-------------------------------------------------------------------------+
 |                    RIDE COMPLETION REQUIRES                             |
 |                                                                         |
-|  Step 1: Ride Service      -> Mark ride as COMPLETED                    |
-|  Step 2: Pricing Service   -> Calculate final fare                      |
-|  Step 3: Payment Service   -> Charge rider's card                       |
-|  Step 4: Earnings Service  -> Credit driver's balance                   |
-|  Step 5: Notification Svc  -> Send receipt email                        |
-|  Step 6: Rating Service    -> Request rating from rider                 |
+|  Step 1: Ride Service      > Mark ride as COMPLETED                    |
+|  Step 2: Pricing Service   > Calculate final fare                      |
+|  Step 3: Payment Service   > Charge rider's card                       |
+|  Step 4: Earnings Service  > Credit driver's balance                   |
+|  Step 5: Notification Svc  > Send receipt email                        |
+|  Step 6: Rating Service    > Request rating from rider                 |
 |                                                                         |
 |  Each step is a DIFFERENT microservice with its OWN database.          |
 |                                                                         |
@@ -4241,9 +4241,9 @@ inconsistent state where ride is marked COMPLETED but rider wasn't charged.
 |                                                                         |
 |  BUT in microservices, each service has its OWN database:              |
 |                                                                         |
-|  Ride Service      -> PostgreSQL (rides DB)                             |
-|  Payment Service   -> PostgreSQL (payments DB)                          |
-|  Earnings Service  -> PostgreSQL (earnings DB)                          |
+|  Ride Service      > PostgreSQL (rides DB)                             |
+|  Payment Service   > PostgreSQL (payments DB)                          |
+|  Earnings Service  > PostgreSQL (earnings DB)                          |
 |                                                                         |
 |  There's NO single transaction that spans all three!                   |
 |                                                                         |
@@ -4299,13 +4299,13 @@ inconsistent state where ride is marked COMPLETED but rider wasn't charged.
 |  A compensation is NOT a database rollback.                            |
 |  It's a NEW transaction that semantically reverses the effect.         |
 |                                                                         |
-|  Original Action           ->  Compensation Action                      |
+|  Original Action           >  Compensation Action                      |
 |  ---------------------------------------------------------------------  |
-|  Charge $20 to card        ->  Refund $20 to card                       |
-|  Mark ride as COMPLETED    ->  Mark ride as PAYMENT_PENDING             |
-|  Credit driver $16         ->  Debit driver $16                         |
-|  Reserve inventory item    ->  Release inventory item                   |
-|  Send confirmation email   ->  Send cancellation email                  |
+|  Charge $20 to card        >  Refund $20 to card                       |
+|  Mark ride as COMPLETED    >  Mark ride as PAYMENT_PENDING             |
+|  Credit driver $16         >  Debit driver $16                         |
+|  Reserve inventory item    >  Release inventory item                   |
+|  Send confirmation email   >  Send cancellation email                  |
 |                                                                         |
 |  Compensation must be:                                                 |
 |  * IDEMPOTENT: Safe to run multiple times (in case of retries)        |
@@ -4320,11 +4320,11 @@ inconsistent state where ride is marked COMPLETED but rider wasn't charged.
 +-------------------------------------------------------------------------+
 |                    SAGA SUCCESS SCENARIO                                |
 |                                                                         |
-|  T1: Mark ride COMPLETED    [x] Commit to Ride DB                        |
-|  T2: Calculate fare         [x] Read-only, no commit needed              |
-|  T3: Charge rider $20       [x] Commit to Payment DB                     |
-|  T4: Credit driver $16      [x] Commit to Earnings DB                    |
-|  T5: Send receipt           [x] Email sent                               |
+|  T1: Mark ride COMPLETED    Y Commit to Ride DB                        |
+|  T2: Calculate fare         Y Read-only, no commit needed              |
+|  T3: Charge rider $20       Y Commit to Payment DB                     |
+|  T4: Credit driver $16      Y Commit to Earnings DB                    |
+|  T5: Send receipt           Y Email sent                               |
 |                                                                         |
 |  All steps succeeded. Saga completes. No compensation needed.          |
 |                                                                         |
@@ -4333,9 +4333,9 @@ inconsistent state where ride is marked COMPLETED but rider wasn't charged.
 +-------------------------------------------------------------------------+
 |                    SAGA FAILURE SCENARIO                                |
 |                                                                         |
-|  T1: Mark ride COMPLETED    [x] Committed                                |
-|  T2: Calculate fare         [x] Done                                     |
-|  T3: Charge rider $20       [ ] FAILED (card declined)                   |
+|  T1: Mark ride COMPLETED    Y Committed                                |
+|  T2: Calculate fare         Y Done                                     |
+|  T3: Charge rider $20       X FAILED (card declined)                   |
 |                                                                         |
 |  Step 3 failed. Now we run compensations in REVERSE order:             |
 |                                                                         |
@@ -4365,12 +4365,12 @@ inconsistent state where ride is marked COMPLETED but rider wasn't charged.
 +-------------------------------------------------------------------------+
 |                    WHAT IF COMPENSATION FAILS?                          |
 |                                                                         |
-|  T1: Mark ride COMPLETED    [x] Committed                                |
-|  T2: Charge rider $20       [x] Committed                                |
-|  T3: Credit driver $16      [ ] FAILED (earnings service down)           |
+|  T1: Mark ride COMPLETED    Y Committed                                |
+|  T2: Charge rider $20       Y Committed                                |
+|  T3: Credit driver $16      X FAILED (earnings service down)           |
 |                                                                         |
 |  Now we compensate:                                                    |
-|  C2: Refund rider $20       [ ] FAILED (payment service timeout)         |
+|  C2: Refund rider $20       X FAILED (payment service timeout)         |
 |                                                                         |
 |  What now?! Rider was charged but compensation failed!                 |
 |                                                                         |
@@ -4463,8 +4463,8 @@ There are two fundamentally different ways to coordinate a saga.
 |  Payment Service publishes: Event: PAYMENT_FAILED                      |
 |                                                                         |
 |  Ride Service listens for PAYMENT_FAILED:                              |
-|  -> Reverts ride status to PAYMENT_PENDING                              |
-|  -> Publishes: Event: RIDE_REVERTED                                     |
+|  > Reverts ride status to PAYMENT_PENDING                              |
+|  > Publishes: Event: RIDE_REVERTED                                     |
 |                                                                         |
 |  Each service knows what events trigger its compensation.              |
 |                                                                         |
@@ -4556,8 +4556,8 @@ There are two fundamentally different ways to coordinate a saga.
 |  What if Payment Service fails?                                        |
 |                                                                         |
 |  ORCHESTRATOR:                                                         |
-|  1. Calls Ride Service: "Mark completed"          [x]                    |
-|  2. Calls Payment Service: "Charge $20"           [ ] FAILED             |
+|  1. Calls Ride Service: "Mark completed"          Y                    |
+|  2. Calls Payment Service: "Charge $20"           X FAILED             |
 |                                                                         |
 |  ORCHESTRATOR detects failure and runs compensations:                  |
 |  1. Calls Ride Service: "Revert to PAYMENT_FAILED"                    |
@@ -4753,8 +4753,8 @@ bulletproof reliability. We cannot double-charge customers or miss payments.
 |  4. Ride can proceed                                                  |
 |                                                                         |
 |  If authorization fails:                                               |
-|  -> Prompt rider to use different payment method                       |
-|  -> Cannot request ride without valid payment                          |
+|  > Prompt rider to use different payment method                       |
+|  > Cannot request ride without valid payment                          |
 |                                                                         |
 |  PHASE 2: CAPTURE (After ride)                                         |
 |  -----------------------------                                         |
@@ -4764,9 +4764,9 @@ bulletproof reliability. We cannot double-charge customers or miss payments.
 |  4. Transaction complete                                              |
 |                                                                         |
 |  If capture fails:                                                     |
-|  -> Retry with exponential backoff                                     |
-|  -> Try backup payment method                                          |
-|  -> Block rider from new rides until resolved                          |
+|  > Retry with exponential backoff                                     |
+|  > Try backup payment method                                          |
+|  > Block rider from new rides until resolved                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -4828,16 +4828,16 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  HOW IT WORKS:                                                         |
 |                                                                         |
 |  Request 1: "Charge ride_123" with key = "payment:ride_123:attempt_1" |
-|             -> System processes, charges $20, stores result with key   |
+|             > System processes, charges $20, stores result with key   |
 |                                                                         |
 |  Request 2: Same key (retry)                                          |
-|             -> System sees key exists                                   |
-|             -> Returns stored result WITHOUT processing again          |
-|             -> Customer charged exactly once!                          |
+|             > System sees key exists                                   |
+|             > Returns stored result WITHOUT processing again          |
+|             > Customer charged exactly once!                          |
 |                                                                         |
 |  Request 3: "Charge ride_456" with key = "payment:ride_456:attempt_1" |
-|             -> Different key, genuinely new operation                    |
-|             -> System processes normally                                 |
+|             > Different key, genuinely new operation                    |
+|             > System processes normally                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -4855,8 +4855,8 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  |  STEP 1: CHECK CACHE (Fast Path)                                |  |
 |  |  -----------------------------                                  |  |
 |  |  Look up idempotency key in Redis cache.                        |  |
-|  |  If found -> Return cached result immediately (sub-millisecond)  |  |
-|  |  If not found -> Continue to step 2                              |  |
+|  |  If found > Return cached result immediately (sub-millisecond)  |  |
+|  |  If not found > Continue to step 2                              |  |
 |  |                                                                  |  |
 |  |  Why cache? Most retries happen within seconds.                 |  |
 |  |  Redis lookup: < 1ms. Database lookup: 5-20ms.                  |  |
@@ -4870,8 +4870,8 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  |  -----------------------------------                            |  |
 |  |  Cache might have expired but operation was done.               |  |
 |  |  Query database: "Any payment with this idempotency key?"      |  |
-|  |  If found -> Return result, warm the cache                      |  |
-|  |  If not found -> Continue to step 3                              |  |
+|  |  If found > Return result, warm the cache                      |  |
+|  |  If not found > Continue to step 3                              |  |
 |  |                                                                  |  |
 |  +------------------------------------------------------------------+  |
 |                         |                                              |
@@ -4882,10 +4882,10 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  |  ---------------------------------------------                  |  |
 |  |  What if two retries arrive simultaneously?                     |  |
 |  |  Both pass steps 1 & 2 (nothing found yet).                    |  |
-|  |  Without locking, both would process -> double charge!          |  |
+|  |  Without locking, both would process > double charge!          |  |
 |  |                                                                  |  |
 |  |  Solution: Acquire distributed lock on idempotency key.         |  |
-|  |  * First request gets lock -> proceeds to step 4                |  |
+|  |  * First request gets lock > proceeds to step 4                |  |
 |  |  * Second request waits or fails with "in progress"            |  |
 |  |                                                                  |  |
 |  +------------------------------------------------------------------+  |
@@ -4945,9 +4945,9 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  Example: "payment:ride_12345:1"                                       |
 |                                                                         |
 |  WHY IT WORKS:                                                         |
-|  * Same ride_id + attempt = same key on retry [x]                       |
+|  * Same ride_id + attempt = same key on retry Y                       |
 |  * If payment failed and rider retries with new card,                 |
-|    increment attempt_number -> different key -> new charge              |
+|    increment attempt_number > different key > new charge              |
 |                                                                         |
 |  For ride requests:                                                    |
 |  ride:{rider_id}:{pickup_geohash}:{minute_bucket}                      |
@@ -4962,10 +4962,10 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  BAD KEY DESIGNS:                                                      |
 |                                                                         |
 |  payment:{random_uuid}                                                 |
-|  PROBLEM: Client generates new UUID on retry -> double charge!         |
+|  PROBLEM: Client generates new UUID on retry > double charge!         |
 |                                                                         |
 |  payment:{timestamp}                                                   |
-|  PROBLEM: Timestamp changes on retry -> double charge!                 |
+|  PROBLEM: Timestamp changes on retry > double charge!                 |
 |                                                                         |
 |  payment:{request_id}                                                  |
 |  PROBLEM: What if client retries with same request_id but             |
@@ -5031,7 +5031,7 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  |                         |  }                                  |    |
 |  +----------------------------------------------------------------+    |
 |                                                                         |
-|  On retry, client gets same failure -> knows to try different card.    |
+|  On retry, client gets same failure > knows to try different card.    |
 |  Don't retry the charge (card is still declined!).                    |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -5059,7 +5059,7 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  |  ride_id            |  UUID NOT NULL                            |  |
 |  |  amount             |  DECIMAL(10,2)                            |  |
 |  |  status             |  VARCHAR(20)                              |  |
-|  |  idempotency_key    |  VARCHAR(255) UNIQUE  <- DATABASE ENFORCED |  |
+|  |  idempotency_key    |  VARCHAR(255) UNIQUE  < DATABASE ENFORCED |  |
 |  |  created_at         |  TIMESTAMP                                |  |
 |  +------------------------------------------------------------------+  |
 |                                                                         |
@@ -5087,8 +5087,8 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  SCENARIO 1: Processing crashed after charging, before storing         |
 |  ---------------------------------------------------------------------  |
 |  1. Request received, passed all checks                               |
-|  2. Called payment gateway, card charged [x]                            |
-|  3. Server crashed before saving to database [ ]                        |
+|  2. Called payment gateway, card charged Y                            |
+|  3. Server crashed before saving to database X                        |
 |  4. Client retries...                                                 |
 |                                                                         |
 |  PROBLEM: No record in our DB, but card was charged!                  |
@@ -5110,7 +5110,7 @@ The client will RETRY. Without idempotency, a payment could be charged twice!
 |  SOLUTION: Validate parameters match                                   |
 |  * Store request parameters with idempotency key                      |
 |  * On cache hit, compare stored params with new request               |
-|  * If mismatch -> reject with "conflicting request"                   |
+|  * If mismatch > reject with "conflicting request"                   |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -5243,14 +5243,14 @@ With these constraints, we can enumerate valid orderings efficiently.
 |  PRINCIPLE: Pooling works only if riders are going the same way.      |
 |                                                                         |
 |  APPROACH:                                                             |
-|  * Calculate heading/bearing for pool (current location -> destination)|
-|  * Calculate heading for new rider (pickup -> dropoff)                 |
+|  * Calculate heading/bearing for pool (current location > destination)|
+|  * Calculate heading for new rider (pickup > dropoff)                 |
 |  * If angle difference > threshold (e.g., 45°), skip this pool        |
 |                                                                         |
 |                        N (0°)                                          |
 |                          ^                                             |
 |                          |                                             |
-|              Pool -------+---------> E (90°)                           |
+|              Pool -------+--------> E (90°)                           |
 |              heading     |                                             |
 |                   \      |                                             |
 |                    \45°  |                                             |
@@ -5317,17 +5317,17 @@ With these constraints, we can enumerate valid orderings efficiently.
 |  VALID orderings (P before D for each rider):                         |
 |                                                                         |
 |  +------------------------------------------------------------------+  |
-|  |  P1 -> P2 -> D1 -> D2    Pick both, drop 1, drop 2                 |  |
-|  |  P1 -> P2 -> D2 -> D1    Pick both, drop 2, drop 1                 |  |
-|  |  P1 -> D1 -> P2 -> D2    Pick 1, drop 1, then pick & drop 2        |  |
-|  |  P2 -> P1 -> D1 -> D2    Pick 2, pick 1, drop 1, drop 2            |  |
-|  |  P2 -> P1 -> D2 -> D1    Pick 2, pick 1, drop 2, drop 1            |  |
-|  |  P2 -> D2 -> P1 -> D1    Pick 2, drop 2, then pick & drop 1        |  |
+|  |  P1 > P2 > D1 > D2    Pick both, drop 1, drop 2                 |  |
+|  |  P1 > P2 > D2 > D1    Pick both, drop 2, drop 1                 |  |
+|  |  P1 > D1 > P2 > D2    Pick 1, drop 1, then pick & drop 2        |  |
+|  |  P2 > P1 > D1 > D2    Pick 2, pick 1, drop 1, drop 2            |  |
+|  |  P2 > P1 > D2 > D1    Pick 2, pick 1, drop 2, drop 1            |  |
+|  |  P2 > D2 > P1 > D1    Pick 2, drop 2, then pick & drop 1        |  |
 |  +------------------------------------------------------------------+  |
 |                                                                         |
 |  INVALID orderings (D before P):                                       |
-|  [ ] D1 -> P1 -> ...  (Can't drop before pickup!)                         |
-|  [ ] P1 -> D2 -> P2 -> D1  (D2 before P2!)                                 |
+|  X D1 > P1 > ...  (Can't drop before pickup!)                         |
+|  X P1 > D2 > P2 > D1  (D2 before P2!)                                 |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
 |                                                                         |
@@ -5470,12 +5470,12 @@ With these constraints, we can enumerate valid orderings efficiently.
 ### VALID ORDERING GENERATION (Backtracking Algorithm):
 
 For 2 riders (4 waypoints), valid orderings where Pickup < Dropoff for each:
-- P1 -> P2 -> D1 -> D2
-- P1 -> P2 -> D2 -> D1
-- P1 -> D1 -> P2 -> D2
-- P2 -> P1 -> D1 -> D2
-- P2 -> P1 -> D2 -> D1
-- P2 -> D2 -> P1 -> D1
+- P1 > P2 > D1 > D2
+- P1 > P2 > D2 > D1
+- P1 > D1 > P2 > D2
+- P2 > P1 > D1 > D2
+- P2 > P1 > D2 > D1
+- P2 > D2 > P1 > D1
 
 Only 6 valid orderings out of 24 total permutations (4!).
 
@@ -5704,7 +5704,7 @@ Let's bring everything together into a complete picture.
 |     Ride status: EN_ROUTE                                             |
 |                                                                         |
 |  5. DRIVER EN ROUTE                                                    |
-|     Location updates stream to Kafka -> Redis                          |
+|     Location updates stream to Kafka > Redis                          |
 |     Rider app polls/subscribes for driver location                    |
 |     Live map shows driver approaching                                 |
 |                                                                         |
@@ -5721,7 +5721,7 @@ Let's bring everything together into a complete picture.
 |     Driver swipes "End Ride"                                          |
 |     Fare calculated from GPS trace                                    |
 |     Payment captured                                                  |
-|     Status: COMPLETED -> PAID                                          |
+|     Status: COMPLETED > PAID                                          |
 |     Receipt sent, rating requested                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -6008,8 +6008,8 @@ Exploit this for sharding, caching, and latency optimization.
 |                                                                         |
 |  READ-YOUR-WRITES:                                                      |
 |  -------------------                                                    |
-|  * Driver updates location -> immediately sees own position            |
-|  * Rider requests ride -> immediately sees pending status              |
+|  * Driver updates location > immediately sees own position            |
+|  * Rider requests ride > immediately sees pending status              |
 |  * Implementation: Read from leader after write                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -6024,9 +6024,9 @@ Exploit this for sharding, caching, and latency optimization.
 |  GEOGRAPHIC SHARDING (Primary Strategy):                                |
 |  ----------------------------------------                               |
 |                                                                         |
-|  NYC users -> NYC shard                                                 |
-|  LA users -> LA shard                                                   |
-|  London users -> London shard                                           |
+|  NYC users > NYC shard                                                 |
+|  LA users > LA shard                                                   |
+|  London users > London shard                                           |
 |                                                                         |
 |  WHY IT WORKS:                                                          |
 |  * NYC rider never matches with LA driver                             |
@@ -6038,8 +6038,8 @@ Exploit this for sharding, caching, and latency optimization.
 |  REPLICATION:                                                           |
 |                                                                         |
 |  PostgreSQL (Single-Leader):                                           |
-|  * Writes -> Leader                                                    |
-|  * Reads -> Followers (read replicas)                                  |
+|  * Writes > Leader                                                    |
+|  * Reads > Followers (read replicas)                                  |
 |  * Ride assignments: Read from leader (consistency)                   |
 |  * Historical data: Read from followers (performance)                 |
 |                                                                         |
@@ -6075,7 +6075,7 @@ Exploit this for sharding, caching, and latency optimization.
 |  * Driver app sends location                                           |
 |  * Write directly to Redis (GEOADD)                                   |
 |  * TTL: 60 seconds (driver timeout)                                   |
-|  * Async: Kafka -> Cassandra (history)                                 |
+|  * Async: Kafka > Cassandra (history)                                 |
 |                                                                         |
 |  RIDE STATE (Cache-Aside):                                              |
 |  ---------------------------                                            |
@@ -6124,13 +6124,13 @@ Exploit this for sharding, caching, and latency optimization.
 |  WEBSOCKET ROUTING:                                                     |
 |  -------------------                                                    |
 |  * Connection registry tracks which server has each driver            |
-|  * "Send message to driver 123" -> Lookup server -> Route              |
+|  * "Send message to driver 123" > Lookup server > Route              |
 |  * Sticky sessions (IP hash) for connection stability                 |
 |                                                                         |
 |  GEOGRAPHIC ROUTING (DNS-based):                                        |
 |  ---------------------------------                                      |
-|  * NYC users -> NYC data center                                        |
-|  * EU users -> EU data center                                          |
+|  * NYC users > NYC data center                                        |
+|  * EU users > EU data center                                          |
 |  * Route53 latency-based routing                                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -6195,10 +6195,10 @@ Exploit this for sharding, caching, and latency optimization.
 |  ORDERING:                                                              |
 |  ----------                                                             |
 |  * Partition key = ride_id                                            |
-|  * All events for same ride -> same partition -> ordered               |
+|  * All events for same ride > same partition > ordered               |
 |                                                                         |
 |  Ride lifecycle (ordered within partition):                            |
-|  REQUESTED -> MATCHED -> DRIVER_ARRIVED -> IN_PROGRESS -> COMPLETED       |
+|  REQUESTED > MATCHED > DRIVER_ARRIVED > IN_PROGRESS > COMPLETED       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -6213,8 +6213,8 @@ Exploit this for sharding, caching, and latency optimization.
 |  -----------------                                                      |
 |  Payment gateway down? Don't keep calling, fail fast.                  |
 |                                                                         |
-|  CLOSED -> (failures exceed threshold) -> OPEN                           |
-|  OPEN -> (timeout) -> HALF-OPEN -> (test success) -> CLOSED               |
+|  CLOSED > (failures exceed threshold) > OPEN                           |
+|  OPEN > (timeout) > HALF-OPEN > (test success) > CLOSED               |
 |                                                                         |
 |  Used for:                                                              |
 |  * Payment service                                                     |
@@ -6227,9 +6227,9 @@ Exploit this for sharding, caching, and latency optimization.
 |  --------------                                                         |
 |  Ride completion involves multiple services:                           |
 |                                                                         |
-|  1. Update ride status -> SUCCESS                                      |
-|  2. Calculate fare -> SUCCESS                                          |
-|  3. Charge payment -> FAILED                                           |
+|  1. Update ride status > SUCCESS                                      |
+|  2. Calculate fare > SUCCESS                                          |
+|  3. Charge payment > FAILED                                           |
 |  4. COMPENSATE: Revert fare, update status to PAYMENT_FAILED         |
 |                                                                         |
 |  ---------------------------------------------------------------------  |
@@ -6238,9 +6238,9 @@ Exploit this for sharding, caching, and latency optimization.
 |  ---------------                                                        |
 |  Ride states with valid transitions:                                   |
 |                                                                         |
-|  REQUESTED -> MATCHING -> MATCHED -> DRIVER_ARRIVED                      |
+|  REQUESTED > MATCHING > MATCHED > DRIVER_ARRIVED                      |
 |           ↘  CANCELLED   v            v                               |
-|                    IN_PROGRESS -> COMPLETED                            |
+|                    IN_PROGRESS > COMPLETED                            |
 |                         v                                             |
 |                    CANCELLED                                          |
 |                                                                         |

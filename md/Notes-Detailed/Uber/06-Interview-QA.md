@@ -16,7 +16,7 @@ and architect-level interviews.
 |                                                                         |
 |  1. CLARIFY REQUIREMENTS (2 min)                                       |
 |     * Users: Riders and Drivers                                       |
-|     * Core flow: Request ride -> match -> pickup -> dropoff             |
+|     * Core flow: Request ride > match > pickup > dropoff             |
 |     * Scale: 100M+ users, 1M+ concurrent drivers                     |
 |     * Real-time: Location updates every 4 seconds                    |
 |                                                                         |
@@ -52,8 +52,8 @@ and architect-level interviews.
 |     * Notification Service: Push/SMS/Email                          |
 |                                                                         |
 |  4. DATA FLOW                                                          |
-|     Rider requests -> Matching finds nearby -> Driver accepts         |
-|     -> Trip created -> Navigation provided -> Payment processed        |
+|     Rider requests > Matching finds nearby > Driver accepts         |
+|     > Trip created > Navigation provided > Payment processed        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -73,7 +73,7 @@ and architect-level interviews.
 |                                                                         |
 |  2. STORAGE TIER                                                       |
 |     * Current location: Redis (in-memory for speed)                  |
-|     * History: Kafka -> Time-series DB (for analytics)               |
+|     * History: Kafka > Time-series DB (for analytics)               |
 |     * Shard by driver_id or geographic region                       |
 |                                                                         |
 |  3. OPTIMIZATIONS                                                      |
@@ -84,8 +84,8 @@ and architect-level interviews.
 |     * Compress location data                                         |
 |                                                                         |
 |  4. DATA MODEL IN REDIS                                                |
-|     * driver:{id}:location -> {lat, lng, heading, ts}               |
-|     * cell:{s2_cell} -> Set<driver_ids>  (for spatial query)        |
+|     * driver:{id}:location > {lat, lng, heading, ts}               |
+|     * cell:{s2_cell} > Set<driver_ids>  (for spatial query)        |
 |     * Update both atomically when location changes                  |
 |                                                                         |
 |  5. GEOGRAPHIC SHARDING                                                |
@@ -112,7 +112,7 @@ and architect-level interviews.
 |                                                                         |
 |  1. INDEXABILITY                                                       |
 |     * Convert 2D coordinates to 1D cell ID                          |
-|     * Cell ID is an integer -> standard B-tree index works          |
+|     * Cell ID is an integer > standard B-tree index works          |
 |     * Nearby points have similar cell IDs                           |
 |                                                                         |
 |  2. EFFICIENT RANGE QUERIES                                            |
@@ -172,8 +172,8 @@ and architect-level interviews.
 |  EX 30 = expires in 30 seconds                                       |
 |                                                                         |
 |  FLOW:                                                                 |
-|  1. Request A: SET ... NX -> Success (got lock)                       |
-|  2. Request B: SET ... NX -> Fails (already reserved)                |
+|  1. Request A: SET ... NX > Success (got lock)                       |
+|  2. Request B: SET ... NX > Fails (already reserved)                |
 |  3. Request A sends offer to D1                                      |
 |  4. Request B tries next best driver (D4)                           |
 |                                                                         |
@@ -301,7 +301,7 @@ and architect-level interviews.
 |  TRACKING                                                              |
 |  --------                                                              |
 |  * Log rejections for driver scoring                                 |
-|  * High rejection rate -> lower matching priority                    |
+|  * High rejection rate > lower matching priority                    |
 |  * Timeouts might indicate driver's app crashed                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -371,8 +371,8 @@ and architect-level interviews.
 |  PURPOSE                                                               |
 |  -------                                                               |
 |  Balance supply and demand in real-time.                             |
-|  * High demand -> prices rise -> some riders wait                    |
-|  * High prices -> more drivers come online                          |
+|  * High demand > prices rise > some riders wait                    |
+|  * High prices > more drivers come online                          |
 |  * Equilibrium: reasonable wait times                                |
 |                                                                         |
 |  CALCULATION                                                           |
@@ -396,7 +396,7 @@ and architect-level interviews.
 |                                                                         |
 |  4. SMOOTHING                                                          |
 |     * Don't change too quickly (confusing for users)                |
-|     * Step increments: 1.0 -> 1.25 -> 1.5...                         |
+|     * Step increments: 1.0 > 1.25 > 1.5...                         |
 |     * Hysteresis: goes up fast, down slow                           |
 |                                                                         |
 |  5. APPLY TO FARE                                                      |
@@ -456,7 +456,7 @@ and architect-level interviews.
 |  CACHING                                                               |
 |  -------                                                               |
 |  * Cache ETA, surge, driver info                                     |
-|  * Multi-level: local cache -> Redis -> database                     |
+|  * Multi-level: local cache > Redis > database                     |
 |  * 80%+ cache hit rate                                               |
 |                                                                         |
 +-------------------------------------------------------------------------+

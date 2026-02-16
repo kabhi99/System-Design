@@ -166,7 +166,7 @@ SECTION 2: PAYMENT ARCHITECTURE
 *|  |     | 7. Completes payment                                     |  |*
 *|  |     |                                                           |  |*
 *|  |     v                                                           |  |*
-*|  |  Razorpay -> Webhook                                            |  |*
+*|  |  Razorpay > Webhook                                            |  |*
 *|  |     |                                                           |  |*
 *|  |     | 8. POST /webhooks/razorpay                              |  |*
 *|  |     |    { event: "payment.captured", ... }                   |  |*
@@ -481,17 +481,17 @@ SECTION 4: CART SERVICE
 *|                                                                         |*
 *|  1. Single Restaurant: Cart can only have items from ONE restaurant  |*
 *|     * If user adds item from different restaurant:                    |*
-*|       -> Prompt: "Clear cart and add this item?"                      |*
+*|       > Prompt: "Clear cart and add this item?"                      |*
 *|                                                                         |*
 *|  2. Availability Check: Validate item availability on:               |*
 *|     * Every add/update                                                |*
 *|     * Checkout                                                        |*
-*|     * If item unavailable -> remove from cart, notify user           |*
+*|     * If item unavailable > remove from cart, notify user           |*
 *|                                                                         |*
 *|  3. Price Sync: Prices can change between add and checkout           |*
 *|     * Store price at add time                                        |*
 *|     * Re-validate at checkout                                        |*
-*|     * If price changed -> notify user before proceeding              |*
+*|     * If price changed > notify user before proceeding              |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 

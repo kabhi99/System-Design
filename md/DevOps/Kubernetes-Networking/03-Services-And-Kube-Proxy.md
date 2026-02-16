@@ -31,10 +31,10 @@ This creates a fundamental problem:
 |  TIME 1: Backend pod dies and restarts                                |
 |  +----------+         +----------+                                    |
 |  | Frontend |-------->| Backend  |                                    |
-|  |          |    [ ]    |10.244.1.9| <- NEW IP!                         |
+|  |          |    X    |10.244.1.9| < NEW IP!                         |
 |  +----------+         +----------+                                    |
 |                                                                         |
-|  Frontend still tries 10.244.1.5 -> Connection fails!                  |
+|  Frontend still tries 10.244.1.5 > Connection fails!                  |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -154,9 +154,9 @@ WHAT HAPPENS:
 |   +------------------------------------------------------------------+ |
 |                                                                         |
 |   ACCESSIBILITY:                                                       |
-|   [x] From any pod in the cluster                                       |
-|   [x] From nodes                                                        |
-|   [ ] From outside the cluster                                          |
+|   Y From any pod in the cluster                                       |
+|   Y From nodes                                                        |
+|   X From outside the cluster                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -308,12 +308,12 @@ WHAT HAPPENS:
 USE CASES:
 * Pointing to external databases
 * Migrating from external to internal services
-* Different environments (staging -> external, prod -> internal)
+* Different environments (staging > external, prod > internal)
 ```
 
 ## SECTION 3.3: HOW SERVICES WORK — ENDPOINTS AND SELECTORS
 
-### THE SELECTOR -> ENDPOINT FLOW
+### THE SELECTOR > ENDPOINT FLOW
 
 Services find their backend pods using SELECTORS:
 
@@ -541,7 +541,7 @@ kubectl rollout restart daemonset kube-proxy -n kube-system
 |                                                                         |
 |  IPTABLES:                                                             |
 |                                                                         |
-|  Packet -> Rule 1 -> Rule 2 -> Rule 3 -> ... -> Rule N -> Match!            |
+|  Packet > Rule 1 > Rule 2 > Rule 3 > ... > Rule N > Match!            |
 |                                                                         |
 |  * Sequential rule matching O(n)                                       |
 |  * 10,000 services = slow!                                            |
@@ -550,7 +550,7 @@ kubectl rollout restart daemonset kube-proxy -n kube-system
 |                                                                         |
 |  IPVS:                                                                  |
 |                                                                         |
-|  Packet -> Hash Table Lookup -> Match!                                   |
+|  Packet > Hash Table Lookup > Match!                                   |
 |                                                                         |
 |  * Hash-based lookup O(1)                                              |
 |  * 10,000 services = still fast!                                      |
@@ -599,7 +599,7 @@ Controls how EXTERNAL traffic is routed:
 |  externalTrafficPolicy: Cluster (default)                              |
 |  -----------------------------------------                              |
 |                                                                         |
-|  External traffic -> Any node -> Potentially forwarded to another node   |
+|  External traffic > Any node > Potentially forwarded to another node   |
 |                                                                         |
 |   Client                                                               |
 |     |                                                                   |
@@ -619,7 +619,7 @@ Controls how EXTERNAL traffic is routed:
 |  externalTrafficPolicy: Local                                          |
 |  -----------------------------                                         |
 |                                                                         |
-|  External traffic -> Only to pods on the receiving node                 |
+|  External traffic > Only to pods on the receiving node                 |
 |                                                                         |
 |   Client                                                               |
 |     |                                                                   |
@@ -708,9 +708,9 @@ spec:
 
 1. STATEFULSETS
 Each pod needs unique identity:
-mysql-0.mysql-headless.default.svc.cluster.local -> 10.244.0.5
-mysql-1.mysql-headless.default.svc.cluster.local -> 10.244.1.6
-mysql-2.mysql-headless.default.svc.cluster.local -> 10.244.2.7
+mysql-0.mysql-headless.default.svc.cluster.local > 10.244.0.5
+mysql-1.mysql-headless.default.svc.cluster.local > 10.244.1.6
+mysql-2.mysql-headless.default.svc.cluster.local > 10.244.2.7
 
 2. CLIENT-SIDE LOAD BALANCING
 Application gets all IPs and balances itself

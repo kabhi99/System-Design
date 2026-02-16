@@ -69,7 +69,7 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  1. User logs in with username/password                              |
 |  2. Server creates session, stores in DB/Redis                       |
-|     session_id: abc123 -> { user_id: 1, expires: ... }               |
+|     session_id: abc123 > { user_id: 1, expires: ... }               |
 |  3. Server sends session_id in cookie                                |
 |     Set-Cookie: session_id=abc123; HttpOnly; Secure                 |
 |  4. Browser sends cookie with every request                          |
@@ -157,14 +157,14 @@ authorization, encryption, and defense against common attacks.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Stateless (no server storage)                                     |
-|  [x] Scalable (any server can verify)                                  |
-|  [x] Works across services (microservices)                            |
+|  Y Stateless (no server storage)                                     |
+|  Y Scalable (any server can verify)                                  |
+|  Y Works across services (microservices)                            |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Can't revoke easily (token valid until expiry)                   |
-|  [ ] Larger than session ID                                           |
-|  [ ] Payload visible (don't put secrets!)                             |
+|  X Can't revoke easily (token valid until expiry)                   |
+|  X Larger than session ID                                           |
+|  X Payload visible (don't put secrets!)                             |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -184,8 +184,8 @@ authorization, encryption, and defense against common attacks.
 |     * Short expiry + refresh token rotation                         |
 |                                                                         |
 |  4. ALGORITHM SECURITY                                                 |
-|     [x] Use HS256 (shared secret) or RS256 (public/private key)      |
-|     [ ] Never accept alg: "none"                                      |
+|     Y Use HS256 (shared secret) or RS256 (public/private key)      |
+|     X Never accept alg: "none"                                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -285,11 +285,11 @@ authorization, encryption, and defense against common attacks.
 |  +-------------+------------+------------+------------+              |
 |  | Permission  | Admin      | Editor     | Viewer     |              |
 |  +-------------+------------+------------+------------+              |
-|  | Create      | [x]          | [x]          | [ ]          |              |
-|  | Read        | [x]          | [x]          | [x]          |              |
-|  | Update      | [x]          | [x]          | [ ]          |              |
-|  | Delete      | [x]          | [ ]          | [ ]          |              |
-|  | Manage Users| [x]          | [ ]          | [ ]          |              |
+|  | Create      | Y          | Y          | X          |              |
+|  | Read        | Y          | Y          | Y          |              |
+|  | Update      | Y          | Y          | X          |              |
+|  | Delete      | Y          | X          | X          |              |
+|  | Manage Users| Y          | X          | X          |              |
 |  +-------------+------------+------------+------------+              |
 |                                                                         |
 |  User Alice: [Admin]                                                  |
@@ -410,13 +410,13 @@ authorization, encryption, and defense against common attacks.
 |  ATTACK:                                                               |
 |  Input: ' OR '1'='1' --                                              |
 |  Query: SELECT * FROM users WHERE name = '' OR '1'='1' --'           |
-|  -> Returns all users!                                                |
+|  > Returns all users!                                                |
 |                                                                         |
 |  DEFENSE:                                                              |
-|  [x] Parameterized queries / Prepared statements                       |
+|  Y Parameterized queries / Prepared statements                       |
 |    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))   |
-|  [x] ORM (abstracts SQL)                                               |
-|  [ ] Never concatenate user input into SQL                            |
+|  Y ORM (abstracts SQL)                                               |
+|  X Never concatenate user input into SQL                            |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -425,13 +425,13 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  ATTACK:                                                               |
 |  User input: <script>steal(document.cookie)</script>                 |
-|  Rendered in page -> Script executes in victim's browser             |
+|  Rendered in page > Script executes in victim's browser             |
 |                                                                         |
 |  DEFENSE:                                                              |
-|  [x] Escape output (HTML entities)                                     |
-|    <script> -> &lt;script&gt;                                        |
-|  [x] Content Security Policy (CSP) header                              |
-|  [x] HttpOnly cookies (JS can't access)                               |
+|  Y Escape output (HTML entities)                                     |
+|    <script> > &lt;script&gt;                                        |
+|  Y Content Security Policy (CSP) header                              |
+|  Y HttpOnly cookies (JS can't access)                               |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -441,12 +441,12 @@ authorization, encryption, and defense against common attacks.
 |  ATTACK:                                                               |
 |  User logged into bank.com                                           |
 |  Visits evil.com with: <img src="bank.com/transfer?to=hacker">      |
-|  Browser sends bank cookies -> Transfer happens!                      |
+|  Browser sends bank cookies > Transfer happens!                      |
 |                                                                         |
 |  DEFENSE:                                                              |
-|  [x] CSRF tokens (hidden form field, verify on server)                |
-|  [x] SameSite cookie attribute (Strict or Lax)                        |
-|  [x] Check Origin/Referer headers                                     |
+|  Y CSRF tokens (hidden form field, verify on server)                |
+|  Y SameSite cookie attribute (Strict or Lax)                        |
+|  Y Check Origin/Referer headers                                     |
 |                                                                         |
 |  --------------------------------------------------------------------  |
 |                                                                         |
@@ -457,10 +457,10 @@ authorization, encryption, and defense against common attacks.
 |  Flood server with requests until it can't respond                  |
 |                                                                         |
 |  DEFENSE:                                                              |
-|  [x] Rate limiting                                                     |
-|  [x] CDN (absorb traffic at edge)                                     |
-|  [x] DDoS protection (Cloudflare, AWS Shield)                         |
-|  [x] Auto-scaling                                                      |
+|  Y Rate limiting                                                     |
+|  Y CDN (absorb traffic at edge)                                     |
+|  Y DDoS protection (Cloudflare, AWS Shield)                         |
+|  Y Auto-scaling                                                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -492,7 +492,7 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  AUTHORIZATION                                                         |
 |  -------------                                                          |
-|  * RBAC: Roles -> Permissions                                        |
+|  * RBAC: Roles > Permissions                                        |
 |  * ABAC: Attribute-based policies                                   |
 |  * ACL: Per-resource permissions                                    |
 |                                                                         |
@@ -504,10 +504,10 @@ authorization, encryption, and defense against common attacks.
 |                                                                         |
 |  COMMON ATTACKS                                                        |
 |  --------------                                                         |
-|  * SQL Injection -> Parameterized queries                            |
-|  * XSS -> Escape output, CSP                                         |
-|  * CSRF -> CSRF tokens, SameSite cookies                             |
-|  * DDoS -> Rate limiting, CDN                                        |
+|  * SQL Injection > Parameterized queries                            |
+|  * XSS > Escape output, CSP                                         |
+|  * CSRF > CSRF tokens, SameSite cookies                             |
+|  * DDoS > Rate limiting, CDN                                        |
 |                                                                         |
 |  INTERVIEW TIP                                                         |
 |  -------------                                                         |

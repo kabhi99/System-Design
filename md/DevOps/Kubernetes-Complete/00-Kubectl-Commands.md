@@ -283,10 +283,10 @@ This file provides syntax and examples for the most common operations.
 |                                                                         |
 |  SERVICE TYPES:                                                         |
 |  ---------------                                                        |
-|  ClusterIP    -> Internal only (default)                               |
-|  NodePort     -> External via node port (30000-32767)                  |
-|  LoadBalancer -> External via cloud LB                                 |
-|  ExternalName -> DNS alias                                              |
+|  ClusterIP    > Internal only (default)                               |
+|  NodePort     > External via node port (30000-32767)                  |
+|  LoadBalancer > External via cloud LB                                 |
+|  ExternalName > DNS alias                                              |
 |                                                                         |
 |  EXAMPLE SERVICE YAML (ClusterIP):                                     |
 |  -----------------------------------                                    |
@@ -448,10 +448,10 @@ This file provides syntax and examples for the most common operations.
 |                                                                         |
 |  DEFAULT NAMESPACES:                                                    |
 |  --------------------                                                   |
-|  default         -> Default for resources without namespace             |
-|  kube-system     -> Kubernetes system components                        |
-|  kube-public     -> Publicly accessible data                            |
-|  kube-node-lease -> Node heartbeat leases                               |
+|  default         > Default for resources without namespace             |
+|  kube-system     > Kubernetes system components                        |
+|  kube-public     > Publicly accessible data                            |
+|  kube-node-lease > Node heartbeat leases                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

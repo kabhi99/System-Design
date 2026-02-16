@@ -48,7 +48,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |                                                         |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
-*|  |  Each Bounded Context -> One Microservice                       |  |*
+*|  |  Each Bounded Context > One Microservice                       |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -156,7 +156,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |  PARTNERSHIP                                              ||  |*
 *|  |  |  Two teams collaborate closely, mutual dependency         ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  [Context A] <-------------> [Context B]                   ||  |*
+*|  |  |  [Context A] <-----------> [Context B]                   ||  |*
 *|  |  |              mutual success                               ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
@@ -166,7 +166,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |  CUSTOMER-SUPPLIER                                        ||  |*
 *|  |  |  Upstream (supplier) provides to downstream (customer)    ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  [Supplier] --------------> [Customer]                    ||  |*
+*|  |  |  [Supplier] -------------> [Customer]                    ||  |*
 *|  |  |             upstream        downstream                    ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Customer can request features from supplier              ||  |*
@@ -178,7 +178,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |  CONFORMIST                                               ||  |*
 *|  |  |  Downstream conforms to upstream's model (no influence)   ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  [Upstream] --------------> [Conformist]                  ||  |*
+*|  |  |  [Upstream] -------------> [Conformist]                  ||  |*
 *|  |  |             take it or leave it                           ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Example: Using external API as-is                        ||  |*
@@ -190,7 +190,7 @@ SECTION 2: STRATEGIC DDD PATTERNS
 *|  |  |  ANTI-CORRUPTION LAYER (ACL)                             ||  |*
 *|  |  |  Translation layer to protect your model from external   ||  |*
 *|  |  |                                                           ||  |*
-*|  |  |  [External] ---> [ACL] ---> [Your Context]                 ||  |*
+*|  |  |  [External] --> [ACL] --> [Your Context]                 ||  |*
 *|  |  |              translate                                    ||  |*
 *|  |  |                                                           ||  |*
 *|  |  |  Example: Wrap legacy system or external API             ||  |*
@@ -315,7 +315,7 @@ SECTION 3: TACTICAL DDD PATTERNS (Building Blocks)
 *|  |  |  +-----------------------------------------------------+ ||  |*
 *|  |  |  |                                                     | ||  |*
 *|  |  |  |           +-----------------+                      | ||  |*
-*|  |  |  |           |     ORDER       | <- Aggregate Root    | ||  |*
+*|  |  |  |           |     ORDER       | < Aggregate Root    | ||  |*
 *|  |  |  |           |    (Entity)     |                      | ||  |*
 *|  |  |  |           +--------+--------+                      | ||  |*
 *|  |  |  |                    |                                | ||  |*
@@ -501,19 +501,19 @@ SECTION 4: CHOREOGRAPHY vs ORCHESTRATION
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Loose coupling (services don't know about each other)                   |*
-*|  [x] No single point of failure                                              |*
-*|  [x] Easy to add new services (just subscribe to events)                     |*
-*|  [x] Services are independently deployable                                   |*
-*|  [x] Natural fit for event sourcing                                          |*
+*|  Y Loose coupling (services don't know about each other)                   |*
+*|  Y No single point of failure                                              |*
+*|  Y Easy to add new services (just subscribe to events)                     |*
+*|  Y Services are independently deployable                                   |*
+*|  Y Natural fit for event sourcing                                          |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Hard to see the overall flow                                            |*
-*|  [ ] Difficult to debug and trace                                            |*
-*|  [ ] Complex failure handling (compensating events)                          |*
-*|  [ ] Risk of cyclic dependencies                                             |*
-*|  [ ] Harder to test end-to-end                                               |*
-*|  [ ] No central place to see workflow status                                 |*
+*|  X Hard to see the overall flow                                            |*
+*|  X Difficult to debug and trace                                            |*
+*|  X Complex failure handling (compensating events)                          |*
+*|  X Risk of cyclic dependencies                                             |*
+*|  X Harder to test end-to-end                                               |*
+*|  X No central place to see workflow status                                 |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Simple, linear flows                                                     |*
@@ -547,7 +547,7 @@ SECTION 4: CHOREOGRAPHY vs ORCHESTRATION
 *|  |  |  |       | command: CreateOrder                           | |   | |*
 *|  |  |  |       v                                                 | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
-*|  |  |  |  |   Order   | -> reply: OrderCreated                   | |   | |*
+*|  |  |  |  |   Order   | > reply: OrderCreated                   | |   | |*
 *|  |  |  |  |  Service  |                                         | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
 *|  |  |  |       |                                                 | |   | |*
@@ -556,7 +556,7 @@ SECTION 4: CHOREOGRAPHY vs ORCHESTRATION
 *|  |  |  |       | command: ReserveInventory                      | |   | |*
 *|  |  |  |       v                                                 | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
-*|  |  |  |  | Inventory | -> reply: InventoryReserved              | |   | |*
+*|  |  |  |  | Inventory | > reply: InventoryReserved              | |   | |*
 *|  |  |  |  |  Service  |                                         | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
 *|  |  |  |       |                                                 | |   | |*
@@ -565,7 +565,7 @@ SECTION 4: CHOREOGRAPHY vs ORCHESTRATION
 *|  |  |  |       | command: ProcessPayment                        | |   | |*
 *|  |  |  |       v                                                 | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
-*|  |  |  |  |  Payment  | -> reply: PaymentProcessed               | |   | |*
+*|  |  |  |  |  Payment  | > reply: PaymentProcessed               | |   | |*
 *|  |  |  |  |  Service  |                                         | |   | |*
 *|  |  |  |  +-----------+                                         | |   | |*
 *|  |  |  |       |                                                 | |   | |*
@@ -581,18 +581,18 @@ SECTION 4: CHOREOGRAPHY vs ORCHESTRATION
 *|  +------------------------------------------------------------------------+ |*
 *|                                                                              |*
 *|  PROS:                                                                       |*
-*|  [x] Easy to understand the flow (one place)                                 |*
-*|  [x] Centralized error handling and compensation                             |*
-*|  [x] Easy to track workflow status                                           |*
-*|  [x] Better for complex, branching workflows                                 |*
-*|  [x] Easier to test                                                          |*
+*|  Y Easy to understand the flow (one place)                                 |*
+*|  Y Centralized error handling and compensation                             |*
+*|  Y Easy to track workflow status                                           |*
+*|  Y Better for complex, branching workflows                                 |*
+*|  Y Easier to test                                                          |*
 *|                                                                              |*
 *|  CONS:                                                                       |*
-*|  [ ] Orchestrator is a single point of failure                               |*
-*|  [ ] Tighter coupling to orchestrator                                        |*
-*|  [ ] Orchestrator can become complex (god service)                           |*
-*|  [ ] Services less autonomous                                                |*
-*|  [ ] Changes to flow require orchestrator changes                            |*
+*|  X Orchestrator is a single point of failure                               |*
+*|  X Tighter coupling to orchestrator                                        |*
+*|  X Orchestrator can become complex (god service)                           |*
+*|  X Services less autonomous                                                |*
+*|  X Changes to flow require orchestrator changes                            |*
 *|                                                                              |*
 *|  USE WHEN:                                                                   |*
 *|  * Complex workflows with many steps                                        |*
@@ -717,17 +717,17 @@ SECTION 5: SAGA PATTERNS IN DETAIL
 *|  |  |  +--------------+                                             |  | |*
 *|  |  |  |   STARTED    |                                             |  | |*
 *|  |  |  +------+-------+                                             |  | |*
-*|  |  |         | CreateOrder -> success                               |  | |*
+*|  |  |         | CreateOrder > success                               |  | |*
 *|  |  |         v                                                      |  | |*
 *|  |  |  +--------------+                                             |  | |*
 *|  |  |  |ORDER_CREATED |                                             |  | |*
 *|  |  |  +------+-------+                                             |  | |*
-*|  |  |         | ReserveInventory -> success                          |  | |*
+*|  |  |         | ReserveInventory > success                          |  | |*
 *|  |  |         v                                                      |  | |*
 *|  |  |  +--------------+                                             |  | |*
 *|  |  |  |INV_RESERVED  |                                             |  | |*
 *|  |  |  +------+-------+                                             |  | |*
-*|  |  |         | ProcessPayment -> success                            |  | |*
+*|  |  |         | ProcessPayment > success                            |  | |*
 *|  |  |         v                                                      |  | |*
 *|  |  |  +--------------+                                             |  | |*
 *|  |  |  |PAYMENT_DONE  |                                             |  | |*
@@ -783,7 +783,7 @@ SECTION 6: EVENT SOURCING
 *|  |                                                                 |  |*
 *|  |  Account Table:                                                |  |*
 *|  |  | id  | balance |                                             |  |*
-*|  |  | 123 | $500    |  <- Only current state                      |  |*
+*|  |  | 123 | $500    |  < Only current state                      |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -803,17 +803,17 @@ SECTION 6: EVENT SOURCING
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Complete audit trail                                               |*
-*|  [x] Can rebuild state at any point in time                             |*
-*|  [x] Debug issues by replaying events                                   |*
-*|  [x] Natural fit for event-driven architecture                          |*
-*|  [x] Enables CQRS pattern                                               |*
+*|  Y Complete audit trail                                               |*
+*|  Y Can rebuild state at any point in time                             |*
+*|  Y Debug issues by replaying events                                   |*
+*|  Y Natural fit for event-driven architecture                          |*
+*|  Y Enables CQRS pattern                                               |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Complexity (event versioning, schema evolution)                    |*
-*|  [ ] Eventual consistency                                               |*
-*|  [ ] Replaying can be slow for long event streams                       |*
-*|  [ ] Learning curve                                                     |*
+*|  X Complexity (event versioning, schema evolution)                    |*
+*|  X Eventual consistency                                               |*
+*|  X Replaying can be slow for long event streams                       |*
+*|  X Learning curve                                                     |*
 *|                                                                         |*
 *|  USE WHEN:                                                             |*
 *|  * Audit trail is critical (finance, healthcare)                      |*
@@ -845,7 +845,7 @@ SECTION 7: CQRS (Command Query Responsibility Segregation)
 *|  |  |                        |                                |  |  |*
 *|  |  |                        v                                |  |  |*
 *|  |  |              +-----------------+                        |  |  |*
-*|  |  |              |    Database     | <- Same model          |  |  |*
+*|  |  |              |    Database     | < Same model          |  |  |*
 *|  |  |              +-----------------+                        |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
@@ -876,15 +876,15 @@ SECTION 7: CQRS (Command Query Responsibility Segregation)
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Scale reads and writes independently                               |*
-*|  [x] Optimize read model for queries (denormalized)                     |*
-*|  [x] Optimize write model for business logic (normalized)               |*
-*|  [x] Different tech for different needs                                 |*
+*|  Y Scale reads and writes independently                               |*
+*|  Y Optimize read model for queries (denormalized)                     |*
+*|  Y Optimize write model for business logic (normalized)               |*
+*|  Y Different tech for different needs                                 |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Complexity (two models to maintain)                                |*
-*|  [ ] Eventual consistency between models                                |*
-*|  [ ] Sync mechanism needed                                              |*
+*|  X Complexity (two models to maintain)                                |*
+*|  X Eventual consistency between models                                |*
+*|  X Sync mechanism needed                                              |*
 *|                                                                         |*
 *|  USE WHEN:                                                             |*
 *|  * Read and write patterns are very different                         |*

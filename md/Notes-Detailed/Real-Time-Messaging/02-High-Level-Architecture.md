@@ -79,8 +79,8 @@ SECTION 0: COMPLETE HIGH-LEVEL DESIGN DIAGRAM
 *|   |                                                                      |  |*
 *|   |                    REDIS CLUSTER (Pub/Sub)                          |  |*
 *|   |                                                                      |  |*
-*|   |   * Connection Registry: user_id -> chat_server_id                   |  |*
-*|   |   * Presence State: user_id -> {online/offline, last_seen}          |  |*
+*|   |   * Connection Registry: user_id > chat_server_id                   |  |*
+*|   |   * Presence State: user_id > {online/offline, last_seen}          |  |*
 *|   |   * Server-to-Server message routing via channels                   |  |*
 *|   |   * Typing indicator pub/sub                                        |  |*
 *|   |                                                                      |  |*
@@ -102,18 +102,18 @@ SECTION 0: COMPLETE HIGH-LEVEL DESIGN DIAGRAM
 *|   |   |                                                              |    | |*
 *|   |   |   TOPICS:                                                    |    | |*
 *|   |   |                                                              |    | |*
-*|   |   |   messages.outbound         -> Delivery to online users      |    | |*
+*|   |   |   messages.outbound         > Delivery to online users      |    | |*
 *|   |   |   (partitioned by user_id)                                   |    | |*
 *|   |   |                                                              |    | |*
-*|   |   |   messages.store            -> Persist to database           |    | |*
+*|   |   |   messages.store            > Persist to database           |    | |*
 *|   |   |   (partitioned by conversation_id)                           |    | |*
 *|   |   |                                                              |    | |*
-*|   |   |   messages.notifications    -> Push for offline users        |    | |*
+*|   |   |   messages.notifications    > Push for offline users        |    | |*
 *|   |   |   (partitioned by user_id)                                   |    | |*
 *|   |   |                                                              |    | |*
-*|   |   |   messages.retry.{delay}    -> Delayed retries               |    | |*
+*|   |   |   messages.retry.{delay}    > Delayed retries               |    | |*
 *|   |   |                                                              |    | |*
-*|   |   |   messages.dlq              -> Dead letter queue             |    | |*
+*|   |   |   messages.dlq              > Dead letter queue             |    | |*
 *|   |   |                                                              |    | |*
 *|   |   +--------------------------------------------------------------+    | |*
 *|   |                                                                        | |*
@@ -223,7 +223,7 @@ DATA FLOW DIAGRAMS
 
 ## +------------------------------------------------------------------------------+
 *|                                                                              |*
-*|  FLOW 1: SEND MESSAGE (User A -> User B, Both Online)                        |*
+*|  FLOW 1: SEND MESSAGE (User A > User B, Both Online)                        |*
 *|                                                                              |*
 *|  +-------------------------------------------------------------------------+|*
 *|  |                                                                         ||*
@@ -262,7 +262,7 @@ DATA FLOW DIAGRAMS
 *|  |     |                                                                   ||*
 *|  |     | 11. Send delivery receipt back                                   ||*
 *|  |     v                                                                   ||*
-*|  |   User A receives "Delivered [x][x]"                                       ||*
+*|  |   User A receives "Delivered YY"                                       ||*
 *|  |                                                                         ||*
 *|  +-------------------------------------------------------------------------+|*
 *|                                                                              |*
@@ -279,7 +279,7 @@ DATA FLOW DIAGRAMS
 *|  |     v                                                                   ||*
 *|  |   Chat Server                                                           ||*
 *|  |     |                                                                   ||*
-*|  |     | 2. Lookup User B in Redis -> NOT FOUND (offline)                 ||*
+*|  |     | 2. Lookup User B in Redis > NOT FOUND (offline)                 ||*
 *|  |     |                                                                   ||*
 *|  |     | 3. Produce to Kafka (messages.store + messages.notifications)   ||*
 *|  |     v                                                                   ||*
@@ -309,7 +309,7 @@ DATA FLOW DIAGRAMS
 *+------------------------------------------------------------------------------+*
 *+------------------------------------------------------------------------------+*
 *|                                                                              |*
-*|  FLOW 3: GROUP MESSAGE (1 Sender -> 500 Members)                             |*
+*|  FLOW 3: GROUP MESSAGE (1 Sender > 500 Members)                             |*
 *|                                                                              |*
 *|  +-------------------------------------------------------------------------+|*
 *|  |                                                                         ||*
@@ -409,30 +409,30 @@ COMPONENT INTERACTION MATRIX
 *|  COMPONENT              TALKS TO                    PROTOCOL / PURPOSE       |*
 *|  -------------------------------------------------------------------------  |*
 *|                                                                              |*
-*|  Client                 -> Chat Server               WebSocket (bidirectional)|*
-*|  Client                 -> Media Service             HTTPS (upload/download)  |*
-*|  Client                 -> CDN                       HTTPS (media delivery)   |*
+*|  Client                 > Chat Server               WebSocket (bidirectional)|*
+*|  Client                 > Media Service             HTTPS (upload/download)  |*
+*|  Client                 > CDN                       HTTPS (media delivery)   |*
 *|                                                                              |*
-*|  Chat Server            -> Redis                     TCP (connection registry)|*
-*|  Chat Server            -> Kafka                     TCP (produce messages)   |*
-*|  Chat Server            -> Other Chat Servers        gRPC (route messages)    |*
-*|  Chat Server            -> User Service              gRPC (auth, profiles)    |*
+*|  Chat Server            > Redis                     TCP (connection registry)|*
+*|  Chat Server            > Kafka                     TCP (produce messages)   |*
+*|  Chat Server            > Other Chat Servers        gRPC (route messages)    |*
+*|  Chat Server            > User Service              gRPC (auth, profiles)    |*
 *|                                                                              |*
-*|  Delivery Workers       -> Kafka                     TCP (consume messages)   |*
-*|  Delivery Workers       -> Redis                     TCP (lookup connections) |*
-*|  Delivery Workers       -> Chat Servers              gRPC (deliver messages)  |*
+*|  Delivery Workers       > Kafka                     TCP (consume messages)   |*
+*|  Delivery Workers       > Redis                     TCP (lookup connections) |*
+*|  Delivery Workers       > Chat Servers              gRPC (deliver messages)  |*
 *|                                                                              |*
-*|  Storage Workers        -> Kafka                     TCP (consume messages)   |*
-*|  Storage Workers        -> Cassandra                 CQL (write messages)     |*
+*|  Storage Workers        > Kafka                     TCP (consume messages)   |*
+*|  Storage Workers        > Cassandra                 CQL (write messages)     |*
 *|                                                                              |*
-*|  Push Workers           -> Kafka                     TCP (consume messages)   |*
-*|  Push Workers           -> APNs/FCM                  HTTPS (send push)        |*
+*|  Push Workers           > Kafka                     TCP (consume messages)   |*
+*|  Push Workers           > APNs/FCM                  HTTPS (send push)        |*
 *|                                                                              |*
-*|  Media Service          -> S3/GCS                    HTTPS (presigned URLs)   |*
-*|  Media Service          -> PostgreSQL                SQL (metadata)           |*
+*|  Media Service          > S3/GCS                    HTTPS (presigned URLs)   |*
+*|  Media Service          > PostgreSQL                SQL (metadata)           |*
 *|                                                                              |*
-*|  Presence Service       -> Redis                     TCP (presence state)     |*
-*|  Presence Service       -> Kafka                     TCP (presence events)    |*
+*|  Presence Service       > Redis                     TCP (presence state)     |*
+*|  Presence Service       > Kafka                     TCP (presence events)    |*
 *|                                                                              |*
 *+------------------------------------------------------------------------------+*
 
@@ -531,9 +531,9 @@ SECTION 2: CORE COMPONENTS
 *|  |  * CPU: Message parsing, encryption                           |  |*
 *|  |                                                                 |  |*
 *|  |  CONNECTION MAPPING:                                           |  |*
-*|  |  * In-memory map: user_id -> WebSocket connection              |  |*
+*|  |  * In-memory map: user_id > WebSocket connection              |  |*
 *|  |  * Shared across cluster: Redis hash                          |  |*
-*|  |    user_id -> chat_server_id                                   |  |*
+*|  |    user_id > chat_server_id                                   |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -682,7 +682,7 @@ SECTION 2: CORE COMPONENTS
 *|  |  |  Client                                                   ||  |*
 *|  |  |    | 4. Upload directly to S3                            ||  |*
 *|  |  |    v                                                      ||  |*
-*|  |  |  S3 -> Lambda/Worker                                       ||  |*
+*|  |  |  S3 > Lambda/Worker                                       ||  |*
 *|  |  |    | 5. Generate thumbnail, transcode                    ||  |*
 *|  |  |    | 6. Store metadata, update media record              ||  |*
 *|  |  |    v                                                      ||  |*
@@ -808,15 +808,15 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |    |   (repeat every 2 seconds)       |                       |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] Simple to implement                                        |  |*
-*|  |  [x] Works through all firewalls/proxies                       |  |*
-*|  |  [x] Stateless server                                          |  |*
+*|  |  Y Simple to implement                                        |  |*
+*|  |  Y Works through all firewalls/proxies                       |  |*
+*|  |  Y Stateless server                                          |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] High latency (up to polling interval)                     |  |*
-*|  |  [ ] Wastes bandwidth (mostly empty responses)                 |  |*
-*|  |  [ ] High server load (constant requests)                      |  |*
-*|  |  [ ] Battery drain on mobile                                   |  |*
+*|  |  X High latency (up to polling interval)                     |  |*
+*|  |  X Wastes bandwidth (mostly empty responses)                 |  |*
+*|  |  X High server load (constant requests)                      |  |*
+*|  |  X Battery drain on mobile                                   |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASE: Legacy systems, very simple apps                  |  |*
 *|  |                                                                 |  |*
@@ -848,16 +848,16 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |    |                                   |   reconnect)        |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] Near real-time delivery                                   |  |*
-*|  |  [x] Works through most firewalls                              |  |*
-*|  |  [x] No special server requirements                            |  |*
-*|  |  [x] Good fallback for WebSocket                               |  |*
+*|  |  Y Near real-time delivery                                   |  |*
+*|  |  Y Works through most firewalls                              |  |*
+*|  |  Y No special server requirements                            |  |*
+*|  |  Y Good fallback for WebSocket                               |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] Server holds many open connections                        |  |*
-*|  |  [ ] Still half-duplex (one direction at a time)              |  |*
-*|  |  [ ] Timeout reconnection overhead                             |  |*
-*|  |  [ ] Each message = new HTTP request                          |  |*
+*|  |  X Server holds many open connections                        |  |*
+*|  |  X Still half-duplex (one direction at a time)              |  |*
+*|  |  X Timeout reconnection overhead                             |  |*
+*|  |  X Each message = new HTTP request                          |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASE: Fallback when WebSocket fails                     |  |*
 *|  |                                                                 |  |*
@@ -885,16 +885,16 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |    |   (connection stays open indefinitely)                   |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] Built-in browser support (EventSource API)               |  |*
-*|  |  [x] Auto-reconnection                                         |  |*
-*|  |  [x] Simple text-based protocol                                |  |*
-*|  |  [x] Works through HTTP/1.1 proxies                           |  |*
+*|  |  Y Built-in browser support (EventSource API)               |  |*
+*|  |  Y Auto-reconnection                                         |  |*
+*|  |  Y Simple text-based protocol                                |  |*
+*|  |  Y Works through HTTP/1.1 proxies                           |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] ONE-WAY only (server -> client)                           |  |*
-*|  |  [ ] Client sends via separate HTTP POST                      |  |*
-*|  |  [ ] Limited to UTF-8 text                                    |  |*
-*|  |  [ ] Max 6 connections per domain in browser                  |  |*
+*|  |  X ONE-WAY only (server > client)                           |  |*
+*|  |  X Client sends via separate HTTP POST                      |  |*
+*|  |  X Limited to UTF-8 text                                    |  |*
+*|  |  X Max 6 connections per domain in browser                  |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASE: Notifications, live feeds, stock tickers         |  |*
 *|  |  NOT IDEAL FOR: Chat (need bidirectional)                   |  |*
@@ -941,16 +941,16 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |  Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=         |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] TRUE BIDIRECTIONAL (full duplex)                          |  |*
-*|  |  [x] Low latency (no HTTP overhead per message)                |  |*
-*|  |  [x] Efficient (small frame overhead: 2-14 bytes)             |  |*
-*|  |  [x] Binary and text support                                   |  |*
+*|  |  Y TRUE BIDIRECTIONAL (full duplex)                          |  |*
+*|  |  Y Low latency (no HTTP overhead per message)                |  |*
+*|  |  Y Efficient (small frame overhead: 2-14 bytes)             |  |*
+*|  |  Y Binary and text support                                   |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] Blocked by some firewalls/proxies                        |  |*
-*|  |  [ ] Stateful (harder to scale)                               |  |*
-*|  |  [ ] Need fallback for older browsers                         |  |*
-*|  |  [ ] Connection management complexity                         |  |*
+*|  |  X Blocked by some firewalls/proxies                        |  |*
+*|  |  X Stateful (harder to scale)                               |  |*
+*|  |  X Need fallback for older browsers                         |  |*
+*|  |  X Connection management complexity                         |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASE: Chat apps, gaming, real-time collaboration       |  |*
 *|  |                                                                 |  |*
@@ -989,16 +989,16 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |  * QoS 2: Exactly once (4-way handshake)                     |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] Very lightweight (2-byte header minimum)                  |  |*
-*|  |  [x] Battery efficient (designed for IoT)                      |  |*
-*|  |  [x] Built-in QoS levels                                       |  |*
-*|  |  [x] Retained messages, Last Will                              |  |*
-*|  |  [x] Topic-based pub/sub                                       |  |*
+*|  |  Y Very lightweight (2-byte header minimum)                  |  |*
+*|  |  Y Battery efficient (designed for IoT)                      |  |*
+*|  |  Y Built-in QoS levels                                       |  |*
+*|  |  Y Retained messages, Last Will                              |  |*
+*|  |  Y Topic-based pub/sub                                       |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] Requires separate broker (Mosquitto, HiveMQ)             |  |*
-*|  |  [ ] Not natively supported in browsers                       |  |*
-*|  |  [ ] Less common for web apps                                  |  |*
+*|  |  X Requires separate broker (Mosquitto, HiveMQ)             |  |*
+*|  |  X Not natively supported in browsers                       |  |*
+*|  |  X Less common for web apps                                  |  |*
 *|  |                                                                 |  |*
 *|  |  USE CASE: IoT, mobile apps with battery constraints        |  |*
 *|  |  Facebook Messenger uses MQTT for mobile!                    |  |*
@@ -1036,13 +1036,13 @@ SECTION 3.1: CONNECTION PROTOCOLS COMPARISON
 *|  |  This is for SERVER-TO-SERVER communication, not client!     |  |*
 *|  |                                                                 |  |*
 *|  |  PROS:                                                         |  |*
-*|  |  [x] Decouples chat servers                                    |  |*
-*|  |  [x] Horizontal scaling                                        |  |*
-*|  |  [x] Low latency message routing                              |  |*
+*|  |  Y Decouples chat servers                                    |  |*
+*|  |  Y Horizontal scaling                                        |  |*
+*|  |  Y Low latency message routing                              |  |*
 *|  |                                                                 |  |*
 *|  |  CONS:                                                         |  |*
-*|  |  [ ] Messages lost if no subscriber (Redis)                   |  |*
-*|  |  [ ] Additional infrastructure                                |  |*
+*|  |  X Messages lost if no subscriber (Redis)                   |  |*
+*|  |  X Additional infrastructure                                |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -1127,11 +1127,11 @@ SECTION 3.3: WEBSOCKET BROADCAST (Group Messages)
 *|  |  |    |                                                      ||  |*
 *|  |  |    +--> Redis: GET user_locations for group              ||  |*
 *|  |  |    |                                                      ||  |*
-*|  |  |    +--> Direct to Server 1 (local) -> 30 WebSockets      ||  |*
+*|  |  |    +--> Direct to Server 1 (local) > 30 WebSockets      ||  |*
 *|  |  |    |                                                      ||  |*
-*|  |  |    +--> HTTP/gRPC to Server 2 -> 25 WebSockets           ||  |*
+*|  |  |    +--> HTTP/gRPC to Server 2 > 25 WebSockets           ||  |*
 *|  |  |    |                                                      ||  |*
-*|  |  |    +--> HTTP/gRPC to Server 3 -> 20 WebSockets           ||  |*
+*|  |  |    +--> HTTP/gRPC to Server 3 > 20 WebSockets           ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -1171,8 +1171,8 @@ SECTION 3.3: WEBSOCKET BROADCAST (Group Messages)
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
 *|  |  FLOW:                                                         |  |*
-*|  |  1. When user joins group -> their server subscribes to channel|  |*
-*|  |  2. Message sent -> published to group channel                 |  |*
+*|  |  1. When user joins group > their server subscribes to channel|  |*
+*|  |  2. Message sent > published to group channel                 |  |*
 *|  |  3. All subscribed servers receive message                    |  |*
 *|  |  4. Each server pushes to its local WebSocket connections    |  |*
 *|  |                                                                 |  |*
@@ -1189,7 +1189,7 @@ SECTION 3.3: WEBSOCKET BROADCAST (Group Messages)
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
-*|  |  |  User A -> Chat Server 1                                   ||  |*
+*|  |  |  User A > Chat Server 1                                   ||  |*
 *|  |  |                 |                                         ||  |*
 *|  |  |                 | Produce to Kafka                       ||  |*
 *|  |  |                 | topic: groups.messages                 ||  |*
@@ -1253,7 +1253,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Centralized mapping: user_id -> server_id                     |  |*
+*|  |  Centralized mapping: user_id > server_id                     |  |*
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
@@ -1278,7 +1278,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
-*|  COMPLETE FLOW: USER CONNECT -> MESSAGE -> DELIVER                     |*
+*|  COMPLETE FLOW: USER CONNECT > MESSAGE > DELIVER                     |*
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
@@ -1298,7 +1298,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  |  |       |                                                   ||  |*
 *|  |  |       | 1. Authenticate user (JWT/session)              ||  |*
 *|  |  |       | 2. Accept WebSocket                              ||  |*
-*|  |  |       | 3. Store in LOCAL map: user_A -> ws_connection   ||  |*
+*|  |  |       | 3. Store in LOCAL map: user_A > ws_connection   ||  |*
 *|  |  |       | 4. Register in REDIS:                           ||  |*
 *|  |  |       |    HSET user_connections "user_A" "chat-server-1"|  |*
 *|  |  |       |    EXPIRE user_connections:user_A 120           ||  |*
@@ -1435,7 +1435,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Problem: If Chat Server 1 crashes, Redis still says          |  |*
-*|  |           User A is on Server 1 -> messages go to dead server |  |*
+*|  |           User A is on Server 1 > messages go to dead server |  |*
 *|  |                                                                 |  |*
 *|  |  Solution 1: TTL + Heartbeat                                  |  |*
 *|  |                                                                 |  |*
@@ -1449,8 +1449,8 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  |              await redis.expire(f"user_conn:{user_id}", 60) |  |*
 *|  |          await asyncio.sleep(30)                             |  |*
 *|  |                                                                 |  |*
-*|  |  # If server crashes: No heartbeat -> TTL expires in 60s     |  |*
-*|  |  # User appears offline -> new messages queued correctly     |  |*
+*|  |  # If server crashes: No heartbeat > TTL expires in 60s     |  |*
+*|  |  # User appears offline > new messages queued correctly     |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -1476,7 +1476,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  |  OPTION 1: Hash (Simple, most common)                         |  |*
 *|  |                                                                 |  |*
 *|  |  HSET user_connections user_123 "chat-server-42"             |  |*
-*|  |  HGET user_connections user_123  ->  "chat-server-42"         |  |*
+*|  |  HGET user_connections user_123  >  "chat-server-42"         |  |*
 *|  |  HDEL user_connections user_123                               |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Single key, atomic operations                         |  |*
@@ -1487,7 +1487,7 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  |  OPTION 2: Individual Keys with TTL                           |  |*
 *|  |                                                                 |  |*
 *|  |  SETEX user_conn:user_123 60 "chat-server-42"                |  |*
-*|  |  GET user_conn:user_123  ->  "chat-server-42"                 |  |*
+*|  |  GET user_conn:user_123  >  "chat-server-42"                 |  |*
 *|  |  DEL user_conn:user_123                                       |  |*
 *|  |                                                                 |  |*
 *|  |  Pros: Per-user TTL, auto-cleanup                            |  |*
@@ -1495,13 +1495,13 @@ SECTION 3.4: CONNECTION REGISTRY - HOW SERVER LOOKUP WORKS
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
-*|  |  OPTION 3: Server -> Users (Reverse Index)                    |  |*
+*|  |  OPTION 3: Server > Users (Reverse Index)                    |  |*
 *|  |                                                                 |  |*
 *|  |  # Also maintain reverse mapping for bulk operations         |  |*
 *|  |  SADD server:chat-server-42:users user_123 user_456         |  |*
 *|  |                                                                 |  |*
 *|  |  # When server crashes, easy to find all affected users     |  |*
-*|  |  SMEMBERS server:chat-server-42:users  ->  [user_123, ...]   |  |*
+*|  |  SMEMBERS server:chat-server-42:users  >  [user_123, ...]   |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -1530,7 +1530,7 @@ SECTION 3.5: MULTI-DEVICE SUPPORT
 *|  |  * Client handles deduplication by message_id                 |  |*
 *|  |                                                                 |  |*
 *|  |  Message sync:                                                 |  |*
-*|  |  * New device connects -> sync from last known message_id     |  |*
+*|  |  * New device connects > sync from last known message_id     |  |*
 *|  |  * Cursor per device stored on server                        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -1665,24 +1665,24 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |  SINGLE DEVICE MODEL (simple):                                 |  |*
 *|  |                                                                 |  |*
 *|  |  user_connections:                                              |  |*
-*|  |    "alice" -> "chat-server-1"                                   |  |*
-*|  |    "bob"   -> "chat-server-5"                                   |  |*
+*|  |    "alice" > "chat-server-1"                                   |  |*
+*|  |    "bob"   > "chat-server-5"                                   |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
 *|  |  MULTI-DEVICE MODEL:                                           |  |*
 *|  |                                                                 |  |*
 *|  |  user_connections:alice                                        |  |*
-*|  |    "iPhone-14-xyz"      -> "chat-server-1"                     |  |*
-*|  |    "Chrome-Web-def"     -> "chat-server-3"                     |  |*
-*|  |    "MacBook-Desktop"    -> "chat-server-7"                     |  |*
+*|  |    "iPhone-14-xyz"      > "chat-server-1"                     |  |*
+*|  |    "Chrome-Web-def"     > "chat-server-3"                     |  |*
+*|  |    "MacBook-Desktop"    > "chat-server-7"                     |  |*
 *|  |                                                                 |  |*
 *|  |  user_connections:bob                                          |  |*
-*|  |    "Pixel-8-abc"        -> "chat-server-5"                     |  |*
+*|  |    "Pixel-8-abc"        > "chat-server-5"                     |  |*
 *|  |                                                                 |  |*
 *|  |  Data Structure: Hash per user                                 |  |*
 *|  |  Key: user_connections:{user_id}                               |  |*
-*|  |  Fields: device_id -> chat_server_id                            |  |*
+*|  |  Fields: device_id > chat_server_id                            |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -1787,7 +1787,7 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Alice reads message on Phone                                  |  |*
-*|  |  -> Other devices should also show as "read"                    |  |*
+*|  |  > Other devices should also show as "read"                    |  |*
 *|  |                                                                 |  |*
 *|  |  Phone                                                          |  |*
 *|  |    |                                                            |  |*
@@ -1822,7 +1822,7 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Alice sends message from Web                                  |  |*
-*|  |  -> Phone and Desktop should also show the sent message        |  |*
+*|  |  > Phone and Desktop should also show the sent message        |  |*
 *|  |                                                                 |  |*
 *|  |  Web Browser                                                    |  |*
 *|  |    |                                                            |  |*
@@ -1878,9 +1878,9 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |              |                      |                           |  |*
 *|  |              |   user_connections:  |                           |  |*
 *|  |              |   alice:             |                           |  |*
-*|  |              |     D1 -> srv1        |                           |  |*
-*|  |              |     D2 -> srv3        |                           |  |*
-*|  |              |     D3 -> srv7        |                           |  |*
+*|  |              |     D1 > srv1        |                           |  |*
+*|  |              |     D2 > srv3        |                           |  |*
+*|  |              |     D3 > srv7        |                           |  |*
 *|  |              |                      |                           |  |*
 *|  |              +----------------------+                           |  |*
 *|  |                         |                                       |  |*
@@ -1967,9 +1967,9 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |    |                                                            |  |*
 *|  |    | Route each ciphertext to appropriate device               |  |*
 *|  |    |                                                            |  |*
-*|  |    +-> Phone:   ciphertext_1 -> decrypt with Phone_privkey     |  |*
-*|  |    +-> Web:     ciphertext_2 -> decrypt with Web_privkey       |  |*
-*|  |    +-> Desktop: ciphertext_3 -> decrypt with Desktop_privkey   |  |*
+*|  |    +-> Phone:   ciphertext_1 > decrypt with Phone_privkey     |  |*
+*|  |    +-> Web:     ciphertext_2 > decrypt with Web_privkey       |  |*
+*|  |    +-> Desktop: ciphertext_3 > decrypt with Desktop_privkey   |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -2000,7 +2000,7 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |                                                                 |  |*
 *|  |  * Auto-logout inactive devices (after 30 days no activity)   |  |*
 *|  |  * User can manually remove devices from settings             |  |*
-*|  |  * Suspicious login -> notify other devices                    |  |*
+*|  |  * Suspicious login > notify other devices                    |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
@@ -2009,7 +2009,7 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |  WhatsApp model:                                                |  |*
 *|  |  * Phone is PRIMARY (required for initial setup)              |  |*
 *|  |  * Web/Desktop are COMPANION (can work independently now)     |  |*
-*|  |  * If phone removed -> all companions logged out               |  |*
+*|  |  * If phone removed > all companions logged out               |  |*
 *|  |                                                                 |  |*
 *|  |  Telegram model:                                                |  |*
 *|  |  * All devices are EQUAL                                       |  |*
@@ -2027,23 +2027,23 @@ SECTION 8: MULTI-DEVICE SYNC
 *|  |                                                                 |  |*
 *|  |  WHAT GETS SYNCED:                                              |  |*
 *|  |                                                                 |  |*
-*|  |  [x] Messages (sent and received)                                |  |*
-*|  |  [x] Read receipts / last read position                          |  |*
-*|  |  [x] Deleted messages (tombstones)                               |  |*
-*|  |  [x] Edited messages                                              |  |*
-*|  |  [x] Reactions                                                    |  |*
-*|  |  [x] Conversation mute/archive status                            |  |*
-*|  |  [x] Contact names / nicknames                                   |  |*
-*|  |  [x] Group membership changes                                     |  |*
+*|  |  Y Messages (sent and received)                                |  |*
+*|  |  Y Read receipts / last read position                          |  |*
+*|  |  Y Deleted messages (tombstones)                               |  |*
+*|  |  Y Edited messages                                              |  |*
+*|  |  Y Reactions                                                    |  |*
+*|  |  Y Conversation mute/archive status                            |  |*
+*|  |  Y Contact names / nicknames                                   |  |*
+*|  |  Y Group membership changes                                     |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*
 *|  |  WHAT'S NOT SYNCED (Device-specific):                          |  |*
 *|  |                                                                 |  |*
-*|  |  [ ] Notification settings (per-device)                          |  |*
-*|  |  [ ] Downloaded media (re-download per device)                  |  |*
-*|  |  [ ] Draft messages (usually local)                              |  |*
-*|  |  [ ] App theme/appearance                                        |  |*
+*|  |  X Notification settings (per-device)                          |  |*
+*|  |  X Downloaded media (re-download per device)                  |  |*
+*|  |  X Draft messages (usually local)                              |  |*
+*|  |  X App theme/appearance                                        |  |*
 *|  |                                                                 |  |*
 *|  |  ------------------------------------------------------------  |  |*
 *|  |                                                                 |  |*

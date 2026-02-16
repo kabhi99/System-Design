@@ -94,14 +94,14 @@ SECTION 2: GEOSPATIAL DATA STORAGE
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  Advantages:                                                           |*
-*|  [x] Fast O(log N) operations                                          |*
-*|  [x] Built-in distance calculation                                     |*
-*|  [x] No external dependency                                            |*
-*|  [x] 75K writes/second achievable                                      |*
+*|  Y Fast O(log N) operations                                          |*
+*|  Y Built-in distance calculation                                     |*
+*|  Y No external dependency                                            |*
+*|  Y 75K writes/second achievable                                      |*
 *|                                                                         |*
 *|  Limitations:                                                          |*
-*|  [ ] Single key (no sharding out of box)                               |*
-*|  [ ] Memory intensive                                                   |*
+*|  X Single key (no sharding out of box)                               |*
+*|  X Memory intensive                                                   |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -120,14 +120,14 @@ SECTION 2: GEOSPATIAL DATA STORAGE
 *|  |                                                                 |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |  |                                                         |  |  |*
-*|  |  |  Geohash Length  ->  Cell Size                          |  |  |*
+*|  |  |  Geohash Length  >  Cell Size                          |  |  |*
 *|  |  |  -----------------------------                          |  |  |*
-*|  |  |  1 character     ->  5,000 km × 5,000 km                |  |  |*
-*|  |  |  4 characters    ->  39 km × 19 km                      |  |  |*
-*|  |  |  5 characters    ->  5 km × 5 km                        |  |  |*
-*|  |  |  6 characters    ->  1.2 km × 0.6 km                    |  |  |*
-*|  |  |  7 characters    ->  150m × 150m                        |  |  |*
-*|  |  |  8 characters    ->  38m × 19m                          |  |  |*
+*|  |  |  1 character     >  5,000 km × 5,000 km                |  |  |*
+*|  |  |  4 characters    >  39 km × 19 km                      |  |  |*
+*|  |  |  5 characters    >  5 km × 5 km                        |  |  |*
+*|  |  |  6 characters    >  1.2 km × 0.6 km                    |  |  |*
+*|  |  |  7 characters    >  150m × 150m                        |  |  |*
+*|  |  |  8 characters    >  38m × 19m                          |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
@@ -197,7 +197,7 @@ SECTION 3: DELIVERY PARTNER ASSIGNMENT ALGORITHM
 *|  4. Time since last order (fairness)                                  |*
 *|  5. Vehicle type (bike for short, car for large orders)              |*
 *|  6. Partner's preferred areas                                        |*
-*|  7. Order value (high-value -> trusted partners)                      |*
+*|  7. Order value (high-value > trusted partners)                      |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -241,7 +241,7 @@ SECTION 3: DELIVERY PARTNER ASSIGNMENT ALGORITHM
 *|  |      score += distance_score * 0.4                            |  |*
 *|  |                                                                 |  |*
 *|  |      # Rating - 20% weight                                    |  |*
-*|  |      rating_score = partner.rating * 20  # 5.0 -> 100         |  |*
+*|  |      rating_score = partner.rating * 20  # 5.0 > 100         |  |*
 *|  |      score += rating_score * 0.2                              |  |*
 *|  |                                                                 |  |*
 *|  |      # Workload (fewer orders = better) - 20% weight          |  |*
@@ -413,7 +413,7 @@ SECTION 5: LIVE TRACKING
 *|  |              |                |                               |  |*
 *|  |              | * Maintain map |                               |  |*
 *|  |              |   of active    |                               |  |*
-*|  |              |   order_id ->   |                               |  |*
+*|  |              |   order_id >   |                               |  |*
 *|  |              |   ws_connection|                               |  |*
 *|  |              |                |                               |  |*
 *|  |              +-------+--------+                               |  |*
@@ -439,7 +439,7 @@ SECTION 5: LIVE TRACKING
 *|  |                                                                 |  |*
 *|  |  Customer opens tracking screen:                               |  |*
 *|  |  1. Connect WebSocket: ws://tracking.zomato.com/orders/123    |  |*
-*|  |  2. Server maps: order_123 -> [ws_connection_abc]              |  |*
+*|  |  2. Server maps: order_123 > [ws_connection_abc]              |  |*
 *|  |                                                                 |  |*
 *|  |  When location update arrives (via Kafka):                     |  |*
 *|  |  1. Get order_id for this partner                             |  |*
@@ -475,10 +475,10 @@ SECTION 5: LIVE TRACKING
 *|  |                                                                 |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |  |                                                         |  |  |*
-*|  |  |  order_id -> hash -> tracking_server_N                   |  |  |*
+*|  |  |  order_id > hash > tracking_server_N                   |  |  |*
 *|  |  |                                                         |  |  |*
-*|  |  |  order_123 -> hash -> Server 3                          |  |  |*
-*|  |  |  order_456 -> hash -> Server 7                          |  |  |*
+*|  |  |  order_123 > hash > Server 3                          |  |  |*
+*|  |  |  order_456 > hash > Server 7                          |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  |  Redis pub/sub or Kafka for cross-server messages      |  |  |*
 *|  |  |                                                         |  |  |*

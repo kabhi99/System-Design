@@ -62,7 +62,7 @@ managing inventory in real-time, and processing payments securely.
 |  ----------------                                                       |
 |  User A and User B both see Seat A5 available                        |
 |  Both click "Book" at same time                                       |
-|  -> Only ONE can get the seat!                                        |
+|  > Only ONE can get the seat!                                        |
 |                                                                         |
 |  TEMPORARY HOLDS                                                       |
 |  ----------------                                                       |

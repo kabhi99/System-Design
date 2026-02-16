@@ -470,9 +470,9 @@ SECTION 6: NEWS FEED - THE CORE CHALLENGE
 *|  |  |  For each follower:                                    |  |  |*
 *|  |  |    Add post_id to their feed cache                     |  |  |*
 *|  |  |                                                         |  |  |*
-*|  |  |  feed:user_A -> [post_123, post_456, ...]              |  |  |*
-*|  |  |  feed:user_C -> [post_123, post_789, ...]              |  |  |*
-*|  |  |  feed:user_D -> [post_123, post_101, ...]              |  |  |*
+*|  |  |  feed:user_A > [post_123, post_456, ...]              |  |  |*
+*|  |  |  feed:user_C > [post_123, post_789, ...]              |  |  |*
+*|  |  |  feed:user_D > [post_123, post_101, ...]              |  |  |*
 *|  |  |                                                         |  |  |*
 *|  |  +---------------------------------------------------------+  |  |*
 *|  |                                                                 |  |*
@@ -485,13 +485,13 @@ SECTION 6: NEWS FEED - THE CORE CHALLENGE
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
 *|  PROS:                                                                 |*
-*|  [x] Feed reads are instant (pre-computed)                             |*
-*|  [x] Simple feed query                                                  |*
+*|  Y Feed reads are instant (pre-computed)                             |*
+*|  Y Simple feed query                                                  |*
 *|                                                                         |*
 *|  CONS:                                                                 |*
-*|  [ ] Write amplification (1 post -> 1000 writes)                        |*
-*|  [ ] Celebrities with 50M followers = DISASTER                        |*
-*|  [ ] Wasted work for inactive users                                    |*
+*|  X Write amplification (1 post > 1000 writes)                        |*
+*|  X Celebrities with 50M followers = DISASTER                        |*
+*|  X Wasted work for inactive users                                    |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -628,7 +628,7 @@ SECTION 7: FEED CACHE DESIGN
 *|  2. Multi-get post content: MGET post:999 post:998 post:997 ...     |*
 *|  3. Return hydrated posts                                            |*
 *|                                                                         |*
-*|  If post not in cache -> fetch from DB, cache it (read-through)      |*
+*|  If post not in cache > fetch from DB, cache it (read-through)      |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -709,7 +709,7 @@ SECTION 8: POST CREATION FLOW
 *|  |  ------------------------------------                          |  |*
 *|  |                                                                 |  |*
 *|  |  1. Check if user is celebrity                                |  |*
-*|  |     If yes -> skip fanout (use pull model)                    |  |*
+*|  |     If yes > skip fanout (use pull model)                    |  |*
 *|  |                                                                 |  |*
 *|  |  2. Get follower list                                         |  |*
 *|  |     SELECT follower_id FROM follows WHERE followee_id = 42   |  |*
@@ -798,8 +798,8 @@ SECTION 9: FOLLOW/UNFOLLOW
 *|  * "Get followers of followers" type queries                          |*
 *|                                                                         |*
 *|  Alternative: Redis for hot data                                       |*
-*|  * followers:{user_id} -> Set of follower IDs                         |*
-*|  * following:{user_id} -> Set of followee IDs                         |*
+*|  * followers:{user_id} > Set of follower IDs                         |*
+*|  * following:{user_id} > Set of followee IDs                         |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
@@ -1019,7 +1019,7 @@ SECTION 12: SEARCH AND TRENDING
 *|  |                                                                 |  |*
 *|  |  Redis Sorted Sets for real-time counting:                    |  |*
 *|  |                                                                 |  |*
-*|  |  trending:hashtags:hourly -> {#topic1: 5000, #topic2: 4500}   |  |*
+*|  |  trending:hashtags:hourly > {#topic1: 5000, #topic2: 4500}   |  |*
 *|  |                                                                 |  |*
 *|  |  ZINCRBY trending:hashtags:hourly 1 "#worldcup"              |  |*
 *|  |  ZREVRANGE trending:hashtags:hourly 0 9 (top 10)             |  |*
@@ -1038,8 +1038,8 @@ SECTION 13: SCALING STRATEGIES
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  USERS TABLE: Shard by user_id                                |  |*
-*|  |  * User 1-1M -> Shard 1                                        |  |*
-*|  |  * User 1M-2M -> Shard 2                                       |  |*
+*|  |  * User 1-1M > Shard 1                                        |  |*
+*|  |  * User 1M-2M > Shard 2                                       |  |*
 *|  |  * etc.                                                        |  |*
 *|  |                                                                 |  |*
 *|  |  POSTS TABLE: Shard by user_id (author)                       |  |*
@@ -1187,10 +1187,10 @@ SECTION 14: INTERVIEW QUICK REFERENCE
 *|  ARCHITECTURE SUMMARY                                                  |*
 *|                                                                         |*
 *|  Write Path:                                                          |*
-*|  Client -> API -> Posts DB -> Kafka -> Fanout -> Feed Cache              |*
+*|  Client > API > Posts DB > Kafka > Fanout > Feed Cache              |*
 *|                                                                         |*
 *|  Read Path:                                                            |*
-*|  Client -> API -> Feed Cache (+ Celebrity Pull) -> Post Cache -> DB     |*
+*|  Client > API > Feed Cache (+ Celebrity Pull) > Post Cache > DB     |*
 *|                                                                         |*
 *|  Key Numbers:                                                          |*
 *|  * 500M DAU, 5B feed requests/day                                    |*
@@ -1207,13 +1207,13 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: Post goes viral -> millions of requests for same post |  |*
+*|  |  Problem: Post goes viral > millions of requests for same post |  |*
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
-*|  |  |  Celebrity tweets -> 50M impressions in 1 hour            ||  |*
-*|  |  |  All hit cache for same post -> Hot key problem           ||  |*
-*|  |  |  Cache invalidation -> Thundering herd to DB              ||  |*
+*|  |  |  Celebrity tweets > 50M impressions in 1 hour            ||  |*
+*|  |  |  All hit cache for same post > Hot key problem           ||  |*
+*|  |  |  Cache invalidation > Thundering herd to DB              ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -1222,7 +1222,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  1. HOT KEY DETECTION + REPLICATION                           |  |*
 *|  |     * Monitor cache hit rate per key                         |  |*
 *|  |     * If > threshold, replicate to multiple cache shards    |  |*
-*|  |     * post:123 -> post:123:replica_1, :replica_2, ...        |  |*
+*|  |     * post:123 > post:123:replica_1, :replica_2, ...        |  |*
 *|  |     * Random read from any replica                          |  |*
 *|  |                                                                 |  |*
 *|  |  2. LOCAL CACHING (L1 Cache)                                  |  |*
@@ -1291,7 +1291,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  500M posts/day -> Can't manually review all                   |  |*
+*|  |  500M posts/day > Can't manually review all                   |  |*
 *|  |                                                                 |  |*
 *|  |  Multi-Layer Approach:                                         |  |*
 *|  |                                                                 |  |*

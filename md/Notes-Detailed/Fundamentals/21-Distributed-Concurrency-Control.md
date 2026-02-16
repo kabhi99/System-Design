@@ -83,10 +83,10 @@ simultaneously. This chapter covers patterns for safe coordination.
 |                                                                         |
 |  RELEASE LOCK (MUST CHECK OWNERSHIP):                                  |
 |                                                                         |
-|  [ ] WRONG - May release someone else's lock:                           |
+|  X WRONG - May release someone else's lock:                           |
 |    redis.delete(lock_key)                                               |
 |                                                                         |
-|  [x] CORRECT - Lua script for atomic check-and-delete:                  |
+|  Y CORRECT - Lua script for atomic check-and-delete:                  |
 |                                                                         |
 |  RELEASE_SCRIPT = """                                                   |
 |  if redis.call("GET", KEYS[1]) == ARGV[1] then                         |
@@ -120,17 +120,17 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |       |                                                          |   |
 |  |  [5 seconds pass - LOCK EXPIRES]                                |   |
 |  |                                                                  |   |
-|  |  Client B acquires lock [x]                                       |   |
+|  |  Client B acquires lock Y                                       |   |
 |  |       |                                                          |   |
 |  |       +---- starts work...                                      |   |
 |  |       |                                                          |   |
 |  |  Client A resumes (thinks it still has lock!)                   |   |
 |  |       |                                                          |   |
-|  |       +---- modifies resource [ ] CONFLICT!                       |   |
+|  |       +---- modifies resource X CONFLICT!                       |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  TTL too long:                                                          |
-|  * Client crashes -> lock held until TTL expires                       |
+|  * Client crashes > lock held until TTL expires                       |
 |  * Other clients blocked unnecessarily                                |
 |                                                                         |
 |  SOLUTIONS:                                                             |
@@ -156,14 +156,14 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |                                                                 |   |
 |  |  Lock Server assigns incrementing token with each lock:        |   |
 |  |                                                                 |   |
-|  |  Client A acquires lock -> token = 33                           |   |
+|  |  Client A acquires lock > token = 33                           |   |
 |  |  Client A pauses (GC)                                          |   |
 |  |  Lock expires                                                  |   |
-|  |  Client B acquires lock -> token = 34                           |   |
+|  |  Client B acquires lock > token = 34                           |   |
 |  |  Client B writes to storage: "value=X, token=34"               |   |
 |  |  Client A resumes, tries to write: "value=Y, token=33"         |   |
 |  |                                                                 |   |
-|  |  Storage: "33 < 34? REJECT!" [ ]                                 |   |
+|  |  Storage: "33 < 34? REJECT!" X                                 |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -214,10 +214,10 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |      v          v       v       v          v                   |   |
 |  |  +-------+ +-------+ +-------+ +-------+ +-------+           |   |
 |  |  |Redis 1| |Redis 2| |Redis 3| |Redis 4| |Redis 5|           |   |
-|  |  |  [x]    | |  [x]    | |  [x]    | |  [ ]    | |  [x]    |           |   |
+|  |  |  Y    | |  Y    | |  Y    | |  X    | |  Y    |           |   |
 |  |  +-------+ +-------+ +-------+ +-------+ +-------+           |   |
 |  |                                                                 |   |
-|  |  Got 4/5 = majority -> LOCK ACQUIRED [x]                         |   |
+|  |  Got 4/5 = majority > LOCK ACQUIRED Y                         |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -268,7 +268,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |                                                                         |
 |  EPHEMERAL NODES:                                                       |
 |  * Node is deleted when client session ends                           |
-|  * Client crash -> session timeout -> lock auto-released               |
+|  * Client crash > session timeout > lock auto-released               |
 |                                                                         |
 |  SEQUENTIAL NODES:                                                      |
 |  * ZooKeeper appends incrementing number to node name                 |
@@ -277,21 +277,21 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  +-----------------------------------------------------------------+   |
 |  |                                                                 |   |
 |  |  /locks/my-resource/                                           |   |
-|  |      +-- lock-0000000001  (Client A) <- Holds lock              |   |
-|  |      +-- lock-0000000002  (Client B) <- Waiting                 |   |
-|  |      +-- lock-0000000003  (Client C) <- Waiting                 |   |
+|  |      +-- lock-0000000001  (Client A) < Holds lock              |   |
+|  |      +-- lock-0000000002  (Client B) < Waiting                 |   |
+|  |      +-- lock-0000000003  (Client C) < Waiting                 |   |
 |  |                                                                 |   |
 |  |  Client B watches lock-0000000001                              |   |
-|  |  When it's deleted -> Client B gets lock                        |   |
+|  |  When it's deleted > Client B gets lock                        |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
 |  ALGORITHM:                                                             |
 |  1. Create ephemeral sequential node under /locks/resource/           |
 |  2. Get all children, sort by sequence number                         |
-|  3. If my node is lowest -> I have the lock                           |
-|  4. Else -> Watch the node just before mine                           |
-|  5. When notified -> Go to step 2                                      |
+|  3. If my node is lowest > I have the lock                           |
+|  4. Else > Watch the node just before mine                           |
+|  5. When notified > Go to step 2                                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -303,7 +303,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  * Create a lease (like TTL)                                          |
 |  * Attach key to lease                                                 |
 |  * Keep-alive to refresh lease                                        |
-|  * Lease expires -> key deleted -> lock released                       |
+|  * Lease expires > key deleted > lock released                       |
 |                                                                         |
 |  # Using etcd's built-in lock                                          |
 |  etcdctl lock my-lock-name                                              |
@@ -347,8 +347,8 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  |            +---------------+                                    |   |
 |  |                                                                 |   |
 |  |  All nodes try to acquire leadership                          |   |
-|  |  Only one succeeds -> becomes leader                           |   |
-|  |  Leader fails -> another takes over                            |   |
+|  |  Only one succeeds > becomes leader                           |   |
+|  |  Leader fails > another takes over                            |   |
 |  |                                                                 |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -370,7 +370,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  client-go provides leader election library:                          |
 |  * Pods compete for Lease ownership                                   |
 |  * Leader renews lease periodically                                   |
-|  * If leader fails to renew -> another pod takes over                 |
+|  * If leader fails to renew > another pod takes over                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -426,9 +426,9 @@ simultaneously. This chapter covers patterns for safe coordination.
 |      - Correctness: Add fencing tokens                                |
 |                                                                         |
 |   2. What infrastructure do we have?                                  |
-|      - Already have Redis -> use Redis                                 |
-|      - Kubernetes -> use etcd/Lease                                    |
-|      - Need strong guarantees -> ZooKeeper/etcd                       |
+|      - Already have Redis > use Redis                                 |
+|      - Kubernetes > use etcd/Lease                                    |
+|      - Need strong guarantees > ZooKeeper/etcd                       |
 |                                                                         |
 |   3. Always implement:                                                 |
 |      - TTL for auto-release                                           |
@@ -450,7 +450,7 @@ simultaneously. This chapter covers patterns for safe coordination.
 |  ----------------------                                                  |
 |  Acquire: SET lock:key uuid NX PX 30000                               |
 |  Release: Lua script (check owner before delete)                      |
-|  Risk: Lock expires while holding -> use fencing tokens               |
+|  Risk: Lock expires while holding > use fencing tokens               |
 |                                                                         |
 |  FENCING TOKEN:                                                         |
 |  ----------------                                                        |

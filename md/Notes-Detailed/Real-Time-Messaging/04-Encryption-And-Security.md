@@ -36,7 +36,7 @@ SECTION 1: END-TO-END ENCRYPTION (E2EE) OVERVIEW
 *|  |  * Each user has key pair: public + private                   |  |*
 *|  |  * Public key: shared with everyone                           |  |*
 *|  |  * Private key: never leaves device                           |  |*
-*|  |  * Encrypt with public -> only private can decrypt            |  |*
+*|  |  * Encrypt with public > only private can decrypt            |  |*
 *|  |                                                                 |  |*
 *|  |  SYMMETRIC ENCRYPTION                                          |  |*
 *|  |  * Single shared key for encrypt/decrypt                      |  |*
@@ -288,16 +288,16 @@ SECTION 6: SECURITY CONSIDERATIONS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  E2EE PROTECTS AGAINST:                                        |  |*
-*|  |  [x] Server breach (messages unreadable)                        |  |*
-*|  |  [x] Network eavesdropping                                      |  |*
-*|  |  [x] Malicious server operators                                 |  |*
-*|  |  [x] Government subpoenas for message content                  |  |*
+*|  |  Y Server breach (messages unreadable)                        |  |*
+*|  |  Y Network eavesdropping                                      |  |*
+*|  |  Y Malicious server operators                                 |  |*
+*|  |  Y Government subpoenas for message content                  |  |*
 *|  |                                                                 |  |*
 *|  |  E2EE DOES NOT PROTECT AGAINST:                               |  |*
-*|  |  [ ] Compromised device (malware on phone)                     |  |*
-*|  |  [ ] Screenshots by recipient                                  |  |*
-*|  |  [ ] Metadata (who talks to whom, when)                        |  |*
-*|  |  [ ] Physical access to unlocked phone                         |  |*
+*|  |  X Compromised device (malware on phone)                     |  |*
+*|  |  X Screenshots by recipient                                  |  |*
+*|  |  X Metadata (who talks to whom, when)                        |  |*
+*|  |  X Physical access to unlocked phone                         |  |*
 *|  |                                                                 |  |*
 *|  |  METADATA VISIBLE TO SERVER:                                   |  |*
 *|  |  * Sender and recipient IDs                                   |  |*

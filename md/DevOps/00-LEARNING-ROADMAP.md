@@ -201,10 +201,10 @@ THE CONTAINER SOLUTION:
 
 By the end of Phase 1, you should be able to:
 
-[x] Explain why containers exist and what problems they solve
-[x] Describe the difference between VMs and containers
-[x] Understand that containers share the host kernel
-[x] Know the basic Linux features enabling containers (namespaces, cgroups)
+Y Explain why containers exist and what problems they solve
+Y Describe the difference between VMs and containers
+Y Understand that containers share the host kernel
+Y Know the basic Linux features enabling containers (namespaces, cgroups)
 
 ## PHASE 2: DOCKER FUNDAMENTALS (Week 2-4)
 
@@ -321,14 +321,14 @@ Run with: docker-compose up
 
 By the end of Docker phases, you should be able to:
 
-[x] Explain Docker architecture (client, daemon, containerd, runc)
-[x] Build optimized Docker images with multi-stage builds
-[x] Write Dockerfiles following best practices
-[x] Use volumes for data persistence
-[x] Create multi-container applications with Docker Compose
-[x] Understand Docker networking modes
-[x] Implement security best practices
-[x] Push/pull images from registries
+Y Explain Docker architecture (client, daemon, containerd, runc)
+Y Build optimized Docker images with multi-stage builds
+Y Write Dockerfiles following best practices
+Y Use volumes for data persistence
+Y Create multi-container applications with Docker Compose
+Y Understand Docker networking modes
+Y Implement security best practices
+Y Push/pull images from registries
 
 ## PHASE 4: KUBERNETES FUNDAMENTALS (Week 5-7)
 
@@ -662,7 +662,7 @@ PLAYGROUNDS:
 
 ### RECOMMENDED READING ORDER
 
-Start here -> Follow the chapter numbers -> Complete hands-on exercises
+Start here > Follow the chapter numbers > Complete hands-on exercises
 
 Don't skip ahead! Each chapter builds on previous knowledge.
 

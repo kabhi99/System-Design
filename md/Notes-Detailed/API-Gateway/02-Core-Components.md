@@ -16,9 +16,9 @@
 |  |  1. PATH-BASED ROUTING (Most common)                          |  |
 |  |  ===================================                           |  |
 |  |                                                                 |  |
-|  |  /api/v1/users/*     -> User Service                           |  |
-|  |  /api/v1/orders/*    -> Order Service                          |  |
-|  |  /api/v1/products/*  -> Product Service                        |  |
+|  |  /api/v1/users/*     > User Service                           |  |
+|  |  /api/v1/orders/*    > Order Service                          |  |
+|  |  /api/v1/products/*  > Product Service                        |  |
 |  |                                                                 |  |
 |  |  Config (Kong style):                                         |  |
 |  |  routes:                                                       |  |
@@ -33,27 +33,27 @@
 |  |  2. HOST-BASED ROUTING                                        |  |
 |  |  =======================                                        |  |
 |  |                                                                 |  |
-|  |  api.example.com      -> Main API                              |  |
-|  |  admin.example.com    -> Admin Service                         |  |
-|  |  partner.example.com  -> Partner API                           |  |
+|  |  api.example.com      > Main API                              |  |
+|  |  admin.example.com    > Admin Service                         |  |
+|  |  partner.example.com  > Partner API                           |  |
 |  |                                                                 |  |
 |  |  ------------------------------------------------------------  |  |
 |  |                                                                 |  |
 |  |  3. HEADER-BASED ROUTING                                      |  |
 |  |  ===========================                                    |  |
 |  |                                                                 |  |
-|  |  X-API-Version: v1  -> Service v1                              |  |
-|  |  X-API-Version: v2  -> Service v2                              |  |
+|  |  X-API-Version: v1  > Service v1                              |  |
+|  |  X-API-Version: v2  > Service v2                              |  |
 |  |                                                                 |  |
-|  |  X-Tenant-ID: acme  -> Acme's dedicated cluster                |  |
+|  |  X-Tenant-ID: acme  > Acme's dedicated cluster                |  |
 |  |                                                                 |  |
 |  |  ------------------------------------------------------------  |  |
 |  |                                                                 |  |
 |  |  4. METHOD-BASED ROUTING                                      |  |
 |  |  ===========================                                    |  |
 |  |                                                                 |  |
-|  |  GET  /orders  -> Read replica (Order Query Service)          |  |
-|  |  POST /orders  -> Primary (Order Command Service)             |  |
+|  |  GET  /orders  > Read replica (Order Query Service)          |  |
+|  |  POST /orders  > Primary (Order Command Service)             |  |
 |  |                                                                 |  |
 |  |  ------------------------------------------------------------  |  |
 |  |                                                                 |  |
@@ -232,7 +232,7 @@
 |                                                                         |
 |  ROLE-BASED ACCESS CONTROL (RBAC)                                      |
 |                                                                         |
-|  User has roles -> Roles have permissions -> Check permission           |
+|  User has roles > Roles have permissions > Check permission           |
 |                                                                         |
 |  JWT Payload:                                                           |
 |  {                                                                     |
@@ -271,7 +271,7 @@
 |    }                                                                   |
 |  }                                                                     |
 |                                                                         |
-|  -> Can delete order if: user is in sales, order is pending,          |
+|  > Can delete order if: user is in sales, order is pending,          |
 |    and it's business hours                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -297,7 +297,7 @@
 |  |  |   Tokens added: 100/60 = 1.67/sec  |                      |  |
 |  |  |   Max tokens: 10 (burst)           |                      |  |
 |  |  |                                     |                      |  |
-|  |  |   [●][●][●][●][●][●][●][●][●][●]   | <- 10 tokens         |  |
+|  |  |   [●][●][●][●][●][●][●][●][●][●]   | < 10 tokens         |  |
 |  |  |                                     |                      |  |
 |  |  |   Request arrives:                  |                      |  |
 |  |  |   - Token available? Take 1, allow |                      |  |
@@ -393,10 +393,10 @@
 |  +-----------------------------------------------------------------+  |
 |  |                                                                 |  |
 |  |  1. ROUND ROBIN                                                |  |
-|  |     Request 1 -> Server A                                      |  |
-|  |     Request 2 -> Server B                                      |  |
-|  |     Request 3 -> Server C                                      |  |
-|  |     Request 4 -> Server A (cycle)                              |  |
+|  |     Request 1 > Server A                                      |  |
+|  |     Request 2 > Server B                                      |  |
+|  |     Request 3 > Server C                                      |  |
+|  |     Request 4 > Server A (cycle)                              |  |
 |  |                                                                 |  |
 |  |  2. WEIGHTED ROUND ROBIN                                      |  |
 |  |     Server A (weight 3): Gets 3x requests                     |  |
@@ -407,7 +407,7 @@
 |  |     Good for long-running requests                           |  |
 |  |                                                                 |  |
 |  |  4. CONSISTENT HASHING                                        |  |
-|  |     Hash(user_id) -> Same server for same user                |  |
+|  |     Hash(user_id) > Same server for same user                |  |
 |  |     Good for caching, sticky sessions                        |  |
 |  |                                                                 |  |
 |  |  5. RANDOM                                                     |  |
@@ -444,7 +444,7 @@
 |    user-service:                                                       |
 |      host: user-service.namespace.svc.cluster.local                  |
 |                                                                         |
-|  Gateway resolves DNS -> Gets list of IPs                              |
+|  Gateway resolves DNS > Gets list of IPs                              |
 |  Works well with Kubernetes                                           |
 |                                                                         |
 |  --------------------------------------------------------------------  |
@@ -555,17 +555,17 @@
 |  CLOSED (Normal operation):                                            |
 |  * All requests pass through                                          |
 |  * Track failure rate                                                 |
-|  * If failures > threshold -> OPEN                                    |
+|  * If failures > threshold > OPEN                                    |
 |                                                                         |
 |  OPEN (Circuit tripped):                                               |
 |  * Requests fail immediately (no backend call)                       |
 |  * Return 503 or cached response                                     |
-|  * After timeout -> HALF-OPEN                                         |
+|  * After timeout > HALF-OPEN                                         |
 |                                                                         |
 |  HALF-OPEN (Testing):                                                  |
 |  * Allow limited requests through                                    |
-|  * If success -> CLOSED                                               |
-|  * If failure -> OPEN                                                 |
+|  * If success > CLOSED                                               |
+|  * If failure > OPEN                                                 |
 |                                                                         |
 |  Config:                                                                |
 |  circuit_breaker:                                                      |

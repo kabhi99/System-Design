@@ -254,7 +254,7 @@ SECTION 5: CORE COMPONENTS DEEP DIVE
 *|  BENEFIT 2: DEDUPLICATION                                             |*
 *|  * Same block content = same hash                                    |*
 *|  * Store identical blocks only once                                  |*
-*|  * User A and User B upload same file -> stored once                 |*
+*|  * User A and User B upload same file > stored once                 |*
 *|                                                                         |*
 *|  BENEFIT 3: RESUMABLE UPLOADS                                         |*
 *|  * Upload interrupted? Resume from last successful block            |*
@@ -268,15 +268,15 @@ SECTION 5: CORE COMPONENTS DEEP DIVE
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  TOO SMALL (e.g., 64 KB):                                     |  |*
-*|  |  [ ] Too many blocks per file (metadata overhead)              |  |*
-*|  |  [ ] Too many network round trips                               |  |*
+*|  |  X Too many blocks per file (metadata overhead)              |  |*
+*|  |  X Too many network round trips                               |  |*
 *|  |                                                                 |  |*
 *|  |  TOO LARGE (e.g., 64 MB):                                     |  |*
-*|  |  [ ] Small change = upload entire large block                  |  |*
-*|  |  [ ] Less deduplication opportunity                            |  |*
+*|  |  X Small change = upload entire large block                  |  |*
+*|  |  X Less deduplication opportunity                            |  |*
 *|  |                                                                 |  |*
 *|  |  SWEET SPOT: 4 MB (Dropbox uses 4 MB)                        |  |*
-*|  |  [x] Good balance of overhead vs efficiency                    |  |*
+*|  |  Y Good balance of overhead vs efficiency                    |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -324,8 +324,8 @@ SECTION 5: CORE COMPONENTS DEEP DIVE
 *|  |  TABLE: files                                                  |  |*
 *|  |  * file_id (PK)                                               |  |*
 *|  |  * name                                                        |  |*
-*|  |  * owner_id (FK -> users)                                      |  |*
-*|  |  * parent_folder_id (FK -> files, nullable)                   |  |*
+*|  |  * owner_id (FK > users)                                      |  |*
+*|  |  * parent_folder_id (FK > files, nullable)                   |  |*
 *|  |  * is_folder (boolean)                                        |  |*
 *|  |  * size                                                        |  |*
 *|  |  * checksum                                                    |  |*
@@ -334,7 +334,7 @@ SECTION 5: CORE COMPONENTS DEEP DIVE
 *|  |                                                                 |  |*
 *|  |  TABLE: file_versions                                         |  |*
 *|  |  * version_id (PK)                                            |  |*
-*|  |  * file_id (FK -> files)                                       |  |*
+*|  |  * file_id (FK > files)                                       |  |*
 *|  |  * version_number                                              |  |*
 *|  |  * size                                                        |  |*
 *|  |  * checksum                                                    |  |*
@@ -576,7 +576,7 @@ SECTION 7: CONFLICT RESOLUTION
 *|  |  ----    -----------------     ------    -----------------    |  |*
 *|  |  T0      File v1               File v1   File v1              |  |*
 *|  |          |                               |                     |  |*
-*|  |  T1      Edit -> v2 (local)               Edit -> v3 (local)    |  |*
+*|  |  T1      Edit > v2 (local)               Edit > v3 (local)    |  |*
 *|  |          |                               |                     |  |*
 *|  |  T2      Goes online ------------------------------------->   |  |*
 *|  |          Uploads v2            v2        |                     |  |*
@@ -663,8 +663,8 @@ SECTION 8: DEDUPLICATION
 *|  |  * If hash exists, don't store again                          |  |*
 *|  |  * Simple but limited (any change = new file)                 |  |*
 *|  |                                                                 |  |*
-*|  |  User A: photo.jpg (hash: abc123) -> STORED                    |  |*
-*|  |  User B: photo.jpg (hash: abc123) -> LINK to existing         |  |*
+*|  |  User A: photo.jpg (hash: abc123) > STORED                    |  |*
+*|  |  User B: photo.jpg (hash: abc123) > LINK to existing         |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -709,11 +709,11 @@ SECTION 8: DEDUPLICATION
 *|  |  Reference count: 3                                            |  |*
 *|  |                                                                 |  |*
 *|  |  When User A deletes file1.pdf:                               |  |*
-*|  |  * Decrement ref count: 3 -> 1                                 |  |*
+*|  |  * Decrement ref count: 3 > 1                                 |  |*
 *|  |  * Block still needed (User B has it)                        |  |*
 *|  |                                                                 |  |*
 *|  |  When User B deletes document.pdf:                            |  |*
-*|  |  * Decrement ref count: 1 -> 0                                 |  |*
+*|  |  * Decrement ref count: 1 > 0                                 |  |*
 *|  |  * NOW safe to delete block from storage                     |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
@@ -836,12 +836,12 @@ SECTION 9: SECURITY
 *|  |  PERMISSION CHECK FLOW:                                       |  |*
 *|  |                                                                 |  |*
 *|  |  1. User requests file access                                 |  |*
-*|  |  2. Check: Is user the owner? -> Full access                  |  |*
-*|  |  3. Check: Does user have explicit permission? -> Use it      |  |*
-*|  |  4. Check: Is user in a group with permission? -> Use it     |  |*
-*|  |  5. Check: Is user's domain allowed? -> Use it               |  |*
-*|  |  6. Check: Is file public/link-shared? -> Use that level     |  |*
-*|  |  7. Otherwise -> DENY                                          |  |*
+*|  |  2. Check: Is user the owner? > Full access                  |  |*
+*|  |  3. Check: Does user have explicit permission? > Use it      |  |*
+*|  |  4. Check: Is user in a group with permission? > Use it     |  |*
+*|  |  5. Check: Is user's domain allowed? > Use it               |  |*
+*|  |  6. Check: Is file public/link-shared? > Use that level     |  |*
+*|  |  7. Otherwise > DENY                                          |  |*
 *|  |                                                                 |  |*
 *|  |  ============================================================ |  |*
 *|  |                                                                 |  |*
@@ -849,11 +849,11 @@ SECTION 9: SECURITY
 *|  |                                                                 |  |*
 *|  |  By default, files inherit parent folder permissions         |  |*
 *|  |                                                                 |  |*
-*|  |  Shared Folder/               <- Shared with Team (Editor)    |  |*
-*|  |    +-- doc1.pdf               <- Inherits Editor access       |  |*
-*|  |    +-- doc2.pdf               <- Inherits Editor access       |  |*
-*|  |    +-- Subfolder/             <- Inherits Editor access       |  |*
-*|  |        +-- secret.pdf         <- Can restrict further        |  |*
+*|  |  Shared Folder/               < Shared with Team (Editor)    |  |*
+*|  |    +-- doc1.pdf               < Inherits Editor access       |  |*
+*|  |    +-- doc2.pdf               < Inherits Editor access       |  |*
+*|  |    +-- Subfolder/             < Inherits Editor access       |  |*
+*|  |        +-- secret.pdf         < Can restrict further        |  |*
 *|  |                                                                 |  |*
 *|  |  Rules:                                                        |  |*
 *|  |  * Child can RESTRICT parent permissions                     |  |*
@@ -1048,8 +1048,8 @@ SECTION 11: ADDITIONAL FEATURES
 *|  |  | v789       | abc        | 0           |                   |  |*
 *|  |  | v789       | def        | 1           |                   |  |*
 *|  |  | v789       | NEW_ghi    | 2           |                   |  |*
-*|  |  | v456       | abc        | 0           | <- Same block!    |  |*
-*|  |  | v456       | def        | 1           | <- Same block!    |  |*
+*|  |  | v456       | abc        | 0           | < Same block!    |  |*
+*|  |  | v456       | def        | 1           | < Same block!    |  |*
 *|  |  | v456       | old_ghi    | 2           |                   |  |*
 *|  |  +------------+------------+-------------+                   |  |*
 *|  |                                                                 |  |*
@@ -1068,7 +1068,7 @@ SECTION 11: ADDITIONAL FEATURES
 *|  |  3. RESTORE VERSION                                           |  |*
 *|  |     Make old version the current version                     |  |*
 *|  |     Creates new version (doesn't delete history)             |  |*
-*|  |     v3 -> v4 (content of v1)                                  |  |*
+*|  |     v3 > v4 (content of v1)                                  |  |*
 *|  |                                                                 |  |*
 *|  |  4. NAMED VERSIONS (Snapshots)                                |  |*
 *|  |     Mark important versions: "Final Draft"                   |  |*
@@ -1082,7 +1082,7 @@ SECTION 11: ADDITIONAL FEATURES
 *|  |     User clicks "Save" in editor                             |  |*
 *|  |                                                                 |  |*
 *|  |  2. FILE RE-UPLOAD                                            |  |*
-*|  |     Desktop client detects file change -> sync               |  |*
+*|  |     Desktop client detects file change > sync               |  |*
 *|  |                                                                 |  |*
 *|  |  3. AUTO-SAVE (for documents)                                |  |*
 *|  |     Every N minutes during editing                           |  |*
@@ -1225,12 +1225,12 @@ SECTION 12: INTERVIEW QUICK REFERENCE
 *|                                                                         |*
 *|  ARCHITECTURE SUMMARY                                                  |*
 *|                                                                         |*
-*|  Client -> LB -> API Gateway -> Services -> Storage                      |*
+*|  Client > LB > API Gateway > Services > Storage                      |*
 *|                                                                         |*
 *|  Services:                                                             |*
-*|  * Metadata Service -> PostgreSQL (files, folders, sharing)          |*
-*|  * Block Service -> S3/GCS (actual file blocks)                      |*
-*|  * Sync Service -> WebSocket + Message Queue                         |*
+*|  * Metadata Service > PostgreSQL (files, folders, sharing)          |*
+*|  * Block Service > S3/GCS (actual file blocks)                      |*
+*|  * Sync Service > WebSocket + Message Queue                         |*
 *|                                                                         |*
 *|  Key Numbers:                                                          |*
 *|  * Block size: 4 MB                                                  |*
@@ -1247,8 +1247,8 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: User's computer infected -> all files encrypted      |  |*
-*|  |           -> Synced to cloud -> All versions destroyed          |  |*
+*|  |  Problem: User's computer infected > all files encrypted      |  |*
+*|  |           > Synced to cloud > All versions destroyed          |  |*
 *|  |                                                                 |  |*
 *|  |  Solutions:                                                    |  |*
 *|  |                                                                 |  |*
@@ -1259,7 +1259,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |                                                                 |  |*
 *|  |  2. ANOMALY DETECTION                                         |  |*
 *|  |     * Detect mass file modifications (1000+ files/minute)   |  |*
-*|  |     * Detect file extension changes (.docx -> .encrypted)    |  |*
+*|  |     * Detect file extension changes (.docx > .encrypted)    |  |*
 *|  |     * Detect entropy increase (encrypted = high entropy)    |  |*
 *|  |     * Auto-pause sync, alert user                           |  |*
 *|  |                                                                 |  |*
@@ -1350,7 +1350,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: User uploads malware -> shares with team -> infects  |  |*
+*|  |  Problem: User uploads malware > shares with team > infects  |  |*
 *|  |                                                                 |  |*
 *|  |  Solution:                                                     |  |*
 *|  |                                                                 |  |*
@@ -1364,9 +1364,9 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  |    v                                                      ||  |*
 *|  |  |  Malware Scanner (ClamAV, VirusTotal API)                ||  |*
 *|  |  |    |                                                      ||  |*
-*|  |  |    +-- Clean -> Move to permanent storage                 ||  |*
+*|  |  |    +-- Clean > Move to permanent storage                 ||  |*
 *|  |  |    |                                                      ||  |*
-*|  |  |    +-- Infected -> Block, notify user, quarantine        ||  |*
+*|  |  |    +-- Infected > Block, notify user, quarantine        ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -1396,9 +1396,9 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |     * Resume from last successful chunk on failure           |  |*
 *|  |                                                                 |  |*
 *|  |  2. S3 MULTIPART UPLOAD                                       |  |*
-*|  |     * Initiate multipart upload -> get upload_id              |  |*
+*|  |     * Initiate multipart upload > get upload_id              |  |*
 *|  |     * Upload parts (can be parallel, out of order)           |  |*
-*|  |     * Complete multipart -> S3 assembles the file             |  |*
+*|  |     * Complete multipart > S3 assembles the file             |  |*
 *|  |     * Abort if not completed in 24 hours                     |  |*
 *|  |                                                                 |  |*
 *|  |  3. STREAMING UPLOAD                                          |  |*
@@ -1419,7 +1419,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: Shared link goes viral -> bandwidth costs explode   |  |*
+*|  |  Problem: Shared link goes viral > bandwidth costs explode   |  |*
 *|  |           Or: Pirated content shared via your platform       |  |*
 *|  |                                                                 |  |*
 *|  |  Solutions:                                                    |  |*
@@ -1441,7 +1441,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  4. DMCA/COPYRIGHT HANDLING                                   |  |*
 *|  |     * Content ID matching for video/audio                    |  |*
 *|  |     * Takedown request workflow                              |  |*
-*|  |     * Repeat infringer policy -> account termination         |  |*
+*|  |     * Repeat infringer policy > account termination         |  |*
 *|  |                                                                 |  |*
 *|  |  5. ANALYTICS & MONITORING                                    |  |*
 *|  |     * Track downloads per link                               |  |*
@@ -1531,7 +1531,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |                                                                 |  |*
 *|  |  On upload:                                                    |  |*
 *|  |  1. Check if used_bytes + new_file_size <= quota_bytes       |  |*
-*|  |  2. If over -> reject with "Upgrade your plan"               |  |*
+*|  |  2. If over > reject with "Upgrade your plan"               |  |*
 *|  |  3. Atomic increment: UPDATE user_quotas SET used_bytes +=   |  |*
 *|  |                                                                 |  |*
 *|  |  On delete:                                                    |  |*

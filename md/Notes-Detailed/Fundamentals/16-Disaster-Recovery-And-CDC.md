@@ -117,11 +117,11 @@
 |  |                                                                 |  |
 |  |  Primary Region              DR Region                         |  |
 |  |  +---------------+          +---------------+                 |  |
-|  |  | App Servers   |          |    (OFF)      |  <- Start on    |  |
+|  |  | App Servers   |          |    (OFF)      |  < Start on    |  |
 |  |  | (running)     |          |               |    demand      |  |
 |  |  +---------------+          +---------------+                 |  |
 |  |  +---------------+          +---------------+                 |  |
-|  |  |   Database    |--sync--->|   Database    |  <- Always      |  |
+|  |  |   Database    |--sync--->|   Database    |  < Always      |  |
 |  |  |   (primary)   |          |   (standby)   |    synced      |  |
 |  |  +---------------+          +---------------+                 |  |
 |  |                                                                 |  |
@@ -148,11 +148,11 @@
 |  |                                                                 |  |
 |  |  Primary Region              DR Region                         |  |
 |  |  +---------------+          +---------------+                 |  |
-|  |  | 10 App        |          | 2 App         |  <- Running     |  |
+|  |  | 10 App        |          | 2 App         |  < Running     |  |
 |  |  | Servers       |          | Servers       |    (scaled down)|  |
 |  |  +---------------+          +---------------+                 |  |
 |  |  +---------------+          +---------------+                 |  |
-|  |  |   Database    |--sync--->|   Database    |  <- Synced      |  |
+|  |  |   Database    |--sync--->|   Database    |  < Synced      |  |
 |  |  |   (primary)   |          |   (replica)   |                 |  |
 |  |  +---------------+          +---------------+                 |  |
 |  |                                                                 |  |
@@ -434,7 +434,7 @@
 |  ================                                                       |
 |                                                                         |
 |  * AWS DMS: Managed database migration with CDC                       |
-|  * Maxwell: MySQL binlog -> Kafka (simpler than Debezium)             |
+|  * Maxwell: MySQL binlog > Kafka (simpler than Debezium)             |
 |  * GoldenGate: Oracle's enterprise CDC solution                       |
 |  * Airbyte: Data integration with CDC connectors                      |
 |  * Fivetran: Managed ELT with CDC                                     |
@@ -581,7 +581,7 @@
 |  RPO = Max acceptable data loss                                       |
 |                                                                         |
 |  Strategies (cost ^, RTO/RPO v):                                      |
-|  Backup -> Pilot Light -> Warm Standby -> Hot/Active-Active             |
+|  Backup > Pilot Light > Warm Standby > Hot/Active-Active             |
 |                                                                         |
 |  CDC (Change Data Capture)                                             |
 |  =========================                                              |

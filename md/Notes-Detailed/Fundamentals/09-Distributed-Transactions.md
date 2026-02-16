@@ -19,7 +19,7 @@ transactions across distributed systems.
 |    UPDATE accounts SET balance = balance + 100 WHERE id = 2;          |
 |  COMMIT;                                                               |
 |                                                                         |
-|  -> Either both happen or neither. ACID guarantees it.                |
+|  > Either both happen or neither. ACID guarantees it.                |
 |                                                                         |
 |  DISTRIBUTED SYSTEM:                                                   |
 |  --------------------                                                   |
@@ -30,7 +30,7 @@ transactions across distributed systems.
 |  |       |                    |                      |             |  |
 |  |       v                    v                      v             |  |
 |  |  Create Order         Charge Card            Reserve Stock      |  |
-|  |       [x]                    [x]                      [ ]             |  |
+|  |       Y                    Y                      X             |  |
 |  |                                              (Out of stock!)    |  |
 |  |                                                                 |  |
 |  |  PROBLEM: Order created, card charged, but no stock!           |  |
@@ -94,7 +94,7 @@ transactions across distributed systems.
 |  |    +----+----+                      +----+----+                |  |
 |  |    v    v    v                      v    v    v                |  |
 |  |   A    B    C                      A    B    C                 |  |
-|  |   [x]    [x]    [x]                      ↩    ↩    ↩                |  |
+|  |   Y    Y    Y                      ↩    ↩    ↩                |  |
 |  |                                  (rollback)                    |  |
 |  |                                                                 |  |
 |  +-----------------------------------------------------------------+  |
@@ -215,15 +215,15 @@ transactions across distributed systems.
 |  +-----------------------------------------------------------------+  |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Loosely coupled                                                   |
-|  [x] Simple for small sagas                                            |
-|  [x] No single point of failure                                        |
+|  Y Loosely coupled                                                   |
+|  Y Simple for small sagas                                            |
+|  Y No single point of failure                                        |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Hard to understand (follow the events)                           |
-|  [ ] Cyclic dependencies possible                                      |
-|  [ ] Testing is complex                                                |
-|  [ ] Hard to add new steps                                             |
+|  X Hard to understand (follow the events)                           |
+|  X Cyclic dependencies possible                                      |
+|  X Testing is complex                                                |
+|  X Hard to add new steps                                             |
 |                                                                         |
 |  ==================================================================== |
 |                                                                         |
@@ -262,15 +262,15 @@ transactions across distributed systems.
 |      +--------------+-----------------------+--> CANCELLED           |
 |                                                                         |
 |  PROS:                                                                 |
-|  [x] Easy to understand (centralized logic)                           |
-|  [x] Easy to add/modify steps                                         |
-|  [x] Avoids cyclic dependencies                                       |
-|  [x] Easier testing (test orchestrator)                               |
+|  Y Easy to understand (centralized logic)                           |
+|  Y Easy to add/modify steps                                         |
+|  Y Avoids cyclic dependencies                                       |
+|  Y Easier testing (test orchestrator)                               |
 |                                                                         |
 |  CONS:                                                                 |
-|  [ ] Orchestrator can be bottleneck                                   |
-|  [ ] More infrastructure (saga service)                               |
-|  [ ] Services coupled to orchestrator                                 |
+|  X Orchestrator can be bottleneck                                   |
+|  X More infrastructure (saga service)                               |
+|  X Services coupled to orchestrator                                 |
 |                                                                         |
 |  RECOMMENDATION: Use orchestration for complex sagas                 |
 |                                                                         |
@@ -288,10 +288,10 @@ transactions across distributed systems.
 |  -------------------------------------                                  |
 |  May be called multiple times (retries)                               |
 |                                                                         |
-|  [ ] def release_inventory(order_id):                                  |
+|  X def release_inventory(order_id):                                  |
 |        inventory += order.quantity  # May add twice!                 |
 |                                                                         |
-|  [x] def release_inventory(order_id):                                  |
+|  Y def release_inventory(order_id):                                  |
 |        if reservation_exists(order_id):                              |
 |            inventory += order.quantity                               |
 |            delete_reservation(order_id)                              |
@@ -302,7 +302,7 @@ transactions across distributed systems.
 |  --------------------------------------------------                     |
 |  Set a flag to indicate "in progress"                                |
 |                                                                         |
-|  Order states: PENDING -> APPROVED -> SHIPPED                          |
+|  Order states: PENDING > APPROVED > SHIPPED                          |
 |                                                                         |
 |  Other services check: "Is order APPROVED?"                          |
 |  If still PENDING, saga in progress, wait or reject                  |
@@ -390,7 +390,7 @@ transactions across distributed systems.
 |  |      ('OrderCreated', '{...}');                                |  |
 |  |  COMMIT;                                                        |  |
 |  |                                                                 |  |
-|  |  -> Both writes succeed or both fail. ACID!                    |  |
+|  |  > Both writes succeed or both fail. ACID!                    |  |
 |  |                                                                 |  |
 |  |  ------------------------------------------------------------  |  |
 |  |                                                                 |  |
@@ -490,13 +490,13 @@ transactions across distributed systems.
 |  |                                                                 |  |
 |  |  All TRY succeeded?                                            |  |
 |  |                                                                 |  |
-|  |  YES -> CONFIRM Phase:                                          |  |
+|  |  YES > CONFIRM Phase:                                          |  |
 |  |  +--------------+--------------+--------------+               |  |
 |  |  | Flight       | Hotel        | Car Rental   |               |  |
 |  |  | Book seat    | Book room    | Book car     |               |  |
 |  |  +--------------+--------------+--------------+               |  |
 |  |                                                                 |  |
-|  |  NO -> CANCEL Phase:                                            |  |
+|  |  NO > CANCEL Phase:                                            |  |
 |  |  +--------------+--------------+--------------+               |  |
 |  |  | Flight       | Hotel        | Car Rental   |               |  |
 |  |  | Release seat | Release room | Release car  |               |  |
@@ -556,10 +556,10 @@ transactions across distributed systems.
 |                                                                         |
 |  DECISION GUIDE                                                        |
 |                                                                         |
-|  Need strong consistency? -> 2PC (if within datacenter)              |
-|  Long-running process? -> SAGA                                        |
-|  Database + message queue? -> Outbox pattern                         |
-|  Resource reservation? -> TCC                                         |
+|  Need strong consistency? > 2PC (if within datacenter)              |
+|  Long-running process? > SAGA                                        |
+|  Database + message queue? > Outbox pattern                         |
+|  Resource reservation? > TCC                                         |
 |                                                                         |
 |  INTERVIEW TIP                                                         |
 |  -------------                                                         |

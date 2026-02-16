@@ -31,12 +31,12 @@ SECTION 3.1: COMMON INTERVIEW QUESTIONS
 *|  3. Deep Dive Algorithm (10 min)                                      |*
 *|     * Explain sliding window counter                                 |*
 *|     * Show Redis implementation                                       |*
-*|     * Discuss race conditions -> atomic operations                    |*
+*|     * Discuss race conditions > atomic operations                    |*
 *|                                                                         |*
 *|  4. Handle Edge Cases (5 min)                                         |*
-*|     * Redis down -> fail open with local cache                        |*
-*|     * Race conditions -> Lua scripts                                  |*
-*|     * Multiple rules -> check all, deny if any exceeded              |*
+*|     * Redis down > fail open with local cache                        |*
+*|     * Race conditions > Lua scripts                                  |*
+*|     * Multiple rules > check all, deny if any exceeded              |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -103,7 +103,7 @@ SECTION 3.1: COMMON INTERVIEW QUESTIONS
 *|                                                                         |*
 *|   3. Fallback to local rate limiting (recommended)                  |*
 *|      Divide limit by number of servers                               |*
-*|      If 100 req/min and 10 servers -> 10 req/min per server         |*
+*|      If 100 req/min and 10 servers > 10 req/min per server         |*
 *|      Not perfect but degraded functionality"                         |*
 *|                                                                         |*
 *|  ==================================================================== |*
@@ -437,21 +437,21 @@ SECTION 3.4: MONITORING AND OBSERVABILITY
 *|  |  ALERT: High Rate Limit Denials                               |  |*
 *|  |  IF rate(ratelimit_denied_total[5m]) > 100                   |  |*
 *|  |  FOR 5 minutes                                                 |  |*
-*|  |  -> Possible attack or need to adjust limits                   |  |*
+*|  |  > Possible attack or need to adjust limits                   |  |*
 *|  |                                                                 |  |*
 *|  |  ALERT: Rate Limiter Latency High                             |  |*
 *|  |  IF histogram_quantile(0.99, ratelimit_check_duration) > 10ms|  |*
 *|  |  FOR 5 minutes                                                 |  |*
-*|  |  -> Redis performance issue                                     |  |*
+*|  |  > Redis performance issue                                     |  |*
 *|  |                                                                 |  |*
 *|  |  ALERT: Redis Connection Failures                             |  |*
 *|  |  IF rate(redis_connection_errors_total[1m]) > 0              |  |*
 *|  |  FOR 1 minute                                                  |  |*
-*|  |  -> Redis connectivity issue                                    |  |*
+*|  |  > Redis connectivity issue                                    |  |*
 *|  |                                                                 |  |*
 *|  |  ALERT: User Approaching Limit                                |  |*
 *|  |  IF ratelimit_current_usage / ratelimit_limit > 0.8          |  |*
-*|  |  -> Notify user to upgrade or slow down                        |  |*
+*|  |  > Notify user to upgrade or slow down                        |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -512,9 +512,9 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|  |  * Database - Too slow                                        |  |*
 *|  |                                                                 |  |*
 *|  |  DISTRIBUTED CHALLENGES:                                       |  |*
-*|  |  * Race conditions -> Atomic ops (INCR, Lua scripts)          |  |*
-*|  |  * Redis down -> Fail open with local fallback               |  |*
-*|  |  * Latency -> Pipeline commands, local cache                  |  |*
+*|  |  * Race conditions > Atomic ops (INCR, Lua scripts)          |  |*
+*|  |  * Redis down > Fail open with local fallback               |  |*
+*|  |  * Latency > Pipeline commands, local cache                  |  |*
 *|  |                                                                 |  |*
 *|  +-----------------------------------------------------------------+  |*
 *|                                                                         |*
@@ -525,8 +525,8 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|  Fixed Window:    ratelimit:{user}:{window_number}                   |*
 *|  Sliding Window:  ratelimit:{user}:{curr_window}                     |*
 *|                   ratelimit:{user}:{prev_window}                     |*
-*|  Token Bucket:    ratelimit:{user} -> {tokens, last_refill}          |*
-*|  Sliding Log:     ratelimit:{user} -> sorted set of timestamps       |*
+*|  Token Bucket:    ratelimit:{user} > {tokens, last_refill}          |*
+*|  Sliding Log:     ratelimit:{user} > sorted set of timestamps       |*
 *|                                                                         |*
 *|  ==================================================================== |*
 *|                                                                         |*
@@ -543,7 +543,7 @@ SECTION 3.5: QUICK REFERENCE CHEAT SHEET
 *|                                                                         |*
 *|  ☐ Clarify: What to limit? What rate? Distributed?                  |*
 *|  ☐ Choose algorithm (default: Sliding Window Counter)               |*
-*|  ☐ Design: Client -> Gateway -> Rate Limiter -> Service               |*
+*|  ☐ Design: Client > Gateway > Rate Limiter > Service               |*
 *|  ☐ Storage: Redis (centralized counters)                            |*
 *|  ☐ Handle race conditions (atomic ops)                              |*
 *|  ☐ Handle Redis failure (fail open + local fallback)               |*
@@ -593,15 +593,15 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Problem: Popular API key (e.g., Twitter API) generates       |  |*
-*|  |           millions of requests -> single Redis key hammered    |  |*
+*|  |           millions of requests > single Redis key hammered    |  |*
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
-*|  |  |  API Key "twitter_official" -> 100,000 req/sec            ||  |*
+*|  |  |  API Key "twitter_official" > 100,000 req/sec            ||  |*
 *|  |  |       |                                                   ||  |*
 *|  |  |       v                                                   ||  |*
 *|  |  |  Redis Key: ratelimit:twitter_official                   ||  |*
-*|  |  |  This single key gets 100K INCR/sec -> Hot key!           ||  |*
+*|  |  |  This single key gets 100K INCR/sec > Hot key!           ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |                                                                 |  |*
@@ -632,8 +632,8 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|                                                                         |*
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
-*|  |  Problem: Rate limit window resets -> all blocked requests    |  |*
-*|  |           retry at exactly same moment -> spike                |  |*
+*|  |  Problem: Rate limit window resets > all blocked requests    |  |*
+*|  |           retry at exactly same moment > spike                |  |*
 *|  |                                                                 |  |*
 *|  |  +-----------------------------------------------------------+|  |*
 *|  |  |                                                           ||  |*
@@ -642,7 +642,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |  |      [100 req]    |                                        ||  |*
 *|  |  |  [BLOCKED] [BLOCKED] [BLOCKED]                            ||  |*
 *|  |  |                   |                                        ||  |*
-*|  |  |                   | <- All retries hit here!               ||  |*
+*|  |  |                   | < All retries hit here!               ||  |*
 *|  |  |                   |   [SPIKE of 500 requests]             ||  |*
 *|  |  |                                                           ||  |*
 *|  |  +-----------------------------------------------------------+|  |*
@@ -655,7 +655,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  |     * Spreads retries over 10 second window                 |  |*
 *|  |                                                                 |  |*
 *|  |  2. SLIDING WINDOW (Built-in solution)                       |  |*
-*|  |     * No hard reset point -> gradual limit recovery          |  |*
+*|  |     * No hard reset point > gradual limit recovery          |  |*
 *|  |     * Requests naturally spread                              |  |*
 *|  |                                                                 |  |*
 *|  |  3. EXPONENTIAL BACKOFF ON CLIENT                            |  |*
@@ -672,7 +672,7 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Rate limiting is NOT enough for DDoS:                        |  |*
-*|  |  * Attacker uses millions of IPs -> each under limit          |  |*
+*|  |  * Attacker uses millions of IPs > each under limit          |  |*
 *|  |  * Total traffic still overwhelms system                     |  |*
 *|  |                                                                 |  |*
 *|  |  Additional Layers:                                            |  |*
@@ -742,9 +742,9 @@ ADVANCED TOPICS & REAL-WORLD PROBLEMS
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Problem: Not all requests are equal                          |  |*
-*|  |  * GET /users/123 -> Cheap (cache hit)                        |  |*
-*|  |  * POST /search -> Expensive (full-text search)               |  |*
-*|  |  * POST /export -> Very expensive (generate large report)     |  |*
+*|  |  * GET /users/123 > Cheap (cache hit)                        |  |*
+*|  |  * POST /search > Expensive (full-text search)               |  |*
+*|  |  * POST /export > Very expensive (generate large report)     |  |*
 *|  |                                                                 |  |*
 *|  |  Solution: Cost-based limiting                                |  |*
 *|  |                                                                 |  |*

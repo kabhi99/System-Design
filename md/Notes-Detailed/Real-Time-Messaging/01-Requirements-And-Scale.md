@@ -52,7 +52,7 @@ SECTION 2: FUNCTIONAL REQUIREMENTS
 *|  1. ONE-TO-ONE MESSAGING                                               |*
 *|     * Send text messages                                              |*
 *|     * Send media (images, videos, audio, documents)                  |*
-*|     * Message status: Sent -> Delivered -> Read                        |*
+*|     * Message status: Sent > Delivered > Read                        |*
 *|     * Typing indicator                                                |*
 *|                                                                         |*
 *|  2. GROUP MESSAGING                                                    |*

@@ -75,7 +75,7 @@ Docker networking is built entirely on top of Linux kernel features.
 |  |       +------------+------------+                               |   |
 |  |                    |                                             |   |
 |  |              +-----+-----+                                       |   |
-|  |              |   eth0    |  <- All processes share same network  |   |
+|  |              |   eth0    |  < All processes share same network  |   |
 |  |              +-----------+                                       |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -98,7 +98,7 @@ Docker networking is built entirely on top of Linux kernel features.
 |  |  +----------------------+-----------------------+              |   |
 |  |                         |                                       |   |
 |  |                    +----+----+                                  |   |
-|  |                    |  eth0   |  <- Host's physical interface    |   |
+|  |                    |  eth0   |  < Host's physical interface    |   |
 |  |                    +---------+                                  |   |
 |  +-----------------------------------------------------------------+   |
 |                                                                         |
@@ -199,12 +199,12 @@ sudo ip netns exec red ping 192.168.1.2
 |       +------------+-----+------+------------+------------+            |
 |                          |                                             |
 |                +---------+---------+                                   |
-|                |   LINUX BRIDGE    | <- Acts like a switch              |
+|                |   LINUX BRIDGE    | < Acts like a switch              |
 |                |     (docker0)     |                                   |
 |                +---------+---------+                                   |
 |                          |                                             |
 |                     +----+----+                                        |
-|                     |  eth0   | <- To outside world                     |
+|                     |  eth0   | < To outside world                     |
 |                     +---------+                                        |
 |                                                                         |
 |  This is EXACTLY how Docker's default bridge network works!            |
@@ -329,7 +329,7 @@ sudo ip netns exec red ping 192.168.1.2
 |                                                                         |
 |  External client wants to reach container's web server.                |
 |  Problem: Client can't reach 172.17.0.2 directly                       |
-|  Solution: Forward host:8080 -> container:80                            |
+|  Solution: Forward host:8080 > container:80                            |
 |                                                                         |
 |  +--------------+         +--------------+         +--------------+   |
 |  |   Client     |         |     HOST     |         |  Container   |   |
@@ -574,7 +574,7 @@ docker run -d --name app --network app-net \
   my-app
 
 # Communication flow:
-#   app -> DNS lookup "postgres" -> 172.18.0.2 -> postgres container
+#   app > DNS lookup "postgres" > 172.18.0.2 > postgres container
 ```
 
 SCENARIO 2: Different Networks (Isolated)
@@ -906,10 +906,10 @@ docker run -d --name web --network my-macvlan \
 |  |   +-------------------------------------------------------+     |   |
 |  |   |              Docker DNS Server (127.0.0.11)           |     |   |
 |  |   |                                                       |     |   |
-|  |   |   "db" -> 172.18.0.3                                   |     |   |
-|  |   |   "web" -> 172.18.0.2                                  |     |   |
+|  |   |   "db" > 172.18.0.3                                   |     |   |
+|  |   |   "web" > 172.18.0.2                                  |     |   |
 |  |   |                                                       |     |   |
-|  |   |   Unknown queries -> Forward to host's DNS            |     |   |
+|  |   |   Unknown queries > Forward to host's DNS            |     |   |
 |  |   +-------------------------------------------------------+     |   |
 |  |                                                                  |   |
 |  +------------------------------------------------------------------+   |
@@ -1239,7 +1239,7 @@ iptables -t nat -L -n | grep 8080
 | docker network prune              | Remove unused networks         |
 +-----------------------------------+--------------------------------+
 | docker run --network <net>        | Run container on network       |
-| docker run -p 8080:80             | Map port 8080->80              |
+| docker run -p 8080:80             | Map port 8080>80              |
 | docker run --network host         | Use host network               |
 | docker run --network none         | No networking                  |
 | docker run --ip 10.0.0.5          | Assign specific IP             |

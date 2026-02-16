@@ -195,7 +195,7 @@ SECTION 4: HIGH-LEVEL ARCHITECTURE
 *|      +-- 3. Generate unique short code                                |*
 *|      |                                                                 |*
 *|      +-- 4. Store mapping in database                                 |*
-*|      |      short_code -> long_url                                    |*
+*|      |      short_code > long_url                                    |*
 *|      |                                                                 |*
 *|      +-- 5. Return short URL                                          |*
 *|            { "short_url": "https://bit.ly/xY7kLm" }                  |*
@@ -254,8 +254,8 @@ SECTION 5: THE CORE PROBLEM - GENERATING UNIQUE SHORT CODES
 *|  +-----------------------------------------------------------------+  |*
 *|  |                                                                 |  |*
 *|  |  Option A: Append counter until unique                         |  |*
-*|  |  hash(url) -> collision? -> hash(url + "1") -> collision?       |  |*
-*|  |            -> hash(url + "2") -> ... until no collision         |  |*
+*|  |  hash(url) > collision? > hash(url + "1") > collision?       |  |*
+*|  |            > hash(url + "2") > ... until no collision         |  |*
 *|  |                                                                 |  |*
 *|  |  Option B: Use longer hash portion                             |  |*
 *|  |  Start with 7 chars, if collision, try 8, 9, etc.             |  |*
@@ -291,8 +291,8 @@ SECTION 5: THE CORE PROBLEM - GENERATING UNIQUE SHORT CODES
 *|  * Convert ID to base62 string                                       |*
 *|                                                                         |*
 *|  Example:                                                              |*
-*|  ID = 12345 -> Base62 = "3d7"                                        |*
-*|  ID = 999999999 -> Base62 = "15ftgG"                                 |*
+*|  ID = 12345 > Base62 = "3d7"                                        |*
+*|  ID = 999999999 > Base62 = "15ftgG"                                 |*
 *|                                                                         |*
 *|  Base62 encoding:                                                      |*
 *|  Characters: 0-9 (10) + a-z (26) + A-Z (26) = 62 characters         |*
@@ -536,7 +536,7 @@ SECTION 7: CACHING STRATEGY
 *|  1. What if URL is updated/deleted?                                  |*
 *|     * Write-through: Update cache when DB updates                   |*
 *|     * TTL: Cache expires after X hours (slight staleness OK)       |*
-*|     * For URL shortener, URLs rarely change -> TTL is fine          |*
+*|     * For URL shortener, URLs rarely change > TTL is fine          |*
 *|                                                                         |*
 *|  2. Cache warming                                                      |*
 *|     * Pre-load popular URLs on startup                              |*
@@ -778,7 +778,7 @@ SECTION 12: INTERVIEW QUICK REFERENCE
 *|  1. SCALE                                                              |*
 *|     * 100M URLs/month, 10B over 10 years                             |*
 *|     * 7-character codes (62^7 = 3.5 trillion combinations)          |*
-*|     * Read-heavy (100:1 ratio) -> caching critical                   |*
+*|     * Read-heavy (100:1 ratio) > caching critical                   |*
 *|                                                                         |*
 *|  2. SHORT CODE GENERATION (Most important!)                           |*
 *|     * Counter-based with key ranges (distributed, no collision)     |*
@@ -786,7 +786,7 @@ SECTION 12: INTERVIEW QUICK REFERENCE
 *|     * Base62 encoding for compactness                               |*
 *|                                                                         |*
 *|  3. ARCHITECTURE                                                       |*
-*|     * Load Balancer -> App Servers -> Cache -> Database                |*
+*|     * Load Balancer > App Servers > Cache > Database                |*
 *|     * Redis cache for hot URLs                                       |*
 *|     * PostgreSQL or Cassandra for storage                           |*
 *|                                                                         |*
@@ -855,7 +855,7 @@ ARCHITECTURE DIAGRAM SUMMARY
 *|     |      CACHE        |       |     DATABASE      |                |*
 *|     |     (Redis)       |       |   (PostgreSQL/    |                |*
 *|     |                   |       |    Cassandra)     |                |*
-*|     |  short -> long     |       |   URL mappings    |                |*
+*|     |  short > long     |       |   URL mappings    |                |*
 *|     |  (hot URLs)       |       |   (permanent)     |                |*
 *|     +-------------------+       +-------------------+                |*
 *|                                                                         |*
@@ -875,8 +875,8 @@ ARCHITECTURE DIAGRAM SUMMARY
 *|                    |   ANALYTICS       |                              |*
 *|                    |   (Async)         |                              |*
 *|                    |                   |                              |*
-*|                    |   Kafka -> Workers |                              |*
-*|                    |   -> Data Lake     |                              |*
+*|                    |   Kafka > Workers |                              |*
+*|                    |   > Data Lake     |                              |*
 *|                    +-------------------+                              |*
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
