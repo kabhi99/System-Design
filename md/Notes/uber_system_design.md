@@ -2109,7 +2109,7 @@ This creates a recursive spatial partitioning where nearby points often
 
 ```
 +---------+---------------------------------------------------------+
-|  9q8yx  |  9q8yy                                                |
+|  9q8yx  |  9q8yy                                                  |
 |    *    |   *     |  * and * are 100m apart but in DIFFERENT cells!
 +---------+---------------------------------------------------------+
 ```
