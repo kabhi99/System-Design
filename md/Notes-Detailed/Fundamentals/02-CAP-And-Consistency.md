@@ -587,92 +587,292 @@ How distributed systems agree on values:
 
 ## SECTION 2.7: CLOCKS AND TIME IN DISTRIBUTED SYSTEMS
 
-Time is surprisingly hard in distributed systems:
+Time is surprisingly hard in distributed systems. Understanding why
+is critical for designing correct systems.
+
+### WHY DO WE NEED CLOCKS?
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  THE CLOCK PROBLEM                                                      |
+|  THE FUNDAMENTAL QUESTION: "WHICH EVENT HAPPENED FIRST?"                |
 |                                                                         |
-|  PHYSICAL CLOCKS:                                                       |
-|  * Every computer's clock drifts differently                            |
-|  * Network time sync (NTP) has milliseconds of error                    |
-|  * Can't reliably order events across machines                          |
+|  In a single-server system, ordering is easy:                           |
+|  * One CPU, one clock, events have natural order                        |
+|  * Request A arrives at 10:00:00.100, B at 10:00:00.200                 |
+|  * A happened before B. Done.                                           |
 |                                                                         |
-|  SCENARIO:                                                              |
-|  Machine A: Clock says 10:00:00.000                                     |
-|  Machine B: Clock says 10:00:00.050 (50ms ahead)                        |
+|  In a distributed system, it's a nightmare:                             |
+|  * Server A is in New York, Server B is in Tokyo                        |
+|  * Each has its own clock, and they're NEVER perfectly in sync          |
+|  * A user writes data on Server A, another writes on Server B           |
+|  * Which write happened first? We genuinely don't know.                 |
 |                                                                         |
-|  Event on A at "10:00:00.100"                                           |
-|  Event on B at "10:00:00.075" (appears earlier but happened later!)     |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  ====================================================================   |
+|  WHY ORDERING MATTERS -- REAL EXAMPLES:                                 |
 |                                                                         |
-|  LAMPORT TIMESTAMPS (LOGICAL CLOCKS)                                    |
-|  ===================================                                    |
+|  1. DATABASE REPLICATION                                                |
+|     Server A: SET balance = 500   (at "10:00:00.100")                   |
+|     Server B: SET balance = 300   (at "10:00:00.095")                   |
+|     Which is the "latest" value? If clocks are wrong, you pick          |
+|     the OLDER write and lose the newer one. Money disappears.           |
 |                                                                         |
-|  RULES:                                                                 |
-|  1. Before each event, increment counter                                |
-|  2. When sending message, include counter                               |
-|  3. When receiving, set counter = max(local, received) + 1              |
+|  2. DISTRIBUTED LOCKS                                                   |
+|     Process A acquires lock at "10:00:00"                               |
+|     Lock expires at "10:00:30" (30 second TTL)                          |
+|     But Server's clock is 5 seconds ahead...                            |
+|     Lock expires 5 seconds EARLY. Another process grabs it.             |
+|     Now TWO processes think they hold the lock.                         |
 |                                                                         |
-|  EXAMPLE:                                                               |
+|  3. EVENT ORDERING                                                      |
+|     User cancels order at "10:00:01" on Server A                        |
+|     Payment processes at "10:00:02" on Server B                         |
+|     But Server B's clock is 5 seconds behind...                         |
+|     Payment appears to happen BEFORE cancellation.                      |
+|     User gets charged for a cancelled order.                            |
 |                                                                         |
-|  Process A          Process B          Process C                        |
-|     |                   |                   |                           |
-|     1 (event)          |                    |                           |
-|     |----- msg(1) ---->2                    |                           |
-|     |                   |----- msg(2) ----> 3                           |
-|     |                   |                   |                           |
-|     |                   |                   4 (event)                   |
-|     |<----------------- msg(4) -----------  |                           |
-|     5                   |                   |                           |
-|                                                                         |
-|  PROPERTY: If A happened-before B, then timestamp(A) < timestamp(B)     |
-|  (But not vice versa - can't determine causality from timestamps)       |
-|                                                                         |
-|  --------------------------------------------------------------------   |
-|                                                                         |
-|  VECTOR CLOCKS                                                          |
-|  =============                                                          |
-|                                                                         |
-|  Track causality between events.                                        |
-|                                                                         |
-|  Each process maintains a vector of counters:                           |
-|  [count_A, count_B, count_C, ...]                                       |
-|                                                                         |
-|  RULES:                                                                 |
-|  1. On local event: increment own counter                               |
-|  2. On send: include current vector                                     |
-|  3. On receive: take element-wise max, then increment own               |
-|                                                                         |
-|  COMPARING VECTORS:                                                     |
-|  V1 < V2 if all(V1[i] <= V2[i]) and some V1[i] < V2[i]                  |
-|  V1 || V2 (concurrent) if neither V1 < V2 nor V2 < V1                   |
-|                                                                         |
-|  EXAMPLE:                                                               |
-|  A: [2,0,0]  B: [0,1,0]                                                 |
-|  Neither is greater > concurrent events (potential conflict!)           |
-|                                                                         |
-|  Used by: DynamoDB (version vectors), Riak                              |
-|                                                                         |
-|  --------------------------------------------------------------------   |
-|                                                                         |
-|  GOOGLE'S TRUETIME (Spanner)                                            |
-|  ============================                                           |
-|                                                                         |
-|  Uses atomic clocks + GPS to bound clock uncertainty                    |
-|                                                                         |
-|  API: TrueTime.now() returns [earliest, latest] interval                |
-|  Uncertainty: typically 1-7 milliseconds                                |
-|                                                                         |
-|  COMMIT WAIT: After commit, wait until uncertainty passes               |
-|  If uncertainty is 7ms, wait 7ms before confirming commit               |
-|                                                                         |
-|  Result: Globally consistent reads without consensus!                   |
-|  Trade-off: Latency (must wait for uncertainty to pass)                 |
+|  BOTTOM LINE: Wrong time = wrong ordering = data corruption,            |
+|  lost money, broken locks, and inconsistent state.                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
+```
+
+### THE PROBLEM WITH PHYSICAL CLOCKS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PHYSICAL CLOCK = The wall clock on each computer                       |
+|                                                                         |
+|  WHY PHYSICAL CLOCKS CAN'T BE TRUSTED:                                  |
+|                                                                         |
+|  1. CLOCK DRIFT                                                         |
+|     Every computer's crystal oscillator runs at slightly                |
+|     different speed. A typical server drifts ~10-20 ms/day.             |
+|     After a week without sync: 70-140 ms off.                           |
+|                                                                         |
+|  2. NTP SYNC IS IMPERFECT                                               |
+|     NTP (Network Time Protocol) syncs clocks over the network.          |
+|     But network latency varies: sync accuracy is 1-50 ms.               |
+|     Under load, NTP can be even worse.                                  |
+|                                                                         |
+|  3. CLOCK CAN JUMP                                                      |
+|     NTP correction can move clock BACKWARD or FORWARD.                  |
+|     A "later" event can get an earlier timestamp.                       |
+|     Leap seconds can cause clocks to repeat a second.                   |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  EXAMPLE -- WHY THIS BREAKS THINGS:                                     |
+|                                                                         |
+|  Machine A clock: 10:00:00.000 (accurate)                               |
+|  Machine B clock: 10:00:00.050 (50ms AHEAD of real time)                |
+|                                                                         |
+|  Real order of events:                                                  |
+|    1st: User writes X=1 on Machine A  (A's clock: 10:00:00.100)         |
+|    2nd: User writes X=2 on Machine B  (B's clock: 10:00:00.120)         |
+|                                                                         |
+|  Correct latest value: X=2 (happened second)                            |
+|                                                                         |
+|  But B's clock is 50ms ahead, so B's timestamp is 10:00:00.120          |
+|  while A's timestamp is 10:00:00.100.                                   |
+|  If we use "last write wins" by timestamp: X=2 wins. Correct!           |
+|                                                                         |
+|  NOW FLIP IT -- Machine B is 50ms BEHIND:                               |
+|  A's timestamp: 10:00:00.100                                            |
+|  B's timestamp: 10:00:00.070 (even though B happened LATER!)            |
+|  "Last write wins": X=1 wins. WRONG! We lost the latest write.          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### SOLUTION 1: LAMPORT TIMESTAMPS (LOGICAL CLOCKS)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KEY IDEA: Don't use wall-clock time at all.                            |
+|  Instead, use a COUNTER that tracks "what happened before what."        |
+|                                                                         |
+|  RULES (very simple):                                                   |
+|  1. Every process has a counter, starting at 0                          |
+|  2. Before doing anything, increment your counter                       |
+|  3. When sending a message, attach your counter value                   |
+|  4. When receiving a message:                                           |
+|     counter = max(my_counter, received_counter) + 1                     |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  EXAMPLE (step by step):                                                |
+|                                                                         |
+|  Process A         Process B         Process C                          |
+|  counter=0         counter=0         counter=0                          |
+|     |                  |                 |                              |
+|     | A does work                        |                              |
+|     | counter: 0->1                      |                              |
+|     |                  |                 |                              |
+|     |--- msg(1) ------>|                 |                              |
+|     |                  | B receives 1                                   |
+|     |                  | max(0,1)+1 = 2                                 |
+|     |                  |                 |                              |
+|     |                  |--- msg(2) ----->|                              |
+|     |                  |                 | C receives 2                 |
+|     |                  |                 | max(0,2)+1 = 3               |
+|     |                  |                 |                              |
+|     |                  |                 | C does work                  |
+|     |                  |                 | counter: 3->4                |
+|     |                  |                 |                              |
+|     |<------------ msg(4) --------------|                               |
+|     | A receives 4                       |                              |
+|     | max(1,4)+1 = 5                     |                              |
+|     |                  |                 |                              |
+|                                                                         |
+|  Now we know:                                                           |
+|  * A's first event (1) happened before B's event (2)                    |
+|  * B's event (2) happened before C's event (3)                          |
+|  * C's event (4) happened before A's event (5)                          |
+|                                                                         |
+|  GUARANTEE: If event X caused event Y, then timestamp(X) < timestamp(Y) |
+|                                                                         |
+|  LIMITATION: If timestamp(X) < timestamp(Y), we CANNOT say X caused Y.  |
+|  Two independent events might just have different counters by chance.   |
+|  Lamport clocks give you ORDERING, not CAUSALITY.                       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### SOLUTION 2: VECTOR CLOCKS (DETECT CONFLICTS)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KEY IDEA: Each process tracks not just its own counter, but            |
+|  EVERYONE's counter. This lets you detect concurrent events.            |
+|                                                                         |
+|  Each process maintains a vector: [my_count, your_count, their_count]   |
+|                                                                         |
+|  RULES:                                                                 |
+|  1. On local event: increment YOUR OWN position in the vector           |
+|  2. On send: attach your entire vector                                  |
+|  3. On receive: take max of each position, then increment yours         |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  EXAMPLE:                                                               |
+|                                                                         |
+|  Alice writes "X=1":      Alice's vector = [1, 0, 0]                    |
+|  Bob writes "X=2":        Bob's vector   = [0, 1, 0]                    |
+|                                                                         |
+|  COMPARE: [1,0,0] vs [0,1,0]                                            |
+|  Alice has higher count for Alice (1>0)                                 |
+|  Bob has higher count for Bob (1>0)                                     |
+|  NEITHER is fully greater than the other                                |
+|  --> CONCURRENT! These writes happened independently.                   |
+|  --> This is a CONFLICT that needs resolution.                          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  NOW CONSIDER:                                                          |
+|                                                                         |
+|  Alice writes "X=1":      vector = [1, 0, 0]                            |
+|  Alice sends to Bob.                                                    |
+|  Bob sees [1,0,0], does max, writes "X=2":                              |
+|                            Bob's vector = [1, 1, 0]                     |
+|                                                                         |
+|  COMPARE: [1,0,0] vs [1,1,0]                                            |
+|  Every element in Alice's vector <= Bob's vector                        |
+|  --> Alice's write HAPPENED BEFORE Bob's write                          |
+|  --> No conflict. Bob's value is the latest.                            |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SUMMARY:                                                               |
+|                                                                         |
+|  V1 < V2  (all elements <=, at least one <) -> V1 happened before V2    |
+|  V1 = V2  (all elements equal)              -> Same event               |
+|  Neither V1 < V2 nor V2 < V1               -> CONCURRENT (conflict!)    |
+|                                                                         |
+|  Used by: Amazon DynamoDB, Riak, Voldemort                              |
+|  On conflict: return both values, let application decide                |
+|  (e.g., merge shopping carts, pick latest profile update)               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### SOLUTION 3: GOOGLE'S TRUETIME (HARDWARE APPROACH)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Google said: "If we can't fix software clocks, let's fix hardware."    |
+|                                                                         |
+|  TRUETIME = Atomic clocks + GPS receivers in every data center          |
+|                                                                         |
+|  Regular NTP:  "The time is 10:00:00.000"  (could be 50ms wrong)        |
+|  TrueTime API: "The time is between 10:00:00.000 and 10:00:00.007"      |
+|                                                                         |
+|  Instead of a single (unreliable) timestamp, TrueTime gives you         |
+|  an INTERVAL: [earliest_possible, latest_possible]                      |
+|  Uncertainty is typically only 1-7 milliseconds.                        |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  HOW GOOGLE SPANNER USES IT:                                            |
+|                                                                         |
+|  COMMIT WAIT:                                                           |
+|  1. Transaction commits at TrueTime = [10:00:00.000, 10:00:00.005]      |
+|  2. Spanner WAITS until 10:00:00.005 passes (5ms wait)                  |
+|  3. Only then confirms the commit                                       |
+|                                                                         |
+|  WHY? After waiting, we GUARANTEE that the commit timestamp is          |
+|  in the past for ALL servers. So any future read on any server          |
+|  will see this committed data correctly ordered.                        |
+|                                                                         |
+|  Result: Globally consistent reads across continents!                   |
+|  Trade-off: Every commit pays a few ms latency penalty.                 |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  WHY ONLY GOOGLE CAN DO THIS:                                           |
+|  * Atomic clocks cost $50,000+ each                                     |
+|  * GPS receivers in every data center                                   |
+|  * Custom hardware in every server rack                                 |
+|  * Most companies use logical clocks instead                            |
+|                                                                         |
+|  ALTERNATIVES FOR THE REST OF US:                                       |
+|  * CockroachDB: Hybrid Logical Clocks (HLC)                             |
+|    Combines physical time + logical counter                             |
+|    Less accurate than TrueTime but no special hardware needed           |
+|  * YugabyteDB: Similar HLC approach                                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### WHICH CLOCK TO USE? (DECISION GUIDE)
+
+```
++----------------------------------------------------------------------------+
+|                                                                            |
+|  +--------------------+---------------------+---------------------------+  |
+|  | Approach           | Use When            | Examples                  |  |
+|  +--------------------+---------------------+---------------------------+  |
+|  | Physical clock     | Rough ordering OK,  | Logging, metrics,         |  |
+|  | (NTP)              | not critical         | cache TTL                |  |
+|  +--------------------+---------------------+---------------------------+  |
+|  | Lamport timestamp  | Need total ordering  | Event logs, message      |  |
+|  |                    | across processes      | ordering in queues      |  |
+|  +--------------------+---------------------+---------------------------+  |
+|  | Vector clock       | Need to detect       | Shopping cart merge,     |  |
+|  |                    | conflicts (concurrent | collaborative editing,  |  |
+|  |                    | writes)               | multi-master DB         |  |
+|  +--------------------+---------------------+---------------------------+  |
+|  | TrueTime / HLC     | Need globally        | Google Spanner,          |  |
+|  |                    | consistent ordering   | CockroachDB,            |  |
+|  |                    | with real time         | financial systems      |  |
+|  +--------------------+---------------------+---------------------------+  |
+|                                                                            |
++----------------------------------------------------------------------------+
 ```
 
 ## SECTION 2.8: CONFLICT RESOLUTION STRATEGIES
