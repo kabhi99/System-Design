@@ -8,48 +8,43 @@
 |                                                                         |
 |  END-TO-END CARD PAYMENT FLOW                                           |
 |                                                                         |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  Customer    Merchant    Payment     Token    Card      Issuing   |  |
-|  |  Browser     Server     Gateway     Vault    Network    Bank      |  |
-|  |     |          |           |          |         |            |    |  |
-|  |     |--1. Enter card-->|   |          |         |            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |--2. Card data---------------->|          |             |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |<-3. Token--------------------|          |              |    |  |
-|  |     |   (tok_xxx)      |   |          |         |            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |--4. Pay-->|      |   |          |         |            |    |  |
-|  |     |  (token)  |      |   |          |         |            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |--5. Create Payment-->|        |             |    |  |
-|  |     |          |  {token, amount}  |   |        |            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |--6. Decrypt token-->|  |            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |<-7. Card PAN-|        |             |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |--8. Authorization Request------>    |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |   |          |    9. Check funds,        |  |
-|  |     |          |       |   |          |       fraud rules         |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |<-10. Auth Response (approved/declined)   |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |<-11. Payment result--|        |             |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |<-12. Redirect to success/fail   |        |             |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |     |          |       |--13. Webhook (async)-->|            |    |  |
-|  |     |          |       |   |          |         |            |    |  |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  Customer   Merchant   Payment    Token     Card      Issuing           |
+|  Browser    Server     Gateway    Vault     Network   Bank              |
+|     |          |          |          |         |         |              |
+|     |--1.Card->|          |          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |--2.Card data------->|          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |<-3.Token (tok_xxx)--|          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |--4.Pay-->|          |          |         |         |              |
+|     | (token)  |          |          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |          |--5.Pay-->|          |         |         |              |
+|     |          |{tok,amt} |          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |          |          |--6.Detok>|         |         |              |
+|     |          |          |          |         |         |              |
+|     |          |          |<-7.PAN---|         |         |              |
+|     |          |          |          |         |         |              |
+|     |          |          |--8.Auth Request--->|         |              |
+|     |          |          |          |         |         |              |
+|     |          |          |          |         |--9.Check funds,        |
+|     |          |          |          |         |    fraud rules         |
+|     |          |          |          |         |         |              |
+|     |          |          |<--10.Auth Response (ok/decline)             |
+|     |          |          |          |         |         |              |
+|     |          |<-11.Result|         |         |         |              |
+|     |          |          |          |         |         |              |
+|     |<-12.Redirect--------|          |         |         |              |
+|     |          |          |          |         |         |              |
+|     |          |--13.Webhook(async)----------->|         |              |
+|     |          |          |          |         |         |              |
 |                                                                         |
 |  TIMELINE:                                                              |
-|  Steps 1-4: ~500ms (client-side, depends on user)                       |
+|  Steps 1-4:  ~500ms (client-side, depends on user)                      |
 |  Steps 5-11: ~1-2s (payment processing)                                 |
-|  Step 13: Async (within minutes)                                        |
+|  Step 13:    Async (within minutes)                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
