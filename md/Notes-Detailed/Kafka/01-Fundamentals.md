@@ -16,7 +16,7 @@ the backbone of real-time data pipelines at thousands of companies.
 |  lets you publish, subscribe to, store, and process streams of          |
 |  records (events) in real time.                                         |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  KEY TRAITS:                                                            |
 |  * Distributed   -- runs as a cluster across many servers               |
@@ -48,14 +48,14 @@ the backbone of real-time data pipelines at thousands of companies.
 |    N services = N x N integrations.                                     |
 |    Adding one new system meant touching every producer.                 |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  AFTER KAFKA:                                                           |
 |                                                                         |
 |    Service A --+                        +--> Database                   |
-|    Service B --+--> [ KAFKA CLUSTER ] --+--> Hadoop                    |
+|    Service B --+--> [ KAFKA CLUSTER ] --+--> Hadoop                     |
 |    Service C --+                        +--> Monitoring                 |
-|    Service D --+                        +--> Search Index              |
+|    Service D --+                        +--> Search Index               |
 |                                                                         |
 |    Single integration point for all services.                           |
 |    Producers and consumers are fully decoupled.                         |
@@ -78,7 +78,7 @@ the backbone of real-time data pipelines at thousands of companies.
 |  Examples:                                                              |
 |  * "user-signups"     -- every new user registration                    |
 |  * "order-events"     -- order created, paid, shipped, delivered        |
-|  * "page-views"       -- every web page view for analytics             |
+|  * "page-views"       -- every web page view for analytics              |
 |  * "inventory-updates"-- stock level changes                            |
 |                                                                         |
 |  Properties:                                                            |
@@ -94,73 +94,73 @@ the backbone of real-time data pipelines at thousands of companies.
 ### PARTITIONS
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
 |  PARTITION = An ordered, immutable sequence of messages                  |
-|                                                                         |
-|  Topic "order-events" with 3 partitions:                                |
-|                                                                         |
-|  Partition 0:  [msg0] [msg1] [msg2] [msg3] [msg4] [msg5] -->           |
-|  Partition 1:  [msg0] [msg1] [msg2] [msg3] -->                         |
-|  Partition 2:  [msg0] [msg1] [msg2] [msg3] [msg4] -->                  |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  WHY PARTITIONS?                                                        |
-|                                                                         |
-|  1. PARALLELISM                                                         |
+|                                                                          |
+|  Topic "order-events" with 3 partitions:                                 |
+|                                                                          |
+|  Partition 0:  [msg0] [msg1] [msg2] [msg3] [msg4] [msg5] -->             |
+|  Partition 1:  [msg0] [msg1] [msg2] [msg3] -->                           |
+|  Partition 2:  [msg0] [msg1] [msg2] [msg3] [msg4] -->                    |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  WHY PARTITIONS?                                                         |
+|                                                                          |
+|  1. PARALLELISM                                                          |
 |     Each partition can be consumed by a different consumer               |
-|     3 partitions = up to 3 consumers reading in parallel                |
-|                                                                         |
-|  2. SCALABILITY                                                         |
+|     3 partitions = up to 3 consumers reading in parallel                 |
+|                                                                          |
+|  2. SCALABILITY                                                          |
 |     Partitions can live on different brokers (servers)                   |
-|     More partitions = more throughput                                   |
-|                                                                         |
-|  3. ORDERING                                                            |
+|     More partitions = more throughput                                    |
+|                                                                          |
+|  3. ORDERING                                                             |
 |     Messages within a partition are strictly ordered                     |
-|     Messages ACROSS partitions have NO ordering guarantee               |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  HOW MESSAGES ARE ASSIGNED TO PARTITIONS:                               |
-|                                                                         |
-|  * No key   -> Round-robin across partitions                            |
-|  * With key -> hash(key) % num_partitions                               |
-|                                                                         |
-|  Example: key = "user-123"                                              |
-|  hash("user-123") % 3 = 1  --> always goes to Partition 1              |
-|  All events for user-123 are ordered in the same partition              |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|     Messages ACROSS partitions have NO ordering guarantee                |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  HOW MESSAGES ARE ASSIGNED TO PARTITIONS:                                |
+|                                                                          |
+|  * No key   -> Round-robin across partitions                             |
+|  * With key -> hash(key) % num_partitions                                |
+|                                                                          |
+|  Example: key = "user-123"                                               |
+|  hash("user-123") % 3 = 1  --> always goes to Partition 1                |
+|  All events for user-123 are ordered in the same partition               |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### OFFSETS
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  OFFSET = A unique ID for each message within a partition               |
-|                                                                         |
-|  Partition 0:                                                           |
-|  +-----+-----+-----+-----+-----+-----+-----+-----+                    |
-|  | 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7   |  --> new writes    |
-|  +-----+-----+-----+-----+-----+-----+-----+-----+                    |
-|    ^                         ^              ^                           |
-|    |                         |              |                           |
-|  oldest                  consumer        latest                        |
-|  message                 position        message                       |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  KEY PROPERTIES:                                                        |
-|  * Offsets are auto-incrementing integers (0, 1, 2, 3...)               |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  OFFSET = A unique ID for each message within a partition                |
+|                                                                          |
+|  Partition 0:                                                            |
+|  +-----+-----+-----+-----+-----+-----+-----+-----+                       |
+|  | 0   | 1   | 2   | 3   | 4   | 5   | 6   | 7   |  --> new writes       |
+|  +-----+-----+-----+-----+-----+-----+-----+-----+                       |
+|    ^                         ^              ^                            |
+|    |                         |              |                            |
+|  oldest                  consumer        latest                          |
+|  message                 position        message                         |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  KEY PROPERTIES:                                                         |
+|  * Offsets are auto-incrementing integers (0, 1, 2, 3...)                |
 |  * Offsets are unique WITHIN a partition (not across partitions)         |
-|  * Consumers track their own offset (where they've read up to)          |
+|  * Consumers track their own offset (where they've read up to)           |
 |  * Kafka stores consumer offsets in __consumer_offsets topic             |
-|  * Consumers can RESET their offset to re-read old data                 |
+|  * Consumers can RESET their offset to re-read old data                  |
 |  * Offsets are never reused even after messages expire                   |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### BROKERS
@@ -207,17 +207,17 @@ the backbone of real-time data pipelines at thousands of companies.
 |       |  send("order-events", key="order-42", value={...})              |
 |       |                                                                 |
 |       v                                                                 |
-|  +----+-----+-----+-----+                                              |
-|  | Partition 0 | Part 1 | Part 2 |   Topic: order-events               |
+|  +----+-----+-----+-----+                                               |
+|  | Partition 0 | Part 1 | Part 2 |   Topic: order-events                |
 |  +-------------+---------+--------+                                     |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  PRODUCER DECIDES:                                                      |
 |  * Which topic to write to                                              |
 |  * Optionally which partition (via key or custom partitioner)           |
-|  * Acknowledgment level (acks=0, acks=1, acks=all)                     |
-|  * Compression (none, gzip, snappy, lz4, zstd)                         |
+|  * Acknowledgment level (acks=0, acks=1, acks=all)                      |
+|  * Compression (none, gzip, snappy, lz4, zstd)                          |
 |  * Batching behavior (batch.size, linger.ms)                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -226,32 +226,32 @@ the backbone of real-time data pipelines at thousands of companies.
 ### CONSUMERS
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  CONSUMER = An application that reads data from Kafka topics            |
-|                                                                         |
-|  +----------+                                                           |
-|  | Consumer | <-- poll() loop                                           |
-|  +----+-----+                                                           |
-|       |                                                                 |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  CONSUMER = An application that reads data from Kafka topics             |
+|                                                                          |
+|  +----------+                                                            |
+|  | Consumer | <-- poll() loop                                            |
+|  +----+-----+                                                            |
+|       |                                                                  |
 |       |  Reads from partition, tracks its own offset                     |
-|       |                                                                 |
-|  Partition 0:                                                           |
-|  [0] [1] [2] [3] [4] [5] [6] [7]                                       |
-|                    ^                                                    |
-|                    |                                                    |
-|               consumer offset = 4                                       |
-|               (has read 0-3, will read 4 next)                          |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  KEY BEHAVIOR:                                                          |
-|  * Consumer PULLS data (Kafka does not push)                            |
-|  * Consumer controls the pace of reading                                |
-|  * Consumer can re-read data by resetting its offset                    |
-|  * Multiple consumers can read the same topic independently             |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|       |                                                                  |
+|  Partition 0:                                                            |
+|  [0] [1] [2] [3] [4] [5] [6] [7]                                         |
+|                    ^                                                     |
+|                    |                                                     |
+|               consumer offset = 4                                        |
+|               (has read 0-3, will read 4 next)                           |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  KEY BEHAVIOR:                                                           |
+|  * Consumer PULLS data (Kafka does not push)                             |
+|  * Consumer controls the pace of reading                                 |
+|  * Consumer can re-read data by resetting its offset                     |
+|  * Multiple consumers can read the same topic independently              |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### CONSUMER GROUPS
@@ -272,7 +272,7 @@ the backbone of real-time data pipelines at thousands of companies.
 |                                                                         |
 |  Consumer D is IDLE (more consumers than partitions)                    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  RULES:                                                                 |
 |  * 1 partition can be assigned to only 1 consumer in a group            |
@@ -280,7 +280,7 @@ the backbone of real-time data pipelines at thousands of companies.
 |  * If consumers > partitions, extra consumers sit idle                  |
 |  * If a consumer dies, its partitions are reassigned (rebalance)        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  MULTIPLE GROUPS CAN READ THE SAME TOPIC:                               |
 |                                                                         |
@@ -339,7 +339,7 @@ the backbone of real-time data pipelines at thousands of companies.
 |  Y Durable audit log / compliance requirement                           |
 |  Y Decoupling microservices at scale                                    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  DO NOT USE KAFKA WHEN:                                                 |
 |                                                                         |
@@ -360,24 +360,24 @@ the backbone of real-time data pipelines at thousands of companies.
 |                                                                         |
 |  KAFKA ECOSYSTEM                                                        |
 |                                                                         |
-|  +---------------------------------------------------------------+     |
+|  +---------------------------------------------------------------+      |
 |  |                        KAFKA CORE                              |     |
 |  |  Brokers / Topics / Partitions / Replication / Log Storage     |     |
-|  +---------------------------------------------------------------+     |
+|  +---------------------------------------------------------------+      |
 |       |             |              |              |                     |
 |       v             v              v              v                     |
-|  +---------+  +-----------+  +-----------+  +------------+             |
-|  | Kafka   |  | Kafka     |  | Schema    |  | Kafka      |             |
-|  | Streams |  | Connect   |  | Registry  |  | REST Proxy |             |
-|  |         |  |           |  |           |  |            |             |
-|  | Stream  |  | Source:   |  | Avro /    |  | HTTP API   |             |
-|  | process |  |  DB, File |  | Protobuf  |  | for non-   |             |
-|  | library |  | Sink:     |  | JSON      |  | JVM apps   |             |
-|  |         |  |  DB, S3,  |  | schema    |  |            |             |
-|  |         |  |  Elastic  |  | evolution |  |            |             |
-|  +---------+  +-----------+  +-----------+  +------------+             |
+|  +---------+  +-----------+  +-----------+  +------------+              |
+|  | Kafka   |  | Kafka     |  | Schema    |  | Kafka      |              |
+|  | Streams |  | Connect   |  | Registry  |  | REST Proxy |              |
+|  |         |  |           |  |           |  |            |              |
+|  | Stream  |  | Source:   |  | Avro /    |  | HTTP API   |              |
+|  | process |  |  DB, File |  | Protobuf  |  | for non-   |              |
+|  | library |  | Sink:     |  | JSON      |  | JVM apps   |              |
+|  |         |  |  DB, S3,  |  | schema    |  |            |              |
+|  |         |  |  Elastic  |  | evolution |  |            |              |
+|  +---------+  +-----------+  +-----------+  +------------+              |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  MANAGED KAFKA OPTIONS:                                                 |
 |  * Confluent Cloud     -- fully managed, from Kafka creators            |
@@ -393,91 +393,91 @@ the backbone of real-time data pipelines at thousands of companies.
 
 ```bash
 # Download and start Kafka (using KRaft mode, no ZooKeeper)
-# Download from https://kafka.apache.org/downloads
+# Download from https://kafka.apache.org/downloads         
 
-# Generate a cluster ID
-KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"
+# Generate a cluster ID                                    
+KAFKA_CLUSTER_ID="$(bin/kafka-storage.sh random-uuid)"     
 
-# Format the storage
-bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID \
-    -c config/kraft/server.properties
+# Format the storage                                       
+bin/kafka-storage.sh format -t $KAFKA_CLUSTER_ID \         
+    -c config/kraft/server.properties                      
 
-# Start the broker
-bin/kafka-server-start.sh config/kraft/server.properties
+# Start the broker                                         
+bin/kafka-server-start.sh config/kraft/server.properties   
 ```
 
 ```bash
-# Create a topic
-bin/kafka-topics.sh --create \
-    --topic my-first-topic \
-    --bootstrap-server localhost:9092 \
-    --partitions 3 \
-    --replication-factor 1
+# Create a topic                                            
+bin/kafka-topics.sh --create \                              
+    --topic my-first-topic \                                
+    --bootstrap-server localhost:9092 \                     
+    --partitions 3 \                                        
+    --replication-factor 1                                  
 
-# List topics
+# List topics                                               
 bin/kafka-topics.sh --list --bootstrap-server localhost:9092
 
-# Describe a topic
-bin/kafka-topics.sh --describe \
-    --topic my-first-topic \
-    --bootstrap-server localhost:9092
+# Describe a topic                                          
+bin/kafka-topics.sh --describe \                            
+    --topic my-first-topic \                                
+    --bootstrap-server localhost:9092                       
 ```
 
 ```bash
-# Produce messages (interactive)
-bin/kafka-console-producer.sh \
-    --topic my-first-topic \
+# Produce messages (interactive)     
+bin/kafka-console-producer.sh \      
+    --topic my-first-topic \         
     --bootstrap-server localhost:9092
-> Hello Kafka!
-> This is my second message
-> ^C
+> Hello Kafka!                       
+> This is my second message          
+> ^C                                 
 
-# Consume messages (from beginning)
-bin/kafka-console-consumer.sh \
-    --topic my-first-topic \
-    --from-beginning \
+# Consume messages (from beginning)  
+bin/kafka-console-consumer.sh \      
+    --topic my-first-topic \         
+    --from-beginning \               
     --bootstrap-server localhost:9092
 ```
 
 ```java
-// Java Producer Example
-Properties props = new Properties();
-props.put("bootstrap.servers", "localhost:9092");
-props.put("key.serializer",
-    "org.apache.kafka.common.serialization.StringSerializer");
-props.put("value.serializer",
-    "org.apache.kafka.common.serialization.StringSerializer");
+// Java Producer Example                                       
+Properties props = new Properties();                           
+props.put("bootstrap.servers", "localhost:9092");              
+props.put("key.serializer",                                    
+    "org.apache.kafka.common.serialization.StringSerializer"); 
+props.put("value.serializer",                                  
+    "org.apache.kafka.common.serialization.StringSerializer"); 
 
 Producer<String, String> producer = new KafkaProducer<>(props);
 
-producer.send(new ProducerRecord<>(
-    "order-events",        // topic
-    "order-123",           // key
-    "{\"status\":\"created\"}" // value
-));
+producer.send(new ProducerRecord<>(                            
+    "order-events",        // topic                            
+    "order-123",           // key                              
+    "{\"status\":\"created\"}" // value                        
+));                                                            
 
-producer.close();
+producer.close();                                              
 ```
 
 ```java
-// Java Consumer Example
-Properties props = new Properties();
-props.put("bootstrap.servers", "localhost:9092");
-props.put("group.id", "order-service");
-props.put("key.deserializer",
+// Java Consumer Example                                        
+Properties props = new Properties();                            
+props.put("bootstrap.servers", "localhost:9092");               
+props.put("group.id", "order-service");                         
+props.put("key.deserializer",                                   
     "org.apache.kafka.common.serialization.StringDeserializer");
-props.put("value.deserializer",
+props.put("value.deserializer",                                 
     "org.apache.kafka.common.serialization.StringDeserializer");
 
-Consumer<String, String> consumer = new KafkaConsumer<>(props);
-consumer.subscribe(Arrays.asList("order-events"));
+Consumer<String, String> consumer = new KafkaConsumer<>(props); 
+consumer.subscribe(Arrays.asList("order-events"));              
 
-while (true) {
-    ConsumerRecords<String, String> records =
-        consumer.poll(Duration.ofMillis(100));
-    for (ConsumerRecord<String, String> record : records) {
-        System.out.printf("offset=%d, key=%s, value=%s%n",
-            record.offset(), record.key(), record.value());
-    }
-}
+while (true) {                                                  
+    ConsumerRecords<String, String> records =                   
+        consumer.poll(Duration.ofMillis(100));                  
+    for (ConsumerRecord<String, String> record : records) {     
+        System.out.printf("offset=%d, key=%s, value=%s%n",      
+            record.offset(), record.key(), record.value());     
+    }                                                           
+}                                                               
 ```

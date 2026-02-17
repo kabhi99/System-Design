@@ -18,7 +18,7 @@ from fundamentals to advanced topics, with detailed answers.
 |  * Decouple producers from consumers (microservices)                    |
 |  * Handle massive throughput (millions of events/sec)                   |
 |  * Event replay (reprocess historical data)                             |
-|  * Real-time stream processing                                         |
+|  * Real-time stream processing                                          |
 |  * Durable audit log / event sourcing                                   |
 |                                                                         |
 |  KEY DIFFERENCE FROM TRADITIONAL QUEUES:                                |
@@ -33,102 +33,102 @@ from fundamentals to advanced topics, with detailed answers.
 ### Q2: Explain Topics, Partitions, and Offsets.
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  TOPIC: A named stream of records (like a database table).              |
-|         Example: "user-events", "order-created"                         |
-|                                                                         |
-|  PARTITION: A topic is split into partitions for parallelism.           |
-|         Each partition is an ordered, immutable log.                    |
-|         Partitions live on different brokers for scalability.           |
-|                                                                         |
-|  OFFSET: A unique sequential ID for each message in a partition.        |
-|         Consumers track offsets to know where they left off.            |
-|         Offsets are per-partition, not per-topic.                       |
-|                                                                         |
-|  EXAMPLE:                                                               |
-|  Topic "orders" with 3 partitions:                                      |
-|    P0: [offset0, offset1, offset2, ...]                                 |
-|    P1: [offset0, offset1, ...]                                          |
-|    P2: [offset0, offset1, offset2, offset3, ...]                        |
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  TOPIC: A named stream of records (like a database table).               |
+|         Example: "user-events", "order-created"                          |
+|                                                                          |
+|  PARTITION: A topic is split into partitions for parallelism.            |
+|         Each partition is an ordered, immutable log.                     |
+|         Partitions live on different brokers for scalability.            |
+|                                                                          |
+|  OFFSET: A unique sequential ID for each message in a partition.         |
+|         Consumers track offsets to know where they left off.             |
+|         Offsets are per-partition, not per-topic.                        |
+|                                                                          |
+|  EXAMPLE:                                                                |
+|  Topic "orders" with 3 partitions:                                       |
+|    P0: [offset0, offset1, offset2, ...]                                  |
+|    P1: [offset0, offset1, ...]                                           |
+|    P2: [offset0, offset1, offset2, offset3, ...]                         |
+|                                                                          |
 |  Each partition can be on a different broker and consumed                |
-|  by a different consumer in the same group.                             |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  by a different consumer in the same group.                              |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q3: What is a Consumer Group?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  A set of consumers that cooperate to consume a topic.                  |
-|                                                                         |
-|  RULES:                                                                 |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  A set of consumers that cooperate to consume a topic.                   |
+|                                                                          |
+|  RULES:                                                                  |
 |  * Each partition is assigned to exactly ONE consumer in the group       |
-|  * One consumer can read from multiple partitions                       |
-|  * If consumers > partitions, extras sit idle                           |
-|  * If a consumer dies, its partitions are rebalanced to others          |
-|                                                                         |
-|  MULTIPLE GROUPS:                                                       |
-|  * Different groups read the SAME data independently                    |
+|  * One consumer can read from multiple partitions                        |
+|  * If consumers > partitions, extras sit idle                            |
+|  * If a consumer dies, its partitions are rebalanced to others           |
+|                                                                          |
+|  MULTIPLE GROUPS:                                                        |
+|  * Different groups read the SAME data independently                     |
 |  * Group "payments" and group "analytics" both get all messages          |
-|  * This is how Kafka does pub-sub AND load balancing                    |
-|                                                                         |
-|  INTERVIEW TIP: "Consumer groups give you pub-sub (between groups)      |
-|  and competing consumers (within a group) at the same time."            |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  * This is how Kafka does pub-sub AND load balancing                     |
+|                                                                          |
+|  INTERVIEW TIP: "Consumer groups give you pub-sub (between groups)       |
+|  and competing consumers (within a group) at the same time."             |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q4: How does Kafka guarantee message ordering?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
 |  Kafka guarantees ordering WITHIN A PARTITION, not across partitions.    |
-|                                                                         |
-|  To ensure ordering for related messages:                               |
-|  * Use the same MESSAGE KEY for related events                          |
-|  * Same key = same partition = same order                               |
-|                                                                         |
-|  Example: All events for order-123 use key="order-123"                  |
-|  They all go to the same partition and are ordered.                     |
-|                                                                         |
-|  GOTCHA: If you add partitions, key-to-partition mapping changes!       |
+|                                                                          |
+|  To ensure ordering for related messages:                                |
+|  * Use the same MESSAGE KEY for related events                           |
+|  * Same key = same partition = same order                                |
+|                                                                          |
+|  Example: All events for order-123 use key="order-123"                   |
+|  They all go to the same partition and are ordered.                      |
+|                                                                          |
+|  GOTCHA: If you add partitions, key-to-partition mapping changes!        |
 |  Existing keys may go to different partitions. Plan partition count      |
-|  carefully upfront.                                                     |
-|                                                                         |
-|  GLOBAL ORDERING: Use a topic with 1 partition.                         |
-|  But this kills parallelism. Avoid unless absolutely necessary.         |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  carefully upfront.                                                      |
+|                                                                          |
+|  GLOBAL ORDERING: Use a topic with 1 partition.                          |
+|  But this kills parallelism. Avoid unless absolutely necessary.          |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q5: What are acks=0, acks=1, and acks=all?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  acks=0: Producer does not wait for broker confirmation.                |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  acks=0: Producer does not wait for broker confirmation.                 |
 |          Fastest. Risk of data loss (broker may not have received it).   |
-|          Use: metrics, logs where some loss is OK.                      |
-|                                                                         |
-|  acks=1: Producer waits for LEADER to write to its local log.           |
-|          Good balance. Risk: leader dies before replicating.            |
-|          Use: most applications (default).                              |
-|                                                                         |
-|  acks=all: Producer waits for ALL in-sync replicas to confirm.          |
-|          Safest. Slowest. No data loss if >= 1 ISR alive.               |
-|          Use: financial data, critical events.                          |
-|          MUST pair with min.insync.replicas >= 2.                       |
-|                                                                         |
-|  INTERVIEW TIP: "acks=all alone is not enough. Without                  |
-|  min.insync.replicas=2, if ISR shrinks to just the leader,              |
-|  acks=all becomes equivalent to acks=1."                                |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|          Use: metrics, logs where some loss is OK.                       |
+|                                                                          |
+|  acks=1: Producer waits for LEADER to write to its local log.            |
+|          Good balance. Risk: leader dies before replicating.             |
+|          Use: most applications (default).                               |
+|                                                                          |
+|  acks=all: Producer waits for ALL in-sync replicas to confirm.           |
+|          Safest. Slowest. No data loss if >= 1 ISR alive.                |
+|          Use: financial data, critical events.                           |
+|          MUST pair with min.insync.replicas >= 2.                        |
+|                                                                          |
+|  INTERVIEW TIP: "acks=all alone is not enough. Without                   |
+|  min.insync.replicas=2, if ISR shrinks to just the leader,               |
+|  acks=all becomes equivalent to acks=1."                                 |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q6: How does Kafka achieve high throughput?
@@ -153,7 +153,7 @@ from fundamentals to advanced topics, with detailed answers.
 |     Consumer fetches many messages in one poll().                       |
 |                                                                         |
 |  5. COMPRESSION                                                         |
-|     Batches are compressed (lz4/zstd), reducing network I/O.           |
+|     Batches are compressed (lz4/zstd), reducing network I/O.            |
 |     Stored compressed on disk too.                                      |
 |                                                                         |
 |  6. PARTITIONING                                                        |
@@ -234,7 +234,7 @@ from fundamentals to advanced topics, with detailed answers.
 |                                                                         |
 |  MINIMIZE REBALANCES:                                                   |
 |  * Use static group membership (group.instance.id)                      |
-|  * Increase session.timeout.ms (e.g., 30s)                             |
+|  * Increase session.timeout.ms (e.g., 30s)                              |
 |  * Process messages faster (don't exceed max.poll.interval.ms)          |
 |  * Use cooperative sticky assignor                                      |
 |                                                                         |
@@ -244,92 +244,92 @@ from fundamentals to advanced topics, with detailed answers.
 ### Q10: What is log compaction and when would you use it?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  Log compaction keeps the LATEST value for each key and discards        |
-|  older values. Unlike time-based retention, compaction is key-based.    |
-|                                                                         |
-|  Before: [K1=A] [K2=B] [K1=C] [K3=D] [K2=E] [K1=F]                    |
-|  After:  [K3=D] [K2=E] [K1=F]                                          |
-|                                                                         |
-|  USE CASES:                                                             |
-|  * Database changelog (CDC) -- latest state of each row                 |
-|  * User profile updates -- latest profile per user                      |
-|  * Configuration distribution -- latest config per service              |
-|  * Kafka Streams state store changelogs                                 |
-|                                                                         |
-|  TOMBSTONE: A message with key + null value.                            |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Log compaction keeps the LATEST value for each key and discards         |
+|  older values. Unlike time-based retention, compaction is key-based.     |
+|                                                                          |
+|  Before: [K1=A] [K2=B] [K1=C] [K3=D] [K2=E] [K1=F]                       |
+|  After:  [K3=D] [K2=E] [K1=F]                                            |
+|                                                                          |
+|  USE CASES:                                                              |
+|  * Database changelog (CDC) -- latest state of each row                  |
+|  * User profile updates -- latest profile per user                       |
+|  * Configuration distribution -- latest config per service               |
+|  * Kafka Streams state store changelogs                                  |
+|                                                                          |
+|  TOMBSTONE: A message with key + null value.                             |
 |  Tells compaction to DELETE this key entirely after a grace period.      |
-|                                                                         |
-|  CONFIG: cleanup.policy=compact                                         |
-|  Can combine: cleanup.policy=compact,delete                             |
-|  (compact + delete segments older than retention.ms)                    |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  CONFIG: cleanup.policy=compact                                          |
+|  Can combine: cleanup.policy=compact,delete                              |
+|  (compact + delete segments older than retention.ms)                     |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q11: How would you handle exactly-once processing?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  Three approaches:                                                      |
-|                                                                         |
-|  1. IDEMPOTENT PRODUCER (simplest)                                      |
-|     enable.idempotence=true                                             |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Three approaches:                                                       |
+|                                                                          |
+|  1. IDEMPOTENT PRODUCER (simplest)                                       |
+|     enable.idempotence=true                                              |
 |     Prevents duplicates on producer retries within a partition.          |
-|     Does NOT cover consumer side.                                       |
-|                                                                         |
-|  2. KAFKA TRANSACTIONS (strongest)                                      |
-|     Atomic read-process-write across topics.                            |
-|     Consumer reads with isolation.level=read_committed.                 |
-|     Covers both producer and consumer side.                             |
-|     Cost: ~20% throughput overhead.                                     |
-|                                                                         |
-|  3. IDEMPOTENT CONSUMER (pragmatic, most common)                        |
-|     Use at-least-once delivery + make processing idempotent.            |
-|     Store a dedup key (message ID) in your database.                    |
-|     On duplicate, skip processing.                                      |
-|                                                                         |
-|  INTERVIEW TIP: "In practice, most teams use at-least-once             |
-|  delivery with idempotent consumers. Kafka transactions exist           |
-|  but add complexity and are mainly used in Kafka-to-Kafka               |
-|  stream processing pipelines."                                          |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|     Does NOT cover consumer side.                                        |
+|                                                                          |
+|  2. KAFKA TRANSACTIONS (strongest)                                       |
+|     Atomic read-process-write across topics.                             |
+|     Consumer reads with isolation.level=read_committed.                  |
+|     Covers both producer and consumer side.                              |
+|     Cost: ~20% throughput overhead.                                      |
+|                                                                          |
+|  3. IDEMPOTENT CONSUMER (pragmatic, most common)                         |
+|     Use at-least-once delivery + make processing idempotent.             |
+|     Store a dedup key (message ID) in your database.                     |
+|     On duplicate, skip processing.                                       |
+|                                                                          |
+|  INTERVIEW TIP: "In practice, most teams use at-least-once               |
+|  delivery with idempotent consumers. Kafka transactions exist            |
+|  but add complexity and are mainly used in Kafka-to-Kafka                |
+|  stream processing pipelines."                                           |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q12: How do you decide the number of partitions?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  FORMULA:                                                               |
-|  partitions = max(T/Tp, T/Tc)                                          |
-|                                                                         |
-|  Where:                                                                 |
-|  T  = target throughput (e.g., 100 MB/sec)                              |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  FORMULA:                                                                |
+|  partitions = max(T/Tp, T/Tc)                                            |
+|                                                                          |
+|  Where:                                                                  |
+|  T  = target throughput (e.g., 100 MB/sec)                               |
 |  Tp = throughput per partition on producer side (~10 MB/sec)             |
 |  Tc = throughput per partition on consumer side (~20 MB/sec)             |
-|                                                                         |
-|  Example: 100 MB/sec target, 10 MB/sec per partition                    |
-|  partitions = 100/10 = 10 partitions minimum                            |
-|                                                                         |
-|  GUIDELINES:                                                            |
-|  * Start with num_partitions >= expected max consumer count             |
-|  * 6-30 partitions per topic is typical                                 |
-|  * More partitions = more memory, file handles, leader elections        |
-|  * Each partition adds ~10MB broker memory overhead                     |
-|  * You can ADD partitions but NEVER reduce them                         |
-|  * Adding partitions breaks key ordering for existing keys              |
-|                                                                         |
-|  RULE OF THUMB:                                                         |
-|  * Low throughput topic: 6 partitions                                   |
-|  * Medium throughput: 12-24 partitions                                  |
-|  * High throughput: 30-100 partitions                                   |
-|  * Cluster limit: ~4000 partitions per broker (with KRaft)              |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  Example: 100 MB/sec target, 10 MB/sec per partition                     |
+|  partitions = 100/10 = 10 partitions minimum                             |
+|                                                                          |
+|  GUIDELINES:                                                             |
+|  * Start with num_partitions >= expected max consumer count              |
+|  * 6-30 partitions per topic is typical                                  |
+|  * More partitions = more memory, file handles, leader elections         |
+|  * Each partition adds ~10MB broker memory overhead                      |
+|  * You can ADD partitions but NEVER reduce them                          |
+|  * Adding partitions breaks key ordering for existing keys               |
+|                                                                          |
+|  RULE OF THUMB:                                                          |
+|  * Low throughput topic: 6 partitions                                    |
+|  * Medium throughput: 12-24 partitions                                   |
+|  * High throughput: 30-100 partitions                                    |
+|  * Cluster limit: ~4000 partitions per broker (with KRaft)               |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q13: What happens when a Kafka broker goes down?
@@ -352,11 +352,11 @@ from fundamentals to advanced topics, with detailed answers.
 |                                                                         |
 |  FAILOVER TIME:                                                         |
 |  * KRaft mode: seconds                                                  |
-|  * ZooKeeper mode: 10-30 seconds (sometimes minutes)                   |
+|  * ZooKeeper mode: 10-30 seconds (sometimes minutes)                    |
 |                                                                         |
 |  DATA LOSS SCENARIOS:                                                   |
 |  * acks=1 + leader dies before replication = LOST MESSAGES              |
-|  * acks=all + min.insync.replicas=2 = NO DATA LOSS                     |
+|  * acks=all + min.insync.replicas=2 = NO DATA LOSS                      |
 |  * All ISR replicas dead + unclean.leader.election=true = POSSIBLE LOSS |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -365,84 +365,84 @@ from fundamentals to advanced topics, with detailed answers.
 ### Q14: How does Kafka differ from a database?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  +-------------------+---------------------------+--------------------+ |
-|  | Feature           | Kafka                     | Database (RDBMS)   | |
-|  +-------------------+---------------------------+--------------------+ |
-|  | Data model        | Append-only log           | Tables with CRUD   | |
-|  | Writes            | Append only               | Insert/Update/Del  | |
-|  | Reads             | Sequential scan           | Random access      | |
-|  | Indexes           | Offset-based only         | B-tree, hash, etc  | |
-|  | Query             | No query language         | SQL                | |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  +-------------------+---------------------------+---------------------+ |
+|  | Feature           | Kafka                     | Database (RDBMS)    | |
+|  +-------------------+---------------------------+---------------------+ |
+|  | Data model        | Append-only log           | Tables with CRUD    | |
+|  | Writes            | Append only               | Insert/Update/Del   | |
+|  | Reads             | Sequential scan           | Random access       | |
+|  | Indexes           | Offset-based only         | B-tree, hash, etc   | |
+|  | Query             | No query language         | SQL                 | |
 |  | Retention         | Time/size based            | Indefinite         | |
-|  | Transactions      | Limited (EOS)             | Full ACID          | |
-|  | Throughput        | Millions/sec              | Thousands/sec      | |
-|  | Primary use       | Event transport + replay  | State storage      | |
-|  +-------------------+---------------------------+--------------------+ |
-|                                                                         |
-|  INTERVIEW TIP: "Kafka is a transportation system, not a database.      |
-|  It moves data between systems. Use it alongside databases,             |
-|  not instead of them."                                                  |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  | Transactions      | Limited (EOS)             | Full ACID           | |
+|  | Throughput        | Millions/sec              | Thousands/sec       | |
+|  | Primary use       | Event transport + replay  | State storage       | |
+|  +-------------------+---------------------------+---------------------+ |
+|                                                                          |
+|  INTERVIEW TIP: "Kafka is a transportation system, not a database.       |
+|  It moves data between systems. Use it alongside databases,              |
+|  not instead of them."                                                   |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q15: What is backpressure and how does Kafka handle it?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  Backpressure = consumer is slower than producer.                       |
-|                                                                         |
-|  HOW KAFKA HANDLES IT:                                                  |
-|                                                                         |
-|  1. Consumer just falls behind (lag increases)                          |
-|     Kafka retains messages, consumer catches up at its own pace.        |
-|     No message loss, no producer slowdown.                              |
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Backpressure = consumer is slower than producer.                        |
+|                                                                          |
+|  HOW KAFKA HANDLES IT:                                                   |
+|                                                                          |
+|  1. Consumer just falls behind (lag increases)                           |
+|     Kafka retains messages, consumer catches up at its own pace.         |
+|     No message loss, no producer slowdown.                               |
+|                                                                          |
 |  2. Producer-side buffer full (buffer.memory exhausted)                  |
-|     producer.send() blocks for max.block.ms then throws exception.      |
-|                                                                         |
-|  MITIGATION STRATEGIES:                                                 |
-|  * Scale consumers (add more to the group, up to partition count)       |
-|  * Increase partitions (allows more parallel consumers)                 |
-|  * Optimize consumer processing (batch writes, async I/O)              |
-|  * Increase retention to handle temporary spikes                        |
-|  * Use consumer lag alerting to detect early                            |
-|                                                                         |
-|  KAFKA ADVANTAGE OVER PUSH-BASED SYSTEMS:                               |
-|  Since consumers pull, they naturally self-regulate. A slow consumer    |
-|  doesn't slow down producers or other consumers.                       |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|     producer.send() blocks for max.block.ms then throws exception.       |
+|                                                                          |
+|  MITIGATION STRATEGIES:                                                  |
+|  * Scale consumers (add more to the group, up to partition count)        |
+|  * Increase partitions (allows more parallel consumers)                  |
+|  * Optimize consumer processing (batch writes, async I/O)                |
+|  * Increase retention to handle temporary spikes                         |
+|  * Use consumer lag alerting to detect early                             |
+|                                                                          |
+|  KAFKA ADVANTAGE OVER PUSH-BASED SYSTEMS:                                |
+|  Since consumers pull, they naturally self-regulate. A slow consumer     |
+|  doesn't slow down producers or other consumers.                         |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q16: Explain the difference between Kafka Streams and Flink.
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  +-------------------+----------------------------+------------------+  |
-|  | Feature           | Kafka Streams              | Apache Flink     |  |
-|  +-------------------+----------------------------+------------------+  |
-|  | Deployment        | Library (embedded in app)  | Separate cluster |  |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  +-------------------+----------------------------+-------------------+  |
+|  | Feature           | Kafka Streams              | Apache Flink      |  |
+|  +-------------------+----------------------------+-------------------+  |
+|  | Deployment        | Library (embedded in app)  | Separate cluster  |  |
 |  | Source/Sink        | Kafka only                 | Many (Kafka, DB) |  |
-|  | State             | RocksDB (local)            | Checkpointed     |  |
-|  | Exactly-once      | Yes (Kafka native)         | Yes              |  |
-|  | Windowing         | Basic                      | Advanced         |  |
-|  | SQL support       | ksqlDB (separate)          | Flink SQL        |  |
-|  | Scaling           | Consumer group rebalance   | Task managers    |  |
-|  | Ops complexity    | Low (just your app)        | High (cluster)   |  |
-|  +-------------------+----------------------------+------------------+  |
-|                                                                         |
-|  USE KAFKA STREAMS: Simple transformations, Kafka-only pipeline,        |
-|  want to avoid managing another cluster.                                |
-|                                                                         |
-|  USE FLINK: Complex event processing, multi-source joins,               |
-|  advanced windowing, SQL over streams, large-scale aggregations.        |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  | State             | RocksDB (local)            | Checkpointed      |  |
+|  | Exactly-once      | Yes (Kafka native)         | Yes               |  |
+|  | Windowing         | Basic                      | Advanced          |  |
+|  | SQL support       | ksqlDB (separate)          | Flink SQL         |  |
+|  | Scaling           | Consumer group rebalance   | Task managers     |  |
+|  | Ops complexity    | Low (just your app)        | High (cluster)    |  |
+|  +-------------------+----------------------------+-------------------+  |
+|                                                                          |
+|  USE KAFKA STREAMS: Simple transformations, Kafka-only pipeline,         |
+|  want to avoid managing another cluster.                                 |
+|                                                                          |
+|  USE FLINK: Complex event processing, multi-source joins,                |
+|  advanced windowing, SQL over streams, large-scale aggregations.         |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ## SECTION 5.3: ADVANCED (Q17-Q25)
@@ -453,14 +453,14 @@ from fundamentals to advanced topics, with detailed answers.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  CAPACITY ESTIMATION:                                                   |
-|  * 1M events/sec, avg 1KB each = 1 GB/sec throughput                   |
+|  * 1M events/sec, avg 1KB each = 1 GB/sec throughput                    |
 |  * Each partition handles ~10 MB/sec = 100 partitions minimum           |
 |  * Replication factor 3 = 3 GB/sec total disk write                     |
-|  * Retention 7 days = 1 GB/sec x 86400 x 7 = ~600 TB storage           |
+|  * Retention 7 days = 1 GB/sec x 86400 x 7 = ~600 TB storage            |
 |                                                                         |
 |  CLUSTER SIZING:                                                        |
 |  * 12-20 brokers (50-100 partitions per broker)                         |
-|  * Each broker: 12-core CPU, 64GB RAM, 12x 2TB SSDs (JBOD)             |
+|  * Each broker: 12-core CPU, 64GB RAM, 12x 2TB SSDs (JBOD)              |
 |  * Network: 10 Gbps NIC per broker                                      |
 |  * JVM heap: 6GB (rest for page cache)                                  |
 |                                                                         |
@@ -512,27 +512,27 @@ from fundamentals to advanced topics, with detailed answers.
 ### Q19: What is the __consumer_offsets topic?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
 |  An internal Kafka topic that stores committed consumer offsets.         |
-|                                                                         |
-|  * Created automatically (50 partitions by default)                     |
-|  * Key = (group.id, topic, partition)                                   |
-|  * Value = committed offset + metadata + timestamp                      |
-|  * Compacted (keeps only latest offset per key)                         |
-|                                                                         |
-|  When consumer calls commitSync() or auto-commits:                      |
-|  * A message is produced to __consumer_offsets                          |
-|  * Contains the offset the consumer has processed up to                 |
-|                                                                         |
-|  When consumer restarts:                                                |
-|  * Reads its last committed offset from __consumer_offsets              |
-|  * Resumes from that position                                           |
-|                                                                         |
-|  BEFORE KAFKA 0.9: Offsets were stored in ZooKeeper.                    |
-|  This caused performance issues at scale.                               |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  * Created automatically (50 partitions by default)                      |
+|  * Key = (group.id, topic, partition)                                    |
+|  * Value = committed offset + metadata + timestamp                       |
+|  * Compacted (keeps only latest offset per key)                          |
+|                                                                          |
+|  When consumer calls commitSync() or auto-commits:                       |
+|  * A message is produced to __consumer_offsets                           |
+|  * Contains the offset the consumer has processed up to                  |
+|                                                                          |
+|  When consumer restarts:                                                 |
+|  * Reads its last committed offset from __consumer_offsets               |
+|  * Resumes from that position                                            |
+|                                                                          |
+|  BEFORE KAFKA 0.9: Offsets were stored in ZooKeeper.                     |
+|  This caused performance issues at scale.                                |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### Q20: How does Kafka handle schema evolution?
@@ -651,7 +651,7 @@ from fundamentals to advanced topics, with detailed answers.
 |     Log the bad message, skip it, commit offset.                        |
 |     Simplest but may lose data.                                         |
 |                                                                         |
-|  BEST PRACTICE: Option 1 or 2 with alerting on DLQ.                    |
+|  BEST PRACTICE: Option 1 or 2 with alerting on DLQ.                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

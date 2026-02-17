@@ -8,31 +8,31 @@ rebalancing determine your system's delivery guarantees and performance.
 ## SECTION 3.1: PRODUCER INTERNALS
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  PRODUCER ARCHITECTURE                                                  |
-|                                                                         |
-|  Application Thread                                                     |
-|       |                                                                 |
-|       v                                                                 |
-|  +----------+     +-----------+     +-----------+                       |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  PRODUCER ARCHITECTURE                                                   |
+|                                                                          |
+|  Application Thread                                                      |
+|       |                                                                  |
+|       v                                                                  |
+|  +----------+     +-----------+     +-----------+                        |
 |  | Serialize | --> | Partition | --> | Record    |                       |
 |  | Key+Value |     | (choose   |     | Accumul-  |                       |
 |  |           |     |  target   |     | ator      |                       |
 |  +----------+     |  partition)|     | (batching)|                       |
 |                    +-----------+     +-----+-----+                       |
-|                                            |                            |
-|                                    +-------v-------+                    |
-|                                    | Sender Thread |                    |
-|                                    | (background)  |                    |
-|                                    +-------+-------+                    |
-|                                            |                            |
-|                              +-------------+-------------+              |
-|                              |             |             |              |
-|                              v             v             v              |
-|                          Broker 0      Broker 1      Broker 2           |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                            |                             |
+|                                    +-------v-------+                     |
+|                                    | Sender Thread |                     |
+|                                    | (background)  |                     |
+|                                    +-------+-------+                     |
+|                                            |                             |
+|                              +-------------+-------------+               |
+|                              |             |             |               |
+|                              v             v             v               |
+|                          Broker 0      Broker 1      Broker 2            |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### BATCHING AND COMPRESSION
@@ -56,11 +56,11 @@ rebalancing determine your system's delivery guarantees and performance.
 |  buffer.memory = 33554432 (32MB default)                                |
 |    Total memory for unsent messages. If full, send() blocks.            |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  COMPRESSION (applied per batch):                                       |
 |                                                                         |
-|  compression.type = none | gzip | snappy | lz4 | zstd                  |
+|  compression.type = none | gzip | snappy | lz4 | zstd                   |
 |                                                                         |
 |  +----------+--------+--------+----------+                              |
 |  | Type     | Ratio  | Speed  | CPU      |                              |
@@ -72,7 +72,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |  | zstd     | best   | fast   | medium   |                              |
 |  +----------+--------+--------+----------+                              |
 |                                                                         |
-|  RECOMMENDATION: Use lz4 or zstd for most workloads.                   |
+|  RECOMMENDATION: Use lz4 or zstd for most workloads.                    |
 |  Compression saves network bandwidth AND disk space.                    |
 |  Broker stores compressed batches as-is (no re-compression).            |
 |                                                                         |
@@ -82,75 +82,75 @@ rebalancing determine your system's delivery guarantees and performance.
 ### ACKNOWLEDGMENTS (acks)
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  acks SETTING = How many replicas must confirm before success           |
-|                                                                         |
-|  acks=0 (FIRE AND FORGET)                                              |
-|  ========================                                               |
-|  Producer does not wait for any acknowledgment.                         |
-|  Fastest. Risk: messages may be lost.                                   |
-|                                                                         |
-|  Producer --> Broker (no response waited)                               |
-|                                                                         |
-|  Use case: metrics, logs where some loss is acceptable.                 |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  acks=1 (LEADER ONLY)                                                   |
-|  =====================                                                  |
-|  Leader writes to its local log and responds.                           |
-|  Followers may not have the data yet.                                   |
-|  Risk: data loss if leader dies before followers replicate.             |
-|                                                                         |
-|  Producer --> Leader (ack) --> Followers (async)                        |
-|                                                                         |
-|  Use case: default for most applications. Good balance.                 |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  acks=all (or acks=-1) (FULL REPLICATION)                               |
-|  ==========================================                             |
-|  Leader waits for ALL in-sync replicas (ISR) to acknowledge.            |
-|  Slowest but safest. No data loss as long as >= 1 ISR alive.            |
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  acks SETTING = How many replicas must confirm before success            |
+|                                                                          |
+|  acks=0 (FIRE AND FORGET)                                                |
+|  ========================                                                |
+|  Producer does not wait for any acknowledgment.                          |
+|  Fastest. Risk: messages may be lost.                                    |
+|                                                                          |
+|  Producer --> Broker (no response waited)                                |
+|                                                                          |
+|  Use case: metrics, logs where some loss is acceptable.                  |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  acks=1 (LEADER ONLY)                                                    |
+|  =====================                                                   |
+|  Leader writes to its local log and responds.                            |
+|  Followers may not have the data yet.                                    |
+|  Risk: data loss if leader dies before followers replicate.              |
+|                                                                          |
+|  Producer --> Leader (ack) --> Followers (async)                         |
+|                                                                          |
+|  Use case: default for most applications. Good balance.                  |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  acks=all (or acks=-1) (FULL REPLICATION)                                |
+|  ==========================================                              |
+|  Leader waits for ALL in-sync replicas (ISR) to acknowledge.             |
+|  Slowest but safest. No data loss as long as >= 1 ISR alive.             |
+|                                                                          |
 |  Producer --> Leader --> All ISR Followers --> (ack)                     |
-|                                                                         |
-|  Use case: financial transactions, critical events.                     |
-|  MUST combine with min.insync.replicas >= 2.                            |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  Use case: financial transactions, critical events.                      |
+|  MUST combine with min.insync.replicas >= 2.                             |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### IDEMPOTENT PRODUCER
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  PROBLEM: Duplicate messages on retry                                   |
-|                                                                         |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  PROBLEM: Duplicate messages on retry                                    |
+|                                                                          |
 |  Producer sends msg --> network timeout --> producer retries             |
-|  But the broker DID receive the first one --> DUPLICATE!                |
-|                                                                         |
-|  SOLUTION: enable.idempotence = true (default since Kafka 3.0)          |
-|                                                                         |
-|  How it works:                                                          |
-|  * Each producer gets a unique Producer ID (PID)                        |
+|  But the broker DID receive the first one --> DUPLICATE!                 |
+|                                                                          |
+|  SOLUTION: enable.idempotence = true (default since Kafka 3.0)           |
+|                                                                          |
+|  How it works:                                                           |
+|  * Each producer gets a unique Producer ID (PID)                         |
 |  * Each message gets a sequence number (per partition)                   |
-|  * Broker rejects duplicates with same PID + sequence number            |
-|                                                                         |
-|  Producer (PID=7):                                                      |
-|    send(seq=0) --> Broker accepts                                       |
-|    send(seq=1) --> network timeout, retry                               |
-|    send(seq=1) --> Broker sees duplicate, returns success (no dup)      |
-|    send(seq=2) --> Broker accepts                                       |
-|                                                                         |
-|  REQUIREMENTS:                                                          |
-|  * acks=all (set automatically)                                         |
-|  * retries > 0 (set automatically)                                      |
-|  * max.in.flight.requests.per.connection <= 5                           |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|  * Broker rejects duplicates with same PID + sequence number             |
+|                                                                          |
+|  Producer (PID=7):                                                       |
+|    send(seq=0) --> Broker accepts                                        |
+|    send(seq=1) --> network timeout, retry                                |
+|    send(seq=1) --> Broker sees duplicate, returns success (no dup)       |
+|    send(seq=2) --> Broker accepts                                        |
+|                                                                          |
+|  REQUIREMENTS:                                                           |
+|  * acks=all (set automatically)                                          |
+|  * retries > 0 (set automatically)                                       |
+|  * max.in.flight.requests.per.connection <= 5                            |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ## SECTION 3.2: CONSUMER INTERNALS
@@ -171,7 +171,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |      }                                                                  |
 |  }                                                                      |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  WHAT poll() DOES INTERNALLY:                                           |
 |                                                                         |
@@ -201,49 +201,49 @@ rebalancing determine your system's delivery guarantees and performance.
 ### OFFSET MANAGEMENT
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  OFFSET COMMIT STRATEGIES                                               |
-|                                                                         |
-|  1. AUTO-COMMIT (default)                                               |
-|     ==========================                                          |
-|     enable.auto.commit = true                                           |
-|     auto.commit.interval.ms = 5000                                      |
-|                                                                         |
-|     Every 5 seconds, the consumer automatically commits                 |
-|     the latest offset it has poll()'d.                                  |
-|                                                                         |
-|     Risk: AT-LEAST-ONCE delivery                                        |
-|     * If consumer crashes AFTER poll() but BEFORE commit                |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  OFFSET COMMIT STRATEGIES                                                |
+|                                                                          |
+|  1. AUTO-COMMIT (default)                                                |
+|     ==========================                                           |
+|     enable.auto.commit = true                                            |
+|     auto.commit.interval.ms = 5000                                       |
+|                                                                          |
+|     Every 5 seconds, the consumer automatically commits                  |
+|     the latest offset it has poll()'d.                                   |
+|                                                                          |
+|     Risk: AT-LEAST-ONCE delivery                                         |
+|     * If consumer crashes AFTER poll() but BEFORE commit                 |
 |       --> messages re-delivered on restart (duplicates)                  |
-|     * If consumer crashes AFTER commit but BEFORE processing            |
-|       --> messages LOST (already committed)                             |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  2. MANUAL COMMIT (recommended for critical systems)                    |
-|     =================================================                   |
-|     enable.auto.commit = false                                          |
-|                                                                         |
-|     a) commitSync() -- blocks until offset is committed                 |
-|        Safest, but slower.                                              |
-|                                                                         |
-|     b) commitAsync() -- fire and forget, with callback                  |
-|        Faster, but no guarantee of commit success.                      |
-|                                                                         |
-|  -------------------------------------------------------------------   |
-|                                                                         |
-|  DELIVERY SEMANTICS:                                                    |
-|                                                                         |
-|  +-------------------+--------------------------+---------------------+ |
-|  | Semantic          | How                      | Risk                | |
-|  +-------------------+--------------------------+---------------------+ |
-|  | At-most-once      | Commit BEFORE processing | Lost messages       | |
-|  | At-least-once     | Commit AFTER processing  | Duplicate messages  | |
-|  | Exactly-once      | Kafka transactions       | Complexity + cost   | |
-|  +-------------------+--------------------------+---------------------+ |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|     * If consumer crashes AFTER commit but BEFORE processing             |
+|       --> messages LOST (already committed)                              |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  2. MANUAL COMMIT (recommended for critical systems)                     |
+|     =================================================                    |
+|     enable.auto.commit = false                                           |
+|                                                                          |
+|     a) commitSync() -- blocks until offset is committed                  |
+|        Safest, but slower.                                               |
+|                                                                          |
+|     b) commitAsync() -- fire and forget, with callback                   |
+|        Faster, but no guarantee of commit success.                       |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  DELIVERY SEMANTICS:                                                     |
+|                                                                          |
+|  +-------------------+--------------------------+----------------------+ |
+|  | Semantic          | How                      | Risk                 | |
+|  +-------------------+--------------------------+----------------------+ |
+|  | At-most-once      | Commit BEFORE processing | Lost messages        | |
+|  | At-least-once     | Commit AFTER processing  | Duplicate messages   | |
+|  | Exactly-once      | Kafka transactions       | Complexity + cost    | |
+|  +-------------------+--------------------------+----------------------+ |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ## SECTION 3.3: CONSUMER REBALANCING
@@ -261,7 +261,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |  * A consumer is kicked out (missed poll() deadline)                    |
 |  * Partitions are added to a subscribed topic                           |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  EAGER REBALANCE (default before 2.4)                                   |
 |  =====================================                                  |
@@ -272,7 +272,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |                                                                         |
 |  Problem: "stop the world" -- ALL consumers pause briefly               |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  COOPERATIVE (INCREMENTAL) REBALANCE (2.4+)                             |
 |  =============================================                          |
@@ -284,7 +284,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |  partition.assignment.strategy =                                        |
 |    org.apache.kafka.clients.consumer.CooperativeStickyAssignor          |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  STATIC GROUP MEMBERSHIP (minimize rebalances)                          |
 |  ===============================================                        |
@@ -306,14 +306,14 @@ rebalancing determine your system's delivery guarantees and performance.
 |  CONSUMER LAG = latest offset - consumer's committed offset             |
 |                                                                         |
 |  Partition 0:                                                           |
-|  [0] [1] [2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12]              |
+|  [0] [1] [2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12]                 |
 |                          ^                          ^                   |
 |                          |                          |                   |
 |                   consumer offset=5           latest offset=12          |
 |                                                                         |
 |                   LAG = 12 - 5 = 7 messages behind                      |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  MONITORING TOOLS:                                                      |
 |  * kafka-consumer-groups.sh --describe --group my-group                 |
@@ -321,7 +321,7 @@ rebalancing determine your system's delivery guarantees and performance.
 |  * Kafka JMX metrics (records-lag-max)                                  |
 |  * Prometheus + Grafana dashboards                                      |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  WHEN LAG IS HIGH:                                                      |
 |  * Consumer is too slow -> optimize processing or add consumers         |
@@ -333,15 +333,15 @@ rebalancing determine your system's delivery guarantees and performance.
 ```
 
 ```bash
-# Check consumer lag from CLI
-bin/kafka-consumer-groups.sh \
-    --bootstrap-server localhost:9092 \
-    --describe \
-    --group order-service
+# Check consumer lag from CLI                                               
+bin/kafka-consumer-groups.sh \                                              
+    --bootstrap-server localhost:9092 \                                     
+    --describe \                                                            
+    --group order-service                                                   
 
-# Output:
+# Output:                                                                   
 # GROUP          TOPIC        PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
-# order-service  orders       0          1000            1050            50
-# order-service  orders       1          2000            2005            5
-# order-service  orders       2          1500            1500            0
+# order-service  orders       0          1000            1050            50 
+# order-service  orders       1          2000            2005            5  
+# order-service  orders       2          1500            1500            0  
 ```
