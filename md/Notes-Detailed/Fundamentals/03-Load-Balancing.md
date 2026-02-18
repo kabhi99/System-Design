@@ -202,6 +202,66 @@ Operates at HTTP/HTTPS level. Inspects request content.
 +-------------------------------------------------------------------------+
 ```
 
+#### WHAT "TERMINATES THE TCP CONNECTION" MEANS
+
+L4 vs L7 handle the client's TCP connection fundamentally differently:
+
+```
+L4 (Pass-Through):
+  Client <------------- single TCP connection -------------> Server
+                    LB just rewrites IP headers
+                    and forwards raw packets
+
+L7 (Termination):
+  Client <--- TCP conn 1 ---> L7 LB <--- TCP conn 2 ---> Server
+                                 ^
+                    Client's TCP connection ENDS here
+                    LB reads full HTTP request,
+                    then opens a NEW connection to backend
+```
+
+- Client does a full TCP handshake (SYN, SYN-ACK, ACK) with the **load balancer**
+- The LB accepts the connection as if it were the final destination
+- The LB reads the complete HTTP request (URL, headers, cookies, body)
+- Based on content, it opens a **separate TCP connection** to the chosen backend
+- The client never has a direct TCP connection to the backend server
+- This is required because reading HTTP content (Layer 7) requires a fully established TCP connection (Layer 4)
+
+#### WHAT "SSL/TLS TERMINATION" MEANS
+
+Direct consequence of TCP termination — since the LB is the endpoint of the client's connection, it can also be the endpoint of the **encryption**.
+
+```
+WITHOUT TLS Termination (each server handles crypto):
+
+  Client --HTTPS--> LB --HTTPS--> Server 1 (decrypt, CPU heavy)
+                       --HTTPS--> Server 2 (decrypt, CPU heavy)
+                       --HTTPS--> Server 3 (decrypt, CPU heavy)
+  * SSL certs needed on EVERY server
+  * Every server burns CPU on crypto
+
+
+WITH TLS Termination at LB:
+
+  Client --HTTPS (encrypted)--> L7 LB --HTTP (plain text)--> Server 1
+                                   ^                     +--> Server 2
+                          Decrypts here                  +--> Server 3
+                     (holds SSL certificate)
+  * SSL cert managed in ONE place
+  * Backend servers freed from crypto overhead
+  * LB can now inspect/route based on HTTP content
+```
+
+- TLS handshakes + encryption/decryption are **CPU-heavy** operations
+- Without TLS termination, every backend server does this crypto work itself
+- With TLS termination at LB, backend servers only deal with plain HTTP
+- SSL certificates managed in **one place** (the LB) instead of every server
+- L4 LBs **cannot** do this — they forward raw packets without understanding them
+
+> **Note:** Internal traffic (LB to servers) is plain HTTP over a trusted private network.
+> For zero-trust environments, you can re-encrypt (mTLS) between LB and backends,
+> but the LB still terminates and re-establishes — giving it the ability to inspect content.
+
 ### WHEN TO USE EACH
 
 ```
