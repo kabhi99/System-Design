@@ -451,6 +451,64 @@ Write only to database, let cache expire naturally.
 +-------------------------------------------------------------------------+
 ```
 
+#### WHY WRITE-AROUND + INVALIDATION IS MOST COMMON
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  COMPARE THE ALTERNATIVES:                                               |
+|                                                                          |
+|  Write-through:  Write to cache AND DB on every write                    |
+|                  Slow (2 writes), wastes cache on data nobody reads      |
+|                                                                          |
+|  Write-behind:   Write to cache, async flush to DB later                 |
+|                  Fast, but cache crash = DATA LOSS. DB may be stale.     |
+|                                                                          |
+|  Write-around    Write to DB only, delete cache key                      |
+|  + invalidate:   DB always truth, no wasted cache, tiny stale window     |
+|                                                                          |
+|  --------------------------------------------------------------------    |
+|                                                                          |
+|  WHY WRITE-AROUND + INVALIDATION WINS:                                   |
+|                                                                          |
+|  +-------------------------------------------------------------------+   |
+|  |                                                                   |   |
+|  |  Concern          Write-Around + Invalidate                       |   |
+|  |  -------------------------------------------------------------    |   |
+|  |                                                                   |   |
+|  |  Data safety      DB written first — no data loss risk            |   |
+|  |  Write speed      1 write (DB) + 1 delete (cache) — cheap         |   |
+|  |  Cache waste      Only caches data that's actually READ           |   |
+|  |  Staleness        Milliseconds (between write and next read)      |   |
+|  |  Simplicity       2 lines: db.update() then cache.delete()        |   |
+|  |  Pairing          Works perfectly with cache-aside reads          |   |
+|  |                                                                   |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  --------------------------------------------------------------------    |
+|                                                                          |
+|  REAL-WORLD PATTERN (Amazon, Netflix, Twitter):                          |
+|                                                                          |
+|  READ (cache-aside):                                                     |
+|    result = cache.get(key)                                               |
+|    if miss:                                                              |
+|        result = db.query(key)                                            |
+|        cache.set(key, result, ttl=300)                                   |
+|    return result                                                         |
+|                                                                          |
+|  WRITE (write-around + invalidation):                                    |
+|    db.update(key, new_data)     # DB is source of truth                  |
+|    cache.delete(key)            # Force next read to reload from DB      |
+|                                                                          |
+|  --------------------------------------------------------------------    |
+|                                                                          |
+|  WHEN TO PICK ALTERNATIVES:                                              |
+|  * Write-through: consistency must be absolute (bank balances)           |
+|  * Write-behind: extreme write throughput, loss ok (view counters)       |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 4.4: CACHE INVALIDATION
 
 "There are only two hard things in Computer Science: cache invalidation

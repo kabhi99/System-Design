@@ -207,17 +207,17 @@ Operates at HTTP/HTTPS level. Inspects request content.
 L4 vs L7 handle the client's TCP connection fundamentally differently:
 
 ```
-L4 (Pass-Through):
+L4 (Pass-Through):                                                 
   Client <------------- single TCP connection -------------> Server
-                    LB just rewrites IP headers
-                    and forwards raw packets
+                    LB just rewrites IP headers                    
+                    and forwards raw packets                       
 
-L7 (Termination):
-  Client <--- TCP conn 1 ---> L7 LB <--- TCP conn 2 ---> Server
-                                 ^
-                    Client's TCP connection ENDS here
-                    LB reads full HTTP request,
-                    then opens a NEW connection to backend
+L7 (Termination):                                                  
+  Client <--- TCP conn 1 ---> L7 LB <--- TCP conn 2 ---> Server    
+                                 ^                                 
+                    Client's TCP connection ENDS here              
+                    LB reads full HTTP request,                    
+                    then opens a NEW connection to backend         
 ```
 
 - Client does a full TCP handshake (SYN, SYN-ACK, ACK) with the **load balancer**
@@ -232,24 +232,24 @@ L7 (Termination):
 Direct consequence of TCP termination — since the LB is the endpoint of the client's connection, it can also be the endpoint of the **encryption**.
 
 ```
-WITHOUT TLS Termination (each server handles crypto):
+WITHOUT TLS Termination (each server handles crypto):                 
 
-  Client --HTTPS--> LB --HTTPS--> Server 1 (decrypt, CPU heavy)
-                       --HTTPS--> Server 2 (decrypt, CPU heavy)
-                       --HTTPS--> Server 3 (decrypt, CPU heavy)
-  * SSL certs needed on EVERY server
-  * Every server burns CPU on crypto
+  Client --HTTPS--> LB --HTTPS--> Server 1 (decrypt, CPU heavy)       
+                       --HTTPS--> Server 2 (decrypt, CPU heavy)       
+                       --HTTPS--> Server 3 (decrypt, CPU heavy)       
+  * SSL certs needed on EVERY server                                  
+  * Every server burns CPU on crypto                                  
 
 
-WITH TLS Termination at LB:
+WITH TLS Termination at LB:                                           
 
-  Client --HTTPS (encrypted)--> L7 LB --HTTP (plain text)--> Server 1
+  Client --HTTPS (encrypted)--> L7 LB --HTTP (plain text)--> Server 1 
                                    ^                     +--> Server 2
                           Decrypts here                  +--> Server 3
-                     (holds SSL certificate)
-  * SSL cert managed in ONE place
-  * Backend servers freed from crypto overhead
-  * LB can now inspect/route based on HTTP content
+                     (holds SSL certificate)                          
+  * SSL cert managed in ONE place                                     
+  * Backend servers freed from crypto overhead                        
+  * LB can now inspect/route based on HTTP content                    
 ```
 
 - TLS handshakes + encryption/decryption are **CPU-heavy** operations
@@ -306,6 +306,32 @@ WITH TLS Termination at LB:
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+#### WHY "NON-HTTP TRAFFIC" REQUIRES LAYER 4
+
+L7 LBs parse HTTP grammar (URLs, headers, cookies). Non-HTTP protocols are invisible to them.
+
+```
+Protocol            Used By                What It Speaks                        
+─────────────────────────────────────────────────────────────────                
+MySQL/PostgreSQL    Databases              Custom binary over TCP                
+MQTT                IoT devices            Pub-sub over TCP                      
+Redis RESP          Cache clients          Text-based, not HTTP                  
+AMQP                RabbitMQ               Binary messaging                      
+RTMP                Live streaming         Binary streaming                      
+Custom TCP/UDP      Game servers           Proprietary binary                    
+
+L4 LB:  "TCP packets on port 3306 → forward to Server 2"   (doesn't read payload)
+L7 LB:  "Tried to parse as HTTP... binary garbage. FAIL ✗"  (can't understand it)
+```
+
+- L4 never opens the payload — it only reads IP + port, so protocol doesn't matter
+- L7 expects `GET /path HTTP/1.1` — anything else is unparseable
+- **Rule:** if traffic isn't HTTP/HTTPS, you must use L4
+
+> **gRPC edge case:** gRPC runs on HTTP/2, so modern L7 LBs (Envoy, newer Nginx)
+> can handle it. But many traditional L7 LBs struggle with HTTP/2 streaming and
+> multiplexing, so L4 is often still preferred for gRPC-heavy workloads.
 
 ## SECTION 3.3: LOAD BALANCING ALGORITHMS
 
