@@ -212,109 +212,307 @@ Relational databases guarantee ACID properties for transactions:
 ## SECTION 5.3: LOCKING AND CONCURRENCY CONTROL
 
 ```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  CONCURRENCY CONTROL STRATEGIES                                          |
+|                                                                          |
+|  1. PESSIMISTIC LOCKING                                                  |
+|  ========================                                                |
+|  Lock data before reading/writing. Assume conflicts are common.          |
+|                                                                          |
+|  SELECT * FROM inventory WHERE id = 1 FOR UPDATE;                        |
+|  -- Row is locked, other transactions wait                               |
+|  UPDATE inventory SET quantity = quantity - 1 WHERE id = 1;              |
+|  COMMIT;                                                                 |
+|  -- Lock released                                                        |
+|                                                                          |
+|  LOCK TYPES:                                                             |
+|  +-------------------------------------------------------------------+   |
+|  | Shared Lock (S)      | Multiple readers allowed                   |   |
+|  | Exclusive Lock (X)   | Only one writer, no readers                |   |
+|  | Intent Shared (IS)   | Intend to get S lock on child              |   |
+|  | Intent Exclusive (IX)| Intend to get X lock on child              |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  LOCK GRANULARITY:                                                       |
+|  * Row-level: Highest concurrency, most overhead                         |
+|  * Page-level: Medium concurrency                                        |
+|  * Table-level: Lowest concurrency, least overhead                       |
+|                                                                          |
+|  PAGE = fixed-size block on disk (8 KB Postgres, 16 KB InnoDB).          |
+|  Contains multiple rows. Page-level lock = lock ALL rows in that page.   |
+|                                                                          |
+|  +-------------------------------------------------------------------+   |
+|  | Granularity | Locks          | Concurrency | Lock Overhead        |   |
+|  +-------------------------------------------------------------------+   |
+|  | Table       | Entire table   | Lowest      | 1 lock               |   |
+|  | Page        | ~50-500 rows   | Medium      | Thousands of locks   |   |
+|  |             | (one disk page)|             |                      |   |
+|  | Row         | Single row     | Highest     | Millions of locks    |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  Modern DBs (PostgreSQL, MySQL InnoDB, Oracle): Row-level + MVCC         |
+|  SQL Server: Starts row-level, ESCALATES to page then table if           |
+|  a transaction locks >5000 rows (reduces lock management cost)           |
+|  B-tree indexes: Page-level locks during page splits even in row DBs     |
+|                                                                          |
+|  PROS: Prevents conflicts                                                |
+|  CONS: Deadlocks possible, reduces throughput                            |
+|                                                                          |
+|  DEADLOCK:                                                               |
+|  Txn A: Lock row 1, waiting for row 2                                    |
+|  Txn B: Lock row 2, waiting for row 1                                    |
+|  > Both waiting forever!                                                 |
+|                                                                          |
+|  SOLUTION: Database detects and kills one transaction                    |
+|                                                                          |
+|  --------------------------------------------------------------------    |
+|                                                                          |
+|  2. OPTIMISTIC LOCKING (Optimistic Concurrency Control)                  |
+|  =======================================================                 |
+|  Don't lock upfront. Check for conflicts at commit time.                 |
+|                                                                          |
+|  APPROACH 1: VERSION NUMBER                                              |
+|                                                                          |
+|  CREATE TABLE inventory (                                                |
+|    id INT PRIMARY KEY,                                                   |
+|    quantity INT,                                                         |
+|    version INT DEFAULT 0                                                 |
+|  );                                                                      |
+|                                                                          |
+|  -- Read (remember version)                                              |
+|  SELECT quantity, version FROM inventory WHERE id = 1;                   |
+|  -- Returns: quantity=10, version=5                                      |
+|                                                                          |
+|  -- Update (check version)                                               |
+|  UPDATE inventory                                                        |
+|  SET quantity = 9, version = version + 1                                 |
+|  WHERE id = 1 AND version = 5;                                           |
+|                                                                          |
+|  -- If 0 rows affected > someone else modified!                          |
+|  -- Retry the operation                                                  |
+|                                                                          |
+|  APPROACH 2: TIMESTAMP                                                   |
+|  Same concept, use updated_at timestamp instead of version               |
+|                                                                          |
+|  PROS: High concurrency, no deadlocks                                    |
+|  CONS: Retries on conflicts, wasted work                                 |
+|                                                                          |
+|  USE WHEN: Conflicts are rare (most reads, few writes)                   |
+|                                                                          |
+|  --------------------------------------------------------------------    |
+|                                                                          |
+|  3. MVCC (Multi-Version Concurrency Control)                             |
+|  ============================================                            |
+|  Keep multiple versions of each row. Readers see consistent snapshot.    |
+|                                                                          |
+|  HOW IT WORKS:                                                           |
+|  +-------------------------------------------------------------------+   |
+|  | Each row has:                                                     |   |
+|  | * xmin: Transaction ID that created this version                  |   |
+|  | * xmax: Transaction ID that deleted/updated (created new)         |   |
+|  |                                                                   |   |
+|  | Row versions:                                                     |   |
+|  | +-------------------------------------------------------------+   |   |
+|  | | Version 1 | data="Alice" | xmin=100 | xmax=150              |   |   |
+|  | | Version 2 | data="Alicia" | xmin=150 | xmax=~               |   |   |
+|  | +-------------------------------------------------------------+   |   |
+|  |                                                                   |   |
+|  | Transaction 120 sees Version 1 (120 > 100, 120 < 150)             |   |
+|  | Transaction 200 sees Version 2 (200 > 150)                        |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  BENEFITS:                                                               |
+|  * Readers never block writers                                           |
+|  * Writers never block readers                                           |
+|  * Consistent snapshots without locks                                    |
+|                                                                          |
+|  COST:                                                                   |
+|  * Storage overhead (multiple versions)                                  |
+|  * Need VACUUM/garbage collection for old versions                       |
+|                                                                          |
+|  USED BY: PostgreSQL, MySQL InnoDB, Oracle, CockroachDB                  |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+#### MVCC DEEP DIVE — HOW IT ACTUALLY WORKS
+
+```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  CONCURRENCY CONTROL STRATEGIES                                         |
+|  THE CORE IDEA                                                          |
 |                                                                         |
-|  1. PESSIMISTIC LOCKING                                                 |
-|  ========================                                               |
-|  Lock data before reading/writing. Assume conflicts are common.         |
+|  Instead of locking a row during a write, the database keeps            |
+|  MULTIPLE VERSIONS of the same row. Each transaction sees a             |
+|  consistent SNAPSHOT — the version of the row that was committed        |
+|  before the transaction started.                                        |
 |                                                                         |
-|  SELECT * FROM inventory WHERE id = 1 FOR UPDATE;                       |
-|  -- Row is locked, other transactions wait                              |
-|  UPDATE inventory SET quantity = quantity - 1 WHERE id = 1;             |
-|  COMMIT;                                                                |
-|  -- Lock released                                                       |
+|  Result: Readers never wait for writers. Writers never wait for         |
+|  readers. Only writer-vs-writer on the SAME row needs coordination.     |
 |                                                                         |
-|  LOCK TYPES:                                                            |
-|  +------------------------------------------------------------------+   |
-|  | Shared Lock (S)      | Multiple readers allowed                  |   |
-|  | Exclusive Lock (X)   | Only one writer, no readers               |   |
-|  | Intent Shared (IS)   | Intend to get S lock on child             |   |
-|  | Intent Exclusive (IX)| Intend to get X lock on child             |   |
-|  +------------------------------------------------------------------+   |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
 |                                                                         |
-|  LOCK GRANULARITY:                                                      |
-|  * Row-level: Highest concurrency, most overhead                        |
-|  * Page-level: Medium concurrency                                       |
-|  * Table-level: Lowest concurrency, least overhead                      |
+|  STEP-BY-STEP EXAMPLE                                                   |
 |                                                                         |
-|  PROS: Prevents conflicts                                               |
-|  CONS: Deadlocks possible, reduces throughput                           |
+|  Table: users (id=1, name="Alice")                                      |
 |                                                                         |
-|  DEADLOCK:                                                              |
-|  Txn A: Lock row 1, waiting for row 2                                   |
-|  Txn B: Lock row 2, waiting for row 1                                   |
-|  > Both waiting forever!                                                |
+|  Time 1: Txn 100 inserted the row                                       |
+|  +-------+----------+----------+---------+                              |
+|  | id    | name     | xmin     | xmax    |                              |
+|  +-------+----------+----------+---------+                              |
+|  | 1     | Alice    | 100      | -       |                              |
+|  +-------+----------+----------+---------+                              |
 |                                                                         |
-|  SOLUTION: Database detects and kills one transaction                   |
+|  Time 2: Txn 150 updates name to "Alicia"                               |
+|  DB does NOT overwrite. Creates a NEW version:                          |
+|  +-------+----------+----------+---------+                              |
+|  | id    | name     | xmin     | xmax    |                              |
+|  +-------+----------+----------+---------+                              |
+|  | 1     | Alice    | 100      | 150     |  <- old, "deleted" by 150    |
+|  | 1     | Alicia   | 150      | -       |  <- current                  |
+|  +-------+----------+----------+---------+                              |
 |                                                                         |
-|  --------------------------------------------------------------------   |
+|  Time 3: Txn 200 updates name to "Bob"                                  |
+|  +-------+----------+----------+---------+                              |
+|  | id    | name     | xmin     | xmax    |                              |
+|  +-------+----------+----------+---------+                              |
+|  | 1     | Alice    | 100      | 150     |  <- dead                     |
+|  | 1     | Alicia   | 150      | 200     |  <- dead                     |
+|  | 1     | Bob      | 200      | -       |  <- current                  |
+|  +-------+----------+----------+---------+                              |
 |                                                                         |
-|  2. OPTIMISTIC LOCKING (Optimistic Concurrency Control)                 |
-|  =======================================================                |
-|  Don't lock upfront. Check for conflicts at commit time.                |
+|  VISIBILITY RULE:                                                       |
+|  A transaction sees a version if:                                       |
+|    xmin <= my_txn_id  AND  (xmax is empty OR xmax > my_txn_id)          |
 |                                                                         |
-|  APPROACH 1: VERSION NUMBER                                             |
+|  Txn 120 (started before Txn 150 committed):                            |
+|    Row 1: xmin=100 <= 120 AND xmax=150 > 120  -> sees "Alice"           |
 |                                                                         |
-|  CREATE TABLE inventory (                                               |
-|    id INT PRIMARY KEY,                                                  |
-|    quantity INT,                                                        |
-|    version INT DEFAULT 0                                                |
-|  );                                                                     |
+|  Txn 180 (started after Txn 150, before Txn 200):                       |
+|    Row 1: xmin=150 <= 180 AND xmax is empty   -> sees "Alicia"          |
 |                                                                         |
-|  -- Read (remember version)                                             |
-|  SELECT quantity, version FROM inventory WHERE id = 1;                  |
-|  -- Returns: quantity=10, version=5                                     |
+|  Txn 250 (started after Txn 200):                                       |
+|    Row 1: xmin=200 <= 250 AND xmax is empty   -> sees "Bob"             |
 |                                                                         |
-|  -- Update (check version)                                              |
-|  UPDATE inventory                                                       |
-|  SET quantity = 9, version = version + 1                                |
-|  WHERE id = 1 AND version = 5;                                          |
++-------------------------------------------------------------------------+
+```
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  READER vs WRITER — NO CONFLICT (the whole point)                        |
+|                                                                          |
+|  Txn 100 (READER)               Txn 150 (WRITER)                         |
+|  ────────────────                ────────────────                        |
+|  BEGIN                           BEGIN                                   |
+|  snapshot_id = 100                                                       |
+|                                  UPDATE user SET name='Alicia'           |
+|                                  -> Creates Version 2 (xmin=150)         |
+|                                                                          |
+|  SELECT name FROM user                                                   |
+|  -> Sees Version 1 (name='Alice')                                        |
+|     because 100 < 150, so                                                |
+|     Version 2 is invisible                                               |
+|                                  COMMIT                                  |
+|                                                                          |
+|  Both proceed in parallel. Reader sees consistent old data.              |
+|  Writer creates new version. They never block each other.                |
+|                                                                          |
+|  WITHOUT MVCC:                                                           |
+|  Writer locks row -> Reader WAITS -> High contention, slow reads         |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
 |                                                                         |
-|  -- If 0 rows affected > someone else modified!                         |
-|  -- Retry the operation                                                 |
+|  WRITER vs WRITER — YES, CONFLICTS HAPPEN                               |
 |                                                                         |
-|  APPROACH 2: TIMESTAMP                                                  |
-|  Same concept, use updated_at timestamp instead of version              |
+|  MVCC only eliminates read-write conflicts.                             |
+|  Two writers on the SAME row still conflict:                            |
 |                                                                         |
-|  PROS: High concurrency, no deadlocks                                   |
-|  CONS: Retries on conflicts, wasted work                                |
+|  Txn 200                         Txn 201                                |
+|  ────────                        ────────                               |
+|  UPDATE user SET name='Bob'      UPDATE user SET name='Charlie'         |
+|  -> Acquires row lock            -> WAITS (row locked by 200)           |
+|  COMMIT                          -> Row was changed by 200!             |
+|                                  -> ABORT (serialization failure)       |
+|                                  -> Client must RETRY                   |
 |                                                                         |
-|  USE WHEN: Conflicts are rare (most reads, few writes)                  |
+|  DIFFERENT DBs HANDLE THIS DIFFERENTLY:                                 |
 |                                                                         |
-|  --------------------------------------------------------------------   |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  PostgreSQL   First-writer-wins. Second aborts.                 |    |
+|  |  MySQL InnoDB Row-level lock for writes. Second waits.          |    |
+|  |  CouchDB      Both succeed. Creates conflict branches.          |    |
+|  |               App resolves later (like a git merge conflict).   |    |
+|  |  Cassandra    Last-write-wins by timestamp. Earlier lost.       |    |
+|  |               Simple but can lose data silently.                |    |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
 |                                                                         |
-|  3. MVCC (Multi-Version Concurrency Control)                            |
-|  ============================================                           |
-|  Keep multiple versions of each row. Readers see consistent snapshot.   |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
 |                                                                         |
-|  HOW IT WORKS:                                                          |
-|  +------------------------------------------------------------------+   |
-|  | Each row has:                                                    |   |
-|  | * xmin: Transaction ID that created this version                 |   |
-|  | * xmax: Transaction ID that deleted/updated (created new)        |   |
-|  |                                                                  |   |
-|  | Row versions:                                                    |   |
-|  | +------------------------------------------------------------+   |   |
-|  | | Version 1 | data="Alice" | xmin=100 | xmax=150             |   |   |
-|  | | Version 2 | data="Alicia" | xmin=150 | xmax=~              |   |   |
-|  | +------------------------------------------------------------+   |   |
-|  |                                                                  |   |
-|  | Transaction 120 sees Version 1 (120 > 100, 120 < 150)            |   |
-|  | Transaction 200 sees Version 2 (200 > 150)                       |   |
-|  +------------------------------------------------------------------+   |
+|  GARBAGE COLLECTION (VACUUM)                                            |
 |                                                                         |
-|  BENEFITS:                                                              |
-|  * Readers never block writers                                          |
-|  * Writers never block readers                                          |
-|  * Consistent snapshots without locks                                   |
+|  Old versions pile up. Once no active transaction needs them,           |
+|  they become "dead tuples" and waste space.                             |
 |                                                                         |
-|  COST:                                                                  |
-|  * Storage overhead (multiple versions)                                 |
-|  * Need VACUUM/garbage collection for old versions                      |
+|  +-------+----------+----------+---------+                              |
+|  | id    | name     | xmin     | xmax    |                              |
+|  +-------+----------+----------+---------+                              |
+|  | 1     | Alice    | 100      | 150     |  <- no txn < 150 alive       |
+|  | 1     | Alicia   | 150      | 200     |  <- no txn < 200 alive       |
+|  | 1     | Bob      | 200      | -       |  <- current                  |
+|  +-------+----------+----------+---------+                              |
 |                                                                         |
-|  USED BY: PostgreSQL, MySQL InnoDB, Oracle                              |
+|  If oldest active transaction is 250:                                   |
+|  -> "Alice" and "Alicia" versions are safe to delete                    |
+|  -> VACUUM reclaims this space                                          |
+|                                                                         |
+|  PostgreSQL: autovacuum runs periodically                               |
+|  MySQL:      purge thread cleans undo log                               |
+|  Cassandra:  compaction merges SSTables, drops old versions             |
+|  CouchDB:    compaction removes old revisions                           |
+|                                                                         |
+|  PROBLEM: Long-running transactions prevent cleanup                     |
+|  -> Dead tuples accumulate -> table bloat -> slow queries               |
+|  -> This is why you should avoid very long transactions                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  MVCC CONFLICT SUMMARY                                                  |
+|                                                                         |
+|  +-----------------------------------------------------------------+    |
+|  |                                                                 |    |
+|  |  Reader vs Reader    -> NO conflict                             |    |
+|  |  Reader vs Writer    -> NO conflict  <- THIS is why MVCC        |    |
+|  |                                         exists                  |    |
+|  |  Writer vs Writer    -> YES conflict                            |    |
+|  |    SQL:      first-writer-wins, second aborts/waits             |    |
+|  |    CouchDB:  both win, resolve later (conflict branches)        |    |
+|  |    Cassandra: last-write-wins, earlier data lost                |    |
+|  |                                                                 |    |
+|  +-----------------------------------------------------------------+    |
+|                                                                         |
+|  USED BY:                                                               |
+|  SQL:   PostgreSQL, MySQL InnoDB, Oracle, SQL Server, CockroachDB       |
+|  NoSQL: MongoDB (WiredTiger), CouchDB, Cassandra, DynamoDB, HBase       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

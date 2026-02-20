@@ -2,7 +2,7 @@
 
 Comprehensive system design notes covering fundamentals, real-world system designs, distributed systems, DevOps, and interview preparation.
 
-## Fundamentals (22 chapters)
+## Fundamentals (23 chapters)
 
 | # | Topic | Link |
 |---|-------|------|
@@ -28,6 +28,7 @@ Comprehensive system design notes covering fundamentals, real-world system desig
 | 20 | Database Internals Deep Dive | [Notes](md/Notes-Detailed/Fundamentals/20-Database-Internals-Deep-Dive.md) |
 | 21 | Distributed Concurrency Control | [Notes](md/Notes-Detailed/Fundamentals/21-Distributed-Concurrency-Control.md) |
 | 22 | Idempotent API Design | [Notes](md/Notes-Detailed/Fundamentals/22-Idempotent-API-Design.md) |
+| 23 | Interview Follow-up Questions | [Notes](md/Notes-Detailed/Fundamentals/23-Interview-Followup-Questions.md) |
 
 ## System Design Problems
 
