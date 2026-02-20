@@ -119,6 +119,9 @@ Relational databases guarantee ACID properties for transactions:
 
 ## SECTION 5.2: ISOLATION LEVELS (DEEP DIVE)
 
+Isolation levels control how much one transaction can see another's uncommitted
+changes. Higher isolation = fewer anomalies but lower concurrency.
+
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -210,6 +213,9 @@ Relational databases guarantee ACID properties for transactions:
 ```
 
 ## SECTION 5.3: LOCKING AND CONCURRENCY CONTROL
+
+Locks prevent conflicting operations from corrupting data. The tradeoff:
+stricter locking = more correctness but less throughput.
 
 ```
 +--------------------------------------------------------------------------+
@@ -873,32 +879,37 @@ Understanding internal data structures helps you make better design decisions.
 |  |              CONSISTENT HASHING RING                              |  |
 |  |  +-----------------------------------------------------------+    |  |
 |  |  |                                                           |    |  |
-|  |  |     Partition Key > Hash > Position on Ring              |     |  |
+|  |  |     Partition Key > Hash > Position on Ring               |    |  |
+|  |  |                                                           |    |  |
+|  |  |  Note: Partition key (e.g. user_id) is hashed to a        |    |  |
+|  |  |  number, mapped to a position on the ring. Walk           |    |  |
+|  |  |  clockwise to find owning node. Minimizes reshuffling     |    |  |
+|  |  |  when nodes join/leave.                                   |    |  |
 |  |  |                                                           |    |  |
 |  |  |              o-------o-------o                            |    |  |
 |  |  |            /                   \                          |    |  |
-|  |  |          o       Hash Ring      o                        |     |  |
+|  |  |          o       Hash Ring      o                         |    |  |
 |  |  |            \                   /                          |    |  |
 |  |  |              o-------o-------o                            |    |  |
 |  |  |                                                           |    |  |
-|  |  |  Each position owned by a storage node                   |     |  |
+|  |  |  Each position owned by a storage node                    |    |  |
 |  |  +-----------------------------------------------------------+    |  |
 |  |                          |                                        |  |
 |  |                          v                                        |  |
 |  |                  STORAGE NODES                                    |  |
 |  |  +-----------------------------------------------------------+    |  |
 |  |  |                                                           |    |  |
-|  |  |  Each partition stored on 3 nodes (replication factor=3) |     |  |
+|  |  |  Each partition stored on 3 nodes (replication factor=3)  |    |  |
 |  |  |                                                           |    |  |
-|  |  |  +-------------+ +-------------+ +-------------+        |      |  |
-|  |  |  |   Node A    | |   Node B    | |   Node C    |        |      |  |
-|  |  |  |  (Leader)   | |  (Replica)  | |  (Replica)  |        |      |  |
-|  |  |  |             | |             | |             |        |      |  |
-|  |  |  | +---------+ | | +---------+ | | +---------+ |        |      |  |
-|  |  |  | |B+ Tree  | | | |B+ Tree  | | | |B+ Tree  | |        |      |  |
-|  |  |  | |(Storage)| | | |(Storage)| | | |(Storage)| |        |      |  |
-|  |  |  | +---------+ | | +---------+ | | +---------+ |        |      |  |
-|  |  |  +-------------+ +-------------+ +-------------+        |      |  |
+|  |  |  +-------------+ +-------------+ +-------------+          |    |  |
+|  |  |  |   Node A    | |   Node B    | |   Node C    |          |    |  |
+|  |  |  |  (Leader)   | |  (Replica)  | |  (Replica)  |          |    |  |
+|  |  |  |             | |             | |             |          |    |  |
+|  |  |  | +---------+ | | +---------+ | | +---------+ |          |    |  |
+|  |  |  | |B+ Tree  | | | |B+ Tree  | | | |B+ Tree  | |          |    |  |
+|  |  |  | |(Storage)| | | |(Storage)| | | |(Storage)| |          |    |  |
+|  |  |  | +---------+ | | +---------+ | | +---------+ |          |    |  |
+|  |  |  +-------------+ +-------------+ +-------------+          |    |  |
 |  |  |                                                           |    |  |
 |  |  +-----------------------------------------------------------+    |  |
 |  |                                                                   |  |
@@ -1162,10 +1173,15 @@ Understanding internal data structures helps you make better design decisions.
 
 ## SECTION 5.6: INDEXING DEEP DIVE
 
-Indexes make queries fast. Understanding them is crucial.
-
 ```
 +-------------------------------------------------------------------------+
+|                                                                         |
+|  WHAT IS AN INDEX?                                                      |
+|  A separate data structure (usually B-tree) storing sorted references   |
+|  to rows. DB jumps directly to data instead of scanning every row.      |
+|  Tradeoff: extra storage + slower writes for much faster reads.         |
+|                                                                         |
+|  ====================================================================   |
 |                                                                         |
 |  HOW INDEXES WORK                                                       |
 |                                                                         |
@@ -1322,6 +1338,9 @@ Indexes make queries fast. Understanding them is crucial.
 
 ## SECTION 5.7: QUERY OPTIMIZATION
 
+How the database turns your SQL into an efficient execution plan. Understanding
+this helps you write queries that use indexes instead of full table scans.
+
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -1442,6 +1461,9 @@ Indexes make queries fast. Understanding them is crucial.
 
 ## SECTION 5.8: NEWSQL AND HTAP DATABASES
 
+NewSQL = SQL guarantees + horizontal scaling. HTAP = one database that handles
+both transactional (OLTP) and analytical (OLAP) workloads.
+
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -1511,6 +1533,9 @@ Indexes make queries fast. Understanding them is crucial.
 ```
 
 ## SECTION 5.9: DATABASE SCALING PATTERNS
+
+Techniques to handle growing data and traffic: read replicas for read-heavy
+loads, sharding for write-heavy loads, and connection pooling to reduce overhead.
 
 ```
 +-------------------------------------------------------------------------+

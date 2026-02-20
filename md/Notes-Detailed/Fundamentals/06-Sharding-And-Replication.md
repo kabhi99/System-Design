@@ -350,6 +350,10 @@ Sharding splits data across multiple databases, each holding a subset.
 
 ### CONSISTENT HASHING DEEP DIVE
 
+A technique where keys and nodes are mapped onto a ring via hashing. Each key is
+owned by the next node clockwise on the ring. When nodes join or leave, only
+neighboring keys are reshuffled — not everything.
+
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
