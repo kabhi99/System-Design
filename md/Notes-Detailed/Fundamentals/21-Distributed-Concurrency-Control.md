@@ -489,5 +489,369 @@ simultaneously. This chapter covers patterns for safe coordination.
 +--------------------------------------------------------------------------+
 ```
 
+## SECTION 21.6: RACE CONDITIONS IN ASYNC MICROSERVICES
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  RACE CONDITIONS IN ASYNC MICROSERVICES                                 |
+|  ======================================                                 |
+|                                                                         |
+|  In async systems (Kafka, SQS, event-driven), race conditions are       |
+|  HARDER to spot because there's no shared thread or process —           |
+|  events arrive at unpredictable times across multiple services.         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.1: OUT-OF-ORDER EVENT PROCESSING
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM: Events arrive in wrong order                                  |
+|                                                                         |
+|  Order Service publishes:                                               |
+|    Event 1: order_created  (t=100ms)                                    |
+|    Event 2: order_updated  (t=200ms)                                    |
+|    Event 3: order_cancelled (t=300ms)                                   |
+|                                                                         |
+|  Consumer receives:                                                     |
+|    Event 3: order_cancelled                                             |
+|    Event 1: order_created   <-- STALE! Resurrects cancelled order       |
+|                                                                         |
+|  WHY IT HAPPENS:                                                        |
+|  * Kafka: different partitions = no ordering guarantee                  |
+|  * Retries: Event 1 fails, retried after Event 2 succeeds               |
+|  * Multiple producers: Service A and B publish about same entity        |
+|  * Network: messages take different paths with varying latency          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. VERSION / TIMESTAMP CHECK (most common)                             |
+|                                                                         |
+|     Every event carries a version or timestamp.                         |
+|     Consumer only applies if event version > current version.           |
+|                                                                         |
+|     // Consumer logic                                                   |
+|     event = consume()                                                   |
+|     current = db.get(event.entity_id)                                   |
+|                                                                         |
+|     if event.version <= current.version:                                |
+|       log("Stale event, skipping")                                      |
+|       return ACK  // don't reprocess                                    |
+|                                                                         |
+|     db.update(event.entity_id,                                          |
+|       SET data = event.data, version = event.version                    |
+|       WHERE version < event.version)  // CAS guard                      |
+|                                                                         |
+|  2. SAME PARTITION KEY (for Kafka)                                      |
+|                                                                         |
+|     All events for same entity go to same partition.                    |
+|     Kafka guarantees order WITHIN a partition.                          |
+|                                                                         |
+|     producer.send("orders", key=order_id, value=event)                  |
+|     // All events for order_123 go to same partition                    |
+|     // Consumer sees them in order                                      |
+|                                                                         |
+|  3. SEQUENCE NUMBER WITH GAP DETECTION                                  |
+|                                                                         |
+|     Each event has seq_no (1, 2, 3...).                                 |
+|     If consumer sees seq 5 but last was 3 — hold in buffer.             |
+|     Wait for seq 4, then process 4, 5 in order.                         |
+|     Timeout: if seq 4 never arrives, alert + process anyway.            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.2: CONCURRENT CONSUMERS UPDATING SAME RESOURCE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM: Two consumers process events that affect the same entity      |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Kafka Topic: "payments"                                          |  |
+|  |                                                                   |  |
+|  |  Consumer A gets: { order: 123, action: "charge" }               |   |
+|  |  Consumer B gets: { order: 123, action: "refund" }               |   |
+|  |                                                                   |  |
+|  |  Both read order 123:  balance = $100                             |  |
+|  |  Consumer A: balance = 100 - 50 = $50  (charge)                  |   |
+|  |  Consumer B: balance = 100 + 50 = $150 (refund)                  |   |
+|  |                                                                   |  |
+|  |  Who writes last wins. One update is LOST.                        |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. PARTITION BY ENTITY (prevent concurrency entirely)                  |
+|                                                                         |
+|     Route all events for same entity to same partition.                 |
+|     Single consumer per partition = sequential processing.              |
+|     No concurrent access to same entity. Simplest fix.                  |
+|                                                                         |
+|     // Kafka: key = order_id ensures same partition                     |
+|     // SQS FIFO: MessageGroupId = order_id                              |
+|                                                                         |
+|  2. OPTIMISTIC LOCKING (DB-level guard)                                 |
+|                                                                         |
+|     UPDATE orders                                                       |
+|       SET balance = balance - 50, version = version + 1                 |
+|       WHERE id = 123 AND version = 5;                                   |
+|     -- Rows affected = 0? Someone else changed it. RETRY.               |
+|                                                                         |
+|  3. DISTRIBUTED LOCK (Redis / Zookeeper)                                |
+|                                                                         |
+|     lock = redis.set("lock:order:123", owner, NX, EX=5)                 |
+|     if lock acquired:                                                   |
+|       process event                                                     |
+|       release lock                                                      |
+|     else:                                                               |
+|       retry after backoff (or send to retry queue)                      |
+|                                                                         |
+|  4. ATOMIC DB OPERATIONS (no read-then-write)                           |
+|                                                                         |
+|     BAD:  balance = db.read(balance); db.write(balance - 50)            |
+|     GOOD: UPDATE orders SET balance = balance - 50 WHERE id = 123       |
+|           (single atomic SQL, no read-modify-write race)                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.3: CONSUMER REBALANCE RACE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM: Kafka consumer rebalance causes duplicate processing          |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Consumer A processing message at offset 42...                    |  |
+|  |                                                                   |  |
+|  |  REBALANCE TRIGGERED (new consumer joins group)                   |  |
+|  |                                                                   |  |
+|  |  Partition reassigned: A loses partition, B gets it               |  |
+|  |                                                                   |  |
+|  |  But A hasn't committed offset 42 yet!                            |  |
+|  |  A is still mid-processing...                                    |   |
+|  |                                                                   |  |
+|  |  B starts from last committed offset (41)                         |  |
+|  |  B processes message 42 AGAIN                                     |  |
+|  |                                                                   |  |
+|  |  Meanwhile A finishes and tries to commit -> FAILS               |   |
+|  |  (partition no longer assigned to A)                              |  |
+|  |                                                                   |  |
+|  |  Result: Message 42 processed TWICE by A and B                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. IDEMPOTENT CONSUMERS (most important, always do this)               |
+|     -- Track processed event_ids in DB                                  |
+|     -- Before processing: if event_id exists -> skip                    |
+|     -- After processing: INSERT event_id in same transaction            |
+|                                                                         |
+|     BEGIN TRANSACTION;                                                  |
+|       INSERT INTO processed_events (event_id) VALUES ('evt-42');        |
+|       -- if duplicate, unique constraint fails -> skip                  |
+|       UPDATE orders SET status = 'confirmed' WHERE id = 123;            |
+|     COMMIT;                                                             |
+|                                                                         |
+|  2. COOPERATIVE STICKY ASSIGNOR (Kafka 2.4+)                            |
+|     -- Minimizes partition movement during rebalance                    |
+|     -- Partitions stay with same consumer when possible                 |
+|     -- Reduces window for duplicate processing                          |
+|     partition.assignment.strategy = cooperative-sticky                  |
+|                                                                         |
+|  3. STATIC GROUP MEMBERSHIP (Kafka 2.3+)                                |
+|     -- Assign fixed group.instance.id to each consumer                  |
+|     -- Consumer restart doesn't trigger rebalance                       |
+|     -- Only triggers rebalance after session.timeout.ms                 |
+|     group.instance.id = "consumer-host-1"                               |
+|     session.timeout.ms = 300000  // 5 min                               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.4: READ-THEN-WRITE (CHECK-THEN-ACT) IN ASYNC FLOWS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM: Service reads state, makes decision, then writes.             |
+|  Between read and write, another event changes the state.               |
+|                                                                         |
+|  EXAMPLE: Double booking                                                |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Event A: "book_seat_A1"     Event B: "book_seat_A1"             |   |
+|  |       |                           |                               |  |
+|  |  Consumer 1:                 Consumer 2:                          |  |
+|  |  1. Check: is A1 free? YES  1. Check: is A1 free? YES           |    |
+|  |  2. Book A1                  2. Book A1                           |  |
+|  |                                                                   |  |
+|  |  Result: DOUBLE BOOKED! Both consumers saw "free" before         |   |
+|  |  either wrote "booked".                                           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  This is the classic TOCTOU (Time Of Check To Time Of Use) bug.         |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. ATOMIC CONDITIONAL WRITE (best for DB)                              |
+|                                                                         |
+|     Don't check then write. Do it in ONE statement:                     |
+|                                                                         |
+|     UPDATE seats SET status = 'booked', user_id = 456                   |
+|       WHERE seat_id = 'A1' AND status = 'available';                    |
+|     -- Rows affected = 1 -> success                                     |
+|     -- Rows affected = 0 -> someone else got it                         |
+|                                                                         |
+|  2. REDIS ATOMIC OPERATIONS                                             |
+|                                                                         |
+|     -- Lua script: check + reserve in one atomic operation              |
+|     local status = redis.call('GET', 'seat:A1')                         |
+|     if status == 'available' then                                       |
+|       redis.call('SET', 'seat:A1', user_id, 'EX', 300)                  |
+|       return 1                                                          |
+|     end                                                                 |
+|     return 0                                                            |
+|                                                                         |
+|  3. UNIQUE CONSTRAINT AS SAFETY NET                                     |
+|                                                                         |
+|     CREATE UNIQUE INDEX idx_seat_booking                                |
+|       ON bookings(show_id, seat_id);                                    |
+|     -- Even if app logic has a race, DB rejects duplicate               |
+|                                                                         |
+|  4. PESSIMISTIC LOCK (SELECT FOR UPDATE)                                |
+|                                                                         |
+|     BEGIN;                                                              |
+|     SELECT * FROM seats WHERE seat_id = 'A1' FOR UPDATE;                |
+|     -- Lock acquired. No one else can read this row.                    |
+|     UPDATE seats SET status = 'booked' WHERE seat_id = 'A1';            |
+|     COMMIT;                                                             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.5: EVENT REPLAY / REPROCESSING OVERWRITES NEWER DATA
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM: Replaying old events overwrites current state                 |
+|                                                                         |
+|  Scenarios where events get replayed:                                   |
+|  * Consumer group reset to earlier offset (bug fix reprocessing)        |
+|  * Dead letter queue (DLQ) messages retried hours later                 |
+|  * Retry queue delivers old event after newer ones processed            |
+|  * Kafka consumer seek back for reprocessing                            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Timeline:                                                        |  |
+|  |  10:00 - Event: user.email = "old@mail.com"                      |   |
+|  |  10:05 - Event: user.email = "new@mail.com" (processed OK)       |   |
+|  |  10:10 - REPLAY: user.email = "old@mail.com" (from DLQ retry)   |    |
+|  |                                                                   |  |
+|  |  Result: User's email reverts to old value!                       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. EVENT TIMESTAMP / VERSION CHECK (always do this)                    |
+|                                                                         |
+|     UPDATE users                                                        |
+|       SET email = 'old@mail.com', updated_at = '10:00'                  |
+|       WHERE id = 123 AND updated_at < '10:00';                          |
+|     -- Rows affected = 0: current data is newer. Skip.                  |
+|                                                                         |
+|  2. MONOTONIC VERSION COLUMN                                            |
+|                                                                         |
+|     Every entity has a version counter.                                 |
+|     Events carry the version they were created at.                      |
+|     Consumer: only apply if event.version > current.version             |
+|                                                                         |
+|  3. IDEMPOTENCY TABLE                                                   |
+|                                                                         |
+|     Track every processed event_id.                                     |
+|     On replay: event_id already exists -> skip entirely.                |
+|     No stale data written, no side effects repeated.                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.6.6: DECISION GUIDE & INTERVIEW CHEAT SHEET
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  RACE CONDITION DECISION GUIDE                                          |
+|  ==============================                                         |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  | Problem                   | Best Solution                         |  |
+|  |---------------------------|---------------------------------------|  |
+|  | Out-of-order events       | Version check + partition by entity   |  |
+|  | Concurrent updates        | Atomic DB ops or optimistic locking   |  |
+|  | Consumer rebalance dupes  | Idempotent consumers (always!)        |  |
+|  | Check-then-act / TOCTOU   | Atomic conditional write / Lua script |  |
+|  | Event replay overwrites   | Timestamp/version guard on writes     |  |
+|  | Two services, same entity | Partition key = entity_id             |  |
+|  | Flash sale / hot resource | Redis Lua script (atomic check+book)  |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  UNIVERSAL DEFENSES (apply to ALL async microservices):                 |
+|                                                                         |
+|  1. IDEMPOTENT CONSUMERS                                                |
+|     Every consumer must handle receiving the same event twice.          |
+|     Track event_id in DB or Redis. Duplicate -> skip.                   |
+|                                                                         |
+|  2. PARTITION BY ENTITY                                                 |
+|     Route events by entity_id (Kafka key / SQS FIFO group).             |
+|     Guarantees ordering per entity. Prevents concurrent access.         |
+|                                                                         |
+|  3. OPTIMISTIC CONCURRENCY (version column)                             |
+|     Every write checks version. Stale write rejected.                   |
+|     No locks needed. Works at any scale.                                |
+|                                                                         |
+|  4. ATOMIC OPERATIONS (no read-modify-write)                            |
+|     Prefer: UPDATE x SET val = val + 1                                  |
+|     Over:   val = READ x; WRITE x = val + 1                             |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  INTERVIEW TIP:                                                         |
+|  "In async microservices, I always design consumers to be               |
+|   idempotent — they track processed event IDs and skip duplicates.      |
+|   I use entity-based partition keys in Kafka to guarantee ordering.     |
+|   For shared state updates, I use optimistic locking with version       |
+|   columns. And I never do read-then-write — always atomic               |
+|   conditional updates like UPDATE ... WHERE version = expected."        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 21
 

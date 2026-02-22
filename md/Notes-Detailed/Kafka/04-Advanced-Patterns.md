@@ -776,3 +776,402 @@ processed[1]
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## SECTION 4.6: EVENT REPLAY IN MICROSERVICES
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  EVENT REPLAY: WHY, WHEN, AND HOW                                      |
+|  ==================================                                    |
+|                                                                         |
+|  Replay = re-consuming events that were already processed.             |
+|  Kafka's killer feature: messages are RETAINED on disk.                |
+|  Consumers can rewind and reprocess from any offset.                   |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  WHEN YOU NEED TO REPLAY:                                              |
+|                                                                         |
+|  1. BUG FIX REPROCESSING                                               |
+|     Consumer had a bug. It processed 1M events wrong.                  |
+|     Fix the bug, reset offset, replay to correct the data.             |
+|                                                                         |
+|  2. NEW CONSUMER / NEW SERVICE                                         |
+|     New analytics service joins. Needs all historical events           |
+|     from day one to build its state / materialized view.               |
+|                                                                         |
+|  3. SCHEMA CHANGE / DATA MIGRATION                                     |
+|     Changed how events are interpreted. Need to reprocess              |
+|     existing events with the new logic.                                 |
+|                                                                         |
+|  4. DLQ REPROCESSING                                                   |
+|     Failed messages moved to DLQ. After root cause is fixed,           |
+|     replay DLQ messages back to the main topic.                         |
+|                                                                         |
+|  5. DISASTER RECOVERY                                                  |
+|     Service lost its database. Rebuild state by replaying              |
+|     all events from Kafka into a fresh database.                       |
+|                                                                         |
+|  6. TESTING / SHADOW MODE                                              |
+|     Replay production events into a shadow environment to              |
+|     validate new consumer logic before going live.                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### HOW TO REPLAY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  REPLAY MECHANISMS                                                     |
+|  =================                                                     |
+|                                                                         |
+|  1. KAFKA OFFSET RESET (most common)                                   |
+|                                                                         |
+|     Reset consumer group offset to earlier position.                   |
+|                                                                         |
+|     # Reset to beginning (all events)                                  |
+|     kafka-consumer-groups.sh --group my-service                        |
+|       --topic orders --reset-offsets --to-earliest --execute           |
+|                                                                         |
+|     # Reset to specific timestamp                                      |
+|     kafka-consumer-groups.sh --group my-service                        |
+|       --topic orders --reset-offsets                                   |
+|       --to-datetime "2025-02-20T00:00:00.000" --execute               |
+|                                                                         |
+|     # Reset to specific offset                                         |
+|     kafka-consumer-groups.sh --group my-service                        |
+|       --topic orders --reset-offsets --to-offset 50000 --execute      |
+|                                                                         |
+|     IMPORTANT: Stop consumers BEFORE resetting offsets.                |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  2. NEW CONSUMER GROUP (safer approach)                                |
+|                                                                         |
+|     Don't reset existing group. Create a NEW group that                |
+|     reads from the beginning. Old group keeps running.                  |
+|                                                                         |
+|     // New group starts from earliest                                  |
+|     group.id = "order-service-v2"                                      |
+|     auto.offset.reset = earliest                                       |
+|                                                                         |
+|     PROS: Old consumer unaffected. Easy rollback.                      |
+|     CONS: Need to switch traffic after replay is done.                 |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  3. DLQ REPLAY                                                         |
+|                                                                         |
+|     DLQ is just another Kafka topic. Replay = consume DLQ             |
+|     and re-publish to original topic (or process directly).            |
+|                                                                         |
+|     // Read from DLQ, publish back to main topic                       |
+|     for msg in dlq_consumer.poll():                                    |
+|       producer.send("orders", key=msg.key, value=msg.value,           |
+|         headers={"replay": "true", "original_ts": msg.timestamp})     |
+|       dlq_consumer.commit()                                            |
+|                                                                         |
+|     Add "replay" header so consumers know it's a replay.              |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  4. EVENT STORE REPLAY (Event Sourcing)                                |
+|                                                                         |
+|     If using event sourcing, the event store IS the source of truth.  |
+|     Replay = read events from event store, rebuild projections.        |
+|                                                                         |
+|     SELECT * FROM events                                               |
+|       WHERE aggregate_id = 'order-123'                                 |
+|       ORDER BY version ASC;                                            |
+|     -- Apply each event to rebuild current state                       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### POTENTIAL ISSUES WITH REPLAY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 1: STALE DATA OVERWRITES NEWER DATA                            |
+|  ==========================================                            |
+|                                                                         |
+|  Replaying old event "email = old@mail.com" overwrites                 |
+|  the current "email = new@mail.com" that was set after.                |
+|                                                                         |
+|  +-------------------------------------------------------------------+ |
+|  |                                                                   | |
+|  |  Timeline:                                                        | |
+|  |  10:00 - Event: user.email = "old@mail.com"   (original)         | |
+|  |  10:05 - Event: user.email = "new@mail.com"   (user changed it)  | |
+|  |  11:00 - REPLAY from 10:00                                       | |
+|  |          Replays "old@mail.com" -> overwrites "new@mail.com"!     | |
+|  |                                                                   | |
+|  +-------------------------------------------------------------------+ |
+|                                                                         |
+|  FIX: Version / timestamp guard on every write                         |
+|                                                                         |
+|  UPDATE users SET email = :email, version = :event_version             |
+|    WHERE id = :user_id AND version < :event_version;                   |
+|  -- Rows affected = 0 means current data is newer. Skip.              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 2: DUPLICATE SIDE EFFECTS                                       |
+|  ================================                                      |
+|                                                                         |
+|  Replaying events re-triggers side effects that already happened:      |
+|                                                                         |
+|  * Sends email AGAIN ("Your order is confirmed" — 2nd time)           |
+|  * Charges payment AGAIN (double charge!)                              |
+|  * Decrements inventory AGAIN (stock goes negative)                    |
+|  * Fires webhook AGAIN (partner receives duplicate notification)       |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 1: IDEMPOTENT CONSUMERS (primary defense)                        |
+|                                                                         |
+|  Track processed event IDs. On replay, check before acting.            |
+|                                                                         |
+|  BEGIN TRANSACTION;                                                     |
+|    INSERT INTO processed_events (event_id)                             |
+|      VALUES ('evt-123') ON CONFLICT DO NOTHING;                        |
+|    -- If insert succeeded (new event): process it                      |
+|    -- If conflict (already processed): skip                            |
+|  COMMIT;                                                                |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 2: SEPARATE SIDE EFFECTS FROM STATE CHANGES                      |
+|                                                                         |
+|  State change: UPDATE order SET status = 'confirmed'                   |
+|    -> Safe to replay (idempotent, same result)                         |
+|                                                                         |
+|  Side effect: send_email("order confirmed")                            |
+|    -> NOT safe to replay (user gets duplicate email)                   |
+|                                                                         |
+|  PATTERN: During replay, SKIP side effects. Only apply state.          |
+|                                                                         |
+|  if event.headers.get("replay") == "true":                             |
+|    update_database(event)     // apply state change                    |
+|    // SKIP: send_email, fire_webhook, charge_payment                   |
+|  else:                                                                  |
+|    update_database(event)                                               |
+|    send_email(event)          // only on first processing              |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 3: IDEMPOTENCY KEYS FOR EXTERNAL CALLS                           |
+|                                                                         |
+|  For payment APIs, webhooks, etc. — use idempotency keys.             |
+|  External system recognizes the same key and returns cached result.    |
+|                                                                         |
+|  payment_gateway.charge(                                                |
+|    amount=100,                                                          |
+|    idempotency_key=f"order_{order_id}_payment"                         |
+|  )                                                                      |
+|  // Gateway: same key -> return previous result, no re-charge          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 3: DOWNSTREAM FLOODING / THUNDERING HERD                        |
+|  ================================================                     |
+|                                                                         |
+|  Replaying 10M events at full speed overwhelms downstream:             |
+|                                                                         |
+|  * Database: 100K writes/sec during replay (normally 1K/sec)           |
+|  * Payment service: sudden spike of charge requests                    |
+|  * Notification service: millions of emails queued at once             |
+|  * Cache: stampede of cache misses during state rebuild                 |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 1: RATE-LIMITED REPLAY                                            |
+|                                                                         |
+|  Don't replay at full Kafka consumer speed. Throttle.                  |
+|                                                                         |
+|  for msg in consumer.poll():                                            |
+|    process(msg)                                                         |
+|    consumer.commit()                                                    |
+|    time.sleep(0.01)  // 100 events/sec instead of 100K/sec            |
+|                                                                         |
+|  Better: use a token bucket rate limiter.                              |
+|  rate_limiter = RateLimiter(permits_per_sec=5000)                      |
+|  for msg in consumer.poll():                                            |
+|    rate_limiter.acquire()                                               |
+|    process(msg)                                                         |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 2: BATCH WRITES DURING REPLAY                                    |
+|                                                                         |
+|  Instead of 1 DB write per event, buffer and batch.                    |
+|                                                                         |
+|  buffer = []                                                            |
+|  for msg in consumer.poll():                                            |
+|    buffer.append(msg)                                                   |
+|    if len(buffer) >= 1000:                                              |
+|      db.bulk_upsert(buffer)  // 1 DB call for 1000 events             |
+|      consumer.commit()                                                  |
+|      buffer.clear()                                                     |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 3: SEPARATE REPLAY PIPELINE                                      |
+|                                                                         |
+|  Don't replay through the live consumer. Use a dedicated               |
+|  replay pipeline that writes to a staging DB first.                    |
+|                                                                         |
+|  +-------------------------------------------------------------------+ |
+|  |                                                                   | |
+|  |  Kafka --> Replay Consumer --> Staging DB                         | |
+|  |                                  |                                | |
+|  |                                  | (validate, swap)              | |
+|  |                                  v                                | |
+|  |                              Live DB                              | |
+|  |                                                                   | |
+|  +-------------------------------------------------------------------+ |
+|                                                                         |
+|  Replay to staging, verify data, then swap (blue-green DB switch).    |
+|  Live system completely unaffected during replay.                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 4: SCHEMA MISMATCH                                              |
+|  =========================                                             |
+|                                                                         |
+|  Events stored 6 months ago have schema v1.                            |
+|  Current consumer expects schema v3.                                   |
+|  Replay old events -> deserialization FAILS or data is wrong.          |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX: SCHEMA EVOLUTION WITH COMPATIBILITY                              |
+|                                                                         |
+|  1. Schema Registry (Avro/Protobuf) enforces compatibility             |
+|     * Backward: new consumer reads old events (required for replay!)   |
+|     * Forward: old consumer reads new events                           |
+|                                                                         |
+|  2. Version field in every event                                       |
+|     { "version": 1, "data": {...} }                                   |
+|                                                                         |
+|     Consumer has handlers per version:                                  |
+|     if event.version == 1: process_v1(event)                           |
+|     if event.version == 2: process_v2(event)                           |
+|     if event.version == 3: process_v3(event)                           |
+|                                                                         |
+|  3. Upcaster pattern: transform old events to new schema               |
+|     at read time, before consumer processes them.                      |
+|                                                                         |
+|     def upcast(event):                                                  |
+|       if event.version == 1:                                           |
+|         event.data["new_field"] = default_value                        |
+|         event.version = 3                                               |
+|       return event                                                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 5: KAFKA RETENTION EXPIRED                                      |
+|  =================================                                     |
+|                                                                         |
+|  Kafka default retention: 7 days. Events older than that are deleted.  |
+|  If you need to replay from 6 months ago — data is GONE.              |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  FIX 1: TIERED STORAGE (Kafka 3.6+)                                   |
+|     Hot data on broker disks, old data moved to S3/GCS/HDFS.           |
+|     Consumer can transparently read from cold storage.                  |
+|     Set: remote.log.storage.enable = true                              |
+|                                                                         |
+|  FIX 2: SINK TO DATA LAKE                                              |
+|     Kafka Connect -> S3/GCS/HDFS (Parquet format)                     |
+|     For replay: read from data lake, re-publish to Kafka topic.        |
+|     Use compacted topic for latest-state-per-key retention.            |
+|                                                                         |
+|  FIX 3: COMPACTED TOPICS (for state events)                            |
+|     log.cleanup.policy = compact                                       |
+|     Keeps latest value per key forever.                                |
+|     Replay from compacted topic = get current state of every entity.   |
+|     Deletes only OLDER versions of same key.                           |
+|                                                                         |
+|  FIX 4: INCREASE RETENTION (simple but costly)                         |
+|     retention.ms = -1 (infinite) or 2592000000 (30 days)              |
+|     Cost: more disk. Fine for low-volume critical topics.              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### REPLAY CHECKLIST (Production Safe)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PRODUCTION-SAFE REPLAY CHECKLIST                                      |
+|  =================================                                     |
+|                                                                         |
+|  BEFORE REPLAY:                                                        |
+|  [ ] Consumers are idempotent (event_id dedup)                         |
+|  [ ] Version/timestamp guards on all DB writes                         |
+|  [ ] Side effects are skippable (replay header flag)                   |
+|  [ ] External calls use idempotency keys                               |
+|  [ ] Schema backward compatibility verified                            |
+|  [ ] Replay rate limiter configured                                    |
+|  [ ] Downstream services alerted (DB team, dependent services)         |
+|  [ ] Monitoring dashboards ready (lag, throughput, error rate)         |
+|                                                                         |
+|  DURING REPLAY:                                                        |
+|  [ ] Monitor consumer lag (should be decreasing steadily)              |
+|  [ ] Monitor DB CPU / connections / replication lag                     |
+|  [ ] Watch for error spikes (schema issues, constraint violations)     |
+|  [ ] Replay with new consumer group (don't disrupt live)               |
+|                                                                         |
+|  AFTER REPLAY:                                                         |
+|  [ ] Verify data consistency (spot checks + count checks)              |
+|  [ ] Switch traffic to replayed consumer group                         |
+|  [ ] Clean up old consumer group offsets                               |
+|  [ ] Document: what was replayed, why, and outcome                     |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  +-------------------------------------------------------------------+ |
+|  | Issue               | Solution                    | Priority      | |
+|  |---------------------|-----------------------------|---------------| |
+|  | Stale overwrites    | Version guard on writes     | MUST HAVE     | |
+|  | Duplicate side fx   | Idempotent consumers +      | MUST HAVE     | |
+|  |                     | replay header flag          |               | |
+|  | Downstream flood    | Rate limiter / batch writes | MUST HAVE     | |
+|  | Schema mismatch     | Schema Registry + upcasters | SHOULD HAVE   | |
+|  | Retention expired   | Tiered storage / data lake  | PLAN AHEAD    | |
+|  +-------------------------------------------------------------------+ |
+|                                                                         |
+|  INTERVIEW TIP:                                                        |
+|  "Kafka's retained log lets us replay events for bug fixes, new        |
+|   consumers, or disaster recovery. But replay is dangerous without     |
+|   safeguards — we use version guards to prevent stale overwrites,      |
+|   idempotent consumers with event_id dedup, a replay header to skip   |
+|   side effects like emails, and rate limiting to avoid flooding        |
+|   downstream. For long-term replay, we sink events to S3 via Kafka    |
+|   Connect and use compacted topics for latest-state-per-key."          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
