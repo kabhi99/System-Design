@@ -540,6 +540,316 @@ distributed applications.
 +-------------------------------------------------------------------------+
 ```
 
+## SECTION 7.6.1: QUEUE TYPES & USE CASES
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  DELAY QUEUE (Scheduled / Deferred Processing)                           |
+|  =============================================                           |
+|                                                                          |
+|  Messages become visible ONLY after a specified delay.                   |
+|                                                                          |
+|  +---------------------------------------------------------------------+ |
+|  |                                                                     | |
+|  |  Producer ---> [Delay Queue (invisible for N seconds)] ---> Consumer  |
+|  |                                                                     | |
+|  |  Message sits in queue but consumer CANNOT see it until             | |
+|  |  delay period expires. Then it becomes available.                   | |
+|  |                                                                     | |
+|  +---------------------------------------------------------------------+ |
+|                                                                          |
+|  USE CASES:                                                              |
+|  * Cancel unpaid orders after 15 minutes                                 |
+|    > Order created -> delay message 15 min -> check if paid -> cancel    |
+|  * Send reminder email 30 minutes after signup                           |
+|  * Retry failed payment after 5 minutes                                  |
+|  * Schedule notifications (OTP expiry, appointment reminders)            |
+|  * Delayed cache invalidation (wait for replication lag)                 |
+|                                                                          |
+|  IMPLEMENTATION:                                                         |
+|                                                                          |
+|  +---------------------------------------------------------------------+ |
+|  | Platform       | How                          | Max Delay           | |
+|  |----------------|------------------------------|--------------------|  |
+|  | SQS            | DelaySeconds (per queue or   | 15 minutes          | |
+|  |                | per message)                 |                     | |
+|  | RabbitMQ       | x-delayed-message plugin     | No limit            | |
+|  |                | OR message TTL + DLQ trick   |                     | |
+|  | Kafka          | No native support. Options:  | N/A                 | |
+|  |                | 1. Delay topics per interval |                     | |
+|  |                |    (delay-5s, delay-30s,     |                     | |
+|  |                |    delay-5m, delay-30m)      |                     | |
+|  |                | 2. Consumer checks timestamp |                     | |
+|  |                |    and pauses if too early   |                     | |
+|  | Redis          | Sorted Set (score = exec     | No limit            | |
+|  |                | timestamp). Poll: score<=now |                     | |
+|  +---------------------------------------------------------------------+ |
+|                                                                          |
+|  REDIS DELAY QUEUE (most flexible):                                      |
+|  ZADD delay_queue <execution_timestamp> <message_json>                   |
+|  ZRANGEBYSCORE delay_queue 0 <current_time> LIMIT 0 10                   |
+|  > Fetch messages whose time has come. Process + ZREM.                   |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  PRIORITY QUEUE                                                          |
+|  ==============                                                          |
+|                                                                          |
+|  Higher priority messages processed BEFORE lower priority ones.          |
+|                                                                          |
+|  +---------------------------------------------------------------------+ |
+|  |                                                                     | |
+|  |  P0 (Critical) -----> [Priority Queue] -----> Consumer              | |
+|  |  P1 (High)     ----->                         processes P0 first    | |
+|  |  P2 (Normal)   ----->                         then P1, then P2      | |
+|  |                                                                     | |
+|  +---------------------------------------------------------------------+ |
+|                                                                          |
+|  USE CASES:                                                              |
+|  * Notifications: OTP/security (P0) > transaction (P1) > marketing (P2)  |
+|  * Support tickets: outage (P0) > bug (P1) > feature request (P2)        |
+|  * Order processing: VIP customers before regular                        |
+|  * Task scheduling: user-facing tasks before background jobs             |
+|                                                                          |
+|  IMPLEMENTATION:                                                         |
+|                                                                          |
+|  +---------------------------------------------------------------------+ |
+|  | Approach         | How                        | Tradeoff            | |
+|  |------------------|----------------------------|--------------------|  |
+|  | Separate topics  | notifications-p0,          | Simple, guaranteed  | |
+|  | per priority     | notifications-p1,          | P0 consumers can    | |
+|  | (RECOMMENDED)    | notifications-p2           | scale independently | |
+|  |                  | Consumer reads P0 first    |                     | |
+|  |------------------+----------------------------+--------------------|  |
+|  | RabbitMQ native  | x-max-priority on queue    | Single queue,       | |
+|  | priority         | Set priority per message   | up to 255 levels    | |
+|  |------------------+----------------------------+--------------------|  |
+|  | Redis sorted set | Score = priority + time    | Full control,       | |
+|  |                  | Lower score = higher pri   | must build consumer | |
+|  +---------------------------------------------------------------------+ |
+|                                                                          |
+|  SEPARATE TOPICS PATTERN (Kafka / SQS):                                  |
+|                                                                          |
+|  Consumer logic:                                                         |
+|  1. Poll P0 queue — process ALL messages                                 |
+|  2. If P0 empty, poll P1 queue — process up to batch_size                |
+|  3. If P1 empty, poll P2 queue                                           |
+|  4. Always check P0 again before next P2 batch                           |
+|                                                                          |
+|  RISK: Starvation — P2 never processed if P0/P1 always have messages.    |
+|  FIX: Weighted processing — 70% P0, 20% P1, 10% P2 per cycle.            |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  RETRY QUEUE (Exponential Backoff with Queues)                          |
+|  =============================================                          |
+|                                                                         |
+|  Instead of retrying immediately, route failures through delay queues   |
+|  with increasing wait times.                                            |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Main Queue --> Consumer --> FAIL                                  | |
+|  |                               |                                    | |
+|  |                    +----------+----------+----------+              | |
+|  |                    |          |          |          |              | |
+|  |                    v          v          v          v              | |
+|  |               Retry-1s   Retry-30s  Retry-5m    DLQ                | |
+|  |               (attempt 1) (attempt 2) (attempt 3) (give up)        | |
+|  |                    |          |          |                         | |
+|  |                    +----------+----------+                         | |
+|  |                               |                                    | |
+|  |                               v                                    | |
+|  |                          Main Queue (re-enqueue)                   | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  USE CASES:                                                             |
+|  * Payment processing (gateway temporarily down)                        |
+|  * Webhook delivery (merchant server unreachable)                       |
+|  * Email sending (SMTP server rate limiting)                            |
+|  * External API calls (third-party rate limits)                         |
+|                                                                         |
+|  MESSAGE HEADERS TRACK RETRY STATE:                                     |
+|  {                                                                      |
+|    "retry_count": 2,                                                    |
+|    "first_attempt": "2025-02-22T10:00:00Z",                             |
+|    "last_error": "Connection refused",                                  |
+|    "next_retry_at": "2025-02-22T10:05:00Z"                              |
+|  }                                                                      |
+|                                                                         |
+|  After max retries (usually 3-5) -> move to DLQ.                        |
+|  DLQ messages investigated and replayed manually after root cause fix.  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  FAN-OUT PATTERN (SNS + SQS / Kafka Topics)                             |
+|  ==========================================                             |
+|                                                                         |
+|  One event triggers MULTIPLE independent consumers.                     |
+|  Each consumer gets its own copy of every message.                      |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |                     +---> SQS: Email Service                       | |
+|  |                     |                                              | |
+|  |  Producer --> SNS --+---> SQS: Analytics Service                   | |
+|  |  (order      Topic  |                                              | |
+|  |   created)          +---> SQS: Inventory Service                   | |
+|  |                     |                                              | |
+|  |                     +---> Lambda: Fraud Detection                  | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  AWS PATTERN: SNS (pub/sub) + SQS (per consumer queue)                  |
+|  * SNS broadcasts to all subscribers                                    |
+|  * Each SQS queue buffers independently (own retry, own DLQ)            |
+|  * If email service is slow, analytics isn't affected                   |
+|                                                                         |
+|  KAFKA EQUIVALENT: Consumer Groups                                      |
+|  * Each consumer group gets ALL messages (fan-out between groups)       |
+|  * Within a group, messages are load-balanced (fan-in)                  |
+|  * Kafka retains messages — consumers can replay                        |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |  SNS + SQS                      | Kafka Consumer Groups            | |
+|  |  -------------------------------|----------------------------------| |
+|  |  Managed, no infra              | Self-managed (or MSK)            | |
+|  |  Per-subscriber filtering       | All consumers get all messages   | |
+|  |  No replay (consumed = gone)    | Replay by resetting offset       | |
+|  |  Good for AWS-native            | Good for high-throughput streams | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SQS DEEP DIVE (Visibility Timeout + FIFO)                              |
+|  ==========================================                             |
+|                                                                         |
+|  VISIBILITY TIMEOUT:                                                    |
+|  How SQS prevents duplicate processing without explicit locks.          |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  1. Consumer polls message --> message becomes INVISIBLE           | |
+|  |  2. Consumer has 30s (default) to process and DELETE               | |
+|  |  3. If consumer crashes / doesn't delete in time:                  | |
+|  |     Message becomes VISIBLE again --> another consumer picks it up | |
+|  |                                                                    | |
+|  |  [Msg A] ----poll----> [invisible 30s] ----timeout----> [visible]  | |
+|  |                              |                                     | |
+|  |                        DELETE (success)                            | |
+|  |                        = permanently removed                       | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  TUNING VISIBILITY TIMEOUT:                                             |
+|  * Too short: message reprocessed while still being handled (dupes)     |
+|  * Too long: if consumer crashes, long wait before retry                |
+|  * Rule: Set to 6x your average processing time                         |
+|  * Can extend dynamically: ChangeMessageVisibility API                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SQS FIFO QUEUES:                                                       |
+|  * Exactly-once processing (deduplication ID, 5-min window)             |
+|  * Strict ordering within a Message Group ID                            |
+|  * Throughput: 300 msg/sec (3000 with batching)                         |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Message Group ID = ordering key (like Kafka partition key)        | |
+|  |                                                                    | |
+|  |  Group "user-123": [msg1] -> [msg2] -> [msg3]  (strict order)      | |
+|  |  Group "user-456": [msg1] -> [msg2]             (strict order)     | |
+|  |  But user-123 and user-456 can process in PARALLEL                 | |
+|  |                                                                    | |
+|  |  Deduplication ID:                                                 | |
+|  |  * Same dedup ID within 5 minutes = SQS drops the duplicate        | |
+|  |  * Content-based: SQS hashes body (enable ContentBasedDedup)       | |
+|  |  * ID-based: you provide MessageDeduplicationId                    | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  STANDARD vs FIFO DECISION:                                             |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                 | Standard             | FIFO                      | |
+|  |-----------------|----------------------|--------------------------|  |
+|  | Ordering        | Best-effort          | Strict (per group)        | |
+|  | Delivery        | At-least-once        | Exactly-once              | |
+|  | Throughput      | Unlimited            | 300/sec (3K batched)      | |
+|  | Deduplication   | No                   | Yes (5-min window)        | |
+|  | Cost            | Lower                | ~25% more                 | |
+|  |-----------------|----------------------|--------------------------|  |
+|  | USE FOR         | Notifications,       | Payments, orders,         | |
+|  |                 | analytics, logs,     | inventory updates,        | |
+|  |                 | image processing     | anything needing order    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  QUEUE TYPE DECISION GUIDE                                              |
+|  =========================                                              |
+|                                                                         |
+|  "I need to..."                        Use this queue type              |
+|  -------------------------------------------------------------------    |
+|  Process later / schedule              DELAY QUEUE                      |
+|  Process critical first                PRIORITY QUEUE                   |
+|  Retry with increasing wait            RETRY QUEUE                      |
+|  Handle permanently failed msgs        DEAD LETTER QUEUE (DLQ)          |
+|  One event, many consumers             FAN-OUT (SNS+SQS / Consumer Grp) |
+|  Strict order per entity               FIFO QUEUE (SQS FIFO / Kafka)    |
+|  High-throughput event streaming        KAFKA                           |
+|  Simple task queue with routing         RABBITMQ                        |
+|  Managed, AWS-native                    SQS + SNS                       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  COMMON COMBINATION IN PRODUCTION:                                      |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  API --> Kafka (main event bus, fan-out to consumer groups)        | |
+|  |           |                                                        | |
+|  |           +--> Order Service (processes, may fail)                 | |
+|  |           |         |                                              | |
+|  |           |    Retry Queue (30s, 5m, 30m delay tiers)              | |
+|  |           |         |                                              | |
+|  |           |    DLQ (after 3 retries, alert + manual review)        | |
+|  |           |                                                        | |
+|  |           +--> Notification Service                                | |
+|  |           |    (Priority Queue: P0 OTP > P1 order > P2 promo)      | |
+|  |           |                                                        | |
+|  |           +--> Analytics Service (standard, best-effort)           | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 7.7: EVENT SOURCING
 
 ```
