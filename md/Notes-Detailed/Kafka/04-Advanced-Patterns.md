@@ -152,61 +152,61 @@ streams.start();
 ### Stateless Operations (filter, map, flatMap)
 
 ```
-+--------------------------------------------------------------------------+
-|                                                                          |
-|  EVERY Kafka Streams pipeline uses these. Know them cold.                |
-|                                                                          |
-|  +-------------------------------------------------------------------+  |
-|  | Operation    | What It Does              | Output         | Use    |  |
-|  |------------- |---------------------------|----------------|--------|  |
-|  | filter       | Keep events matching cond | Same type      | Always |  |
-|  | map          | Transform key AND value   | New key+value  | Often  |  |
-|  | mapValues    | Transform value only      | New value      | Most   |  |
-|  | flatMapValues| One input -> many outputs | Multiple msgs  | Often  |  |
++---------------------------------------------------------------------------+
+|                                                                           |
+|  EVERY Kafka Streams pipeline uses these. Know them cold.                 |
+|                                                                           |
+|  +---------------------------------------------------------------------+  |
+|  | Operation    | What It Does              | Output         | Use     |  |
+|  |------------- |---------------------------|----------------|---------|  |
+|  | filter       | Keep events matching cond | Same type      | Always  |  |
+|  | map          | Transform key AND value   | New key+value  | Often   |  |
+|  | mapValues    | Transform value only      | New value      | Most    |  |
+|  | flatMapValues| One input -> many outputs | Multiple msgs  | Often   |  |
 |  | selectKey    | Change the key            | New key        | Rekeying|  |
-|  | peek         | Side effect (logging)     | Same (passthru)| Debug  |  |
-|  | branch       | Split stream by condition | Multiple streams| Routes|  |
-|  +-------------------------------------------------------------------+  |
-|                                                                          |
-+--------------------------------------------------------------------------+
+|  | peek         | Side effect (logging)     | Same (passthru)| Debug   |  |
+|  | branch       | Split stream by condition | Multiple streams| Routes |  |
+|  +---------------------------------------------------------------------+  |
+|                                                                           |
++---------------------------------------------------------------------------+
 ```
 
 ```java
-// FILTER — Remove events you don't care about
-// "Only process orders above $100"
-KStream<String, Order> highValueOrders = orders
-    .filter((key, order) -> order.getAmount() > 100);
+// FILTER — Remove events you don't care about                               
+// "Only process orders above $100"                                          
+KStream<String, Order> highValueOrders = orders                              
+    .filter((key, order) -> order.getAmount() > 100);                        
 
-// Skip null values (very common in production)
-KStream<String, String> nonNull = stream
-    .filter((key, value) -> value != null);
+// Skip null values (very common in production)                              
+KStream<String, String> nonNull = stream                                     
+    .filter((key, value) -> value != null);                                  
 
-// MAPVALUES — Transform the value (most common operation)
-// "Convert Order to OrderSummary for downstream"
-KStream<String, OrderSummary> summaries = orders
-    .mapValues(order -> new OrderSummary(
-        order.getId(),
-        order.getAmount(),
-        order.getStatus()
-    ));
+// MAPVALUES — Transform the value (most common operation)                   
+// "Convert Order to OrderSummary for downstream"                            
+KStream<String, OrderSummary> summaries = orders                             
+    .mapValues(order -> new OrderSummary(                                    
+        order.getId(),                                                       
+        order.getAmount(),                                                   
+        order.getStatus()                                                    
+    ));                                                                      
 
-// MAP — Transform both key and value (triggers repartition!)
-// "Rekey by customer_id instead of order_id"
-KStream<String, Order> rekeyed = orders
-    .map((orderId, order) -> KeyValue.pair(order.getCustomerId(), order));
+// MAP — Transform both key and value (triggers repartition!)                
+// "Rekey by customer_id instead of order_id"                                
+KStream<String, Order> rekeyed = orders                                      
+    .map((orderId, order) -> KeyValue.pair(order.getCustomerId(), order));   
 // WARNING: map() that changes the key causes a repartition (network shuffle)
-// Use mapValues() when you only need to change the value — no repartition
+// Use mapValues() when you only need to change the value — no repartition   
 
-// BRANCH — Split one stream into multiple based on conditions
-// "Route orders to different processing pipelines"
-KStream<String, Order>[] branches = orders.branch(
-    (key, order) -> order.getAmount() > 1000,   // [0] high value
-    (key, order) -> order.getAmount() > 100,     // [1] medium value
-    (key, order) -> true                          // [2] everything else
-);
-KStream<String, Order> highValue  = branches[0];
-KStream<String, Order> medValue   = branches[1];
-KStream<String, Order> lowValue   = branches[2];
+// BRANCH — Split one stream into multiple based on conditions               
+// "Route orders to different processing pipelines"                          
+KStream<String, Order>[] branches = orders.branch(                           
+    (key, order) -> order.getAmount() > 1000,   // [0] high value            
+    (key, order) -> order.getAmount() > 100,     // [1] medium value         
+    (key, order) -> true                          // [2] everything else     
+);                                                                           
+KStream<String, Order> highValue  = branches[0];                             
+KStream<String, Order> medValue   = branches[1];                             
+KStream<String, Order> lowValue   = branches[2];                             
 ```
 
 ### Stateful Operations (aggregate, reduce, joins)
@@ -217,37 +217,37 @@ KStream<String, Order> lowValue   = branches[2];
 |  STATEFUL = Operations that need to remember past events                 |
 |  State is stored in RocksDB locally, backed by Kafka changelog topic     |
 |                                                                          |
-|  +-------------------------------------------------------------------+  |
-|  | Operation    | What It Does                    | State Required   |  |
-|  |------------- |---------------------------------|------------------|  |
-|  | count        | Count events per key            | key -> count     |  |
-|  | aggregate    | Custom accumulation per key     | key -> agg value |  |
-|  | reduce       | Combine values (associative op) | key -> reduced   |  |
-|  | join         | Combine two streams/tables      | both sides       |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+  |
+|  | Operation    | What It Does                    | State Required    |  |
+|  |------------- |---------------------------------|-------------------|  |
+|  | count        | Count events per key            | key -> count      |  |
+|  | aggregate    | Custom accumulation per key     | key -> agg value  |  |
+|  | reduce       | Combine values (associative op) | key -> reduced    |  |
+|  | join         | Combine two streams/tables      | both sides        |  |
+|  +--------------------------------------------------------------------+  |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
 ```java
-// AGGREGATE — Custom accumulation per key
-// "Track running total of order amounts per customer"
-KTable<String, Double> customerTotals = orders
-    .groupBy((orderId, order) -> order.getCustomerId())
-    .aggregate(
-        () -> 0.0,                                     // initializer
-        (customerId, order, runningTotal) ->            // adder
-            runningTotal + order.getAmount(),
+// AGGREGATE — Custom accumulation per key                                
+// "Track running total of order amounts per customer"                    
+KTable<String, Double> customerTotals = orders                            
+    .groupBy((orderId, order) -> order.getCustomerId())                   
+    .aggregate(                                                           
+        () -> 0.0,                                     // initializer     
+        (customerId, order, runningTotal) ->            // adder          
+            runningTotal + order.getAmount(),                             
         Materialized.as("customer-totals-store")       // state store name
-    );
+    );                                                                    
 
-// REDUCE — Simpler than aggregate (same input/output type)
-// "Find the max order amount per customer"
-KTable<String, Order> maxOrders = orders
-    .groupBy((orderId, order) -> order.getCustomerId())
-    .reduce((order1, order2) ->
-        order1.getAmount() > order2.getAmount() ? order1 : order2
-    );
+// REDUCE — Simpler than aggregate (same input/output type)               
+// "Find the max order amount per customer"                               
+KTable<String, Order> maxOrders = orders                                  
+    .groupBy((orderId, order) -> order.getCustomerId())                   
+    .reduce((order1, order2) ->                                           
+        order1.getAmount() > order2.getAmount() ? order1 : order2         
+    );                                                                    
 ```
 
 ## SECTION 4.2.2: KSTREAM-KTABLE JOINS (Very Common in Production)
@@ -262,55 +262,55 @@ KTable<String, Order> maxOrders = orders
 |                                                                          |
 |  Three join types:                                                       |
 |                                                                          |
-|  +-------------------------------------------------------------------+  |
-|  | Join Type        | Left (Stream) | Right (Table/Stream) | Output  |  |
-|  |------------------|---------------|----------------------|---------|  |
-|  | Inner Join       | Must match    | Must match           | Matched |  |
-|  | Left Join        | Always output | NULL if no match     | All left|  |
-|  | Outer Join       | Always output | Always output        | All     |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+  |
+|  | Join Type        | Left (Stream) | Right (Table/Stream) | Output   |  |
+|  |------------------|---------------|----------------------|----------|  |
+|  | Inner Join       | Must match    | Must match           | Matched  |  |
+|  | Left Join        | Always output | NULL if no match     | All left |  |
+|  | Outer Join       | Always output | Always output        | All      |  |
+|  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  KStream-KTable Join:                                                    |
-|  * Stream event arrives → look up latest value in table → emit joined   |
-|  * Table is always up-to-date (compacted topic)                         |
-|  * NOT windowed — table always has "current" state                      |
+|  * Stream event arrives → look up latest value in table → emit joined    |
+|  * Table is always up-to-date (compacted topic)                          |
+|  * NOT windowed — table always has "current" state                       |
 |                                                                          |
 |  KStream-KStream Join:                                                   |
-|  * MUST specify a time window (events matched within time window)       |
-|  * Example: match order event with payment event within 30 minutes      |
+|  * MUST specify a time window (events matched within time window)        |
+|  * Example: match order event with payment event within 30 minutes       |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
 ```java
-// KStream-KTable Join (most common)
-// "Enrich every order with customer profile"
+// KStream-KTable Join (most common)                                                        
+// "Enrich every order with customer profile"                                               
 KStream<String, Order> orders = builder.stream("orders");            // keyed by customer_id
 KTable<String, Customer> customers = builder.table("customers");     // keyed by customer_id
 
-KStream<String, EnrichedOrder> enriched = orders.join(
-    customers,
-    (order, customer) -> new EnrichedOrder(
-        order.getId(),
-        order.getAmount(),
-        customer.getName(),      // enriched from table
-        customer.getTier()       // enriched from table
-    )
-);
-enriched.to("enriched-orders");
+KStream<String, EnrichedOrder> enriched = orders.join(                                      
+    customers,                                                                              
+    (order, customer) -> new EnrichedOrder(                                                 
+        order.getId(),                                                                      
+        order.getAmount(),                                                                  
+        customer.getName(),      // enriched from table                                     
+        customer.getTier()       // enriched from table                                     
+    )                                                                                       
+);                                                                                          
+enriched.to("enriched-orders");                                                             
 
-// KStream-KStream Join (windowed — match events within time)
-// "Match orders with payments within 30 minutes"
-KStream<String, Order> orders = builder.stream("orders");
-KStream<String, Payment> payments = builder.stream("payments");
+// KStream-KStream Join (windowed — match events within time)                               
+// "Match orders with payments within 30 minutes"                                           
+KStream<String, Order> orders = builder.stream("orders");                                   
+KStream<String, Payment> payments = builder.stream("payments");                             
 
-KStream<String, OrderWithPayment> matched = orders.join(
-    payments,
-    (order, payment) -> new OrderWithPayment(order, payment),
-    JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofMinutes(30))
-);
-// If payment doesn't arrive within 30 min → no output (inner join)
-// Use leftJoin() to still emit order with null payment (for timeout detection)
+KStream<String, OrderWithPayment> matched = orders.join(                                    
+    payments,                                                                               
+    (order, payment) -> new OrderWithPayment(order, payment),                               
+    JoinWindows.ofTimeDifferenceWithNoGrace(Duration.ofMinutes(30))                         
+);                                                                                          
+// If payment doesn't arrive within 30 min → no output (inner join)                         
+// Use leftJoin() to still emit order with null payment (for timeout detection)             
 ```
 
 ## SECTION 4.2.3: WINDOWING (Real-Time Analytics)
@@ -320,96 +320,96 @@ KStream<String, OrderWithPayment> matched = orders.join(
 |                                                                          |
 |  WINDOWS = Group events by time ranges for aggregation                   |
 |                                                                          |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  TUMBLING (Fixed, non-overlapping)                                |  |
-|  |  [0----5min][5----10min][10----15min]                             |  |
-|  |  Use: Hourly/daily counts, batch reporting                        |  |
-|  |  "Count orders per hour"                                          |  |
-|  |                                                                   |  |
-|  |  HOPPING (Fixed, overlapping)                                     |  |
-|  |  [0----5min]                                                      |  |
-|  |    [2.5--7.5min]                                                  |  |
-|  |      [5----10min]                                                 |  |
-|  |  Use: Moving averages, smoother trends                            |  |
-|  |  "5-min average, updated every 2.5 min"                           |  |
-|  |                                                                   |  |
-|  |  SESSION (Dynamic, gap-based)                                     |  |
-|  |  [--click-click-click--]  gap  [--click-click--]  gap  [--click]  |  |
-|  |  Use: User activity sessions, engagement tracking                 |  |
-|  |  "Group user clicks with 30-min inactivity gap"                   |  |
-|  |                                                                   |  |
-|  |  SLIDING (Continuous, event-triggered)                            |  |
-|  |  Evaluated on every new event, looks back N time                  |  |
-|  |  Use: Fraud detection, real-time rate limiting                    |  |
-|  |  "More than 10 transactions in last 5 minutes = fraud alert"      |  |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
-|  |                                                                   |  |
-|  |  DECISION GUIDE:                                                  |  |
-|  |  * Fixed reporting intervals → Tumbling                           |  |
-|  |  * Smooth trends / moving average → Hopping                       |  |
-|  |  * User behavior / activity → Session                             |  |
-|  |  * Real-time alerting / fraud → Sliding                           |  |
-|  |                                                                   |  |
-|  +-------------------------------------------------------------------+  |
+|  +--------------------------------------------------------------------+  |
+|  |                                                                    |  |
+|  |  TUMBLING (Fixed, non-overlapping)                                 |  |
+|  |  [0----5min][5----10min][10----15min]                              |  |
+|  |  Use: Hourly/daily counts, batch reporting                         |  |
+|  |  "Count orders per hour"                                           |  |
+|  |                                                                    |  |
+|  |  HOPPING (Fixed, overlapping)                                      |  |
+|  |  [0----5min]                                                       |  |
+|  |    [2.5--7.5min]                                                   |  |
+|  |      [5----10min]                                                  |  |
+|  |  Use: Moving averages, smoother trends                             |  |
+|  |  "5-min average, updated every 2.5 min"                            |  |
+|  |                                                                    |  |
+|  |  SESSION (Dynamic, gap-based)                                      |  |
+|  |  [--click-click-click--]  gap  [--click-click--]  gap  [--click]   |  |
+|  |  Use: User activity sessions, engagement tracking                  |  |
+|  |  "Group user clicks with 30-min inactivity gap"                    |  |
+|  |                                                                    |  |
+|  |  SLIDING (Continuous, event-triggered)                             |  |
+|  |  Evaluated on every new event, looks back N time                   |  |
+|  |  Use: Fraud detection, real-time rate limiting                     |  |
+|  |  "More than 10 transactions in last 5 minutes = fraud alert"       |  |
+|  |                                                                    |  |
+|  +--------------------------------------------------------------------+  |
+|  |                                                                    |  |
+|  |  DECISION GUIDE:                                                   |  |
+|  |  * Fixed reporting intervals → Tumbling                            |  |
+|  |  * Smooth trends / moving average → Hopping                        |  |
+|  |  * User behavior / activity → Session                              |  |
+|  |  * Real-time alerting / fraud → Sliding                            |  |
+|  |                                                                    |  |
+|  +--------------------------------------------------------------------+  |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
 ```java
-// TUMBLING WINDOW — "Count orders per customer per hour"
-KTable<Windowed<String>, Long> hourlyCounts = orders
-    .groupBy((orderId, order) -> order.getCustomerId())
-    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofHours(1)))
-    .count(Materialized.as("hourly-order-counts"));
+// TUMBLING WINDOW — "Count orders per customer per hour"                         
+KTable<Windowed<String>, Long> hourlyCounts = orders                              
+    .groupBy((orderId, order) -> order.getCustomerId())                           
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofHours(1)))               
+    .count(Materialized.as("hourly-order-counts"));                               
 
-// SESSION WINDOW — "Group user clicks into sessions (30-min gap)"
-KTable<Windowed<String>, Long> sessionClicks = clickStream
-    .groupByKey()
+// SESSION WINDOW — "Group user clicks into sessions (30-min gap)"                
+KTable<Windowed<String>, Long> sessionClicks = clickStream                        
+    .groupByKey()                                                                 
     .windowedBy(SessionWindows.ofInactivityGapWithNoGrace(Duration.ofMinutes(30)))
-    .count(Materialized.as("session-click-counts"));
+    .count(Materialized.as("session-click-counts"));                              
 
-// HOPPING WINDOW — "5-min average, updated every 1 min"
-KTable<Windowed<String>, Double> movingAvg = metrics
-    .groupByKey()
-    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5))
-                           .advanceBy(Duration.ofMinutes(1)))
-    .aggregate(
-        () -> new AvgAccumulator(0.0, 0),
-        (key, value, agg) -> agg.add(value),
-        Materialized.as("moving-avg-store")
-    )
-    .mapValues(agg -> agg.getAverage());
+// HOPPING WINDOW — "5-min average, updated every 1 min"                          
+KTable<Windowed<String>, Double> movingAvg = metrics                              
+    .groupByKey()                                                                 
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(5))              
+                           .advanceBy(Duration.ofMinutes(1)))                     
+    .aggregate(                                                                   
+        () -> new AvgAccumulator(0.0, 0),                                         
+        (key, value, agg) -> agg.add(value),                                      
+        Materialized.as("moving-avg-store")                                       
+    )                                                                             
+    .mapValues(agg -> agg.getAverage());                                          
 ```
 
 ```
-+--------------------------------------------------------------------------+
-|                                                                          |
-|  EVENT TIME vs PROCESSING TIME                                           |
-|                                                                          |
-|  * Event time: When the event actually happened (embedded in message)    |
-|  * Processing time: When Kafka Streams processes it                      |
-|                                                                          |
-|  Problem: Events can arrive LATE (network delay, batch uploads)          |
-|                                                                          |
-|  +----Timeline----->                                                     |
-|  Window: [12:00 - 12:05]                                                 |
-|  Event at 12:03 arrives at 12:07 → Out of window!                        |
-|                                                                          |
++---------------------------------------------------------------------------+
+|                                                                           |
+|  EVENT TIME vs PROCESSING TIME                                            |
+|                                                                           |
+|  * Event time: When the event actually happened (embedded in message)     |
+|  * Processing time: When Kafka Streams processes it                       |
+|                                                                           |
+|  Problem: Events can arrive LATE (network delay, batch uploads)           |
+|                                                                           |
+|  +----Timeline----->                                                      |
+|  Window: [12:00 - 12:05]                                                  |
+|  Event at 12:03 arrives at 12:07 → Out of window!                         |
+|                                                                           |
 |  Solutions:                                                               |
 |  1. Grace period: Allow late events up to N minutes                       |
 |     TimeWindows.ofSizeWithNoGrace(5min) → strict, no late events          |
-|     TimeWindows.ofSizeAndGrace(5min, 2min) → accept up to 2 min late     |
-|                                                                          |
+|     TimeWindows.ofSizeAndGrace(5min, 2min) → accept up to 2 min late      |
+|                                                                           |
 |  2. Use event time extractor:                                             |
 |     config: default.timestamp.extractor = MyEventTimeExtractor            |
 |     Extract timestamp from message payload, not Kafka metadata            |
-|                                                                          |
+|                                                                           |
 |  INTERVIEW TIP: Always mention event time vs processing time              |
 |  when discussing windowed operations. Shows production awareness.         |
-|                                                                          |
-+--------------------------------------------------------------------------+
+|                                                                           |
++---------------------------------------------------------------------------+
 ```
 
 ## SECTION 4.2.4: ERROR HANDLING & DEAD LETTER QUEUE (DLQ)
@@ -446,24 +446,24 @@ KTable<Windowed<String>, Double> movingAvg = metrics
 ```
 
 ```java
-// DLQ pattern in Kafka Streams
-KStream<String, String>[] processed = inputStream
-    .mapValues(value -> {
-        try {
-            return processMessage(value);     // business logic
-        } catch (Exception e) {
-            return "POISON:" + value;         // mark as failed
-        }
-    })
-    .branch(
-        (key, value) -> !value.startsWith("POISON:"),  // [0] success
-        (key, value) -> true                            // [1] failures
-    );
+// DLQ pattern in Kafka Streams                                                 
+KStream<String, String>[] processed = inputStream                               
+    .mapValues(value -> {                                                       
+        try {                                                                   
+            return processMessage(value);     // business logic                 
+        } catch (Exception e) {                                                 
+            return "POISON:" + value;         // mark as failed                 
+        }                                                                       
+    })                                                                          
+    .branch(                                                                    
+        (key, value) -> !value.startsWith("POISON:"),  // [0] success           
+        (key, value) -> true                            // [1] failures         
+    );                                                                          
 
-processed[0].to("output-topic");                       // good messages
-processed[1]
+processed[0].to("output-topic");                       // good messages         
+processed[1]                                                                    
     .mapValues(v -> v.substring(7))                     // remove POISON: prefix
-    .to("dlq-topic");                                   // bad messages → DLQ
+    .to("dlq-topic");                                   // bad messages → DLQ   
 ```
 
 ```
@@ -474,7 +474,7 @@ processed[1]
 |  // In connector config:                                                 |
 |  {                                                                       |
 |    "errors.tolerance": "all",                                            |
-|    "errors.deadletterqueue.topic.name": "my-connector-dlq",             |
+|    "errors.deadletterqueue.topic.name": "my-connector-dlq",              |
 |    "errors.deadletterqueue.topic.replication.factor": 3,                 |
 |    "errors.deadletterqueue.context.headers.enable": true                 |
 |  }                                                                       |
@@ -484,9 +484,9 @@ processed[1]
 |  * Context headers include: error message, exception, timestamp          |
 |                                                                          |
 |  DLQ MONITORING:                                                         |
-|  * Alert when DLQ topic has > 0 messages (something is wrong)           |
-|  * Track DLQ rate: messages/min → sudden spike = new bug or bad data    |
-|  * Replay workflow: fix root cause → replay DLQ messages → verify       |
+|  * Alert when DLQ topic has > 0 messages (something is wrong)            |
+|  * Track DLQ rate: messages/min → sudden spike = new bug or bad data     |
+|  * Replay workflow: fix root cause → replay DLQ messages → verify        |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
