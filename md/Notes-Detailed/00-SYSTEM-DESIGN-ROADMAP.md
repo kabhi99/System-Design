@@ -109,6 +109,7 @@ Specialized knowledge. Asked for specific roles or as follow-ups to deepen the c
 | Database Internals | B+Tree, row vs column, UUIDv7, EXPLAIN | [20-Database-Internals-Deep-Dive](Fundamentals/20-Database-Internals-Deep-Dive.md) |
 | Distributed Concurrency | Redis locks, fencing tokens, Redlock | [21-Distributed-Concurrency-Control](Fundamentals/21-Distributed-Concurrency-Control.md) |
 | Interview Follow-Up Questions | Question banks by system type | [23-Interview-Followup-Questions](Fundamentals/23-Interview-Followup-Questions.md) |
+| **Production Issues & Solutions** | Real-world war stories — DB, cache, cascading failures, zero-downtime migration | [24-Production-Issues-And-Solutions](Fundamentals/24-Production-Issues-And-Solutions.md) |
 
 ---
 
