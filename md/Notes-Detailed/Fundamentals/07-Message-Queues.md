@@ -502,28 +502,175 @@ distributed applications.
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
-|  OUTBOX PATTERN                                                         |
-|  ==============                                                         |
+|  TRANSACTIONAL OUTBOX PATTERN                                           |
+|  ====================================                                   |
 |                                                                         |
-|  Ensure database update and message publish happen atomically.          |
+|  THE DUAL-WRITE PROBLEM:                                                |
 |                                                                         |
-|  PROBLEM:                                                               |
-|  1. Update database  Y                                                  |
-|  2. Publish message  X (fails)                                          |
-|  > Database updated but message never sent!                             |
+|  Service needs to do TWO things atomically:                             |
+|  1. Write to its database                                               |
+|  2. Publish an event to a message queue                                 |
 |                                                                         |
-|  SOLUTION:                                                              |
+|  These are SEPARATE systems — no shared transaction possible.           |
+|                                                                         |
 |  +-------------------------------------------------------------------+  |
-|  |  BEGIN TRANSACTION                                                |  |
-|  |    1. Update orders table                                         |  |
-|  |    2. Insert into outbox table                                    |  |
-|  |  COMMIT                                                           |  |
 |  |                                                                   |  |
-|  |  Background process:                                              |  |
-|  |    1. Read from outbox table                                      |  |
-|  |    2. Publish to message queue                                    |  |
-|  |    3. Mark outbox entry as published                              |  |
+|  |  WHAT CAN GO WRONG:                                               |  |
+|  |                                                                   |  |
+|  |  Scenario 1: DB first, then publish                               |  |
+|  |  1. INSERT INTO orders (...)    --> SUCCESS                       |  |
+|  |  2. kafka.publish("order_created") --> FAILS (network/broker down)|  |
+|  |  Result: Order saved but no event. Downstream never knows.        |  |
+|  |                                                                   |  |
+|  |  Scenario 2: Publish first, then DB                               |  |
+|  |  1. kafka.publish("order_created") --> SUCCESS                    |  |
+|  |  2. INSERT INTO orders (...)    --> FAILS (constraint violation)   | |
+|  |  Result: Event sent for order that doesn't exist.                 |  |
+|  |                                                                   |  |
+|  |  Scenario 3: DB succeeds, app crashes before publish              |  |
+|  |  Result: Same as Scenario 1. Event lost.                          |  |
+|  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  THE SOLUTION: TRANSACTIONAL OUTBOX                                     |
+|                                                                         |
+|  Instead of publishing directly to queue, write the event               |
+|  to an OUTBOX TABLE in the SAME database transaction.                   |
+|  A separate process reads outbox and publishes to the queue.            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  BEGIN TRANSACTION;                                               |  |
+|  |    INSERT INTO orders (id, user_id, total)                        |  |
+|  |      VALUES ('ord-123', 'usr-456', 99.99);                       |   |
+|  |                                                                   |  |
+|  |    INSERT INTO outbox (id, event_type, payload, created_at)       |  |
+|  |      VALUES (uuid(), 'ORDER_CREATED',                            |   |
+|  |        '{"order_id":"ord-123","user_id":"usr-456"}', NOW());      |  |
+|  |  COMMIT;                                                          |  |
+|  |                                                                   |  |
+|  |  -- Both writes are in ONE transaction                            |  |
+|  |  -- Either BOTH succeed or BOTH rollback                          |  |
+|  |  -- Event is guaranteed to exist if order exists                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FLOW:                                                            |  |
+|  |                                                                   |  |
+|  |  Service                                                          |  |
+|  |    |                                                              |  |
+|  |    |-- BEGIN TX                                                   |  |
+|  |    |     |-- INSERT orders                                        |  |
+|  |    |     |-- INSERT outbox                                        |  |
+|  |    |-- COMMIT                                                     |  |
+|  |                                                                   |  |
+|  |  Message Relay (separate process)                                 |  |
+|  |    |                                                              |  |
+|  |    |-- Read unpublished rows from outbox                          |  |
+|  |    |-- Publish each to Kafka/SQS/RabbitMQ                        |   |
+|  |    |-- Mark as published (or delete row)                          |  |
+|  |                                                                   |  |
+|  |  +-----------+     +---------------+     +----------------+       |  |
+|  |  |  Outbox   | --> | Message Relay | --> | Message Queue  |       |  |
+|  |  |  Table    |     | (Poll / CDC)  |     | (Kafka/SQS)   |       |   |
+|  |  +-----------+     +---------------+     +----------------+       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  OUTBOX TABLE SCHEMA:                                                   |
+|                                                                         |
+|  CREATE TABLE outbox (                                                  |
+|    id            UUID PRIMARY KEY,                                      |
+|    event_type    VARCHAR(100) NOT NULL,                                 |
+|    aggregate_id  VARCHAR(100) NOT NULL,   -- e.g. order_id              |
+|    payload       JSONB NOT NULL,          -- event data                 |
+|    created_at    TIMESTAMP DEFAULT NOW(),                               |
+|    published_at  TIMESTAMP NULL           -- NULL = not yet published   |
+|  );                                                                     |
+|                                                                         |
+|  INDEX on (published_at) WHERE published_at IS NULL;                    |
+|  -- Efficiently find unpublished events                                 |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  HOW TO DELIVER: POLLING vs CDC                                         |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |            | Polling                | CDC (Debezium)              |  |
+|  |------------|------------------------|-----------------------------|  |
+|  | How        | SELECT WHERE           | Read DB transaction log     |  |
+|  |            | published_at IS NULL   | (WAL/binlog)                |  |
+|  | Latency    | Seconds (poll interval)| Milliseconds (near real-time|  |
+|  | DB load    | Adds read queries      | Reads log (very low impact) |  |
+|  | Setup      | Simple (just code it)  | Need Debezium + Kafka       |  |
+|  |            |                        | Connect infrastructure      |  |
+|  | Ordering   | Must ORDER BY id       | Guaranteed by log order     |  |
+|  | Cleanup    | UPDATE or DELETE rows   | Separate cleanup job needed | |
+|  |------------|------------------------|-----------------------------|  |
+|  | Best for   | Small scale, simple    | Production, high throughput |  |
+|  |            | services               | microservices               |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  POLLING APPROACH:                                                      |
+|  -- Run every 1-5 seconds                                               |
+|  SELECT * FROM outbox                                                   |
+|    WHERE published_at IS NULL                                           |
+|    ORDER BY created_at                                                  |
+|    LIMIT 100;                                                           |
+|  -- For each: publish to queue, then UPDATE published_at                |
+|                                                                         |
+|  CDC APPROACH (Debezium):                                               |
+|  -- Debezium reads Postgres WAL / MySQL binlog                          |
+|  -- Captures every INSERT into outbox table                             |
+|  -- Publishes directly to Kafka topic                                   |
+|  -- No polling, no delays, no extra DB load                             |
+|  -- Recommended for production systems                                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  GUARANTEES AND EDGE CASES:                                             |
+|                                                                         |
+|  * AT-LEAST-ONCE delivery (not exactly-once)                            |
+|    Relay might publish, crash before marking published.                 |
+|    On restart it re-publishes the same event.                           |
+|    --> Consumers MUST be idempotent (check event_id).                   |
+|                                                                         |
+|  * ORDERING                                                             |
+|    Outbox preserves insertion order.                                    |
+|    Use aggregate_id as Kafka partition key for per-entity ordering.     |
+|                                                                         |
+|  * CLEANUP                                                              |
+|    Don't let outbox table grow forever.                                 |
+|    DELETE published events older than 7 days (cron job).                |
+|    Or use CDC and delete immediately after capture.                     |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  WHEN TO USE OUTBOX:                                                    |
+|                                                                         |
+|  YES:                                                                   |
+|  * Service saves to DB AND needs to notify other services               |
+|  * Order service: save order + publish "order_created" event            |
+|  * Payment service: record payment + publish "payment_done" event       |
+|  * Any microservice that owns data AND publishes domain events          |
+|                                                                         |
+|  NO (simpler alternatives):                                             |
+|  * Read-only services (no DB writes, just consume events)               |
+|  * Fire-and-forget logging/metrics (OK to lose some)                    |
+|  * Single monolith with one DB (just use DB transactions)               |
+|                                                                         |
+|  INTERVIEW TIP:                                                         |
+|  "To solve the dual-write problem, I use the transactional outbox       |
+|   pattern. The service writes the event to an outbox table in the       |
+|   same DB transaction as the business data. Debezium CDC captures       |
+|   the insert and publishes to Kafka. Consumers are idempotent           |
+|   using event IDs, handling the at-least-once delivery guarantee."      |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
@@ -543,108 +690,108 @@ distributed applications.
 ## SECTION 7.6.1: QUEUE TYPES & USE CASES
 
 ```
-+--------------------------------------------------------------------------+
-|                                                                          |
-|  DELAY QUEUE (Scheduled / Deferred Processing)                           |
-|  =============================================                           |
-|                                                                          |
-|  Messages become visible ONLY after a specified delay.                   |
-|                                                                          |
-|  +---------------------------------------------------------------------+ |
-|  |                                                                     | |
-|  |  Producer ---> [Delay Queue (invisible for N seconds)] ---> Consumer  |
-|  |                                                                     | |
-|  |  Message sits in queue but consumer CANNOT see it until             | |
-|  |  delay period expires. Then it becomes available.                   | |
-|  |                                                                     | |
-|  +---------------------------------------------------------------------+ |
-|                                                                          |
-|  USE CASES:                                                              |
-|  * Cancel unpaid orders after 15 minutes                                 |
-|    > Order created -> delay message 15 min -> check if paid -> cancel    |
-|  * Send reminder email 30 minutes after signup                           |
-|  * Retry failed payment after 5 minutes                                  |
-|  * Schedule notifications (OTP expiry, appointment reminders)            |
-|  * Delayed cache invalidation (wait for replication lag)                 |
-|                                                                          |
-|  IMPLEMENTATION:                                                         |
-|                                                                          |
-|  +---------------------------------------------------------------------+ |
-|  | Platform       | How                          | Max Delay           | |
-|  |----------------|------------------------------|--------------------|  |
-|  | SQS            | DelaySeconds (per queue or   | 15 minutes          | |
-|  |                | per message)                 |                     | |
-|  | RabbitMQ       | x-delayed-message plugin     | No limit            | |
-|  |                | OR message TTL + DLQ trick   |                     | |
-|  | Kafka          | No native support. Options:  | N/A                 | |
-|  |                | 1. Delay topics per interval |                     | |
-|  |                |    (delay-5s, delay-30s,     |                     | |
-|  |                |    delay-5m, delay-30m)      |                     | |
-|  |                | 2. Consumer checks timestamp |                     | |
-|  |                |    and pauses if too early   |                     | |
-|  | Redis          | Sorted Set (score = exec     | No limit            | |
-|  |                | timestamp). Poll: score<=now |                     | |
-|  +---------------------------------------------------------------------+ |
-|                                                                          |
-|  REDIS DELAY QUEUE (most flexible):                                      |
-|  ZADD delay_queue <execution_timestamp> <message_json>                   |
-|  ZRANGEBYSCORE delay_queue 0 <current_time> LIMIT 0 10                   |
-|  > Fetch messages whose time has come. Process + ZREM.                   |
-|                                                                          |
-+--------------------------------------------------------------------------+
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DELAY QUEUE (Scheduled / Deferred Processing)                          |
+|  =============================================                          |
+|                                                                         |
+|  Messages become visible ONLY after a specified delay.                  |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Producer ---> [Delay Queue (invisible for N seconds)] ---> Consumer |
+|  |                                                                    | |
+|  |  Message sits in queue but consumer CANNOT see it until            | |
+|  |  delay period expires. Then it becomes available.                  | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  USE CASES:                                                             |
+|  * Cancel unpaid orders after 15 minutes                                |
+|    > Order created -> delay message 15 min -> check if paid -> cancel   |
+|  * Send reminder email 30 minutes after signup                          |
+|  * Retry failed payment after 5 minutes                                 |
+|  * Schedule notifications (OTP expiry, appointment reminders)           |
+|  * Delayed cache invalidation (wait for replication lag)                |
+|                                                                         |
+|  IMPLEMENTATION:                                                        |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  | Platform       | How                          | Max Delay          | |
+|  |----------------|------------------------------|--------------------| |
+|  | SQS            | DelaySeconds (per queue or   | 15 minutes         | |
+|  |                | per message)                 |                    | |
+|  | RabbitMQ       | x-delayed-message plugin     | No limit           | |
+|  |                | OR message TTL + DLQ trick   |                    | |
+|  | Kafka          | No native support. Options:  | N/A                | |
+|  |                | 1. Delay topics per interval |                    | |
+|  |                |    (delay-5s, delay-30s,     |                    | |
+|  |                |    delay-5m, delay-30m)      |                    | |
+|  |                | 2. Consumer checks timestamp |                    | |
+|  |                |    and pauses if too early   |                    | |
+|  | Redis          | Sorted Set (score = exec     | No limit           | |
+|  |                | timestamp). Poll: score<=now |                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  REDIS DELAY QUEUE (most flexible):                                     |
+|  ZADD delay_queue <execution_timestamp> <message_json>                  |
+|  ZRANGEBYSCORE delay_queue 0 <current_time> LIMIT 0 10                  |
+|  > Fetch messages whose time has come. Process + ZREM.                  |
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ```
-+--------------------------------------------------------------------------+
-|                                                                          |
-|  PRIORITY QUEUE                                                          |
-|  ==============                                                          |
-|                                                                          |
-|  Higher priority messages processed BEFORE lower priority ones.          |
-|                                                                          |
-|  +---------------------------------------------------------------------+ |
-|  |                                                                     | |
-|  |  P0 (Critical) -----> [Priority Queue] -----> Consumer              | |
-|  |  P1 (High)     ----->                         processes P0 first    | |
-|  |  P2 (Normal)   ----->                         then P1, then P2      | |
-|  |                                                                     | |
-|  +---------------------------------------------------------------------+ |
-|                                                                          |
-|  USE CASES:                                                              |
-|  * Notifications: OTP/security (P0) > transaction (P1) > marketing (P2)  |
-|  * Support tickets: outage (P0) > bug (P1) > feature request (P2)        |
-|  * Order processing: VIP customers before regular                        |
-|  * Task scheduling: user-facing tasks before background jobs             |
-|                                                                          |
-|  IMPLEMENTATION:                                                         |
-|                                                                          |
-|  +---------------------------------------------------------------------+ |
-|  | Approach         | How                        | Tradeoff            | |
-|  |------------------|----------------------------|--------------------|  |
-|  | Separate topics  | notifications-p0,          | Simple, guaranteed  | |
-|  | per priority     | notifications-p1,          | P0 consumers can    | |
-|  | (RECOMMENDED)    | notifications-p2           | scale independently | |
-|  |                  | Consumer reads P0 first    |                     | |
-|  |------------------+----------------------------+--------------------|  |
-|  | RabbitMQ native  | x-max-priority on queue    | Single queue,       | |
-|  | priority         | Set priority per message   | up to 255 levels    | |
-|  |------------------+----------------------------+--------------------|  |
-|  | Redis sorted set | Score = priority + time    | Full control,       | |
-|  |                  | Lower score = higher pri   | must build consumer | |
-|  +---------------------------------------------------------------------+ |
-|                                                                          |
-|  SEPARATE TOPICS PATTERN (Kafka / SQS):                                  |
-|                                                                          |
-|  Consumer logic:                                                         |
-|  1. Poll P0 queue — process ALL messages                                 |
-|  2. If P0 empty, poll P1 queue — process up to batch_size                |
-|  3. If P1 empty, poll P2 queue                                           |
-|  4. Always check P0 again before next P2 batch                           |
-|                                                                          |
-|  RISK: Starvation — P2 never processed if P0/P1 always have messages.    |
-|  FIX: Weighted processing — 70% P0, 20% P1, 10% P2 per cycle.            |
-|                                                                          |
-+--------------------------------------------------------------------------+
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PRIORITY QUEUE                                                         |
+|  ==============                                                         |
+|                                                                         |
+|  Higher priority messages processed BEFORE lower priority ones.         |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  P0 (Critical) -----> [Priority Queue] -----> Consumer             | |
+|  |  P1 (High)     ----->                         processes P0 first   | |
+|  |  P2 (Normal)   ----->                         then P1, then P2     | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  USE CASES:                                                             |
+|  * Notifications: OTP/security (P0) > transaction (P1) > marketing (P2) |
+|  * Support tickets: outage (P0) > bug (P1) > feature request (P2)       |
+|  * Order processing: VIP customers before regular                       |
+|  * Task scheduling: user-facing tasks before background jobs            |
+|                                                                         |
+|  IMPLEMENTATION:                                                        |
+|                                                                         |
+|  +--------------------------------------------------------------------+ |
+|  | Approach         | How                        | Tradeoff           | |
+|  |------------------|----------------------------|--------------------| |
+|  | Separate topics  | notifications-p0,          | Simple, guaranteed | |
+|  | per priority     | notifications-p1,          | P0 consumers can   | |
+|  | (RECOMMENDED)    | notifications-p2           | scale independently| |
+|  |                  | Consumer reads P0 first    |                    | |
+|  |------------------+----------------------------+--------------------| |
+|  | RabbitMQ native  | x-max-priority on queue    | Single queue,      | |
+|  | priority         | Set priority per message   | up to 255 levels   | |
+|  |------------------+----------------------------+--------------------| |
+|  | Redis sorted set | Score = priority + time    | Full control,      | |
+|  |                  | Lower score = higher pri   | must build consumer| |
+|  +--------------------------------------------------------------------+ |
+|                                                                         |
+|  SEPARATE TOPICS PATTERN (Kafka / SQS):                                 |
+|                                                                         |
+|  Consumer logic:                                                        |
+|  1. Poll P0 queue — process ALL messages                                |
+|  2. If P0 empty, poll P1 queue — process up to batch_size               |
+|  3. If P1 empty, poll P2 queue                                          |
+|  4. Always check P0 again before next P2 batch                          |
+|                                                                         |
+|  RISK: Starvation — P2 never processed if P0/P1 always have messages.   |
+|  FIX: Weighted processing — 70% P0, 20% P1, 10% P2 per cycle.           |
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ```
@@ -846,6 +993,227 @@ distributed applications.
 |  |           +--> Analytics Service (standard, best-effort)           | |
 |  |                                                                    | |
 |  +--------------------------------------------------------------------+ |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 7.6.2: MESSAGE SIZE LIMITS & LARGE MESSAGE HANDLING
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  MESSAGE SIZE LIMITS BY PLATFORM                                        |
+|  ================================                                       |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  | Platform     | Default Max    | Can Increase To   | Notes          | |
+|  |--------------|----------------|-------------------|----------------| |
+|  | Kafka        | 1 MB           | ~10 MB (not rec.) | Set on broker  | |
+|  |              |                |                   | + producer +   | |
+|  |              |                |                   | consumer       | |
+|  | SQS Standard | 256 KB         | 2 GB (Extended)   | Uses S3 for   |  |
+|  |              |                |                   | large payloads | |
+|  | SQS FIFO     | 256 KB         | 2 GB (Extended)   | Same as above  | |
+|  | RabbitMQ     | 128 MB (no     | Configurable      | But keep <1 MB | |
+|  |              | hard default)  |                   | for perf       | |
+|  | SNS          | 256 KB         | 2 GB (Extended)   | Matches SQS    | |
+|  | Google       | 10 MB          | 10 MB (hard)      | Use GCS for    | |
+|  |   Pub/Sub    |                |                   | larger         | |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  KAFKA MESSAGE SIZE CONFIGS (all 3 must be aligned):                    |
+|                                                                         |
+|  PRODUCER:                                                              |
+|    max.request.size = 1048576 (1 MB default)                            |
+|    Max size of a single produce request.                                |
+|                                                                         |
+|  BROKER:                                                                |
+|    message.max.bytes = 1048576 (1 MB default, per topic overridable)    |
+|    Broker rejects messages larger than this.                            |
+|                                                                         |
+|  CONSUMER:                                                              |
+|    max.partition.fetch.bytes = 1048576 (1 MB default)                   |
+|    Must be >= broker's message.max.bytes or consumer can't read.        |
+|                                                                         |
+|  WARNING: All 3 must be changed together. If producer sends 5 MB        |
+|  but broker allows only 1 MB -> message rejected silently.              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WHAT TO DO WITH LARGE MESSAGES                                         |
+|  ================================                                       |
+|                                                                         |
+|  RULE: Keep messages SMALL. Queue is for events, not data transfer.     |
+|                                                                         |
+|  GOOD message (< 1 KB):                                                 |
+|  { "event": "order_created", "order_id": "abc123", "user_id": "u456" }  |
+|                                                                         |
+|  BAD message (5 MB):                                                    |
+|  { "event": "order_created", "order_id": "abc123",                      |
+|    "items": [ ... 500 items with full product details, images ... ],    |
+|    "user_profile": { ... entire user object ... } }                     |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  PATTERN 1: CLAIM CHECK (Reference Pattern)                             |
+|  Most common. Works with any queue.                                     |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Producer:                                                        |  |
+|  |  1. Upload large payload to S3/GCS/blob storage                   |  |
+|  |  2. Send small message with REFERENCE to the stored payload       |  |
+|  |     { "order_id": "abc123", "payload_url": "s3://bucket/key" }    |  |
+|  |                                                                   |  |
+|  |  Consumer:                                                        |  |
+|  |  1. Receive small message from queue                              |  |
+|  |  2. Fetch large payload from S3 using the reference               |  |
+|  |  3. Process the full data                                         |  |
+|  |                                                                   |  |
+|  |  Producer --> [S3: large payload] --> reference URL                | |
+|  |          \                           /                            |  |
+|  |           -> [Queue: small msg + URL] -> Consumer -> fetch S3      | |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  USE CASES:                                                             |
+|  * Image/video processing pipelines (S3 URL in message)                 |
+|  * Batch data export (CSV/Parquet reference)                            |
+|  * Document processing (PDF stored in blob, event triggers processing)  |
+|  * ML inference (model input stored in S3, result in queue)             |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  PATTERN 2: SQS EXTENDED CLIENT LIBRARY (AWS-specific)                  |
+|                                                                         |
+|  * Messages > 256 KB automatically stored in S3                         |
+|  * Consumer library auto-fetches from S3 transparently                  |
+|  * No application code changes needed — just swap the client library    |
+|  * Max size with extended: 2 GB                                         |
+|                                                                         |
+|  // Java example                                                        |
+|  AmazonSQS sqsExtended = new AmazonSQSExtendedClient(sqsClient,         |
+|      new ExtendedClientConfiguration()                                  |
+|          .withLargePayloadSupportEnabled(s3Client, "my-bucket"));       |
+|                                                                         |
+|  sqsExtended.sendMessage(queueUrl, hugeJsonString);  // auto to S3      |
+|  Message msg = sqsExtended.receiveMessage(queueUrl);  // auto from S3   |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  PATTERN 3: CHUNKING (split large message into parts)                   |
+|                                                                         |
+|  * Split large message into ordered chunks with sequence numbers        |
+|  * Consumer reassembles chunks before processing                        |
+|  * Tricky: ordering, missing chunks, partial failures                   |
+|  * Generally AVOID — Claim Check is simpler and more reliable           |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  PATTERN 4: COMPRESSION (reduce message size)                           |
+|                                                                         |
+|  Kafka:                                                                 |
+|    compression.type = lz4 | zstd | gzip | snappy                        |
+|    Applied per batch at producer, stored compressed on broker.          |
+|    Consumer decompresses automatically.                                 |
+|    lz4: fastest, good compression. zstd: best ratio, slightly slower.   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  | Algorithm | Speed      | Compression Ratio | CPU Usage  | Best For|  |
+|  |-----------|------------|-------------------|------------|---------|  |
+|  | lz4       | Fastest    | Good              | Low        | Default |  |
+|  | zstd      | Fast       | Best              | Medium     | Storage |  |
+|  | snappy    | Very fast  | Moderate          | Low        | Legacy  |  |
+|  | gzip      | Slow       | Good              | High       | Avoid   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  TYPICAL COMPRESSION RESULTS:                                           |
+|  * JSON messages: 5-10x compression (1 MB -> 100-200 KB)                |
+|  * Avro/Protobuf: 2-3x on top of already compact binary format          |
+|  * Already compressed data (images, video): ~1x (no benefit)            |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  MESSAGE FORMAT COMPARISON:                                             |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  | Format      | Size    | Schema  | Speed    | Use Case             |  |
+|  |-------------|---------|---------|----------|----------------------|  |
+|  | JSON        | Large   | No      | Fast     | External APIs, debug |  |
+|  | Avro        | Small   | Yes     | Fast     | Kafka (with Schema   |  |
+|  |             |         | (evolve)|          | Registry). Best for  |  |
+|  |             |         |         |          | schema evolution     |  |
+|  | Protobuf    | Smallest| Yes     | Fastest  | gRPC, internal       |  |
+|  |             |         | (evolve)|          | microservices        |  |
+|  | MessagePack | Small   | No      | Very fast| Drop-in JSON replace |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  RECOMMENDATION:                                                        |
+|  * Kafka events: Avro + Schema Registry (schema evolution, compact)     |
+|  * Internal APIs: Protobuf (smallest, fastest, strongly typed)          |
+|  * External APIs / debugging: JSON (human readable)                     |
+|  * Never send raw strings — always use structured format                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  MESSAGE DESIGN BEST PRACTICES                                          |
+|  ==============================                                         |
+|                                                                         |
+|  1. KEEP MESSAGES SMALL (< 1 KB ideal, < 100 KB acceptable)             |
+|     Send IDs and references, not full objects.                          |
+|     Consumer fetches full data if needed (thin events).                 |
+|                                                                         |
+|  2. INCLUDE METADATA                                                    |
+|     {                                                                   |
+|       "event_type": "order_created",                                    |
+|       "event_id": "uuid-123",          // for deduplication             |
+|       "timestamp": "2025-02-22T10:00Z", // for ordering/debugging       |
+|       "version": 2,                     // for schema evolution         |
+|       "source": "order-service",        // for tracing                  |
+|       "correlation_id": "req-abc",      // for distributed tracing      |
+|       "data": { "order_id": "ord-456", "user_id": "usr-789" }           |
+|     }                                                                   |
+|                                                                         |
+|  3. THIN vs FAT EVENTS                                                  |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |              | Thin Event           | Fat Event                    | |
+|  |--------------|----------------------|------------------------------| |
+|  | Contains     | IDs + action only    | Full entity state            | |
+|  | Size         | < 1 KB               | 1-100 KB                     | |
+|  | Consumer     | Must fetch full data | Self-contained               | |
+|  |              | from source service  | (no extra calls)             | |
+|  | Coupling     | Higher (needs access | Lower (standalone)           | |
+|  |              | to source API/DB)    |                              | |
+|  | Stale data   | Always fresh (fetched| May be stale if source       | |
+|  |              | at processing time)  | changed since publish        | |
+|  | Network      | Extra call per event | No extra calls               | |
+|  |--------------|----------------------|------------------------------| |
+|  | Best for     | Commands, triggers   | Event sourcing, CDC,         | |
+|  |              |                      | cross-team events            | |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  RECOMMENDATION: Default to thin events. Use fat events when:           |
+|  * Consumer is in a different team/org (can't call your API)            |
+|  * Event sourcing (events must be self-contained and replayable)        |
+|  * Cross-region (extra API call adds 100ms+ latency)                    |
+|                                                                         |
+|  4. SCHEMA EVOLUTION                                                    |
+|     * Always ADD fields, never REMOVE or RENAME                         |
+|     * Use Schema Registry (Avro/Protobuf) to enforce compatibility      |
+|     * Version field in message helps consumers handle both old and new  |
+|     * Backward compatible: new consumer reads old messages              |
+|     * Forward compatible: old consumer reads new messages               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1119,4 +1487,3 @@ distributed applications.
 ```
 
 ## END OF CHAPTER 7
-

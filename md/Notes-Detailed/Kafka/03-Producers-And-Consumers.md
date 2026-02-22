@@ -79,6 +79,83 @@ rebalancing determine your system's delivery guarantees and performance.
 +-------------------------------------------------------------------------+
 ```
 
+### MESSAGE SIZE LIMITS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KAFKA MESSAGE SIZE CONFIGURATION                                       |
+|  =================================                                      |
+|                                                                         |
+|  DEFAULT MAX MESSAGE SIZE: 1 MB (1048576 bytes)                         |
+|                                                                         |
+|  All 3 configs must be aligned — mismatch causes silent failures:       |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  | Config                      | Where    | Default  | Purpose        | |
+|  |-----------------------------|----------|----------|----------------| |
+|  | max.request.size            | Producer | 1 MB     | Max size of a  | |
+|  |                             |          |          | produce request| |
+|  | message.max.bytes           | Broker   | 1 MB     | Max message    | |
+|  |                             | (topic)  |          | broker accepts | |
+|  | max.partition.fetch.bytes   | Consumer | 1 MB     | Max data per   | |
+|  |                             |          |          | partition fetch| |
+|  | replica.fetch.max.bytes     | Broker   | 1 MB     | Max replication| |
+|  |                             |          |          | fetch size     | |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  TO INCREASE TO 10 MB (example):                                        |
+|  Producer:  max.request.size = 10485760                                 |
+|  Broker:    message.max.bytes = 10485760                                |
+|  Consumer:  max.partition.fetch.bytes = 10485760                        |
+|  Broker:    replica.fetch.max.bytes = 10485760                          |
+|                                                                         |
+|  WARNING: Increasing message size impacts:                              |
+|  * Broker memory (each partition buffer holds max.message.bytes)        |
+|  * Replication speed (large messages slow ISR sync)                     |
+|  * Consumer lag (one large message blocks others in partition)          |
+|  * GC pressure (large byte arrays in JVM heap)                          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  LARGE MESSAGE STRATEGIES:                                              |
+|                                                                         |
+|  1. CLAIM CHECK PATTERN (recommended)                                   |
+|     Store payload in S3/GCS, send reference in Kafka message.           |
+|     { "order_id": "123", "payload_ref": "s3://bucket/data.json" }       |
+|     Consumer fetches from S3 when processing.                           |
+|     Keeps Kafka fast, scalable, and within limits.                      |
+|                                                                         |
+|  2. COMPRESSION (good first step)                                       |
+|     compression.type = lz4 (fast) or zstd (best ratio)                  |
+|     JSON compresses 5-10x. A 5 MB JSON -> ~500 KB after lz4.            |
+|     Applied per batch at producer, stored compressed on broker.         |
+|     Consumer decompresses automatically.                                |
+|                                                                         |
+|  3. CHUNKING (avoid if possible)                                        |
+|     Split into ordered chunks with sequence numbers.                    |
+|     Complex: must handle ordering, missing chunks, reassembly.          |
+|     Kafka Headers can carry chunk metadata:                             |
+|       chunk-id: uuid, chunk-seq: 3, chunk-total: 5                      |
+|                                                                         |
+|  4. SCHEMA OPTIMIZATION                                                 |
+|     Switch from JSON to Avro/Protobuf — 3-10x smaller.                  |
+|     Avro + Schema Registry = compact + schema evolution.                |
+|     Protobuf = smallest binary format, strongly typed.                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  DECISION GUIDE:                                                        |
+|                                                                         |
+|  Message < 1 MB   --> Use as-is (default config works)                  |
+|  Message 1-10 MB  --> Try compression first                             |
+|                       If still large --> Claim Check to S3              |
+|  Message > 10 MB  --> Always use Claim Check                            |
+|  Binary data      --> Always use Claim Check (images, video, files)     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ### ACKNOWLEDGMENTS (acks)
 
 ```
