@@ -552,6 +552,128 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
+### DLQ AND FAILURE HANDLING IN CHAT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DLQ (DEAD LETTER QUEUE) IN CHAT SYSTEMS                                |
+|  =========================================                              |
+|                                                                         |
+|  Chat has TWO delivery paths. Failures handled differently:             |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PATH 1: REAL-TIME (WebSocket)                                    |  |
+|  |  User A --> WS Server --> Chat Service --> lookup conn registry    | |
+|  |                                        --> WS Server --> User B   |  |
+|  |                                                                   |  |
+|  |  Failure? --> Offline Queue (Redis) + Push Notification           |  |
+|  |  NOT a DLQ. Just "deliver later when user reconnects."            |  |
+|  |                                                                   |  |
+|  |  ---------------------------------------------------------------  |  |
+|  |                                                                   |  |
+|  |  PATH 2: ASYNC PROCESSING (Kafka consumers)                      |   |
+|  |  Message --> Kafka "messages" topic                               |  |
+|  |              |                                                    |  |
+|  |              +--> Store in Cassandra                              |  |
+|  |              +--> Update unread counters                          |  |
+|  |              +--> Push notification (APNs/FCM)                    |  |
+|  |              +--> Search indexing (Elasticsearch)                 |  |
+|  |              +--> Analytics / audit log                           |  |
+|  |                                                                   |  |
+|  |  Any consumer fails after 3 retries? --> DLQ topic                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  WHAT GOES TO DLQ (async failures):                                     |
+|                                                                         |
+|  1. PUSH NOTIFICATION FAILURE                                           |
+|     APNs/FCM returns error (invalid token, rate limited)                |
+|     Consumer retries 3x with backoff -> still fails -> DLQ              |
+|     DLQ action: check device token validity, retry or drop              |
+|                                                                         |
+|  2. CASSANDRA WRITE FAILURE                                             |
+|     Node down, timeout, write consistency not met                       |
+|     Critical: message could be lost if not retried!                     |
+|     DLQ action: high-priority alert, replay immediately                 |
+|                                                                         |
+|  3. SEARCH INDEX FAILURE                                                |
+|     Elasticsearch overloaded or cluster rebalancing                     |
+|     Non-critical: chat works fine, search is eventually consistent      |
+|     DLQ action: batch replay after ES is healthy                        |
+|                                                                         |
+|  4. UNREAD COUNTER FAILURE                                              |
+|     Redis counter update failed (rare, network blip)                    |
+|     DLQ action: recalculate counter from Cassandra on replay            |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  WHAT DOES NOT GO TO DLQ:                                               |
+|                                                                         |
+|  * WebSocket delivery failure -> Offline Queue (not DLQ)                |
+|  * User is offline -> Offline Queue + Push Notification                 |
+|  * Message dedup rejection -> expected, just skip                       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  DLQ STRUCTURE:                                                         |
+|                                                                         |
+|  Topic: chat.messages.dlq                                               |
+|                                                                         |
+|  Each DLQ message contains:                                             |
+|  {                                                                      |
+|    "original_topic": "chat.messages",                                   |
+|    "original_offset": 12345,                                            |
+|    "failure_reason": "APNS_INVALID_TOKEN",                              |
+|    "consumer_group": "push-notification-service",                       |
+|    "retry_count": 3,                                                    |
+|    "first_failed_at": "2025-02-22T10:00:00Z",                           |
+|    "last_failed_at": "2025-02-22T10:05:00Z",                            |
+|    "original_payload": { ... message event ... }                        |
+|  }                                                                      |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  OFFLINE QUEUE vs DLQ — KEY DIFFERENCE:                                 |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |               | Offline Queue         | DLQ                       |  |
+|  |---------------|-----------------------|---------------------------|  |
+|  | Purpose       | User not connected    | Backend processing failed |  |
+|  | Storage       | Redis sorted set      | Kafka DLQ topic           |  |
+|  | Trigger       | No WS connection      | Consumer error after      |  |
+|  |               | for recipient         | max retries               |  |
+|  | Consumed when | User comes online     | After root cause fix      |  |
+|  | Data          | Message IDs (small)   | Full event + error info   |  |
+|  | Priority      | Auto (on reconnect)   | Manual / automated replay |  |
+|  | Example       | "Deliver these 5 msgs | "Push to APNs failed 3x   |  |
+|  |               | when Alice reconnects"| for msg-789, token invalid|  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  DLQ HANDLING STRATEGY:                                                 |
+|                                                                         |
+|  CRITICAL (message storage failed):                                     |
+|    --> Alert immediately. Auto-retry every 30s.                         |
+|    --> If still failing: page on-call engineer.                         |
+|    --> Messages are in Kafka (retained), not truly lost.                |
+|                                                                         |
+|  IMPORTANT (push notification, unread counter):                         |
+|    --> Auto-retry with exponential backoff (1m, 5m, 30m).               |
+|    --> After 24h: move to permanent DLQ for investigation.              |
+|    --> Invalid device tokens: clean up from user's device list.         |
+|                                                                         |
+|  NON-CRITICAL (search index, analytics):                                |
+|    --> Batch replay during low-traffic hours.                           |
+|    --> Acceptable to be hours behind.                                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 6: MESSAGE STORAGE
 
 ### DATABASE CHOICE
