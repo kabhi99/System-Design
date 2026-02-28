@@ -188,10 +188,35 @@ to WebSocket connections, every system depends on the network.
 |  * Keep-alive connections (reuse TCP connection)                        |
 |  * Pipelining (send multiple requests, rarely used)                     |
 |                                                                         |
+|  PIPELINING EXPLAINED:                                                  |
+|  Client sends multiple requests without waiting for each response.      |
+|  Server MUST respond in exact order requests were received.             |
+|                                                                         |
+|  Without Pipeline:  Req1 -> Resp1 -> Req2 -> Resp2  (sequential)        |
+|  With Pipeline:     Req1, Req2, Req3 -> Resp1, Resp2, Resp3             |
+|                                                                         |
+|  WHY RARELY USED:                                                       |
+|  * Buggy proxy/server support                                           |
+|  * Most browsers never enabled it by default                            |
+|  * HOL blocking made it impractical (see below)                         |
+|                                                                         |
 |  PROBLEMS:                                                              |
 |  * Head-of-line blocking: Request 2 waits for Response 1                |
 |  * Multiple connections needed for parallelism (6 per domain)           |
 |  * Redundant headers sent with every request                            |
+|                                                                         |
+|  HEAD-OF-LINE (HOL) BLOCKING:                                           |
+|  Even with pipelining, responses must come back IN ORDER.               |
+|  If Response 1 is slow, everything behind it is stuck.                  |
+|                                                                         |
+|  Client                Server                                           |
+|    |-- GET /big.css --->|                                               |
+|    |-- GET /tiny.js --->|  (sent immediately)                           |
+|    |                    |  tiny.js READY but can't send yet!            |
+|    |<-- big.css --------|  (slow, 500ms)                                |
+|    |<-- tiny.js --------|  (blocked until big.css finishes)             |
+|                                                                         |
+|  WORKAROUND: Open multiple parallel TCP connections (6 per domain)      |
 |                                                                         |
 |  +-------------------------------------------------------------------+  |
 |  |  Connection 1: GET /style.css --> response --> GET /app.js        |  |
@@ -234,11 +259,23 @@ to WebSocket connections, every system depends on the network.
 |  STILL USES TCP: Head-of-line blocking at TCP level remains             |
 |  (If packet lost, all streams wait)                                     |
 |                                                                         |
+|  WHY? HTTP/2 multiplexes streams but they all share ONE TCP pipe.       |
+|  TCP guarantees in-order delivery. If one packet is lost, TCP holds     |
+|  back ALL data until retransmit -- even packets for other streams       |
+|  that arrived fine. So all HTTP/2 streams freeze together.              |
+|                                                                         |
+|  HOL BLOCKING SUMMARY:                                                  |
+|  HTTP/1.1:  HOL at HTTP level  X  +  TCP level  X                       |
+|  HTTP/2:    No HOL at HTTP     Y  +  TCP level  X  (still there!)       |
+|  HTTP/3:    No HOL at HTTP     Y  +  No HOL at transport  Y             |
+|                                                                         |
 |  ====================================================================   |
 |                                                                         |
 |  HTTP/3 (2022)                                                          |
 |                                                                         |
 |  HTTP over QUIC (UDP-based). Eliminates TCP limitations.                |
+|  Each stream is independent at transport -- lost packet only blocks     |
+|  THAT stream, not others. Fixes what HTTP/2 couldn't.                   |
 |                                                                         |
 |  KEY FEATURES:                                                          |
 |                                                                         |
