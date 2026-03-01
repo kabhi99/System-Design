@@ -291,7 +291,173 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: INTERVIEW QUESTIONS
+## SECTION 8: DESIGN ALTERNATIVES AND TRADE-OFFS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ALTERNATIVE 1: BFS vs DFS Crawling Strategy                            |
+|                                                                         |
+|  * BFS (breadth-first): discover many sites quickly, shallow            |
+|    coverage. Standard approach for web-scale crawlers.                  |
+|  * DFS (depth-first): go deep into one site before moving on.           |
+|    Risk of crawler traps (infinite depth).                              |
+|  * Best practice: BFS with priority (important/fresh pages first).      |
+|    DFS only for focused crawls (single-site archiving).                 |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  ALTERNATIVE 2: Bloom Filter vs Hash Set vs Database for URL Dedup      |
+|                                                                         |
+|  +--------------+--------+----------+----------+---------+              |
+|  | Method       | Memory | FP Rate  | Persist? | Speed   |              |
+|  +--------------+--------+----------+----------+---------+              |
+|  | Bloom Filter | 1.2 GB | ~1%      | No       | O(k)    |              |
+|  | Hash (Redis) | 16 GB  | Exact    | In-mem   | O(1)    |              |
+|  | RocksDB      | Unlim  | Exact    | Yes      | Slower  |              |
+|  +--------------+--------+----------+----------+---------+              |
+|                                                                         |
+|  Best: Bloom filter in-memory + RocksDB for persistent backup.          |
+|  Redis if budget allows for exact dedup with fast lookups.              |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  ALTERNATIVE 3: Single Machine vs Distributed Crawler                   |
+|                                                                         |
+|  * Single machine: simpler, 100-1000 pages/sec, fine for focused        |
+|    crawls (one site, small dataset).                                    |
+|  * Distributed (Kafka + workers): millions of pages/sec, needed         |
+|    for web-scale crawling (billions of pages).                          |
+|  * Trade-off: distributed adds coordination complexity (dedup           |
+|    across workers, politeness enforcement across machines).             |
+|  * Partition by domain hash: simplifies politeness (each worker         |
+|    owns specific domains, natural rate limiting).                       |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  ALTERNATIVE 4: Headless Browser vs HTTP Client                         |
+|                                                                         |
+|  * HTTP client only: fast (1000+ pages/sec), simple, but misses         |
+|    JS-rendered content (SPAs, dynamic pages).                           |
+|  * Headless browser (Puppeteer/Playwright): renders JS, sees full       |
+|    DOM, but 10-50x slower and high resource cost.                       |
+|  * Hybrid (Google's approach): HTTP first pass for link discovery,      |
+|    headless browser for JS-heavy pages only.                            |
+|  * Budget: rendering 1B pages/day with headless Chrome is               |
+|    impractical. Render selectively based on JS detection.               |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  ALTERNATIVE 5: Centralized vs Decentralized URL Frontier               |
+|                                                                         |
+|  * Centralized (single Kafka cluster): simpler, consistent              |
+|    priority ordering, single source of truth.                           |
+|  * Decentralized (per-worker local queues + coordinator):               |
+|    lower latency, less network overhead.                                |
+|  * Hybrid: Kafka for inter-worker URL distribution + local              |
+|    priority queue per worker for scheduling.                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 9: COMMON ISSUES AND FAILURE SCENARIOS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 1: Crawler Traps (Infinite URL Spaces)                           |
+|                                                                         |
+|  Problem: calendar pages, session IDs, query parameter permutations     |
+|  generate infinite URLs.                                                |
+|                                                                         |
+|  Solution: max URL depth, max pages per domain, URL regex pattern       |
+|  detection, content fingerprint dedup (same content at many URLs).      |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 2: DNS Resolution Bottleneck                                     |
+|                                                                         |
+|  Problem: 12,000 pages/sec = 12,000 DNS lookups/sec. Public DNS         |
+|  can't handle this.                                                     |
+|                                                                         |
+|  Solution: local DNS cache per worker, pre-resolve domains in batch,    |
+|  cache TTL-aware, fallback to multiple DNS providers.                   |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 3: Politeness Violation Causing IP Ban                           |
+|                                                                         |
+|  Problem: crawl too fast, website bans your IP. Or multiple workers     |
+|  crawl same domain simultaneously.                                      |
+|                                                                         |
+|  Solution: per-domain rate limiter (shared across workers), respect     |
+|  robots.txt crawl-delay, rotate IPs (ethically), use                    |
+|  domain-partitioned workers.                                            |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 4: Content Duplication Across Different URLs                     |
+|                                                                         |
+|  Problem: same article at /news/123 and /articles/123 and               |
+|  /amp/123.                                                              |
+|                                                                         |
+|  Solution: Content fingerprinting (SimHash/MinHash), canonical URL      |
+|  detection (rel=canonical), near-duplicate detection                    |
+|  (similarity > 90% = skip).                                             |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 5: Stale Frontier (URLs become invalid over time)                |
+|                                                                         |
+|  Problem: URLs queued weeks ago, site has changed, pages deleted.       |
+|  Wasting crawl budget on dead links.                                    |
+|                                                                         |
+|  Solution: TTL on frontier entries, exponential backoff for             |
+|  repeatedly-failing domains, priority decay (old URLs lose              |
+|  priority), periodic frontier cleanup.                                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 6: Handling Rate-Limited or Slow Websites                        |
+|                                                                         |
+|  Problem: some sites respond in 10+ seconds, blocking the worker        |
+|  thread.                                                                |
+|                                                                         |
+|  Solution: async I/O (don't block on slow sites), per-domain            |
+|  timeout config, deprioritize slow domains, move to slow-queue          |
+|  with longer intervals.                                                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 10: MONITORING AND OPERATIONS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KEY METRICS TO MONITOR:                                                |
+|                                                                         |
+|  * Crawl rate (pages/sec overall and per domain)                        |
+|  * URL frontier depth (growing = falling behind)                        |
+|  * Error rate by type (DNS failures, timeouts, 4xx, 5xx)                |
+|  * Content duplication rate (% of pages are near-duplicates)            |
+|  * Cache hit rates (DNS cache, robots.txt cache)                        |
+|  * Freshness (avg age of last crawl per domain tier)                    |
+|  * Storage growth rate                                                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  OPERATIONAL CONCERNS:                                                  |
+|                                                                         |
+|  * Alerting: frontier growing faster than drain rate                    |
+|  * Capacity planning: bandwidth vs workers vs storage                   |
+|  * Graceful shutdown: finish in-progress fetches, persist               |
+|    frontier state                                                       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 11: INTERVIEW QUESTIONS
 
 ```
 +--------------------------------------------------------------------------+

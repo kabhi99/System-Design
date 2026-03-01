@@ -764,7 +764,120 @@ Lag grows at: 8,000 msg/sec → 480K messages behind per minute
 
 ---
 
-## 6.2 Database Writes Outgrowing Single Node
+## 6.2 Proactive Scaling Strategies (Hotstar / IPL Example)
+
+**Context**: Reactive auto-scaling (CPU > threshold → add instances) is too slow for predictable traffic spikes. By the time new instances boot and warm up (3-5 min), users are already seeing errors.
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THREE TYPES OF SCALING                                                 |
+|                                                                         |
+|  1. REACTIVE AUTO-SCALING                                               |
+|     Trigger: CPU > 70% → scale up                                      |
+|     Problem: 3-5 min delay to boot + warm up                           |
+|     Good for: Gradual, unpredictable traffic growth                    |
+|                                                                         |
+|  2. SCHEDULED PRE-SCALING                                               |
+|     Trigger: Cron-based (scale up at 8:50 AM for 9 AM peak)           |
+|     Example: Flash sale at 12 PM → 10x capacity at 11:30 AM           |
+|     Good for: Known events with fixed start time                       |
+|                                                                         |
+|  3. PREDICTIVE / PROACTIVE SCALING                                      |
+|     Trigger: ML model predicts traffic 10-30 min ahead                 |
+|     Scale BEFORE the spike arrives                                      |
+|     Good for: Events with variable, real-time demand patterns          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+**Hotstar / IPL Case Study**:
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM:                                                               |
+|  * IPL cricket matches: 25M+ concurrent viewers                        |
+|  * Traffic is NOT uniform -- spikes on wickets, sixes, overs           |
+|  * A single wicket can cause 3-5x spike in 30 seconds                  |
+|  * Reactive scaling can't handle 30-second bursts                      |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  HOTSTAR'S APPROACH:                                                    |
+|                                                                         |
+|  1. TRAFFIC PREDICTION MODEL                                            |
+|     * Trained on historical match data (past IPL seasons)              |
+|     * Features: match type, teams, time of day, tournament stage       |
+|     * Predicts viewership curve per match                              |
+|     * Updates predictions in real-time during match                    |
+|                                                                         |
+|  2. PRE-PROVISIONED CAPACITY                                            |
+|     * Spin up infrastructure BEFORE match starts                       |
+|     * Pre-warm: CDN caches, connection pools, DB read replicas         |
+|     * Pre-load static assets (player images, team logos, ads)          |
+|                                                                         |
+|  3. REAL-TIME ADAPTIVE SCALING                                          |
+|     * Monitor live match events (ball-by-ball feed)                    |
+|     * Wicket detected → instantly scale up (anticipate surge)          |
+|     * Last over → scale up (everyone tunes in for finish)              |
+|     * Scale decision happens BEFORE traffic hits, not after            |
+|                                                                         |
+|  4. GRACEFUL DEGRADATION TIERS                                          |
+|     * Tier 1 (normal): Full features, personalization, chat            |
+|     * Tier 2 (high load): Disable chat, reduce ad personalization      |
+|     * Tier 3 (extreme): Static scorecard, simplified video player      |
+|     * Automatic tier switching based on load signals                   |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  ARCHITECTURE FOR PROACTIVE SCALING:                                    |
+|                                                                         |
+|  +------------------+     +-------------------+                         |
+|  | Match Event Feed | --> | Traffic Predictor | --+                     |
+|  | (ball-by-ball)   |     | (ML Model)        |   |                     |
+|  +------------------+     +-------------------+   |                     |
+|                                                    v                    |
+|  +------------------+     +-------------------+  +---------------+     |
+|  | Historical Data  | --> | Scaling Decision  |->| K8s HPA /     |     |
+|  | (past matches)   |     | Engine            |  | Cloud ASG     |     |
+|  +------------------+     +-------------------+  +---------------+     |
+|                                                    |                    |
+|                                                    v                    |
+|                                              Scale 10 min ahead        |
+|                                              of predicted spike        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+**When to Use Which**:
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Strategy              Use When                     Example             |
+|  -------------------------------------------------------------------   |
+|  Reactive auto-scale   Gradual, unpredictable       Normal daily        |
+|                        traffic patterns              traffic             |
+|                                                                         |
+|  Scheduled pre-scale   Known time, known magnitude  Flash sale at       |
+|                                                      12 PM exactly      |
+|                                                                         |
+|  Predictive/Proactive  Known event, variable demand  Live sports,       |
+|                        with real-time signals         elections,         |
+|                                                      concert drops      |
+|                                                                         |
+|  INTERVIEW TIP:                                                         |
+|  "For predictable events I'd pre-scale infrastructure and pre-warm     |
+|   caches. For live events with unpredictable spikes, I'd combine       |
+|   scheduled pre-scaling with real-time event-driven scaling --         |
+|   similar to how Hotstar handles IPL matches where a wicket can        |
+|   cause 3-5x traffic surge in seconds."                                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+---
+
+## 6.3 Database Writes Outgrowing Single Node
 
 **Symptom**: Write latency increasing week over week. WAL write queue growing. Approaching IOPS limits of the disk.
 

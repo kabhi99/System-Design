@@ -294,7 +294,195 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: INTERVIEW QUESTIONS
+## SECTION 8: SCALE ESTIMATION
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ASSUMPTIONS:                                                           |
+|  Serving for a top-50 website, 1B requests/day, 50 TB content cached    |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  REQUEST MATH:                                                          |
+|  * 1B req/day = ~12K req/sec avg, 50K req/sec peak                      |
+|                                                                         |
+|  BANDWIDTH:                                                             |
+|  * Avg response 50 KB x 12K/sec = 600 MB/sec = 4.8 Gbps avg             |
+|  * Peak ~20 Gbps                                                        |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  CACHE HIT RATIO TARGET: 95%+                                           |
+|  * Only 5% goes to origin = 600 req/sec to origin                       |
+|                                                                         |
+|  EDGE STORAGE:                                                          |
+|  * 50 TB across 200 PoPs, but not all content at all PoPs               |
+|  * Hot content maybe 500 GB per PoP                                     |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  GLOBAL CDN SCALE (Cloudflare reference):                               |
+|  * 300+ PoPs                                                            |
+|  * 200+ Tbps capacity                                                   |
+|  * Billions of requests/day                                             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ALTERNATIVE 1: ANYCAST vs DNS-BASED ROUTING                            |
+|                                                                         |
+|  Anycast: same IP from all PoPs, BGP routing. Simple client config,     |
+|  fast failover (BGP converges). But routing is coarse (BGP doesn't      |
+|  know about load).                                                      |
+|                                                                         |
+|  DNS-based: different IP per PoP, DNS resolves based on location /      |
+|  health / load. More control but DNS TTL caching causes stickiness      |
+|  (30-300s stale routing).                                               |
+|                                                                         |
+|  Most CDNs: Anycast for primary (Cloudflare), DNS for large CDNs        |
+|  (CloudFront, Akamai). Some use both.                                   |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  ALTERNATIVE 2: PUSH CDN vs PULL CDN                                    |
+|                                                                         |
+|  Push: origin uploads content to CDN proactively. Full control,         |
+|  guaranteed warm cache. But complex workflow, wastes storage for        |
+|  unpopular content.                                                     |
+|                                                                         |
+|  Pull: CDN fetches from origin on cache miss. Simple, automatic,        |
+|  but first request is slow (cache miss).                                |
+|                                                                         |
+|  Best: pull for most content + push/pre-warm for predicted popular      |
+|  content (new movie releases, product launches).                        |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  ALTERNATIVE 3: SINGLE-TIER vs MULTI-TIER CACHE                         |
+|                                                                         |
+|  Single-tier (edge only): each PoP fetches from origin on miss.         |
+|  Simpler but origin gets hit from 300 PoPs.                             |
+|                                                                         |
+|  Multi-tier (edge -> shield/regional -> origin): shield absorbs         |
+|  misses from many edges. Origin only hit once per shield region.        |
+|                                                                         |
+|  Trade-off: multi-tier adds latency on miss (extra hop) but             |
+|  dramatically reduces origin load. Essential at scale.                  |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  ALTERNATIVE 4: BUILD YOUR OWN CDN vs THIRD-PARTY                       |
+|                                                                         |
+|  Third-party (Cloudflare, Akamai, CloudFront): instant global           |
+|  coverage, pay-per-use. $0.02-0.08/GB.                                  |
+|                                                                         |
+|  Own CDN (Netflix Open Connect): boxes in ISP data centers, massive     |
+|  savings at scale. $5-10M/month vs $50M+ for third-party at Netflix     |
+|  scale. But huge upfront investment, ISP relationships needed.          |
+|                                                                         |
+|  Hybrid: own CDN for top markets + third-party for tail regions.        |
+|  Break-even: typically > 100 Gbps sustained before owning makes         |
+|  financial sense.                                                       |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  ALTERNATIVE 5: EDGE WORKERS vs TRADITIONAL CDN CONFIG                  |
+|                                                                         |
+|  Traditional: cache rules via config (headers, regex patterns).         |
+|  Limited logic.                                                         |
+|                                                                         |
+|  Edge workers (Cloudflare Workers, Lambda@Edge): full                   |
+|  programmability at edge. Can rewrite requests, personalize,            |
+|  A/B test. But limited runtime (CPU time, memory).                      |
+|                                                                         |
+|  Trade-off: workers add cost per invocation, harder to debug            |
+|  (300 PoPs), cold start issues. Use for logic that saves an             |
+|  origin trip.                                                           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ISSUE 1: CACHE STAMPEDE (THUNDERING HERD)                              |
+|                                                                         |
+|  Problem: popular object expires, 1000s of concurrent requests hit      |
+|  origin simultaneously.                                                 |
+|  Solution: request coalescing (only 1 request to origin per PoP),       |
+|  stale-while-revalidate, lock-based refill (one thread fetches,         |
+|  others wait).                                                          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 2: CACHE POISONING                                               |
+|                                                                         |
+|  Problem: attacker manipulates cache key to serve wrong content         |
+|  (e.g., injecting via Host header or unkeyed query params).             |
+|  Solution: strict cache key composition, normalize/validate headers,    |
+|  security headers (X-Cache-Key audit), WAF rules.                       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 3: ORIGIN OVERLOAD DURING CDN OUTAGE                             |
+|                                                                         |
+|  Problem: CDN PoP goes down, traffic fails over to another PoP or       |
+|  directly to origin. Origin can't handle the load.                      |
+|  Solution: multi-tier cache (shield absorbs), origin auto-scaling,      |
+|  circuit breaker (return stale/error page instead of overwhelming       |
+|  origin), pre-provisioned origin capacity.                              |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 4: STALE CONTENT AFTER DEPLOY                                    |
+|                                                                         |
+|  Problem: new app deployed but CDN still serving old JS/CSS. Users      |
+|  see broken UI (new HTML + old JS).                                     |
+|  Solution: content-hash filenames (app.abc123.js), purge API on         |
+|  deploy, immutable assets with long TTL + versioned URLs.               |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 5: CERTIFICATE RENEWAL FAILURE                                   |
+|                                                                         |
+|  Problem: TLS cert expires at edge, users get SSL errors. Or: cert      |
+|  mismatch for custom domains.                                           |
+|  Solution: automated cert renewal (Let's Encrypt + ACME), monitoring    |
+|  for expiring certs (alert 30 days before), wildcard certs for          |
+|  subdomains, fallback cert.                                             |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 6: GEO-ROUTING INACCURACY                                        |
+|                                                                         |
+|  Problem: user routed to wrong PoP because DNS resolver IP doesn't      |
+|  match user location (VPN, corporate DNS).                              |
+|  Solution: EDNS Client Subnet (ECS) sends client IP prefix to CDN       |
+|  DNS, Anycast routing (doesn't depend on DNS), client-side latency      |
+|  measurement for PoP selection.                                         |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  ISSUE 7: CACHE STORAGE EXHAUSTION AT EDGE                              |
+|                                                                         |
+|  Problem: PoP disk fills up, must evict content. If eviction is         |
+|  wrong (evict popular content), cache hit ratio drops.                  |
+|  Solution: LRU/LFU eviction with admission policy (don't cache          |
+|  content accessed only once), tiered storage (SSD for hot, HDD for      |
+|  warm), monitor eviction rate and cache churn.                          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 11: INTERVIEW QUESTIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -327,6 +515,20 @@ latency and offloading origin servers.
 |  A: Short TTL (1-60s) + stale-while-revalidate. Edge-side includes      |
 |     (ESI) for mixing cached + dynamic fragments. Edge compute for       |
 |     personalization. TCP/TLS optimization to origin for uncacheable.    |
+|                                                                         |
+|  Q: How would you design a CDN from scratch for a startup?              |
+|  A: Start with third-party CDN (CloudFront or Cloudflare). Configure    |
+|     cache headers properly. Use versioned asset URLs. Set up a          |
+|     multi-tier cache (CloudFront origin shield). Add edge functions     |
+|     only when needed (A/B testing, geo-routing). Monitor cache hit      |
+|     ratio -- if < 90%, fix cache key configuration.                     |
+|                                                                         |
+|  Q: How does Netflix's Open Connect work?                               |
+|  A: Netflix places custom hardware (Open Connect Appliances) inside     |
+|     ISP data centers. During off-peak hours, popular content is         |
+|     pre-positioned. During streaming, 95%+ of traffic is served from    |
+|     within the ISP network (zero transit cost). Appliances are free     |
+|     to ISPs (Netflix saves on bandwidth, ISP saves on peering).         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

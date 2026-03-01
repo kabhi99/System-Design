@@ -226,7 +226,190 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: INTERVIEW QUESTIONS
+## SECTION 7: SCALE ESTIMATION
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  ASSUMPTIONS:                                                           |
+||  * 10 PB total storage                                                  |
+||  * 100K files, average file size 100 MB                                 |
+||  * 128 MB chunk size (HDFS default)                                     |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  CHUNK COUNT:                                                           |
+||  * 10 PB / 128 MB = ~80 million chunks                                  |
+||  * x3 replicas = 240 million chunk replicas                             |
+||                                                                         |
+||  -------------------------------------------------------------------    |
+||                                                                         |
+||  MASTER METADATA:                                                       |
+||  * 80M chunks x 100 bytes per entry = 8 GB                              |
+||  * Fits comfortably in memory on a single machine                       |
+||                                                                         |
+||  -------------------------------------------------------------------    |
+||                                                                         |
+||  THROUGHPUT:                                                            |
+||  * Write throughput: 1 GB/sec aggregate                                 |
+||    (limited by network and disk I/O)                                    |
+||  * Read throughput: 100 GB/sec aggregate across cluster                 |
+||                                                                         |
+||  -------------------------------------------------------------------    |
+||                                                                         |
+||  MACHINES:                                                              |
+||  * 100 chunk servers, each 100 TB storage, 10 Gbps network              |
+||  * Master memory: 8 GB metadata + overhead = fits in 64 GB RAM          |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 8: DESIGN ALTERNATIVES AND TRADE-OFFS
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  ALTERNATIVE 1: Single Master vs Multi-Master vs Masterless             |
+||                                                                         |
+||  * Single master (GFS/HDFS): simple, consistent, but SPOF.              |
+||    Mitigated with standby.                                              |
+||  * Multi-master (HDFS Federation): each master owns namespace           |
+||    portion. More scale but routing complexity.                          |
+||  * Masterless (Ceph): CRUSH algorithm computes placement,               |
+||    no master bottleneck. More complex, harder to debug.                 |
+||  * Trade-off: single master works for most scales (up to ~100M          |
+||    files). Multi-master at extreme scale.                               |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ALTERNATIVE 2: Large Chunks (64-128 MB) vs Small Chunks (4-16 MB)      |
+||                                                                         |
+||  * Large chunks: fewer metadata entries, better sequential              |
+||    throughput, amortize network overhead                                |
+||  * Small chunks: better for small files, less internal                  |
+||    fragmentation, faster replication                                    |
+||  * GFS chose 64 MB (batch workloads). Modern object stores              |
+||    have variable part sizes.                                            |
+||  * Small file problem: millions of 1 KB files = millions of             |
+||    metadata entries, master overloaded                                  |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ALTERNATIVE 3: Replication vs Erasure Coding                           |
+||                                                                         |
+||  * Replication (3x): simple, fast reads (any replica),                  |
+||    3x storage overhead                                                  |
+||  * Erasure coding (RS 6+3): 1.5x storage overhead, tolerates            |
+||    same failures, but slow reads (reconstruction)                       |
+||  * Trade-off: replication for hot data (fast reads), erasure            |
+||    coding for warm/cold (saves storage)                                 |
+||  * HDFS 3.0+ supports erasure coding. Google Colossus uses              |
+||    erasure coding.                                                      |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ALTERNATIVE 4: Append-Only vs Random Write                             |
+||                                                                         |
+||  * Append-only (GFS/HDFS): simpler consistency, perfect for             |
+||    logs/data pipelines, write once read many                            |
+||  * Random write: needed for databases, much harder                      |
+||    (locking, conflict resolution)                                       |
+||  * GFS supported random write but discouraged it (relaxed               |
+||    consistency). HDFS is strictly append-only.                          |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ALTERNATIVE 5: Self-Managed (HDFS) vs Cloud Object Store (S3/GCS)      |
+||                                                                         |
+||  * Self-managed: data locality for compute (Spark), full control,       |
+||    but high ops burden                                                  |
+||  * Cloud: zero ops, 11-9s durability, exabyte scale, but no             |
+||    data locality, pay per request                                       |
+||                                                                         |
+||  +------------+---------------+------------------+                      |
+||  | Aspect     | HDFS          | Cloud (S3/GCS)   |                      |
+||  +------------+---------------+------------------+                      |
+||  | Cost       | CapEx + ops   | Pay per use      |                      |
+||  | Ops        | High          | Zero             |                      |
+||  | Durability | 3x replicas   | 11 nines         |                      |
+||  | Latency    | Low (local)   | Higher (network) |                      |
+||  | Locality   | Yes           | No               |                      |
+||  | Lock-in    | None          | Vendor           |                      |
+||  +------------+---------------+------------------+                      |
+||                                                                         |
+||  * Trend: even Hadoop shops moving to S3 + Spark. Data locality         |
+||    matters less with fast networks.                                     |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 9: COMMON ISSUES AND FAILURE SCENARIOS
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  ISSUE 1: Master Single Point of Failure                                |
+||                                                                         |
+||  * Problem: master goes down, all metadata ops stop, new file           |
+||    creates fail                                                         |
+||  * Solution: standby master with shared edit log (HDFS QJM),            |
+||    automatic failover via ZooKeeper, clients cache chunk                |
+||    locations so reads continue                                          |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ISSUE 2: Hot Chunk Servers                                             |
+||                                                                         |
+||  * Problem: one file is very popular, all reads hit same 3              |
+||    chunk servers                                                        |
+||  * Solution: increase replication factor for hot files (3 -> 10),       |
+||    CDN/cache layer in front, read from any replica (load balance)       |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ISSUE 3: Small File Problem                                            |
+||                                                                         |
+||  * Problem: millions of tiny files, each consuming a metadata           |
+||    entry. Master memory exhausted at ~500M files.                       |
+||  * Solution: HAR (Hadoop Archives) merge small files, use               |
+||    different storage (HBase, S3) for small objects,                     |
+||    CombineFileInputFormat for MapReduce                                 |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ISSUE 4: Network Partition Between Master and Chunk Servers            |
+||                                                                         |
+||  * Problem: master can't reach chunk server, thinks it's dead,          |
+||    triggers re-replication. But server is fine, now has extra           |
+||    copies.                                                              |
+||  * Solution: lease-based approach (chunk server leases expire,          |
+||    it stops serving), heartbeat grace period, don't re-replicate        |
+||    immediately (wait 10 min)                                            |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ISSUE 5: Stale Reads After Write                                       |
+||                                                                         |
+||  * Problem: client writes to file, another client reads from            |
+||    different replica that hasn't received the write yet                 |
+||  * Solution: read from primary replica (lease holder), or client        |
+||    reads from same chunk server it wrote to, or use generation          |
+||    numbers                                                              |
+||                                                                         |
+||  ====================================================================   |
+||                                                                         |
+||  ISSUE 6: Rebalancing Storm                                             |
+||                                                                         |
+||  * Problem: adding/removing machines triggers massive data              |
+||    movement, saturates network, degrades normal operations              |
+||  * Solution: throttle rebalancing bandwidth (HDFS balancer has          |
+||    bandwidth limit), schedule during off-peak, prioritize               |
+||    under-replicated chunks                                              |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 10: INTERVIEW QUESTIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -254,6 +437,17 @@ the most influential designs.
 |  A: Large chunks waste space for small files. Solutions: merge small    |
 |     files into archives (HAR in HDFS), use a key-value store instead,   |
 |     or use object storage (S3) with metadata in a DB.                   |
+|                                                                         |
+|  Q: When would you choose HDFS over S3?                                 |
+|  A: When data locality matters for compute (co-located Spark/           |
+|     MapReduce), when you need append-only streaming writes, when        |
+|     you need to avoid egress costs, or in on-premise environments.      |
+|                                                                         |
+|  Q: How does erasure coding save storage vs replication?                |
+|  A: 3x replication: 1 PB data = 3 PB storage. RS(6,3) erasure           |
+|     coding: 1 PB data = 1.5 PB storage. Same fault tolerance            |
+|     (tolerate 3 failures) but half the storage. Trade-off: reads        |
+|     are slower (must reconstruct from multiple fragments).              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

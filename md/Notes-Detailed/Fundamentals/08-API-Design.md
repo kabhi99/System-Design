@@ -1085,5 +1085,281 @@ REST (Representational State Transfer) is the most common API style.
 +-------------------------------------------------------------------------+
 ```
 
+## SECTION 8.X: SPEC-DRIVEN (API-FIRST) DEVELOPMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SPEC-DRIVEN DEVELOPMENT                                                |
+|                                                                         |
+|  Core Idea: Define the API specification FIRST, then generate           |
+|  code, docs, mocks, and tests from it.                                  |
+|                                                                         |
+|  Traditional (Code-First):                                              |
+|                                                                         |
+|    Write Code  -->  Generate Docs  -->  Share with Frontend             |
+|    (backend)        (Swagger/OpenAPI)    (often outdated)               |
+|                                                                         |
+|  Spec-Driven (API-First):                                               |
+|                                                                         |
+|    Write Spec  -->  Generate Code Stubs  -->  Parallel Dev              |
+|    (OpenAPI/        (server + client)         (FE + BE)                 |
+|     Protobuf)       + Mock Server                                       |
+|                     + Tests                                             |
+|                     + Docs                                              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### WHY SPEC-DRIVEN?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM IT SOLVES                                                      |
+|                                                                         |
+|  Without spec-first:                                                    |
+|  * Frontend waits for backend to finish endpoints                       |
+|  * API docs drift from actual implementation                            |
+|  * Integration bugs found late in the cycle                             |
+|  * Each team interprets requirements differently                        |
+|  * Breaking changes discovered only during integration                  |
+|                                                                         |
+|  With spec-first:                                                       |
+|  * Frontend and backend work in parallel from Day 1                     |
+|  * Single source of truth (the spec file)                               |
+|  * Auto-generated mocks let frontend test immediately                   |
+|  * Contract tests catch breaking changes before merge                   |
+|  * Docs are always accurate (generated from spec)                       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### THE WORKFLOW
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SPEC-DRIVEN DEVELOPMENT WORKFLOW                                       |
+|                                                                         |
+|  Step 1: Design Phase (Collaborative)                                   |
+|  -----------------------------------------                              |
+|  * Product + Backend + Frontend agree on API contract                   |
+|  * Write spec in OpenAPI (REST) or Protobuf (gRPC)                     |
+|  * Review spec in PR (just like code review)                            |
+|                                                                         |
+|  Step 2: Generate Artifacts                                             |
+|  -----------------------------------------                              |
+|                                                                         |
+|     openapi.yaml                                                        |
+|         |                                                               |
+|         +---> Server stubs (Spring/Express/Go)                          |
+|         +---> Client SDKs (TypeScript/Python/Java)                      |
+|         +---> Mock server (Prism, WireMock)                             |
+|         +---> API documentation (Redoc, Swagger UI)                     |
+|         +---> Contract tests (Pact, Dredd)                              |
+|                                                                         |
+|  Step 3: Parallel Development                                           |
+|  -----------------------------------------                              |
+|                                                                         |
+|    Backend:                    Frontend:                                 |
+|    * Implements stubs          * Codes against mock server              |
+|    * Runs contract tests       * Uses generated SDK types              |
+|    * Validates against spec    * No waiting for real API               |
+|                                                                         |
+|  Step 4: Integration                                                    |
+|  -----------------------------------------                              |
+|  * Switch frontend from mock to real backend                            |
+|  * Contract tests already verified compatibility                        |
+|  * Minimal integration surprises                                        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### SPEC FORMATS AND TOOLS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SPECIFICATION FORMATS                                                  |
+|                                                                         |
+|  Format        Use Case               Example                          |
+|  ------        --------               -------                          |
+|  OpenAPI 3.x   REST APIs              YAML/JSON spec                   |
+|  Protobuf      gRPC services          .proto files                     |
+|  GraphQL SDL   GraphQL APIs           schema.graphql                   |
+|  AsyncAPI      Event-driven APIs      Kafka/WebSocket events           |
+|  JSON Schema   Data validation        Request/response models          |
+|                                                                         |
+|  -----------------------------------------------------------------     |
+|                                                                         |
+|  TOOLING ECOSYSTEM                                                      |
+|                                                                         |
+|  Category          Tools                                                |
+|  --------          -----                                                |
+|  Spec Editor       Stoplight Studio, Swagger Editor                     |
+|  Code Gen          openapi-generator, protoc, graphql-codegen           |
+|  Mock Server       Prism, WireMock, MockServer                          |
+|  Contract Test     Pact, Dredd, Schemathesis                            |
+|  Doc Gen           Redoc, Swagger UI, Docusaurus                        |
+|  Linting           Spectral (OpenAPI linting rules)                     |
+|  Diff/Breaking     optic, oasdiff (detect breaking changes)            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### CONTRACT TESTING PATTERNS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  CONTRACT TESTING                                                       |
+|                                                                         |
+|  Provider Contract (Top-Down):                                          |
+|  * Provider publishes spec                                              |
+|  * All consumers must follow it                                         |
+|  * Provider validates their implementation matches spec                 |
+|                                                                         |
+|    Provider writes spec  --->  Consumers follow  --->  Verified         |
+|                                                                         |
+|  -----------------------------------------------------------------     |
+|                                                                         |
+|  Consumer-Driven Contract (Bottom-Up):                                  |
+|  * Each consumer defines what they NEED from the provider               |
+|  * Provider verifies it doesn't break any consumer contract             |
+|  * More flexible, catches real breaking changes                         |
+|                                                                         |
+|    Consumer A: "I need GET /users with {id, name}"                      |
+|    Consumer B: "I need GET /users with {id, email}"                     |
+|    Provider:   Verifies both contracts pass                             |
+|                                                                         |
+|  -----------------------------------------------------------------     |
+|                                                                         |
+|  PACT WORKFLOW (Consumer-Driven)                                        |
+|                                                                         |
+|    Consumer Test  --->  Generate Pact File  --->  Pact Broker           |
+|                                                        |                |
+|    Provider Test  <---  Fetch Pact  <------------------+                |
+|         |                                                               |
+|         +---> Verify all consumer contracts pass                        |
+|         +---> Publish verification result                               |
+|         +---> CI gate: "Can I Deploy?"                                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### REAL-WORLD EXAMPLE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  EXAMPLE: OpenAPI Spec Snippet                                          |
+|                                                                         |
+|  # openapi.yaml                                                         |
+|  openapi: 3.0.3                                                         |
+|  info:                                                                  |
+|    title: User Service                                                  |
+|    version: 1.0.0                                                       |
+|  paths:                                                                 |
+|    /users/{id}:                                                         |
+|      get:                                                               |
+|        operationId: getUserById                                         |
+|        parameters:                                                      |
+|          - name: id                                                     |
+|            in: path                                                     |
+|            required: true                                                |
+|            schema:                                                       |
+|              type: string                                                |
+|              format: uuid                                                |
+|        responses:                                                       |
+|          200:                                                            |
+|            description: User found                                      |
+|            content:                                                      |
+|              application/json:                                           |
+|                schema:                                                   |
+|                  $ref: '#/components/schemas/User'                       |
+|          404:                                                            |
+|            description: User not found                                  |
+|                                                                         |
+|  -----------------------------------------------------------------     |
+|                                                                         |
+|  FROM THIS SINGLE SPEC FILE YOU GET:                                    |
+|                                                                         |
+|  * TypeScript client:  getUserById(id: string): Promise<User>           |
+|  * Java server stub:   interface UserApi { User getUserById(UUID id) }  |
+|  * Mock server:        GET /users/any-uuid returns sample User          |
+|  * API docs:           Interactive page with "Try It" button            |
+|  * Contract test:      Validates response matches User schema           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### WHEN TO USE / NOT USE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WHEN TO USE SPEC-DRIVEN                                                |
+|                                                                         |
+|  Good Fit:                                                              |
+|  * Multiple teams consuming the same API                                |
+|  * Public/partner-facing APIs                                           |
+|  * Microservices with many inter-service calls                          |
+|  * Frontend and backend teams working in parallel                       |
+|  * Regulated industries (spec = auditable contract)                     |
+|                                                                         |
+|  Not Worth It:                                                          |
+|  * Solo developer, small prototype                                      |
+|  * Rapidly changing experimental API                                    |
+|  * Internal tool with single consumer                                   |
+|  * Very small CRUD app                                                  |
+|                                                                         |
+|  -----------------------------------------------------------------     |
+|                                                                         |
+|  COMPANIES USING SPEC-FIRST                                             |
+|                                                                         |
+|  * Stripe: OpenAPI spec powers all client SDKs in 7 languages           |
+|  * Twilio: Spec-first for all public APIs                               |
+|  * Amazon: API contracts reviewed before any code is written            |
+|  * Netflix: Protobuf-first for internal gRPC services                   |
+|  * Zalando: Company-wide RESTful API guidelines enforced via spec       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### INTERVIEW Q&A
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Q: What is spec-driven development?                                    |
+|  A: Define the API contract (OpenAPI/Protobuf) BEFORE writing code.     |
+|     Generate server stubs, client SDKs, mocks, docs, and tests          |
+|     from the spec. Enables parallel frontend/backend development.       |
+|                                                                         |
+|  Q: Spec-first vs code-first -- when to pick which?                     |
+|  A: Spec-first when multiple consumers, need parallel dev, or public    |
+|     API. Code-first for rapid prototyping or solo dev where the API     |
+|     shape is still evolving fast.                                       |
+|                                                                         |
+|  Q: How do you prevent breaking changes?                                |
+|  A: Run breaking-change detection (oasdiff, optic) in CI. Consumer-    |
+|     driven contract tests (Pact) verify no consumer is broken.          |
+|     Additive changes only; deprecation period before removal.           |
+|                                                                         |
+|  Q: What is consumer-driven contract testing?                           |
+|  A: Each consumer writes a contract for what they need. Provider runs   |
+|     all consumer contracts in CI. If any fail, the provider knows       |
+|     their change would break that consumer. Tools: Pact, Spring         |
+|     Cloud Contract.                                                     |
+|                                                                         |
+|  Q: How does this help in microservices?                                |
+|  A: Each service publishes its API spec. Other teams generate clients   |
+|     from it. Contract tests replace fragile E2E tests. Schema           |
+|     registry (for events) ensures async contracts are also validated.   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 8
 
