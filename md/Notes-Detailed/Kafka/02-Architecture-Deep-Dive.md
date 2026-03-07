@@ -122,6 +122,52 @@ stores data, replicates it, and handles failures.
 +--------------------------------------------------------------------------+
 ```
 
+#### WHY ADDING PARTITIONS BREAKS KEY ORDERING
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Kafka routes keys using: partition = hash(key) % num_partitions         |
+|                                                                          |
+|  BEFORE (3 partitions):                                                  |
+|    hash("user-A") % 3 = 0  -> Partition 0                                |
+|    hash("user-B") % 3 = 1  -> Partition 1                                |
+|    hash("user-C") % 3 = 2  -> Partition 2                                |
+|                                                                          |
+|  AFTER adding 1 partition (now 4):                                       |
+|    hash("user-A") % 4 = 0  -> Partition 0   (same)                       |
+|    hash("user-B") % 4 = 3  -> Partition 3   (MOVED! was P1)              |
+|    hash("user-C") % 4 = 0  -> Partition 0   (MOVED! was P2)              |
+|                                                                          |
+|  user-B now has OLD messages in P1, NEW messages in P3.                  |
+|  Ordering history is split. Consumer of P3 misses old messages.          |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  HOW TO HANDLE IT:                                                       |
+|                                                                          |
+|  1. OVER-PROVISION FROM THE START (Best practice)                        |
+|     Start with more partitions than needed (30-100 per topic).           |
+|     Unused partitions cost almost nothing.                               |
+|     Avoids ever needing to repartition.                                  |
+|                                                                          |
+|  2. CREATE A NEW TOPIC (Clean migration)                                 |
+|     Create "orders-v2" with more partitions.                             |
+|     Produce to new topic, drain old topic, then switch consumers.        |
+|     No split ordering. Requires coordination.                            |
+|                                                                          |
+|  3. ADD PARTITIONS IF NO KEY ORDERING NEEDED                             |
+|     If using round-robin (no key), just add partitions.                  |
+|     No harm — there was no key-based ordering to break.                  |
+|                                                                          |
+|  4. WAIT FOR RETENTION TO EXPIRE                                         |
+|     Add partitions and accept brief split history.                       |
+|     Once old messages expire (retention period), all keys are            |
+|     consistently routed under the new partition count.                   |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 2.4: REPLICATION
 
 ```

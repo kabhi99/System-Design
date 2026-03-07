@@ -96,40 +96,198 @@ try {
 ## SECTION 4.2: KAFKA STREAMS
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  KAFKA STREAMS = A Java library for stream processing                   |
-|                                                                         |
-|  * No separate cluster needed (runs inside your app)                    |
-|  * Exactly-once processing built in                                     |
-|  * Stateful operations (joins, aggregations, windowing)                 |
-|  * Fault-tolerant state stores (backed by changelog topics)             |
-|                                                                         |
-|  -------------------------------------------------------------------    |
-|                                                                         |
-|  ARCHITECTURE:                                                          |
-|                                                                         |
-|  +-------------------+     +-------------------+                        |
-|  | Your App          |     | Your App          |                        |
-|  | (Kafka Streams)   |     | (Kafka Streams)   |                        |
-|  |                   |     |                   |                        |
-|  | Task 0: P0 -> P0' |     | Task 1: P1 -> P1' |                        |
-|  | Task 2: P2 -> P2' |     | Task 3: P3 -> P3' |                        |
-|  |                   |     |                   |                        |
-|  | [RocksDB Store]   |     | [RocksDB Store]   |                        |
-|  +-------------------+     +-------------------+                        |
-|           |                         |                                   |
-|           v                         v                                   |
-|  +--------------------------------------------+                         |
-|  |           Kafka Cluster                     |                        |
-|  | Input Topics | Output Topics | Changelogs   |                        |
-|  +--------------------------------------------+                         |
-|                                                                         |
-+-------------------------------------------------------------------------+
++---------------------------------------------------------------------------+
+|                                                                           |
+|  KAFKA STREAMS = A Java library for real-time stream processing           |
+|                                                                           |
+|  KEY DIFFERENTIATOR: Runs as a library INSIDE your application.           |
+|  No separate cluster (unlike Flink, Spark Streaming).                     |
+|  "Just a JAR file" — deploy like any normal Java/Kotlin app.              |
+|                                                                           |
+|  * No separate cluster needed (runs inside your app)                      |
+|  * Exactly-once processing built in                                       |
+|  * Stateful operations (joins, aggregations, windowing)                   |
+|  * Fault-tolerant state stores (backed by changelog topics)               |
+|  * Elastic scaling — add/remove app instances, tasks rebalance            |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  ARCHITECTURE:                                                            |
+|                                                                           |
+|  +-------------------+     +-------------------+                          |
+|  | Your App          |     | Your App          |                          |
+|  | (Kafka Streams)   |     | (Kafka Streams)   |                          |
+|  |                   |     |                   |                          |
+|  | Task 0: P0 -> P0' |     | Task 1: P1 -> P1' |                          |
+|  | Task 2: P2 -> P2' |     | Task 3: P3 -> P3' |                          |
+|  |                   |     |                   |                          |
+|  | [RocksDB Store]   |     | [RocksDB Store]   |                          |
+|  +-------------------+     +-------------------+                          |
+|           |                         |                                     |
+|           v                         v                                     |
+|  +--------------------------------------------+                           |
+|  |           Kafka Cluster                     |                          |
+|  | Input Topics | Output Topics | Changelogs   |                          |
+|  +--------------------------------------------+                           |
+|                                                                           |
+|  TOPOLOGY = DAG of processing steps (source -> processors -> sink)        |
+|                                                                           |
+|  Source Processor (reads from topic)                                      |
+|       |                                                                   |
+|       v                                                                   |
+|  Stream Processor (filter, map, join, aggregate)                          |
+|       |                                                                   |
+|       v                                                                   |
+|  Sink Processor (writes to topic)                                         |
+|                                                                           |
+|  Topology is compiled at startup and cannot change at runtime.            |
+|                                                                           |
++---------------------------------------------------------------------------+
 ```
 
+### KSTREAM vs KTABLE vs GLOBALKTABLE
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  Three core abstractions in Kafka Streams:                                |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Abstraction   | What It Represents       | Analogy                 |   |
+|  |---------------|--------------------------|-------------------------|   |
+|  | KStream       | Unbounded stream of      | Append-only log         |   |
+|  |               | events (each is a fact)  | "User clicked X"        |   |
+|  |---------------|--------------------------|-------------------------|   |
+|  | KTable        | Changelog stream         | Mutable table/map       |   |
+|  |               | (latest value per key)   | "User's current addr"   |   |
+|  |---------------|--------------------------|-------------------------|   |
+|  | GlobalKTable  | Like KTable but FULL     | Broadcast lookup        |   |
+|  |               | copy on every instance   | (small ref data)        |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  KStream("clicks"):                                                       |
+|    key=user1, value=page_A   (event 1)                                    |
+|    key=user1, value=page_B   (event 2)                                    |
+|    key=user1, value=page_C   (event 3)                                    |
+|    -> ALL three events are processed                                      |
+|                                                                           |
+|  KTable("user-profiles"):                                                 |
+|    key=user1, value={addr: "NYC"}                                         |
+|    key=user1, value={addr: "LA"}    <- replaces NYC                       |
+|    -> Only LATEST value per key is kept                                   |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  KTable vs GlobalKTable:                                                  |
+|                                                                           |
+|  KTable:                                                                  |
+|  * Partitioned — each app instance sees only ITS partitions               |
+|  * Joins require co-partitioning (same key, same # partitions)            |
+|  * Scales well for large tables                                           |
+|                                                                           |
+|  GlobalKTable:                                                            |
+|  * FULL copy of all partitions on every instance                          |
+|  * No co-partitioning needed for joins                                    |
+|  * Use ONLY for small, slowly-changing reference data                     |
+|    (country codes, currency rates, config — NOT user profiles)            |
+|  * If the table has 10M rows, each instance stores all 10M                |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### STATE STORES (How Kafka Streams Remembers Things)
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  Any stateful operation (count, aggregate, join) needs a STATE STORE.     |
+|                                                                           |
+|  Default implementation: RocksDB (embedded key-value store on disk)       |
+|  Alternative: In-memory store (faster but limited by RAM)                 |
+|                                                                           |
+|  +-------------------+       +-------------------+                        |
+|  | App Instance 1    |       | App Instance 2    |                        |
+|  | +---------------+ |       | +---------------+ |                        |
+|  | | RocksDB Store | |       | | RocksDB Store | |                        |
+|  | | (Partitions   | |       | | (Partitions   | |                        |
+|  | |  0, 1)        | |       | |  2, 3)        | |                        |
+|  | +-------+-------+ |       | +-------+-------+ |                        |
+|  +---------|--------=+       +---------|--------=+                        |
+|            |                           |                                  |
+|            v                           v                                  |
+|  +----------------------------------------------------+                   |
+|  |  Kafka: changelog topic (backup of state store)     |                  |
+|  |  "my-app-word-count-store-changelog"                |                  |
+|  +----------------------------------------------------+                   |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  FAULT TOLERANCE:                                                         |
+|                                                                           |
+|  * Every state store change is written to a changelog topic               |
+|  * If an instance crashes, new instance rebuilds state by replaying       |
+|    the changelog (automatic, no manual intervention)                      |
+|  * Standby replicas: pre-warm copies on other instances to speed          |
+|    up recovery (num.standby.replicas=1)                                   |
+|                                                                           |
+|  RECOVERY TIME:                                                           |
+|  * Without standby: Rebuilds from scratch (minutes for large state)       |
+|  * With standby: Near-instant failover (standby is already warm)          |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  INTERACTIVE QUERIES (Read state store from outside):                     |
+|                                                                           |
+|  Expose state stores via REST API from your app.                          |
+|  Useful for dashboards, lookups without going through Kafka.              |
+|                                                                           |
+|  ReadOnlyKeyValueStore<String, Long> store =                              |
+|      streams.store(                                                       |
+|          StoreQueryParameters.fromNameAndType(                            |
+|              "word-count-store",                                          |
+|              QueryableStoreTypes.keyValueStore()));                       |
+|                                                                           |
+|  Long count = store.get("hello");  // direct local lookup                 |
+|                                                                           |
+|  Caveat: State is partitioned. Query may need to be routed                |
+|  to the correct instance using metadata API.                              |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### KAFKA STREAMS vs ALTERNATIVES
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Feature            | Kafka Streams | Flink         | Spark Stream  |   |
+|  |--------------------|---------------|---------------|-------------- |   |
+|  | Deployment         | Library (JAR) | Cluster       | Cluster       |   |
+|  | Infra needed       | Just Kafka    | Flink cluster | Spark cluster |   |
+|  | Latency            | Low (ms)      | Very low (ms) | Higher (sec)  |   |
+|  | Exactly-once       | Yes (native)  | Yes           | Yes           |   |
+|  | Windowing          | Yes           | Advanced      | Yes           |   |
+|  | Source/Sink        | Kafka only    | Many (JDBC,   | Many (JDBC,   |   |
+|  |                    |               | files, etc.)  | files, etc.)  |   |
+|  | State management   | RocksDB       | RocksDB       | In-memory     |   |
+|  | Scaling            | Add instances | Add TaskMgrs  | Add executors |   |
+|  | Ops complexity     | Low           | High          | High          |   |
+|  | Best for           | Kafka-centric | Complex CEP,  | Batch + micro |   |
+|  |                    | microservices | multi-source   | batch hybrid |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  RULE OF THUMB:                                                           |
+|  * Data already in Kafka + simple-to-medium processing -> Kafka Streams   |
+|  * Multiple sources, complex event processing, SQL -> Flink               |
+|  * Already have Spark, batch + streaming unified -> Spark Streaming       |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### BASIC EXAMPLE
+
 ```java
-// Kafka Streams: Word count example                                         
 StreamsBuilder builder = new StreamsBuilder();                               
 
 KStream<String, String> textLines =                                          
@@ -672,6 +830,7 @@ processed[1]
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  KAFKA CONNECT = Framework for moving data in/out of Kafka               |
+|  No custom code needed — just JSON config.                               |
 |                                                                          |
 |  +----------+    +-------------------+    +-----------+                  |
 |  | External | -> | SOURCE CONNECTOR  | -> | Kafka     |                  |
@@ -683,22 +842,224 @@ processed[1]
 |  | Topic     |    | (writes to ext)   |    | System   |                  |
 |  +-----------+    +-------------------+    +----------+                  |
 |                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### KAFKA CONNECT ARCHITECTURE
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  DEPLOYMENT MODES:                                                        |
+|                                                                           |
+|  1. STANDALONE MODE                                                       |
+|     Single process. Good for dev/testing or single-node pipelines.        |
+|     Config: connect-standalone.properties + connector.properties          |
+|     Offsets stored locally in a file.                                     |
+|                                                                           |
+|  2. DISTRIBUTED MODE (Production)                                         |
+|     Multiple workers form a Connect cluster.                              |
+|     Automatic load balancing and fault tolerance.                         |
+|     Offsets, configs, and status stored in internal Kafka topics.         |
+|                                                                           |
+|     +-------------------+   +-------------------+                         |
+|     | Worker 1          |   | Worker 2          |                         |
+|     | Task 0 (source)   |   | Task 1 (source)   |                         |
+|     | Task 2 (sink)     |   | Task 3 (sink)     |                         |
+|     +-------------------+   +-------------------+                         |
+|            |                       |                                      |
+|            v                       v                                      |
+|     +------------------------------------------------+                    |
+|     |              Kafka Cluster                      |                   |
+|     |  connect-offsets | connect-configs |             |                  |
+|     |  connect-status  | data topics     |             |                  |
+|     +------------------------------------------------+                    |
+|                                                                           |
+|  If a worker dies, its tasks are rebalanced to surviving workers.         |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  KEY CONCEPTS:                                                            |
+|                                                                           |
+|  CONNECTOR: High-level abstraction (e.g., "JDBC Source Connector")        |
+|  TASK:      Unit of parallelism. Connector splits work into N tasks.      |
+|             tasks.max=3 means 3 parallel threads doing the work.          |
+|  WORKER:    JVM process that runs tasks. Multiple workers = cluster.      |
+|  CONVERTER: Serialization format for data in Kafka.                       |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  CONVERTERS (how data is serialized to Kafka):                            |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Converter          | Format    | Schema? | Use Case                |   |
+|  |--------------------|-----------|---------|-------------------------|   |
+|  | JsonConverter      | JSON      | Optional| Dev, simple pipelines   |   |
+|  | AvroConverter      | Avro      | Yes     | Production (compact)    |   |
+|  | ProtobufConverter  | Protobuf  | Yes     | gRPC-heavy systems      |   |
+|  | StringConverter    | Plain text| No      | Log data, simple text   |   |
+|  | ByteArrayConverter | Raw bytes | No      | Pass-through, binary    |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  Converters are set per-worker OR per-connector:                          |
+|  key.converter=io.confluent.connect.avro.AvroConverter                    |
+|  value.converter=io.confluent.connect.avro.AvroConverter                  |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### SINGLE MESSAGE TRANSFORMS (SMTs)
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  SMTs = Lightweight per-message transformations inside Connect.           |
+|  Applied before writing to Kafka (source) or before writing to            |
+|  external system (sink). No code needed — configured via JSON.            |
+|                                                                           |
+|  Source DB  -->  [Source Connector]  -->  [SMT]  -->  Kafka Topic         |
+|  Kafka Topic -->  [SMT]  -->  [Sink Connector]  -->  Target DB            |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  COMMON BUILT-IN SMTs:                                                    |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | SMT                    | What It Does                              |   |
+|  |------------------------|-------------------------------------------|   |
+|  | InsertField            | Add a field (e.g., timestamp, topic name) |   |
+|  | ReplaceField           | Rename, drop, or include specific fields  |   |
+|  | MaskField              | Mask sensitive data (PII compliance)      |   |
+|  | ValueToKey             | Promote a value field to the message key  |   |
+|  | ExtractField           | Pull out one field from a struct          |   |
+|  | TimestampRouter        | Route to topic by timestamp (e.g., daily) |   |
+|  | RegexRouter            | Rename topics using regex                 |   |
+|  | Filter                 | Drop messages matching a condition        |   |
+|  | Cast                   | Change field types (int -> string, etc.)  |   |
+|  | Flatten                | Flatten nested structs into flat fields   |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  EXAMPLE — Mask PII before sending to analytics sink:                     |
+|                                                                           |
+|  "transforms": "maskPII",                                                 |
+|  "transforms.maskPII.type":                                               |
+|      "org.apache.kafka.connect.transforms.MaskField$Value",               |
+|  "transforms.maskPII.fields": "ssn,credit_card"                           |
+|                                                                           |
+|  EXAMPLE — Route to daily topics (orders-2024-01-15):                     |
+|                                                                           |
+|  "transforms": "routeByDate",                                             |
+|  "transforms.routeByDate.type":                                           |
+|      "org.apache.kafka.connect.transforms.TimestampRouter",               |
+|  "transforms.routeByDate.topic.format":                                   |
+|      "${topic}-${timestamp}",                                             |
+|  "transforms.routeByDate.timestamp.format": "yyyy-MM-dd"                  |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### POPULAR CONNECTORS
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  SOURCE CONNECTORS (external system -> Kafka):                            |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Connector         | Method     | Use Case                          |   |
+|  |-------------------|------------|-----------------------------------|   |
+|  | Debezium (CDC)    | WAL-based  | Real-time DB change capture       |   |
+|  |                   |            | MySQL, Postgres, MongoDB, Oracle  |   |
+|  | JDBC Source       | Poll-based | Legacy DBs, periodic snapshots    |   |
+|  | S3 Source         | Pull       | Ingest files from S3 into Kafka   |   |
+|  | Syslog Source     | Push       | Log collection                    |   |
+|  | MQTT Source       | Push       | IoT device data                   |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  Debezium vs JDBC Source:                                                 |
+|  * Debezium reads the DB write-ahead log (WAL) — captures ALL             |
+|    changes including DELETEs, no polling load on DB.                      |
+|  * JDBC Source polls with SELECT queries — misses deletes,                |
+|    adds read load, has latency (poll interval).                           |
+|  * Use Debezium for production CDC. JDBC for simple/legacy cases.         |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  SINK CONNECTORS (Kafka -> external system):                              |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Connector         | Target          | Use Case                     |   |
+|  |-------------------|-----------------|------------------------------|   |
+|  | Elasticsearch     | Elasticsearch   | Search indexing              |   |
+|  | S3 Sink           | AWS S3          | Data lake archival           |   |
+|  | JDBC Sink         | Any RDBMS       | Write to relational DB       |   |
+|  | BigQuery          | Google BigQuery | Analytics warehouse          |   |
+|  | Snowflake         | Snowflake       | Analytics warehouse          |   |
+|  | Redis Sink        | Redis           | Cache population             |   |
+|  | MongoDB Sink      | MongoDB         | Document store sync          |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### KAFKA CONNECT REST API & CONFIG EXAMPLE
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Connect exposes a REST API for managing connectors at runtime:          |
+|                                                                          |
+|  GET    /connectors                  List all connectors                 |
+|  POST   /connectors                  Create a new connector              |
+|  GET    /connectors/{name}/status    Check connector & task status       |
+|  PUT    /connectors/{name}/config    Update connector config             |
+|  POST   /connectors/{name}/restart   Restart failed connector            |
+|  PUT    /connectors/{name}/pause     Pause a running connector           |
+|  PUT    /connectors/{name}/resume    Resume a paused connector           |
+|  DELETE /connectors/{name}           Delete a connector                  |
+|                                                                          |
 |  -------------------------------------------------------------------     |
 |                                                                          |
-|  POPULAR CONNECTORS:                                                     |
+|  EXAMPLE — Debezium Postgres Source Connector:                           |
 |                                                                          |
-|  SOURCE:                                                                 |
-|  * Debezium (CDC from MySQL, Postgres, MongoDB)                          |
-|  * JDBC Source (poll-based DB reads)                                     |
-|  * FileStream Source (files -> Kafka)                                    |
-|  * S3 Source                                                             |
+|  POST /connectors                                                        |
+|  {                                                                       |
+|    "name": "postgres-cdc",                                               |
+|    "config": {                                                           |
+|      "connector.class":                                                  |
+|          "io.debezium.connector.postgresql.PostgresConnector",           |
+|      "database.hostname": "db.prod.internal",                            |
+|      "database.port": "5432",                                            |
+|      "database.user": "replicator",                                      |
+|      "database.dbname": "orders_db",                                     |
+|      "table.include.list": "public.orders,public.payments",              |
+|      "topic.prefix": "cdc",                                              |
+|      "plugin.name": "pgoutput",                                          |
+|      "slot.name": "debezium_slot",                                       |
+|      "tasks.max": "1",                                                   |
+|      "key.converter":                                                    |
+|          "io.confluent.connect.avro.AvroConverter",                      |
+|      "value.converter":                                                  |
+|          "io.confluent.connect.avro.AvroConverter"                       |
+|    }                                                                     |
+|  }                                                                       |
 |                                                                          |
-|  SINK:                                                                   |
-|  * Elasticsearch Sink (search indexing)                                  |
-|  * S3 Sink (data lake archival)                                          |
-|  * JDBC Sink (write to any RDBMS)                                        |
-|  * BigQuery / Snowflake Sink (analytics)                                 |
-|  * Redis Sink (cache population)                                         |
+|  This creates topics: cdc.public.orders, cdc.public.payments             |
+|  Each DB row change -> one Kafka message with before/after snapshot.     |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  ERROR HANDLING (built-in DLQ):                                          |
+|                                                                          |
+|  {                                                                       |
+|    "errors.tolerance": "all",                                            |
+|    "errors.deadletterqueue.topic.name": "my-connector-dlq",              |
+|    "errors.deadletterqueue.topic.replication.factor": 3,                 |
+|    "errors.deadletterqueue.context.headers.enable": true                 |
+|  }                                                                       |
+|                                                                          |
+|  errors.tolerance = "all" -> skip bad records, send to DLQ               |
+|  errors.tolerance = "none" (default) -> fail task on first error         |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -782,39 +1143,39 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  EVENT REPLAY: WHY, WHEN, AND HOW                                      |
-|  ==================================                                    |
+|  EVENT REPLAY: WHY, WHEN, AND HOW                                       |
+|  ==================================                                     |
 |                                                                         |
-|  Replay = re-consuming events that were already processed.             |
-|  Kafka's killer feature: messages are RETAINED on disk.                |
-|  Consumers can rewind and reprocess from any offset.                   |
+|  Replay = re-consuming events that were already processed.              |
+|  Kafka's killer feature: messages are RETAINED on disk.                 |
+|  Consumers can rewind and reprocess from any offset.                    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  WHEN YOU NEED TO REPLAY:                                              |
+|  WHEN YOU NEED TO REPLAY:                                               |
 |                                                                         |
-|  1. BUG FIX REPROCESSING                                               |
-|     Consumer had a bug. It processed 1M events wrong.                  |
-|     Fix the bug, reset offset, replay to correct the data.             |
+|  1. BUG FIX REPROCESSING                                                |
+|     Consumer had a bug. It processed 1M events wrong.                   |
+|     Fix the bug, reset offset, replay to correct the data.              |
 |                                                                         |
-|  2. NEW CONSUMER / NEW SERVICE                                         |
-|     New analytics service joins. Needs all historical events           |
-|     from day one to build its state / materialized view.               |
+|  2. NEW CONSUMER / NEW SERVICE                                          |
+|     New analytics service joins. Needs all historical events            |
+|     from day one to build its state / materialized view.                |
 |                                                                         |
-|  3. SCHEMA CHANGE / DATA MIGRATION                                     |
-|     Changed how events are interpreted. Need to reprocess              |
+|  3. SCHEMA CHANGE / DATA MIGRATION                                      |
+|     Changed how events are interpreted. Need to reprocess               |
 |     existing events with the new logic.                                 |
 |                                                                         |
-|  4. DLQ REPROCESSING                                                   |
-|     Failed messages moved to DLQ. After root cause is fixed,           |
+|  4. DLQ REPROCESSING                                                    |
+|     Failed messages moved to DLQ. After root cause is fixed,            |
 |     replay DLQ messages back to the main topic.                         |
 |                                                                         |
-|  5. DISASTER RECOVERY                                                  |
-|     Service lost its database. Rebuild state by replaying              |
-|     all events from Kafka into a fresh database.                       |
+|  5. DISASTER RECOVERY                                                   |
+|     Service lost its database. Rebuild state by replaying               |
+|     all events from Kafka into a fresh database.                        |
 |                                                                         |
-|  6. TESTING / SHADOW MODE                                              |
-|     Replay production events into a shadow environment to              |
+|  6. TESTING / SHADOW MODE                                               |
+|     Replay production events into a shadow environment to               |
 |     validate new consumer logic before going live.                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -825,68 +1186,68 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  REPLAY MECHANISMS                                                     |
-|  =================                                                     |
+|  REPLAY MECHANISMS                                                      |
+|  =================                                                      |
 |                                                                         |
-|  1. KAFKA OFFSET RESET (most common)                                   |
+|  1. KAFKA OFFSET RESET (most common)                                    |
 |                                                                         |
-|     Reset consumer group offset to earlier position.                   |
+|     Reset consumer group offset to earlier position.                    |
 |                                                                         |
-|     # Reset to beginning (all events)                                  |
-|     kafka-consumer-groups.sh --group my-service                        |
-|       --topic orders --reset-offsets --to-earliest --execute           |
+|     # Reset to beginning (all events)                                   |
+|     kafka-consumer-groups.sh --group my-service                         |
+|       --topic orders --reset-offsets --to-earliest --execute            |
 |                                                                         |
-|     # Reset to specific timestamp                                      |
-|     kafka-consumer-groups.sh --group my-service                        |
-|       --topic orders --reset-offsets                                   |
-|       --to-datetime "2025-02-20T00:00:00.000" --execute               |
+|     # Reset to specific timestamp                                       |
+|     kafka-consumer-groups.sh --group my-service                         |
+|       --topic orders --reset-offsets                                    |
+|       --to-datetime "2025-02-20T00:00:00.000" --execute                 |
 |                                                                         |
-|     # Reset to specific offset                                         |
-|     kafka-consumer-groups.sh --group my-service                        |
-|       --topic orders --reset-offsets --to-offset 50000 --execute      |
+|     # Reset to specific offset                                          |
+|     kafka-consumer-groups.sh --group my-service                         |
+|       --topic orders --reset-offsets --to-offset 50000 --execute        |
 |                                                                         |
-|     IMPORTANT: Stop consumers BEFORE resetting offsets.                |
+|     IMPORTANT: Stop consumers BEFORE resetting offsets.                 |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  2. NEW CONSUMER GROUP (safer approach)                                |
+|  2. NEW CONSUMER GROUP (safer approach)                                 |
 |                                                                         |
-|     Don't reset existing group. Create a NEW group that                |
+|     Don't reset existing group. Create a NEW group that                 |
 |     reads from the beginning. Old group keeps running.                  |
 |                                                                         |
-|     // New group starts from earliest                                  |
-|     group.id = "order-service-v2"                                      |
-|     auto.offset.reset = earliest                                       |
+|     // New group starts from earliest                                   |
+|     group.id = "order-service-v2"                                       |
+|     auto.offset.reset = earliest                                        |
 |                                                                         |
-|     PROS: Old consumer unaffected. Easy rollback.                      |
-|     CONS: Need to switch traffic after replay is done.                 |
+|     PROS: Old consumer unaffected. Easy rollback.                       |
+|     CONS: Need to switch traffic after replay is done.                  |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  3. DLQ REPLAY                                                         |
+|  3. DLQ REPLAY                                                          |
 |                                                                         |
-|     DLQ is just another Kafka topic. Replay = consume DLQ             |
-|     and re-publish to original topic (or process directly).            |
+|     DLQ is just another Kafka topic. Replay = consume DLQ               |
+|     and re-publish to original topic (or process directly).             |
 |                                                                         |
-|     // Read from DLQ, publish back to main topic                       |
-|     for msg in dlq_consumer.poll():                                    |
-|       producer.send("orders", key=msg.key, value=msg.value,           |
-|         headers={"replay": "true", "original_ts": msg.timestamp})     |
-|       dlq_consumer.commit()                                            |
+|     // Read from DLQ, publish back to main topic                        |
+|     for msg in dlq_consumer.poll():                                     |
+|       producer.send("orders", key=msg.key, value=msg.value,             |
+|         headers={"replay": "true", "original_ts": msg.timestamp})       |
+|       dlq_consumer.commit()                                             |
 |                                                                         |
-|     Add "replay" header so consumers know it's a replay.              |
+|     Add "replay" header so consumers know it's a replay.                |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  4. EVENT STORE REPLAY (Event Sourcing)                                |
+|  4. EVENT STORE REPLAY (Event Sourcing)                                 |
 |                                                                         |
-|     If using event sourcing, the event store IS the source of truth.  |
-|     Replay = read events from event store, rebuild projections.        |
+|     If using event sourcing, the event store IS the source of truth.    |
+|     Replay = read events from event store, rebuild projections.         |
 |                                                                         |
-|     SELECT * FROM events                                               |
-|       WHERE aggregate_id = 'order-123'                                 |
-|       ORDER BY version ASC;                                            |
-|     -- Apply each event to rebuild current state                       |
+|     SELECT * FROM events                                                |
+|       WHERE aggregate_id = 'order-123'                                  |
+|       ORDER BY version ASC;                                             |
+|     -- Apply each event to rebuild current state                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -896,27 +1257,27 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISSUE 1: STALE DATA OVERWRITES NEWER DATA                            |
-|  ==========================================                            |
+|  ISSUE 1: STALE DATA OVERWRITES NEWER DATA                              |
+|  ==========================================                             |
 |                                                                         |
-|  Replaying old event "email = old@mail.com" overwrites                 |
-|  the current "email = new@mail.com" that was set after.                |
+|  Replaying old event "email = old@mail.com" overwrites                  |
+|  the current "email = new@mail.com" that was set after.                 |
 |                                                                         |
-|  +-------------------------------------------------------------------+ |
-|  |                                                                   | |
-|  |  Timeline:                                                        | |
-|  |  10:00 - Event: user.email = "old@mail.com"   (original)         | |
-|  |  10:05 - Event: user.email = "new@mail.com"   (user changed it)  | |
-|  |  11:00 - REPLAY from 10:00                                       | |
-|  |          Replays "old@mail.com" -> overwrites "new@mail.com"!     | |
-|  |                                                                   | |
-|  +-------------------------------------------------------------------+ |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Timeline:                                                         | |
+|  |  10:00 - Event: user.email = "old@mail.com"   (original)           | |
+|  |  10:05 - Event: user.email = "new@mail.com"   (user changed it)    | |
+|  |  11:00 - REPLAY from 10:00                                         | |
+|  |          Replays "old@mail.com" -> overwrites "new@mail.com"!      | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
-|  FIX: Version / timestamp guard on every write                         |
+|  FIX: Version / timestamp guard on every write                          |
 |                                                                         |
-|  UPDATE users SET email = :email, version = :event_version             |
-|    WHERE id = :user_id AND version < :event_version;                   |
-|  -- Rows affected = 0 means current data is newer. Skip.              |
+|  UPDATE users SET email = :email, version = :event_version              |
+|    WHERE id = :user_id AND version < :event_version;                    |
+|  -- Rows affected = 0 means current data is newer. Skip.                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -924,60 +1285,60 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISSUE 2: DUPLICATE SIDE EFFECTS                                       |
-|  ================================                                      |
+|  ISSUE 2: DUPLICATE SIDE EFFECTS                                        |
+|  ================================                                       |
 |                                                                         |
-|  Replaying events re-triggers side effects that already happened:      |
+|  Replaying events re-triggers side effects that already happened:       |
 |                                                                         |
-|  * Sends email AGAIN ("Your order is confirmed" — 2nd time)           |
-|  * Charges payment AGAIN (double charge!)                              |
-|  * Decrements inventory AGAIN (stock goes negative)                    |
-|  * Fires webhook AGAIN (partner receives duplicate notification)       |
+|  * Sends email AGAIN ("Your order is confirmed" — 2nd time)             |
+|  * Charges payment AGAIN (double charge!)                               |
+|  * Decrements inventory AGAIN (stock goes negative)                     |
+|  * Fires webhook AGAIN (partner receives duplicate notification)        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 1: IDEMPOTENT CONSUMERS (primary defense)                        |
+|  FIX 1: IDEMPOTENT CONSUMERS (primary defense)                          |
 |                                                                         |
-|  Track processed event IDs. On replay, check before acting.            |
+|  Track processed event IDs. On replay, check before acting.             |
 |                                                                         |
 |  BEGIN TRANSACTION;                                                     |
-|    INSERT INTO processed_events (event_id)                             |
-|      VALUES ('evt-123') ON CONFLICT DO NOTHING;                        |
-|    -- If insert succeeded (new event): process it                      |
-|    -- If conflict (already processed): skip                            |
+|    INSERT INTO processed_events (event_id)                              |
+|      VALUES ('evt-123') ON CONFLICT DO NOTHING;                         |
+|    -- If insert succeeded (new event): process it                       |
+|    -- If conflict (already processed): skip                             |
 |  COMMIT;                                                                |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 2: SEPARATE SIDE EFFECTS FROM STATE CHANGES                      |
+|  FIX 2: SEPARATE SIDE EFFECTS FROM STATE CHANGES                        |
 |                                                                         |
-|  State change: UPDATE order SET status = 'confirmed'                   |
-|    -> Safe to replay (idempotent, same result)                         |
+|  State change: UPDATE order SET status = 'confirmed'                    |
+|    -> Safe to replay (idempotent, same result)                          |
 |                                                                         |
-|  Side effect: send_email("order confirmed")                            |
-|    -> NOT safe to replay (user gets duplicate email)                   |
+|  Side effect: send_email("order confirmed")                             |
+|    -> NOT safe to replay (user gets duplicate email)                    |
 |                                                                         |
-|  PATTERN: During replay, SKIP side effects. Only apply state.          |
+|  PATTERN: During replay, SKIP side effects. Only apply state.           |
 |                                                                         |
-|  if event.headers.get("replay") == "true":                             |
-|    update_database(event)     // apply state change                    |
-|    // SKIP: send_email, fire_webhook, charge_payment                   |
+|  if event.headers.get("replay") == "true":                              |
+|    update_database(event)     // apply state change                     |
+|    // SKIP: send_email, fire_webhook, charge_payment                    |
 |  else:                                                                  |
 |    update_database(event)                                               |
-|    send_email(event)          // only on first processing              |
+|    send_email(event)          // only on first processing               |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 3: IDEMPOTENCY KEYS FOR EXTERNAL CALLS                           |
+|  FIX 3: IDEMPOTENCY KEYS FOR EXTERNAL CALLS                             |
 |                                                                         |
-|  For payment APIs, webhooks, etc. — use idempotency keys.             |
-|  External system recognizes the same key and returns cached result.    |
+|  For payment APIs, webhooks, etc. — use idempotency keys.               |
+|  External system recognizes the same key and returns cached result.     |
 |                                                                         |
 |  payment_gateway.charge(                                                |
 |    amount=100,                                                          |
-|    idempotency_key=f"order_{order_id}_payment"                         |
+|    idempotency_key=f"order_{order_id}_payment"                          |
 |  )                                                                      |
-|  // Gateway: same key -> return previous result, no re-charge          |
+|  // Gateway: same key -> return previous result, no re-charge           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -985,66 +1346,66 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISSUE 3: DOWNSTREAM FLOODING / THUNDERING HERD                        |
-|  ================================================                     |
+|  ISSUE 3: DOWNSTREAM FLOODING / THUNDERING HERD                         |
+|  ================================================                       |
 |                                                                         |
-|  Replaying 10M events at full speed overwhelms downstream:             |
+|  Replaying 10M events at full speed overwhelms downstream:              |
 |                                                                         |
-|  * Database: 100K writes/sec during replay (normally 1K/sec)           |
-|  * Payment service: sudden spike of charge requests                    |
-|  * Notification service: millions of emails queued at once             |
+|  * Database: 100K writes/sec during replay (normally 1K/sec)            |
+|  * Payment service: sudden spike of charge requests                     |
+|  * Notification service: millions of emails queued at once              |
 |  * Cache: stampede of cache misses during state rebuild                 |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 1: RATE-LIMITED REPLAY                                            |
+|  FIX 1: RATE-LIMITED REPLAY                                             |
 |                                                                         |
-|  Don't replay at full Kafka consumer speed. Throttle.                  |
+|  Don't replay at full Kafka consumer speed. Throttle.                   |
 |                                                                         |
 |  for msg in consumer.poll():                                            |
 |    process(msg)                                                         |
 |    consumer.commit()                                                    |
-|    time.sleep(0.01)  // 100 events/sec instead of 100K/sec            |
+|    time.sleep(0.01)  // 100 events/sec instead of 100K/sec              |
 |                                                                         |
-|  Better: use a token bucket rate limiter.                              |
-|  rate_limiter = RateLimiter(permits_per_sec=5000)                      |
+|  Better: use a token bucket rate limiter.                               |
+|  rate_limiter = RateLimiter(permits_per_sec=5000)                       |
 |  for msg in consumer.poll():                                            |
 |    rate_limiter.acquire()                                               |
 |    process(msg)                                                         |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 2: BATCH WRITES DURING REPLAY                                    |
+|  FIX 2: BATCH WRITES DURING REPLAY                                      |
 |                                                                         |
-|  Instead of 1 DB write per event, buffer and batch.                    |
+|  Instead of 1 DB write per event, buffer and batch.                     |
 |                                                                         |
 |  buffer = []                                                            |
 |  for msg in consumer.poll():                                            |
 |    buffer.append(msg)                                                   |
 |    if len(buffer) >= 1000:                                              |
-|      db.bulk_upsert(buffer)  // 1 DB call for 1000 events             |
+|      db.bulk_upsert(buffer)  // 1 DB call for 1000 events               |
 |      consumer.commit()                                                  |
 |      buffer.clear()                                                     |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 3: SEPARATE REPLAY PIPELINE                                      |
+|  FIX 3: SEPARATE REPLAY PIPELINE                                        |
 |                                                                         |
-|  Don't replay through the live consumer. Use a dedicated               |
-|  replay pipeline that writes to a staging DB first.                    |
+|  Don't replay through the live consumer. Use a dedicated                |
+|  replay pipeline that writes to a staging DB first.                     |
 |                                                                         |
-|  +-------------------------------------------------------------------+ |
-|  |                                                                   | |
-|  |  Kafka --> Replay Consumer --> Staging DB                         | |
-|  |                                  |                                | |
-|  |                                  | (validate, swap)              | |
-|  |                                  v                                | |
-|  |                              Live DB                              | |
-|  |                                                                   | |
-|  +-------------------------------------------------------------------+ |
+|  +--------------------------------------------------------------------+ |
+|  |                                                                    | |
+|  |  Kafka --> Replay Consumer --> Staging DB                          | |
+|  |                                  |                                 | |
+|  |                                  | (validate, swap)                | |
+|  |                                  v                                 | |
+|  |                              Live DB                               | |
+|  |                                                                    | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
-|  Replay to staging, verify data, then swap (blue-green DB switch).    |
-|  Live system completely unaffected during replay.                      |
+|  Replay to staging, verify data, then swap (blue-green DB switch).      |
+|  Live system completely unaffected during replay.                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1052,35 +1413,35 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISSUE 4: SCHEMA MISMATCH                                              |
-|  =========================                                             |
+|  ISSUE 4: SCHEMA MISMATCH                                               |
+|  =========================                                              |
 |                                                                         |
-|  Events stored 6 months ago have schema v1.                            |
-|  Current consumer expects schema v3.                                   |
-|  Replay old events -> deserialization FAILS or data is wrong.          |
+|  Events stored 6 months ago have schema v1.                             |
+|  Current consumer expects schema v3.                                    |
+|  Replay old events -> deserialization FAILS or data is wrong.           |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX: SCHEMA EVOLUTION WITH COMPATIBILITY                              |
+|  FIX: SCHEMA EVOLUTION WITH COMPATIBILITY                               |
 |                                                                         |
-|  1. Schema Registry (Avro/Protobuf) enforces compatibility             |
-|     * Backward: new consumer reads old events (required for replay!)   |
-|     * Forward: old consumer reads new events                           |
+|  1. Schema Registry (Avro/Protobuf) enforces compatibility              |
+|     * Backward: new consumer reads old events (required for replay!)    |
+|     * Forward: old consumer reads new events                            |
 |                                                                         |
-|  2. Version field in every event                                       |
-|     { "version": 1, "data": {...} }                                   |
+|  2. Version field in every event                                        |
+|     { "version": 1, "data": {...} }                                     |
 |                                                                         |
 |     Consumer has handlers per version:                                  |
-|     if event.version == 1: process_v1(event)                           |
-|     if event.version == 2: process_v2(event)                           |
-|     if event.version == 3: process_v3(event)                           |
+|     if event.version == 1: process_v1(event)                            |
+|     if event.version == 2: process_v2(event)                            |
+|     if event.version == 3: process_v3(event)                            |
 |                                                                         |
-|  3. Upcaster pattern: transform old events to new schema               |
-|     at read time, before consumer processes them.                      |
+|  3. Upcaster pattern: transform old events to new schema                |
+|     at read time, before consumer processes them.                       |
 |                                                                         |
 |     def upcast(event):                                                  |
-|       if event.version == 1:                                           |
-|         event.data["new_field"] = default_value                        |
+|       if event.version == 1:                                            |
+|         event.data["new_field"] = default_value                         |
 |         event.version = 3                                               |
 |       return event                                                      |
 |                                                                         |
@@ -1090,33 +1451,33 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  ISSUE 5: KAFKA RETENTION EXPIRED                                      |
-|  =================================                                     |
+|  ISSUE 5: KAFKA RETENTION EXPIRED                                       |
+|  =================================                                      |
 |                                                                         |
-|  Kafka default retention: 7 days. Events older than that are deleted.  |
-|  If you need to replay from 6 months ago — data is GONE.              |
+|  Kafka default retention: 7 days. Events older than that are deleted.   |
+|  If you need to replay from 6 months ago — data is GONE.                |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  FIX 1: TIERED STORAGE (Kafka 3.6+)                                   |
-|     Hot data on broker disks, old data moved to S3/GCS/HDFS.           |
+|  FIX 1: TIERED STORAGE (Kafka 3.6+)                                     |
+|     Hot data on broker disks, old data moved to S3/GCS/HDFS.            |
 |     Consumer can transparently read from cold storage.                  |
-|     Set: remote.log.storage.enable = true                              |
+|     Set: remote.log.storage.enable = true                               |
 |                                                                         |
-|  FIX 2: SINK TO DATA LAKE                                              |
-|     Kafka Connect -> S3/GCS/HDFS (Parquet format)                     |
-|     For replay: read from data lake, re-publish to Kafka topic.        |
-|     Use compacted topic for latest-state-per-key retention.            |
+|  FIX 2: SINK TO DATA LAKE                                               |
+|     Kafka Connect -> S3/GCS/HDFS (Parquet format)                       |
+|     For replay: read from data lake, re-publish to Kafka topic.         |
+|     Use compacted topic for latest-state-per-key retention.             |
 |                                                                         |
-|  FIX 3: COMPACTED TOPICS (for state events)                            |
-|     log.cleanup.policy = compact                                       |
-|     Keeps latest value per key forever.                                |
-|     Replay from compacted topic = get current state of every entity.   |
-|     Deletes only OLDER versions of same key.                           |
+|  FIX 3: COMPACTED TOPICS (for state events)                             |
+|     log.cleanup.policy = compact                                        |
+|     Keeps latest value per key forever.                                 |
+|     Replay from compacted topic = get current state of every entity.    |
+|     Deletes only OLDER versions of same key.                            |
 |                                                                         |
-|  FIX 4: INCREASE RETENTION (simple but costly)                         |
-|     retention.ms = -1 (infinite) or 2592000000 (30 days)              |
-|     Cost: more disk. Fine for low-volume critical topics.              |
+|  FIX 4: INCREASE RETENTION (simple but costly)                          |
+|     retention.ms = -1 (infinite) or 2592000000 (30 days)                |
+|     Cost: more disk. Fine for low-volume critical topics.               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1126,52 +1487,52 @@ processed[1]
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
-|  PRODUCTION-SAFE REPLAY CHECKLIST                                      |
-|  =================================                                     |
+|  PRODUCTION-SAFE REPLAY CHECKLIST                                       |
+|  =================================                                      |
 |                                                                         |
-|  BEFORE REPLAY:                                                        |
-|  [ ] Consumers are idempotent (event_id dedup)                         |
-|  [ ] Version/timestamp guards on all DB writes                         |
-|  [ ] Side effects are skippable (replay header flag)                   |
-|  [ ] External calls use idempotency keys                               |
-|  [ ] Schema backward compatibility verified                            |
-|  [ ] Replay rate limiter configured                                    |
-|  [ ] Downstream services alerted (DB team, dependent services)         |
-|  [ ] Monitoring dashboards ready (lag, throughput, error rate)         |
+|  BEFORE REPLAY:                                                         |
+|  [ ] Consumers are idempotent (event_id dedup)                          |
+|  [ ] Version/timestamp guards on all DB writes                          |
+|  [ ] Side effects are skippable (replay header flag)                    |
+|  [ ] External calls use idempotency keys                                |
+|  [ ] Schema backward compatibility verified                             |
+|  [ ] Replay rate limiter configured                                     |
+|  [ ] Downstream services alerted (DB team, dependent services)          |
+|  [ ] Monitoring dashboards ready (lag, throughput, error rate)          |
 |                                                                         |
-|  DURING REPLAY:                                                        |
-|  [ ] Monitor consumer lag (should be decreasing steadily)              |
+|  DURING REPLAY:                                                         |
+|  [ ] Monitor consumer lag (should be decreasing steadily)               |
 |  [ ] Monitor DB CPU / connections / replication lag                     |
-|  [ ] Watch for error spikes (schema issues, constraint violations)     |
-|  [ ] Replay with new consumer group (don't disrupt live)               |
+|  [ ] Watch for error spikes (schema issues, constraint violations)      |
+|  [ ] Replay with new consumer group (don't disrupt live)                |
 |                                                                         |
-|  AFTER REPLAY:                                                         |
-|  [ ] Verify data consistency (spot checks + count checks)              |
-|  [ ] Switch traffic to replayed consumer group                         |
-|  [ ] Clean up old consumer group offsets                               |
-|  [ ] Document: what was replayed, why, and outcome                     |
+|  AFTER REPLAY:                                                          |
+|  [ ] Verify data consistency (spot checks + count checks)               |
+|  [ ] Switch traffic to replayed consumer group                          |
+|  [ ] Clean up old consumer group offsets                                |
+|  [ ] Document: what was replayed, why, and outcome                      |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  +-------------------------------------------------------------------+ |
-|  | Issue               | Solution                    | Priority      | |
-|  |---------------------|-----------------------------|---------------| |
-|  | Stale overwrites    | Version guard on writes     | MUST HAVE     | |
-|  | Duplicate side fx   | Idempotent consumers +      | MUST HAVE     | |
-|  |                     | replay header flag          |               | |
-|  | Downstream flood    | Rate limiter / batch writes | MUST HAVE     | |
-|  | Schema mismatch     | Schema Registry + upcasters | SHOULD HAVE   | |
-|  | Retention expired   | Tiered storage / data lake  | PLAN AHEAD    | |
-|  +-------------------------------------------------------------------+ |
+|  +--------------------------------------------------------------------+ |
+|  | Issue               | Solution                    | Priority       | |
+|  |---------------------|-----------------------------|----------------| |
+|  | Stale overwrites    | Version guard on writes     | MUST HAVE      | |
+|  | Duplicate side fx   | Idempotent consumers +      | MUST HAVE      | |
+|  |                     | replay header flag          |                | |
+|  | Downstream flood    | Rate limiter / batch writes | MUST HAVE      | |
+|  | Schema mismatch     | Schema Registry + upcasters | SHOULD HAVE    | |
+|  | Retention expired   | Tiered storage / data lake  | PLAN AHEAD     | |
+|  +--------------------------------------------------------------------+ |
 |                                                                         |
-|  INTERVIEW TIP:                                                        |
-|  "Kafka's retained log lets us replay events for bug fixes, new        |
-|   consumers, or disaster recovery. But replay is dangerous without     |
-|   safeguards — we use version guards to prevent stale overwrites,      |
-|   idempotent consumers with event_id dedup, a replay header to skip   |
-|   side effects like emails, and rate limiting to avoid flooding        |
-|   downstream. For long-term replay, we sink events to S3 via Kafka    |
-|   Connect and use compacted topics for latest-state-per-key."          |
+|  INTERVIEW TIP:                                                         |
+|  "Kafka's retained log lets us replay events for bug fixes, new         |
+|   consumers, or disaster recovery. But replay is dangerous without      |
+|   safeguards — we use version guards to prevent stale overwrites,       |
+|   idempotent consumers with event_id dedup, a replay header to skip     |
+|   side effects like emails, and rate limiting to avoid flooding         |
+|   downstream. For long-term replay, we sink events to S3 via Kafka      |
+|   Connect and use compacted topics for latest-state-per-key."           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
