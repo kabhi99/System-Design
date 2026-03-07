@@ -229,6 +229,114 @@ stores data, replicates it, and handles failures.
 +-------------------------------------------------------------------------+
 ```
 
+### FULL REPLICATION EXAMPLE (4 Partitions, RF=3, 3 Brokers)
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Topic "orders": 4 partitions, replication.factor=3, across 3 brokers    |
+|  Total replicas = 4 partitions x 3 copies = 12 replicas                  |
+|                                                                          |
+|  Kafka spreads leaders evenly using round-robin at creation time:        |
+|                                                                          |
+|  Broker 1                Broker 2                Broker 3                |
+|  +------------------+    +------------------+    +------------------+    |
+|  | P0 (LEADER)      |    | P0 (Follower)    |    | P0 (Follower)    |    |
+|  | P1 (Follower)    |    | P1 (LEADER)      |    | P1 (Follower)    |    |
+|  | P2 (Follower)    |    | P2 (Follower)    |    | P2 (LEADER)      |    |
+|  | P3 (LEADER)      |    | P3 (Follower)    |    | P3 (Follower)    |    |
+|  +------------------+    +------------------+    +------------------+    |
+|                                                                          |
+|  Leaders per broker: B1=2, B2=1, B3=1 (balanced)                         |
+|  Every broker stores ALL 4 partitions (as leader or follower)            |
+|  Producers and consumers only talk to the LEADER of each partition       |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### WHAT HAPPENS WHEN A BROKER DIES
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  SCENARIO: Broker 2 goes down                                            |
+|                                                                          |
+|  Broker 1                Broker 2 (DOWN)       Broker 3                  |
+|  +------------------+    +------------------+  +------------------+      |
+|  | P0 (LEADER)      |    |       X          |  | P0 (Follower)    |      |
+|  | P1 (NEW LEADER)<-|    |       X          |  | P1 (Follower)    |      |
+|  | P2 (Follower)    |    |       X          |  | P2 (LEADER)      |      |
+|  | P3 (LEADER)      |    |       X          |  | P3 (Follower)    |      |
+|  +------------------+    +------------------+  +------------------+      |
+|                                                                          |
+|  P1 lost its leader (was on Broker 2).                                   |
+|  Controller picks a NEW leader from P1's ISR.                            |
+|  Broker 1's copy of P1 was in-sync -> promoted to leader.                |
+|                                                                          |
+|  Now: B1 has 3 leaders, B3 has 1 leader -> UNBALANCED                    |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  AFTER BROKER 2 RECOVERS:                                                |
+|                                                                          |
+|  * Broker 2 rejoins the cluster                                          |
+|  * Its replicas catch up by fetching missed data from leaders            |
+|  * Once caught up, replicas rejoin the ISR                               |
+|  * BUT P1's leader STAYS on Broker 1 (leaders don't auto-move back)      |
+|                                                                          |
+|  To rebalance, run PREFERRED LEADER ELECTION:                            |
+|                                                                          |
+|  kafka-leader-election.sh \                                              |
+|      --election-type preferred \                                         |
+|      --all-topic-partitions                                              |
+|                                                                          |
+|  "Preferred leader" = the broker that was ORIGINALLY assigned as         |
+|  leader when the topic was created. This restores even distribution.     |
+|                                                                          |
+|  Or enable auto rebalancing:                                             |
+|  auto.leader.rebalance.enable=true (checks every 5 min by default)       |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### LEADER ELECTION RULES
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  WHO CAN BECOME LEADER?                                                   |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Setting                          | Behavior                        |   |
+|  |----------------------------------|---------------------------------|   |
+|  | unclean.leader.election = false  | Only ISR members can become     |   |
+|  | (DEFAULT, recommended)           | leader. If no ISR -> partition  |   |
+|  |                                  | goes OFFLINE. Safe, no loss.    |   |
+|  |----------------------------------|---------------------------------|   |
+|  | unclean.leader.election = true   | Out-of-sync replica CAN become  |   |
+|  |                                  | leader. Partition stays online  |   |
+|  |                                  | but RISKS DATA LOSS (missing    |   |
+|  |                                  | messages the old leader had).   |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  ELECTION FLOW:                                                           |
+|                                                                           |
+|  1. Controller detects broker failure (via heartbeat timeout)             |
+|  2. For each partition that lost its leader on that broker:               |
+|     a. Get the ISR list for that partition                                |
+|     b. Pick the first replica in ISR as new leader                        |
+|     c. If ISR is empty and unclean=false -> partition offline             |
+|     d. If ISR is empty and unclean=true -> pick any alive replica         |
+|  3. Controller writes new leader info to metadata                         |
+|  4. Notifies all brokers of the new leader assignments                    |
+|  5. Producers/consumers discover new leader via metadata refresh          |
+|                                                                           |
+|  TIME: Leader election takes milliseconds to low seconds.                 |
+|  Producers see a brief "leader not available" error and retry.            |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
 ## SECTION 2.5: STORAGE INTERNALS
 
 ### COMMIT LOG
