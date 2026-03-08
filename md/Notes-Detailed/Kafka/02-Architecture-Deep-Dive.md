@@ -404,37 +404,69 @@ stores data, replicates it, and handles failures.
 +-------------------------------------------------------------------------+
 ```
 
-### ZERO-COPY OPTIMIZATION
+### WHY KAFKA IS SO FAST
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  WHY KAFKA IS SO FAST: ZERO-COPY                                        |
-|                                                                         |
-|  TRADITIONAL APPROACH (4 copies, 4 context switches):                   |
-|                                                                         |
-|  Disk -> OS Cache -> App Buffer -> Socket Buffer -> NIC                 |
-|    copy1      copy2         copy3          copy4                        |
-|                                                                         |
-|  KAFKA WITH ZERO-COPY (sendfile syscall):                               |
-|                                                                         |
-|  Disk -> OS Cache -------> NIC                                          |
-|             (data never enters JVM heap)                                |
-|                                                                         |
-|  * 2-4x throughput improvement                                          |
-|  * Minimal CPU usage for serving consumers                              |
-|  * Works because Kafka stores data in the SAME format                   |
-|    on disk and on the network (no serialization needed)                 |
-|                                                                         |
-|  -------------------------------------------------------------------    |
-|                                                                         |
-|  OTHER PERFORMANCE TECHNIQUES:                                          |
-|  * Sequential disk I/O (append-only, no random writes)                  |
-|  * OS page cache (Linux caches file data in RAM automatically)          |
-|  * Batching (producer batches, consumer fetches in bulk)                |
-|  * Compression (gzip, snappy, lz4, zstd at batch level)                 |
-|                                                                         |
-+-------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+|                                                                          |
+|  8 architectural decisions that make Kafka handle millions of msg/sec:   |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  1. SEQUENTIAL I/O (Append-only log)                                     |
+|     Writes go to the end of a file, never random seeks.                  |
+|     Sequential disk: ~600 MB/s vs random disk: ~100 KB/s.                |
+|                                                                          |
+|  2. ZERO-COPY TRANSFER (sendfile syscall)                                |
+|     Data goes from disk to network without entering JVM heap.            |
+|                                                                          |
+|     Traditional: Disk -> Kernel -> App -> Kernel -> NIC (4 copies)       |
+|     Zero-copy:   Disk -> Kernel -----------------> NIC (2 copies)        |
+|                                                                          |
+|     Works because Kafka stores data in the SAME format on disk           |
+|     and on the wire — no serialization/deserialization needed.           |
+|                                                                          |
+|  3. OS PAGE CACHE (No application-level cache)                           |
+|     Kafka delegates caching to the OS — recently written data            |
+|     stays in RAM automatically. No GC overhead from in-process cache.    |
+|     Consumers reading recent data (most common) read from RAM.           |
+|                                                                          |
+|  4. BATCHING EVERYWHERE                                                  |
+|     Producer batches messages before sending (linger.ms + batch.size).   |
+|     Broker writes entire batches in one disk I/O.                        |
+|     Consumer fetches batches (fetch.min.bytes). Fewer round trips.       |
+|                                                                          |
+|  5. COMPRESSION AT BATCH LEVEL                                           |
+|     Batches compressed together (gzip, snappy, lz4, zstd).               |
+|     Better ratio than per-message. Less network, less disk.              |
+|                                                                          |
+|  6. PARTITIONING = PARALLELISM                                           |
+|     Each partition is independently read/written.                        |
+|     30 partitions = 30 parallel consumers = 30x throughput.              |
+|     No global ordering lock between partitions.                          |
+|                                                                          |
+|  7. NO PER-MESSAGE ACKNOWLEDGMENT TRACKING                               |
+|     Traditional queues track ack per message (expensive at scale).       |
+|     Kafka stores one offset integer per consumer group per partition.    |
+|     Consumer says "I'm at offset 5000" — no per-message bookkeeping.     |
+|                                                                          |
+|  8. IMMUTABLE SEGMENT FILES                                              |
+|     Log split into ~1 GB segment files.                                  |
+|     Old segments are immutable — no locking needed for concurrent        |
+|     reads. Index files use memory-mapped I/O for fast lookups.           |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  THE COMBINATION:                                                        |
+|                                                                          |
+|  Producer batches 1000 msgs                                              |
+|       -> compressed                                                      |
+|       -> 1 network call to broker                                        |
+|       -> broker does 1 sequential write to disk                          |
+|       -> consumer reads batch via zero-copy from page cache              |
+|       -> 1 network call back with 1000 msgs                              |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ## SECTION 2.6: CONTROLLER AND LEADER ELECTION

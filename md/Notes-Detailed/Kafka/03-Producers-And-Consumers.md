@@ -35,6 +35,156 @@ rebalancing determine your system's delivery guarantees and performance.
 +--------------------------------------------------------------------------+
 ```
 
+### WHAT HAPPENS WHEN YOU CALL send()
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  producer.send(new ProducerRecord("orders", "user-1", orderJson));       |
+|                                                                          |
+|  Step 1: SERIALIZE                                                       |
+|  Key and value are serialized using configured serializers.              |
+|  key.serializer = StringSerializer                                       |
+|  value.serializer = JsonSerializer (or Avro, Protobuf)                   |
+|  Output: raw bytes                                                       |
+|                                                                          |
+|  Step 2: PARTITION                                                       |
+|  Decide which partition to send to:                                      |
+|  * If key != null:  partition = hash(key) % num_partitions               |
+|  * If key == null:  sticky partition (batch to one, rotate)              |
+|  * If custom:       your Partitioner class decides                       |
+|                                                                          |
+|  Step 3: ACCUMULATE (Record Accumulator)                                 |
+|  Message added to a batch for that partition.                            |
+|  Batch is sent when: batch.size is full OR linger.ms expires.            |
+|  If buffer.memory is full, send() BLOCKS (max.block.ms = 60s).           |
+|                                                                          |
+|  Step 4: SENDER THREAD (background, async)                               |
+|  Picks ready batches, compresses them, sends to broker leader.           |
+|  Waits for ack based on acks setting (0, 1, all).                        |
+|                                                                          |
+|  Step 5: CALLBACK                                                        |
+|  On success: callback receives RecordMetadata (partition, offset, ts).   |
+|  On failure: callback receives Exception. Message may be retried.        |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### PARTITIONING STRATEGIES
+
+```
++----------------------------------------------------------------------------+
+|                                                                            |
+|  How the producer decides which partition gets a message:                  |
+|                                                                            |
+|  +---------------------------------------------------------------------+   |
+|  | Strategy         | When                | Behavior                   |   |
+|  |------------------|---------------------|----------------------------|   |
+|  | Key-based hash   | key != null         | hash(key) % partitions     |   |
+|  |                  |                     | Same key -> same partition |   |
+|  |                  |                     | Guarantees ordering by key |   |
+|  |------------------|---------------------|----------------------------|   |
+|  | Sticky partition | key == null         | Batch to one partition,    |   |
+|  | (Kafka 2.4+)    |                     | switch when batch is full   |   |
+|  |                  |                     | Better batching than RR    |   |
+|  |------------------|---------------------|----------------------------|   |
+|  | Round-robin      | key == null         | Rotate across partitions   |   |
+|  | (pre-2.4)       |                     | Even spread, poor batching  |   |
+|  |------------------|---------------------|----------------------------|   |
+|  | Custom           | Partitioner class   | Your logic decides         |   |
+|  |                  | configured          | E.g., route by region      |   |
+|  +---------------------------------------------------------------------+   |
+|                                                                            |
+|  EXAMPLE — Key-based routing:                                              |
+|                                                                            |
+|  send(key="user-A", value=order1)  -> hash("user-A") % 3 = P0              |
+|  send(key="user-A", value=order2)  -> hash("user-A") % 3 = P0  (same!)     |
+|  send(key="user-B", value=order3)  -> hash("user-B") % 3 = P1              |
+|                                                                            |
+|  All of user-A's orders go to P0. Ordering within P0 is guaranteed.        |
+|  User-A's orders will always be processed in order.                        |
+|                                                                            |
++----------------------------------------------------------------------------+
+```
+
+### RETRIES AND ORDERING GUARANTEES
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  RETRIES:                                                                |
+|                                                                          |
+|  retries = 2147483647 (default, effectively infinite since Kafka 2.1)    |
+|  delivery.timeout.ms = 120000 (2 min total time to deliver)              |
+|  retry.backoff.ms = 100 (wait between retries)                           |
+|                                                                          |
+|  Producer retries automatically on transient errors:                     |
+|  * NOT_LEADER_FOR_PARTITION (leader moved)                               |
+|  * NETWORK_EXCEPTION (broker unreachable)                                |
+|  * REQUEST_TIMED_OUT (broker too slow)                                   |
+|                                                                          |
+|  NON-retriable errors (fail immediately):                                |
+|  * INVALID_TOPIC (topic doesn't exist)                                   |
+|  * MESSAGE_TOO_LARGE (exceeds max size)                                  |
+|  * AUTHORIZATION_FAILED (no permission)                                  |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  ORDERING PROBLEM WITH RETRIES:                                          |
+|                                                                          |
+|  max.in.flight.requests.per.connection = 5 (default)                     |
+|  This means 5 batches can be in-flight to a broker simultaneously.       |
+|                                                                          |
+|  Batch 1 [msg A, B] -> sent -> FAILS                                     |
+|  Batch 2 [msg C, D] -> sent -> SUCCEEDS                                  |
+|  Batch 1 retried     -> SUCCEEDS                                         |
+|  Broker log: C, D, A, B  (OUT OF ORDER!)                                 |
+|                                                                          |
+|  FIX: enable.idempotence = true (default since Kafka 3.0)                |
+|  Broker tracks sequence numbers per producer per partition.              |
+|  Even with 5 in-flight requests, broker reorders correctly.              |
+|                                                                          |
+|  Without idempotence, set max.in.flight.requests = 1                     |
+|  (slow, but guarantees order)                                            |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### PRODUCER JAVA EXAMPLE
+
+```java
+Properties props = new Properties();                                
+props.put("bootstrap.servers", "broker1:9092,broker2:9092");        
+props.put("key.serializer",                                         
+    "org.apache.kafka.common.serialization.StringSerializer");      
+props.put("value.serializer",                                       
+    "org.apache.kafka.common.serialization.StringSerializer");      
+props.put("acks", "all");                                           
+props.put("enable.idempotence", "true");                            
+props.put("linger.ms", "20");                                       
+props.put("batch.size", "65536");                                   
+props.put("compression.type", "lz4");                               
+
+KafkaProducer<String, String> producer = new KafkaProducer<>(props);
+
+ProducerRecord<String, String> record =                             
+    new ProducerRecord<>("orders", "user-123", orderJson);          
+
+// Async send with callback                                         
+producer.send(record, (metadata, exception) -> {                    
+    if (exception != null) {                                        
+        log.error("Send failed for key=user-123", exception);       
+    } else {                                                        
+        log.info("Sent to partition={} offset={}",                  
+            metadata.partition(), metadata.offset());               
+    }                                                               
+});                                                                 
+
+// Flush all buffered messages before shutdown                      
+producer.flush();                                                   
+producer.close();                                                   
+```
+
 ### BATCHING AND COMPRESSION
 
 ```
@@ -232,47 +382,232 @@ rebalancing determine your system's delivery guarantees and performance.
 
 ## SECTION 3.2: CONSUMER INTERNALS
 
+### CONSUMER LIFECYCLE
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  CONSUMER LIFECYCLE:                                                      |
+|                                                                           |
+|  1. CREATE   KafkaConsumer with config (group.id, deserializers, etc.)    |
+|  2. SUBSCRIBE to topic(s): consumer.subscribe(List.of("orders"))          |
+|  3. POLL     in a loop: consumer.poll() fetches + processes               |
+|  4. COMMIT   offsets (auto or manual)                                     |
+|  5. CLOSE    consumer.close() on shutdown (triggers rebalance)            |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  WHAT HAPPENS ON FIRST poll() FOR A NEW CONSUMER GROUP?                   |
+|                                                                           |
+|  1. Consumer finds the GROUP COORDINATOR (a specific broker)              |
+|     Group coordinator = broker hosting the partition of                   |
+|     __consumer_offsets for this group.                                    |
+|                                                                           |
+|  2. Sends JoinGroup request -> coordinator starts a rebalance             |
+|                                                                           |
+|  3. One consumer is elected as GROUP LEADER (not the coordinator!)        |
+|     Leader runs the assignment strategy and tells coordinator             |
+|     "Consumer A gets P0,P1 — Consumer B gets P2,P3"                       |
+|                                                                           |
+|  4. Coordinator sends assignments to all consumers                        |
+|                                                                           |
+|  5. Each consumer starts fetching from assigned partitions                |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### KEY CONSUMER CONFIGURATIONS
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  ESSENTIAL CONFIGS:                                                       |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Config                 | Default    | What It Does                 |   |
+|  |------------------------|------------|------------------------------|   |
+|  | group.id               | (required) | Consumer group name. All     |   |
+|  |                        |            | consumers with same group.id |   |
+|  |                        |            | share partitions.            |   |
+|  |------------------------|------------|------------------------------|   |
+|  | auto.offset.reset      | latest     | What to do when no committed |   |
+|  |                        |            | offset exists (see below)    |   |
+|  |------------------------|------------|------------------------------|   |
+|  | enable.auto.commit     | true       | Auto-commit offsets every    |   |
+|  |                        |            | auto.commit.interval.ms      |   |
+|  |------------------------|------------|------------------------------|   |
+|  | max.poll.records       | 500        | Max records per poll() call  |   |
+|  |------------------------|------------|------------------------------|   |
+|  | max.poll.interval.ms   | 300000     | Max gap between poll() calls |   |
+|  |                        | (5 min)    | before consumer is kicked    |   |
+|  |------------------------|------------|------------------------------|   |
+|  | session.timeout.ms     | 45000      | Heartbeat timeout. Consumer  |   |
+|  |                        | (45s)      | considered dead if no beat   |   |
+|  |------------------------|------------|------------------------------|   |
+|  | heartbeat.interval.ms  | 3000       | How often to send heartbeats |   |
+|  |                        | (3s)       | Should be < 1/3 of session   |   |
+|  |------------------------|------------|------------------------------|   |
+|  | fetch.min.bytes        | 1          | Min data to return. Higher   |   |
+|  |                        |            | = fewer requests, more batch |   |
+|  |------------------------|------------|------------------------------|   |
+|  | fetch.max.wait.ms      | 500        | Max broker wait for min.bytes|   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### auto.offset.reset EXPLAINED
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  When a consumer group reads a partition for the FIRST TIME               |
+|  (no committed offset exists), what should it do?                         |
+|                                                                           |
+|  Topic "orders" has messages at offsets 0 through 999:                    |
+|                                                                           |
+|  [0] [1] [2] ... [500] ... [998] [999]                                    |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Setting  | Starts Reading From | Use Case                          |   |
+|  |----------|---------------------|-----------------------------------|   |
+|  | earliest | Offset 0            | Need ALL historical data.         |   |
+|  |          | (beginning of topic) | Data pipelines, replay, backfill |   |
+|  |----------|---------------------|-----------------------------------|   |
+|  | latest   | Offset 999           | Only care about NEW messages.    |   |
+|  | (default)| (end of topic)       | Real-time alerting, live feeds   |   |
+|  |----------|---------------------|-----------------------------------|   |
+|  | none     | THROW EXCEPTION      | Fail loudly if no offset saved.  |   |
+|  |          |                      | Safety net for critical systems  |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  IMPORTANT: This ONLY applies when no committed offset exists.            |
+|  If the consumer has committed before, it resumes from that offset        |
+|  regardless of this setting.                                              |
+|                                                                           |
+|  COMMON MISTAKE:                                                          |
+|  Setting auto.offset.reset=earliest expecting to re-read everything.      |
+|  It won't — because the group already has a committed offset.             |
+|  To truly re-read: reset offsets manually or use a NEW group.id.          |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
 ### POLL LOOP
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  THE CONSUMER POLL LOOP                                                 |
-|                                                                         |
-|  Every Kafka consumer runs a poll loop:                                 |
-|                                                                         |
-|  while (true) {                                                         |
-|      records = consumer.poll(Duration.ofMillis(100));                   |
-|      for (record : records) {                                           |
-|          process(record);                                               |
-|      }                                                                  |
-|  }                                                                      |
-|                                                                         |
-|  -------------------------------------------------------------------    |
-|                                                                         |
-|  WHAT poll() DOES INTERNALLY:                                           |
-|                                                                         |
-|  1. Sends heartbeat to group coordinator (I'm alive!)                   |
-|  2. Fetches records from assigned partitions                            |
-|  3. Auto-commits offsets (if enabled)                                   |
-|  4. Handles rebalance callbacks                                         |
-|                                                                         |
-|  KEY CONFIGS:                                                           |
-|                                                                         |
-|  max.poll.records = 500                                                 |
-|    Max records returned per poll() call.                                |
-|                                                                         |
-|  max.poll.interval.ms = 300000 (5 min)                                  |
-|    Max time between poll() calls before consumer is kicked out.         |
-|    If processing takes longer, increase this or process async.          |
-|                                                                         |
-|  fetch.min.bytes = 1                                                    |
-|    Min data to return. Increase for throughput (e.g., 1MB).             |
-|                                                                         |
-|  fetch.max.wait.ms = 500                                                |
-|    Max time broker waits to fill fetch.min.bytes.                       |
-|                                                                         |
-+-------------------------------------------------------------------------+
++--------------------------------------------------------------------------+
+|                                                                          |
+|  THE CONSUMER POLL LOOP                                                  |
+|                                                                          |
+|  Every Kafka consumer runs a poll loop:                                  |
+|                                                                          |
+|  while (true) {                                                          |
+|      records = consumer.poll(Duration.ofMillis(100));                    |
+|      for (record : records) {                                            |
+|          process(record);                                                |
+|      }                                                                   |
+|  }                                                                       |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  WHAT poll() DOES INTERNALLY:                                            |
+|                                                                          |
+|  1. Sends heartbeat to group coordinator (I'm alive!)                    |
+|  2. Fetches records from assigned partitions                             |
+|  3. Auto-commits offsets (if enabled)                                    |
+|  4. Handles rebalance callbacks                                          |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  CONSUMER THREAD MODEL:                                                  |
+|                                                                          |
+|  One consumer = one thread. You CANNOT share a KafkaConsumer across      |
+|  threads. It is NOT thread-safe.                                         |
+|                                                                          |
+|  For parallel processing within one consumer:                            |
+|                                                                          |
+|  while (true) {                                                          |
+|      records = consumer.poll(100ms);                                     |
+|      // Submit to a thread pool for parallel processing                  |
+|      for (record : records) {                                            |
+|          executor.submit(() -> process(record));                         |
+|      }                                                                   |
+|      // Wait for all tasks to finish before committing                   |
+|      executor.awaitCompletion();                                         |
+|      consumer.commitSync();                                              |
+|  }                                                                       |
+|                                                                          |
+|  WARNING: This breaks per-partition ordering.                            |
+|  If ordering matters, process partitions sequentially.                   |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+### DESERIALIZATION
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  Consumer must deserialize bytes back into objects:                       |
+|                                                                           |
+|  key.deserializer = StringDeserializer                                    |
+|  value.deserializer = depends on what producer used                       |
+|                                                                           |
+|  +--------------------------------------------------------------------+   |
+|  | Format     | Deserializer                    | Needs Schema Reg?   |   |
+|  |------------|---------------------------------|---------------------|   |
+|  | String     | StringDeserializer              | No                  |   |
+|  | JSON       | JsonDeserializer                | No                  |   |
+|  | Avro       | KafkaAvroDeserializer           | Yes                 |   |
+|  | Protobuf   | KafkaProtobufDeserializer       | Yes                 |   |
+|  | Raw bytes  | ByteArrayDeserializer           | No                  |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                           |
+|  POISON PILL: A message that cannot be deserialized.                      |
+|  Consumer throws SerializationException and gets stuck in a loop.         |
+|  Fix: wrap in try-catch, skip bad messages, send to DLQ.                  |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### CONSUMER JAVA EXAMPLE
+
+```java
+Properties props = new Properties();                                
+props.put("bootstrap.servers", "broker1:9092,broker2:9092");        
+props.put("group.id", "payment-service");                           
+props.put("key.deserializer",                                       
+    "org.apache.kafka.common.serialization.StringDeserializer");    
+props.put("value.deserializer",                                     
+    "org.apache.kafka.common.serialization.StringDeserializer");    
+props.put("auto.offset.reset", "earliest");                         
+props.put("enable.auto.commit", "false");                           
+props.put("max.poll.records", "100");                               
+
+KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
+consumer.subscribe(List.of("orders"));                              
+
+try {                                                               
+    while (true) {                                                  
+        ConsumerRecords<String, String> records =                   
+            consumer.poll(Duration.ofMillis(100));                  
+
+        for (ConsumerRecord<String, String> record : records) {     
+            String userId = record.key();                           
+            String orderJson = record.value();                      
+
+            log.info("partition={} offset={} key={}",               
+                record.partition(), record.offset(), userId);       
+
+            processOrder(userId, orderJson);                        
+        }                                                           
+
+        consumer.commitSync();                                      
+    }                                                               
+} finally {                                                         
+    consumer.close();    // triggers rebalance, releases partitions 
+}                                                                   
 ```
 
 ### OFFSET MANAGEMENT
@@ -319,6 +654,150 @@ rebalancing determine your system's delivery guarantees and performance.
 |  | At-least-once     | Commit AFTER processing  | Duplicate messages   | |
 |  | Exactly-once      | Kafka transactions       | Complexity + cost    | |
 |  +-------------------+--------------------------+----------------------+ |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+#### HOW OFFSETS WORK (Step-by-Step Example)
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  WHAT IS AN OFFSET?                                                       |
+|  A monotonically increasing integer per message in a partition.           |
+|  Think of it as a line number in a file.                                  |
+|                                                                           |
+|  Topic "orders", Partition 0:                                             |
+|                                                                           |
+|  +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+            |
+|  |  0  |  1  |  2  |  3  |  4  |  5  |  6  |  7  |  8  |  9  |            |
+|  +-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+            |
+|                          ^                    ^              ^            |
+|                          |                    |              |            |
+|                   committed offset     current position   latest msg      |
+|                    (saved: 3)          (processing: 6)    (offset: 9)     |
+|                                                                           |
+|  WHERE ARE OFFSETS STORED?                                                |
+|  Internal topic: __consumer_offsets (50 partitions by default)            |
+|  Key: {consumer_group, topic, partition}                                  |
+|  Value: committed offset number                                           |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+#### REAL-WORLD EXAMPLE: Order Processing
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Consumer Group "payment-service" reading from "orders" Partition 0      |
+|                                                                          |
+|  Messages in partition:                                                  |
+|  [0: order-100] [1: order-101] [2: order-102] [3: order-103]             |
+|                                                                          |
+|  ================================================================        |
+|  SCENARIO 1: AT-LEAST-ONCE (commit AFTER processing)                     |
+|  ================================================================        |
+|                                                                          |
+|  Step 1: poll()     -> gets [order-100, order-101, order-102]            |
+|  Step 2: process    -> charge $50 for order-100  (success)               |
+|  Step 3: process    -> charge $30 for order-101  (success)               |
+|  Step 4: process    -> charge $80 for order-102  (success)               |
+|  Step 5: commitSync(offset=3)   -> saved!                                |
+|                                                                          |
+|  CRASH SCENARIO:                                                         |
+|  Step 1: poll()     -> gets [order-100, order-101, order-102]            |
+|  Step 2: process    -> charge $50 for order-100  (success)               |
+|  Step 3: process    -> charge $30 for order-101  (success)               |
+|  Step 4: ** CRASH ** (before commit)                                     |
+|                                                                          |
+|  On restart: last committed offset = 0                                   |
+|  poll() returns [order-100, order-101, order-102] AGAIN                  |
+|  -> order-100 and order-101 get charged TWICE!                           |
+|  -> Fix: make processing IDEMPOTENT (check if already charged)           |
+|                                                                          |
+|  ================================================================        |
+|  SCENARIO 2: AT-MOST-ONCE (commit BEFORE processing)                     |
+|  ================================================================        |
+|                                                                          |
+|  Step 1: poll()     -> gets [order-100, order-101, order-102]            |
+|  Step 2: commitSync(offset=3)   -> saved!                                |
+|  Step 3: process    -> charge $50 for order-100  (success)               |
+|  Step 4: ** CRASH **                                                     |
+|                                                                          |
+|  On restart: last committed offset = 3                                   |
+|  poll() returns [order-103, ...]                                         |
+|  -> order-101 and order-102 were NEVER processed, NEVER retried          |
+|  -> Money NOT collected. DATA LOSS.                                      |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+```java
+// AT-LEAST-ONCE — Production standard for payment/order systems                   
+// Process first, commit after. Downstream MUST be idempotent.                     
+
+while (true) {                                                                     
+    ConsumerRecords<String, Order> records = consumer.poll(Duration.ofMillis(100));
+
+    for (ConsumerRecord<String, Order> record : records) {                         
+        Order order = record.value();                                              
+
+        if (alreadyProcessed(order.getId())) {                                     
+            continue;                            // idempotency check              
+        }                                                                          
+
+        chargePayment(order);                    // business logic                 
+        markProcessed(order.getId());            // save to DB                     
+    }                                                                              
+
+    consumer.commitSync();                       // commit AFTER all processed     
+}                                                                                  
+```
+
+```java
+// FINE-GRAINED: Commit offset per partition (more control)        
+// Useful when processing takes a long time per batch              
+
+for (TopicPartition partition : records.partitions()) {            
+    List<ConsumerRecord<String, Order>> partitionRecords =         
+        records.records(partition);                                
+
+    for (ConsumerRecord<String, Order> record : partitionRecords) {
+        processOrder(record.value());                              
+    }                                                              
+
+    long lastOffset = partitionRecords                             
+        .get(partitionRecords.size() - 1).offset();                
+
+    consumer.commitSync(                                           
+        Map.of(partition, new OffsetAndMetadata(lastOffset + 1))   
+    );                                                             
+}                                                                  
+```
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  WHY lastOffset + 1 ?                                                    |
+|                                                                          |
+|  Committed offset = "next message to read", NOT "last message read"      |
+|                                                                          |
+|  If you processed offset 5, commit offset 6.                             |
+|  On restart, consumer starts reading FROM offset 6.                      |
+|                                                                          |
+|  Common bug: committing offset 5 instead of 6                            |
+|  -> message at offset 5 gets re-processed every restart.                 |
+|                                                                          |
+|  -------------------------------------------------------------------     |
+|                                                                          |
+|  SUMMARY:                                                                |
+|                                                                          |
+|  * Auto-commit: Simple, risk of duplicates or loss. OK for logs.         |
+|  * Manual commitSync: Safest. Use for payments, orders, critical data.   |
+|  * Manual commitAsync: Faster, use with commitSync on shutdown.          |
+|  * Per-partition commit: Most control, use for slow processing.          |
+|  * Always make consumers idempotent in at-least-once systems.            |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
