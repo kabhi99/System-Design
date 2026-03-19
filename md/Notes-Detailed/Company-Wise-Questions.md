@@ -24,7 +24,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | # | Question | Frequency | Notes Link |
 |---|----------|-----------|------------|
 | 1 | Design E-Commerce Platform (Walmart.com) | ★★★★★ | [E-Commerce/01-Requirements-And-Scale.md](E-Commerce/01-Requirements-And-Scale.md) |
-| 2 | Design Inventory Management System | ★★★★★ | ❌ *Key ideas: real-time sync across stores/warehouses/online, CQRS for read/write split, event-driven updates via Kafka, Redis cache for hot SKUs, Cassandra/DynamoDB for storage, IoT sensor integration* |
+| 2 | Design Inventory Management System | ★★★★★ | [Inventory-Management/01-Complete-Design.md](Inventory-Management/01-Complete-Design.md) |
 | 3 | Design a Flash Sale / Black Friday System | ★★★★★ | [BookMyShow/03-Booking-Flow-And-Concurrency.md](BookMyShow/03-Booking-Flow-And-Concurrency.md) (concurrency patterns) + [E-Commerce/04-Inventory-Management.md](E-Commerce/04-Inventory-Management.md) |
 | 4 | Design Order Fulfillment & Delivery System | ★★★★☆ | [Food-Delivery-App/03-Location-And-Delivery-Assignment.md](Food-Delivery-App/03-Location-And-Delivery-Assignment.md) (routing/assignment patterns) |
 | 5 | Design a Recommendation Engine | ★★★★☆ | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
@@ -54,16 +54,21 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 |---|----------|-----------|------------|
 | 1 | Design YouTube / Video Streaming Platform | ★★★★★ | [Video-Streaming/01-Complete-Design.md](Video-Streaming/01-Complete-Design.md) |
 | 2 | Design Google Drive / Dropbox (File Storage) | ★★★★★ | [File-Storage-System/01-Complete-Design.md](File-Storage-System/01-Complete-Design.md) |
-| 3 | Design Google Maps / Location Service | ★★★★☆ | [Uber/02-Geospatial-Indexing.md](Uber/02-Geospatial-Indexing.md) (geospatial concepts) |
+| 3 | Design Google Maps / Location Service | ★★★★☆ | [Google-Maps/01-Complete-Design.md](Google-Maps/01-Complete-Design.md) |
 | 4 | Design Web Crawler (Googlebot) | ★★★★☆ | [Web-Crawler/01-Complete-Design.md](Web-Crawler/01-Complete-Design.md) |
 | 5 | Design Search Autocomplete / Typeahead | ★★★★☆ | [Search-Engine-Typeahead/01-Complete-Design.md](Search-Engine-Typeahead/01-Complete-Design.md) |
-| 6 | Design Google Docs (Real-time Collaboration) | ★★★☆☆ | ❌ *Key ideas: OT/CRDT for conflict resolution, WebSocket for real-time sync, operational log, presence service* |
-| 7 | Design Gmail / Email Service | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) (notification patterns apply) |
+| 6 | Design Google Docs (Real-time Collaboration) | ★★★☆☆ | [Collaborative-Editor/01-Complete-Design.md](Collaborative-Editor/01-Complete-Design.md) |
+| 7 | Design Gmail / Email Service | ★★★☆☆ | [Email-System/01-Complete-Design.md](Email-System/01-Complete-Design.md) |
 | 8 | Design Distributed File System (GFS) | ★★★☆☆ | [Distributed-File-System/01-Complete-Design.md](Distributed-File-System/01-Complete-Design.md) |
 | 9 | Design a Chat System | ★★★☆☆ | [Chat-System/01-Complete-Design.md](Chat-System/01-Complete-Design.md) |
 | 10 | Design a Recommendation System | ★★★☆☆ | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
 | 11 | Design a Distributed Key-Value Store | ★★★☆☆ | [Key-Value-Store/01-Complete-Design.md](Key-Value-Store/01-Complete-Design.md) |
 | 12 | Design a Global Load Balancer | ★★☆☆☆ | [Fundamentals/03-Load-Balancing.md](Fundamentals/03-Load-Balancing.md) |
+| 13 | Design an Ad Click Aggregation System | ★★★☆☆ | [Ad-Click-Aggregator/01-Complete-Design.md](Ad-Click-Aggregator/01-Complete-Design.md) |
+| 14 | Design Nearby Friends / Proximity Service | ★★★☆☆ | [Nearby-Friends/01-Complete-Design.md](Nearby-Friends/01-Complete-Design.md) + [Proximity-Service/01-Complete-Design.md](Proximity-Service/01-Complete-Design.md) |
+| 15 | Design an Object Storage System (GCS) | ★★★☆☆ | [S3-Object-Storage/01-Complete-Design.md](S3-Object-Storage/01-Complete-Design.md) |
+| 16 | Design a Unique ID Generator | ★★★☆☆ | [Unique-ID-Generator/01-Complete-Design.md](Unique-ID-Generator/01-Complete-Design.md) |
+| 17 | Design a Metrics Monitoring System | ★★★☆☆ | [Metrics-Monitoring/01-Complete-Design.md](Metrics-Monitoring/01-Complete-Design.md) |
 
 ---
 
@@ -83,6 +88,10 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 10 | Design a Video Streaming Platform (Prime Video) | ★★★☆☆ | [Video-Streaming/01-Complete-Design.md](Video-Streaming/01-Complete-Design.md) |
 | 11 | Design a Task/Job Scheduler | ★★★☆☆ | [Distributed-Job-Scheduler/01-Complete-Design.md](Distributed-Job-Scheduler/01-Complete-Design.md) |
 | 12 | Design an Order Processing System | ★★★☆☆ | [E-Commerce/03-Checkout-And-Saga.md](E-Commerce/03-Checkout-And-Saga.md) |
+| 13 | Design S3 / Object Storage | ★★★☆☆ | [S3-Object-Storage/01-Complete-Design.md](S3-Object-Storage/01-Complete-Design.md) |
+| 14 | Design an Inventory Management System | ★★★☆☆ | [Inventory-Management/01-Complete-Design.md](Inventory-Management/01-Complete-Design.md) |
+| 15 | Design a Unique ID Generator | ★★★☆☆ | [Unique-ID-Generator/01-Complete-Design.md](Unique-ID-Generator/01-Complete-Design.md) |
+| 16 | Design a Metrics Monitoring System | ★★★☆☆ | [Metrics-Monitoring/01-Complete-Design.md](Metrics-Monitoring/01-Complete-Design.md) |
 
 ---
 
@@ -100,6 +109,8 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 8 | Design Stories / Reels (Ephemeral Content) | ★★★☆☆ | [CDN-Edge-Computing/01-Complete-Design.md](CDN-Edge-Computing/01-Complete-Design.md) (CDN patterns) |
 | 9 | Design a Rate Limiter | ★★★☆☆ | [Rate-Limiter/01-Requirements-And-Algorithms.md](Rate-Limiter/01-Requirements-And-Algorithms.md) |
 | 10 | Design a Recommendation/People-You-May-Know System | ★★★☆☆ | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
+| 11 | Design Nearby Friends | ★★★☆☆ | [Nearby-Friends/01-Complete-Design.md](Nearby-Friends/01-Complete-Design.md) |
+| 12 | Design an Ad Click Aggregation System | ★★★☆☆ | [Ad-Click-Aggregator/01-Complete-Design.md](Ad-Click-Aggregator/01-Complete-Design.md) |
 
 ---
 
@@ -114,9 +125,10 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 5 | Design a Notification System | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) |
 | 6 | Design a URL Shortener | ★★★☆☆ | [URL-Shortener/01-Complete-Design.md](URL-Shortener/01-Complete-Design.md) |
 | 7 | Design a Search Engine / Bing | ★★★☆☆ | [Search-Engine-Typeahead/01-Complete-Design.md](Search-Engine-Typeahead/01-Complete-Design.md) + [Web-Crawler/01-Complete-Design.md](Web-Crawler/01-Complete-Design.md) |
-| 8 | Design a Collaborative Editor (Office Online) | ★★★☆☆ | ❌ *Key ideas: OT/CRDT, operational log, WebSocket, cursor presence, conflict-free merge* |
+| 8 | Design a Collaborative Editor (Office Online) | ★★★☆☆ | [Collaborative-Editor/01-Complete-Design.md](Collaborative-Editor/01-Complete-Design.md) |
 | 9 | Design an API Gateway | ★★★☆☆ | [API-Gateway/01-Requirements-And-Architecture.md](API-Gateway/01-Requirements-And-Architecture.md) |
 | 10 | Design a Distributed Lock Service | ★★☆☆☆ | [Distributed-Lock-Service/01-Complete-Design.md](Distributed-Lock-Service/01-Complete-Design.md) |
+| 11 | Design an Object Storage System (Azure Blob) | ★★☆☆☆ | [S3-Object-Storage/01-Complete-Design.md](S3-Object-Storage/01-Complete-Design.md) |
 
 ---
 
@@ -132,6 +144,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 6 | Design a Notification System | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) |
 | 7 | Design a Time Series Database (Monitoring) | ★★★☆☆ | [Time-Series-Database/01-Complete-Design.md](Time-Series-Database/01-Complete-Design.md) |
 | 8 | Design a Distributed Job Scheduler | ★★☆☆☆ | [Distributed-Job-Scheduler/01-Complete-Design.md](Distributed-Job-Scheduler/01-Complete-Design.md) |
+| 9 | Design a Metrics Monitoring System | ★★★☆☆ | [Metrics-Monitoring/01-Complete-Design.md](Metrics-Monitoring/01-Complete-Design.md) |
 
 ---
 
@@ -147,6 +160,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 6 | Design a Real-time Matching System | ★★★★☆ | [Uber/03-Real-Time-Matching.md](Uber/03-Real-Time-Matching.md) |
 | 7 | Design a Notification System | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) |
 | 8 | Design a Payment System | ★★★☆☆ | [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) |
+| 9 | Design Nearby Friends | ★★★☆☆ | [Nearby-Friends/01-Complete-Design.md](Nearby-Friends/01-Complete-Design.md) |
 
 ---
 
@@ -203,6 +217,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 5 | Design a Notification System | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) |
 | 6 | Design Search / Trending Topics | ★★★☆☆ | [Search-Engine-Typeahead/01-Complete-Design.md](Search-Engine-Typeahead/01-Complete-Design.md) |
 | 7 | Design a CDN | ★★☆☆☆ | [CDN-Edge-Computing/01-Complete-Design.md](CDN-Edge-Computing/01-Complete-Design.md) |
+| 8 | Design an Ad Click Aggregation System | ★★★☆☆ | [Ad-Click-Aggregator/01-Complete-Design.md](Ad-Click-Aggregator/01-Complete-Design.md) |
 
 ---
 
@@ -211,11 +226,13 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | # | Question | Frequency | Notes Link |
 |---|----------|-----------|------------|
 | 1 | Design a Booking System (BookMyShow / Airbnb) | ★★★★★ | [BookMyShow/01-Requirements-And-Scale.md](BookMyShow/01-Requirements-And-Scale.md) |
-| 2 | Design a Search / Proximity Service | ★★★★☆ | [Uber/02-Geospatial-Indexing.md](Uber/02-Geospatial-Indexing.md) (geospatial applies) |
+| 2 | Design a Search / Proximity Service | ★★★★☆ | [Proximity-Service/01-Complete-Design.md](Proximity-Service/01-Complete-Design.md) |
 | 3 | Design a Payment System | ★★★★☆ | [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) |
 | 4 | Design a Recommendation System | ★★★☆☆ | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
 | 5 | Design a Notification System | ★★★☆☆ | [Notification-System/01-Complete-Design.md](Notification-System/01-Complete-Design.md) |
 | 6 | Design a Chat System (Host-Guest Messaging) | ★★★☆☆ | [Chat-System/01-Complete-Design.md](Chat-System/01-Complete-Design.md) |
+| 7 | Design a Hotel Reservation System | ★★★★☆ | [Hotel-Reservation/01-Complete-Design.md](Hotel-Reservation/01-Complete-Design.md) |
+| 8 | Design an Auction / Bidding System | ★★★☆☆ | [Auction-System/01-Complete-Design.md](Auction-System/01-Complete-Design.md) |
 
 ---
 
@@ -231,6 +248,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 6 | Design a Rate Limiter | ★★★☆☆ | [Rate-Limiter/01-Requirements-And-Algorithms.md](Rate-Limiter/01-Requirements-And-Algorithms.md) |
 | 7 | Design a Distributed Cache (Redis) | ★★★☆☆ | [Distributed-Cache/01-Caching-Fundamentals.md](Distributed-Cache/01-Caching-Fundamentals.md) + [Redis/01-Fundamentals-And-Data-Structures.md](Redis/01-Fundamentals-And-Data-Structures.md) |
 | 8 | Design a CDN | ★★★☆☆ | [CDN-Edge-Computing/01-Complete-Design.md](CDN-Edge-Computing/01-Complete-Design.md) |
+| 9 | Design an Inventory Management System | ★★★☆☆ | [Inventory-Management/01-Complete-Design.md](Inventory-Management/01-Complete-Design.md) |
 
 ---
 
@@ -238,7 +256,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 
 | # | Question | Frequency | Notes Link |
 |---|----------|-----------|------------|
-| 1 | Design a Digital Wallet / UPI System | ★★★★★ | [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) (payment patterns) |
+| 1 | Design a Digital Wallet / UPI System | ★★★★★ | [Digital-Wallet/01-Complete-Design.md](Digital-Wallet/01-Complete-Design.md) + [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) |
 | 2 | Design a Payment Gateway | ★★★★★ | [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) |
 | 3 | Design Idempotent Transaction API | ★★★★☆ | [Payment-Gateway/03-Payment-Flow-And-Idempotency.md](Payment-Gateway/03-Payment-Flow-And-Idempotency.md) + [Fundamentals/22-Idempotent-API-Design.md](Fundamentals/22-Idempotent-API-Design.md) |
 | 4 | Design a Fraud Detection System | ★★★★☆ | ❌ *Key ideas: ML scoring pipeline, real-time feature extraction, rule engine + ML, <100ms latency, feedback loop* |
@@ -258,7 +276,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 |---|----------|-----------|------------|
 | 1 | Design a Food Delivery App (Swiggy/Zomato) | ★★★★★ | [Food-Delivery-App/01-Requirements-And-Scale.md](Food-Delivery-App/01-Requirements-And-Scale.md) |
 | 2 | Design a Quick Commerce / 10-min Delivery System | ★★★★★ | [Food-Delivery-App/03-Location-And-Delivery-Assignment.md](Food-Delivery-App/03-Location-And-Delivery-Assignment.md) (delivery assignment) + ❌ *Key ideas: dark store inventory, hyperlocal geofencing, demand prediction per store, delivery slot management, real-time rider tracking* |
-| 3 | Design Inventory Management (Dark Store) | ★★★★☆ | ❌ *Key ideas: per-store SKU counts, real-time sync, low-stock alerts, demand forecasting, auto-replenishment triggers* |
+| 3 | Design Inventory Management (Dark Store) | ★★★★☆ | [Inventory-Management/01-Complete-Design.md](Inventory-Management/01-Complete-Design.md) |
 | 4 | Design a Real-time Order Tracking System | ★★★★☆ | [Uber/04-ETA-And-Routing.md](Uber/04-ETA-And-Routing.md) (ETA/tracking patterns) |
 | 5 | Design a Cart / Checkout System | ★★★★☆ | [E-Commerce/03-Checkout-And-Saga.md](E-Commerce/03-Checkout-And-Saga.md) |
 | 6 | Design a Messaging System (WhatsApp) | ★★★☆☆ | [Real-Time-Messaging/01-Requirements-And-Scale.md](Real-Time-Messaging/01-Requirements-And-Scale.md) |
@@ -314,6 +332,7 @@ System Design round appears for SDE-2+ roles. Expect questions rooted in real Wa
 | 5 | Design a Distributed Cache | ★★★☆☆ | [Distributed-Cache/01-Caching-Fundamentals.md](Distributed-Cache/01-Caching-Fundamentals.md) |
 | 6 | Design a Rate Limiter | ★★★☆☆ | [Rate-Limiter/01-Requirements-And-Algorithms.md](Rate-Limiter/01-Requirements-And-Algorithms.md) |
 | 7 | Design a Recommendation System | ★★★☆☆ | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
+| 8 | Design a Digital Wallet | ★★★☆☆ | [Digital-Wallet/01-Complete-Design.md](Digital-Wallet/01-Complete-Design.md) |
 
 **CRED tips:** Credit card bill payments, reward points, merchant offers. Clean design culture.
 **Groww tips:** Real-time market data ingestion, portfolio valuation, mutual fund SIP scheduling, regulatory compliance (SEBI).
@@ -336,6 +355,11 @@ These questions are asked at **almost every** top company:
 | 8 | Design a Payment System | Amazon, Uber, Stripe, Airbnb | [Payment-Gateway/01-Requirements-And-Scale.md](Payment-Gateway/01-Requirements-And-Scale.md) |
 | 9 | Design a Recommendation System | Google, Amazon, Netflix, LinkedIn | [Recommendation-System/01-Complete-Design.md](Recommendation-System/01-Complete-Design.md) |
 | 10 | Design a Web Crawler | Google, Amazon, Microsoft | [Web-Crawler/01-Complete-Design.md](Web-Crawler/01-Complete-Design.md) |
+| 11 | Design a Unique ID Generator | All companies (building block) | [Unique-ID-Generator/01-Complete-Design.md](Unique-ID-Generator/01-Complete-Design.md) |
+| 12 | Design a Proximity Service | Uber, Airbnb, Swiggy, Google | [Proximity-Service/01-Complete-Design.md](Proximity-Service/01-Complete-Design.md) |
+| 13 | Design an Object Storage System (S3) | Amazon, Google, Microsoft | [S3-Object-Storage/01-Complete-Design.md](S3-Object-Storage/01-Complete-Design.md) |
+| 14 | Design an Ad Click Aggregation System | Google, Meta, Twitter | [Ad-Click-Aggregator/01-Complete-Design.md](Ad-Click-Aggregator/01-Complete-Design.md) |
+| 15 | Design a Metrics Monitoring System | Netflix, Google, Amazon | [Metrics-Monitoring/01-Complete-Design.md](Metrics-Monitoring/01-Complete-Design.md) |
 
 ---
 
@@ -357,7 +381,15 @@ These apply regardless of which company you're interviewing at:
 | Observability | [Fundamentals/10-Observability.md](Fundamentals/10-Observability.md) |
 | Networking | [Fundamentals/11-Networking.md](Fundamentals/11-Networking.md) |
 | Security | [Fundamentals/12-Security.md](Fundamentals/12-Security.md) |
+| Reverse Proxy & Processing Patterns | [Fundamentals/13-Reverse-Proxy-And-Processing-Patterns.md](Fundamentals/13-Reverse-Proxy-And-Processing-Patterns.md) |
+| Additional Networking | [Fundamentals/14-Additional-Networking.md](Fundamentals/14-Additional-Networking.md) |
+| Architectural Patterns | [Fundamentals/15-Architectural-Patterns.md](Fundamentals/15-Architectural-Patterns.md) |
+| Disaster Recovery & CDC | [Fundamentals/16-Disaster-Recovery-And-CDC.md](Fundamentals/16-Disaster-Recovery-And-CDC.md) |
 | System Design Tradeoffs | [Fundamentals/17-System-Design-Tradeoffs.md](Fundamentals/17-System-Design-Tradeoffs.md) |
+| Backend Communication Patterns | [Fundamentals/18-Backend-Communication-Patterns.md](Fundamentals/18-Backend-Communication-Patterns.md) |
+| Protocols Deep Dive | [Fundamentals/19-Protocols-Deep-Dive.md](Fundamentals/19-Protocols-Deep-Dive.md) |
+| Database Internals Deep Dive | [Fundamentals/20-Database-Internals-Deep-Dive.md](Fundamentals/20-Database-Internals-Deep-Dive.md) |
+| Distributed Concurrency Control | [Fundamentals/21-Distributed-Concurrency-Control.md](Fundamentals/21-Distributed-Concurrency-Control.md) |
 | Idempotent API Design | [Fundamentals/22-Idempotent-API-Design.md](Fundamentals/22-Idempotent-API-Design.md) |
 | Interview Followup Questions | [Fundamentals/23-Interview-Followup-Questions.md](Fundamentals/23-Interview-Followup-Questions.md) |
 | Production Issues & Solutions | [Fundamentals/24-Production-Issues-And-Solutions.md](Fundamentals/24-Production-Issues-And-Solutions.md) |
@@ -371,18 +403,18 @@ These apply regardless of which company you're interviewing at:
 
 | Question | Asked At | Brief Solution Hint |
 |----------|----------|---------------------|
-| Design an Inventory Management System | Walmart, Amazon, Flipkart | Real-time sync across stores/warehouses/online, CQRS, event-driven Kafka, Redis hot-SKU cache, Cassandra/DynamoDB, IoT sensors |
 | Design Dynamic Pricing & Promotions | Walmart, Amazon, Airbnb | Rule engine, regional overrides, A/B testing, coupon service, fairness compliance, price history audit |
 | Design a Curbside Pickup (BOPIS) System | Walmart | Store inventory reservation, time-slot scheduling, geofence arrival, notification pipeline, order state machine |
 | Design a Fraud Detection System | Walmart, Stripe, Amazon | ML scoring pipeline, real-time feature extraction, rule engine + ML, <100ms latency, feedback loop |
-| Design Google Docs (Real-time Collaboration) | Google, Microsoft | OT/CRDT for conflict resolution, WebSocket real-time sync, operational transform log, cursor presence, version history |
 | Design a Content Moderation System | Meta, Twitter | ML classifiers (text + image + video), human review queue, priority scoring, hash-matching (PhotoDNA/pDNA), appeals workflow, audit log |
 | Design a Real-time Ad Ranking System | Meta, Google | CTR prediction (ML), second-price auction, feature store, real-time bidding pipeline, budget pacing, A/B testing |
 | Design a Webhook Delivery System | Stripe, Shopify | At-least-once delivery, exponential backoff retry, DLQ, idempotency key, event log, HMAC signature verification |
 | Design a Multi-Currency Ledger | Stripe, Payment cos. | Double-entry bookkeeping, immutable append-only log, FX conversion service, eventual consistency, audit trail |
 | Design a Code Deployment System | Google, Amazon, Netflix | Rolling/blue-green/canary deploy, artifact store, health checks, rollback, feature flags, deploy pipeline |
+| Design a Real-time Leaderboard | Dream11, Hotstar, Gaming cos. | Redis ZSET, real-time score ingestion via Kafka, sharded leaderboard, fan-out on update, pagination |
+| Design a Reward / Cashback System | CRED, Paytm, Flipkart | Event-driven reward calculation, rule engine, wallet service, expiry/clawback, idempotent credit |
 
 ---
 
-*Last updated: Feb 2026*
+*Last updated: Mar 2026*
 *Sources: Exponent, DesignGurus, SystemDesignHandbook, Educative, InterviewKickstart, Glassdoor, AmbitionBox, Prepfully, PlacementPreparation.io, HackerPrep*
