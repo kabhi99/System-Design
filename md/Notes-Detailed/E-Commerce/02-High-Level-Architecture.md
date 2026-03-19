@@ -84,7 +84,15 @@ explaining microservices, data flow, and technology choices.
 |  GET  /users/wishlist                                                   |
 |                                                                         |
 |  DATABASE: PostgreSQL (users, addresses)                                |
+|  * WHY POSTGRESQL? User data is relational (user->addresses,            |
+|    user->wishlist). Needs ACID for signup/login (no duplicate emails).  |
+|    Mature auth ecosystem (pgcrypto, row-level security).                |
+|                                                                         |
 |  CACHE: Redis (sessions, profile cache)                                 |
+|  * WHY REDIS? Sessions need sub-ms reads on every authenticated         |
+|    request. Redis TTL auto-expires sessions. In-memory speed avoids     |
+|    hitting DB on every API call. Profile cache reduces read load         |
+|    (profiles are read 100x more than updated).                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -147,6 +155,11 @@ explaining microservices, data flow, and technology choices.
 |  GET /search/suggest?q=lapt                                             |
 |                                                                         |
 |  BACKEND: Elasticsearch                                                 |
+|  * WHY ELASTICSEARCH? Inverted index enables full-text search in        |
+|    ~50ms vs seconds with SQL LIKE. Built-in support for fuzzy           |
+|    matching (typo tolerance), faceted aggregations (filter counts),     |
+|    synonym expansion, and relevance scoring (BM25). MongoDB can't       |
+|    do these at e-commerce scale — ES is purpose-built for search.       |
 |                                                                         |
 |  FEATURES:                                                              |
 |  * Fuzzy matching for typos                                             |
@@ -187,6 +200,15 @@ explaining microservices, data flow, and technology choices.
 |  POST   /cart/apply-coupon                                              |
 |                                                                         |
 |  STORAGE: Redis (primary) + PostgreSQL (backup)                         |
+|  * WHY REDIS PRIMARY? Cart is accessed on every page view and           |
+|    updated frequently (add/remove/quantity change). Redis gives          |
+|    sub-ms reads/writes vs ~5-10ms for PostgreSQL. Hash structure        |
+|    maps naturally to cart:{user_id}. TTL auto-cleans abandoned          |
+|    carts (30-day expiry) without running cleanup jobs.                  |
+|  * WHY POSTGRESQL BACKUP? Redis is volatile — if Redis restarts,        |
+|    cart data is lost. Async write-behind to PostgreSQL ensures           |
+|    cart survives Redis failures. Also needed for analytics               |
+|    (abandoned cart reports, conversion tracking).                        |
 |                                                                         |
 |  CART STRUCTURE IN REDIS:                                               |
 |  +------------------------------------------------------------------+   |
@@ -298,6 +320,13 @@ explaining microservices, data flow, and technology choices.
 |  +------------------------------------------------------------------+   |
 |                                                                         |
 |  DATABASE: PostgreSQL                                                   |
+|  * WHY POSTGRESQL? Orders involve money — needs strict ACID             |
+|    guarantees (no partial orders, no lost payments). Relational          |
+|    model fits naturally: order->order_items->status_history.             |
+|    Supports complex queries (order reports, seller payouts,              |
+|    refund joins). JSONB column for flexible metadata without             |
+|    sacrificing transactions.                                             |
+|                                                                         |
 |  * orders (main order info)                                             |
 |  * order_items (line items)                                             |
 |  * order_status_history (audit trail)                                   |
@@ -329,6 +358,13 @@ explaining microservices, data flow, and technology choices.
 |  * Fraud detection integration                                          |
 |                                                                         |
 |  DATABASE: PostgreSQL                                                   |
+|  * WHY POSTGRESQL? Payments are financial records — ACID is              |
+|    non-negotiable (double-charge prevention via unique                   |
+|    idempotency_key constraint). Need strong consistency for              |
+|    refund reconciliation. Audit compliance requires durable,             |
+|    tamper-evident storage. Foreign keys enforce referential              |
+|    integrity (payment->order linkage).                                   |
+|                                                                         |
 |  * payments (with idempotency_key)                                      |
 |  * refunds                                                              |
 |                                                                         |
