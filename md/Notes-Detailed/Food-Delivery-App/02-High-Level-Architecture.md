@@ -86,7 +86,11 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * User preferences                                            |  |
 |  |                                                                   |  |
 |  |     Database: MySQL (users, addresses tables)                     |  |
+|  |       WHY MYSQL: Relational data with ACID - no duplicate         |  |
+|  |       accounts. Joins for user+addresses. Mature auth support.    |  |
 |  |     Cache: Redis (session, user profile)                          |  |
+|  |       WHY REDIS: Sub-ms session lookups on every API call.        |  |
+|  |       TTL auto-expires sessions. Profile reads 100x > writes.     |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
@@ -101,7 +105,11 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Category management                                         |  |
 |  |                                                                   |  |
 |  |     Database: MySQL (restaurants, menus, items)                   |  |
+|  |       WHY MYSQL: Relational schema (restaurant>menu>items).       |  |
+|  |       Structured data with foreign keys. Transactional updates.   |  |
 |  |     Cache: Redis (menu cache per restaurant)                      |  |
+|  |       WHY REDIS: Menus read thousands of times per order.         |  |
+|  |       Cache entire menu as JSON hash - avoids DB on every view.   |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
@@ -116,6 +124,10 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Personalized recommendations                                |  |
 |  |                                                                   |  |
 |  |     Database: Elasticsearch                                       |  |
+|  |       WHY ES: Full-text search (dish names, cuisines) + geo       |  |
+|  |       queries in one engine. Fuzzy matching for typos. Faceted    |  |
+|  |       filters (rating, price) via aggregations. MySQL can't do    |  |
+|  |       combined text+geo+facet queries at this QPS.                |  |
 |  |     Geospatial: Elasticsearch geo_point                           |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
@@ -132,8 +144,17 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Order history                                               |  |
 |  |                                                                   |  |
 |  |     Database: MySQL (orders, order_items)                         |  |
+|  |       WHY MYSQL: Orders are financial - ACID required (no         |  |
+|  |       partial orders, no double charges). Relational joins for    |  |
+|  |       order+items+payment. Strong consistency for refunds.        |  |
 |  |     Cache: Redis (cart, active orders)                            |  |
+|  |       WHY REDIS: Cart updated on every add/remove. Active         |  |
+|  |       orders polled every few seconds for tracking. In-memory     |  |
+|  |       speed avoids DB load for high-frequency reads.              |  |
 |  |     Events: Kafka (order state changes)                           |  |
+|  |       WHY KAFKA: Order events fan out to delivery, payment,       |  |
+|  |       notification, analytics. Durable log for replay. Ordered    |  |
+|  |       per partition (order_id key) for state consistency.         |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
@@ -148,7 +169,11 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Partner earnings calculation                                |  |
 |  |                                                                   |  |
 |  |     Database: MySQL (delivery_partners, deliveries)               |  |
+|  |       WHY MYSQL: Relational data (partner>deliveries>earnings).   |  |
+|  |       ACID for assignment (prevent double-assigning same order).  |  |
 |  |     Cache: Redis (online partners, assignments)                   |  |
+|  |       WHY REDIS: Assignment algorithm needs real-time list of     |  |
+|  |       online partners. Redis SET operations for O(1) add/remove.  |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
@@ -163,6 +188,9 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Stream location to customers                                |  |
 |  |                                                                   |  |
 |  |     Database: Redis (current location only)                       |  |
+|  |       WHY REDIS: 75K location updates/sec - need in-memory        |  |
+|  |       writes. Only current location matters (no history). Redis   |  |
+|  |       GEO gives GEORADIUS for "partners within 3km" in O(log N).  |  |
 |  |     Geospatial: Redis GEO commands                                |  |
 |  |     Alternative: Custom quadtree/geohash                          |  |
 |  |                                                                   |  |
@@ -179,6 +207,9 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Restaurant/Partner payouts                                  |  |
 |  |                                                                   |  |
 |  |     Database: MySQL (transactions, wallets)                       |  |
+|  |       WHY MYSQL: Financial data - ACID non-negotiable. Unique     |  |
+|  |       constraint on idempotency_key prevents double charges.      |  |
+|  |       Audit trail with immutable transaction log.                 |  |
 |  |     External: Payment gateway (Razorpay, Stripe)                  |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
@@ -194,6 +225,9 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Real-time updates (WebSocket)                               |  |
 |  |                                                                   |  |
 |  |     Queue: Kafka (notification events)                            |  |
+|  |       WHY KAFKA: Decouple notification from order flow - order    |  |
+|  |       service publishes event and moves on. Kafka buffers         |  |
+|  |       spikes (lunch rush). Consumer groups for parallel sending.  |  |
 |  |     External: Twilio (SMS), Firebase (Push)                       |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
@@ -208,7 +242,13 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |     * Aggregate rating calculation                                |  |
 |  |                                                                   |  |
 |  |     Database: MongoDB (flexible schema for reviews)               |  |
+|  |       WHY MONGODB: Reviews have varying structure (text, images,  |  |
+|  |       ratings per category). Document model fits naturally.       |  |
+|  |       No joins needed - each review is self-contained.            |  |
 |  |     Cache: Redis (aggregate ratings)                              |  |
+|  |       WHY REDIS: Aggregate rating shown on every restaurant       |  |
+|  |       card. Precomputed avg in Redis avoids recalculating from    |  |
+|  |       millions of reviews on every search result page.            |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
@@ -223,7 +263,12 @@ PART 2: HIGH-LEVEL ARCHITECTURE
 |  |      * Dynamic pricing rules                                      |  |
 |  |                                                                   |  |
 |  |      Database: MySQL (pricing_rules, coupons)                     |  |
+|  |       WHY MYSQL: Pricing rules are relational (rule>conditions    |  |
+|  |       >actions). ACID for coupon redemption (prevent overuse).    |  |
 |  |      Cache: Redis (active coupons, surge zones)                   |  |
+|  |       WHY REDIS: Every order checks coupons + surge pricing.      |  |
+|  |       Redis gives sub-ms lookups. Surge zones update every        |  |
+|  |       few minutes - cache with short TTL is ideal.                |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |

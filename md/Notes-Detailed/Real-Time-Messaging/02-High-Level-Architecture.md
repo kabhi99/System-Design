@@ -223,7 +223,7 @@ CHAPTER 2: HIGH-LEVEL ARCHITECTURE
 +----------------------------------------------------------------------------------+
 ```
 
-## DATA FLOW DIAGRAMS
+## SECTION 1: DATA FLOW DIAGRAMS
 
 ```
 +------------------------------------------------------------------------------+
@@ -408,7 +408,7 @@ CHAPTER 2: HIGH-LEVEL ARCHITECTURE
 +------------------------------------------------------------------------------+
 ```
 
-## COMPONENT INTERACTION MATRIX
+## SECTION 2: COMPONENT INTERACTION MATRIX
 
 ```
 +------------------------------------------------------------------------------+
@@ -444,7 +444,7 @@ CHAPTER 2: HIGH-LEVEL ARCHITECTURE
 +------------------------------------------------------------------------------+
 ```
 
-## SCALING NUMBERS
+## SECTION 3: SCALING NUMBERS
 
 ```
 +------------------------------------------------------------------------------+
@@ -630,6 +630,9 @@ CHAPTER 2: HIGH-LEVEL ARCHITECTURE
 |  |  * Block/unblock users                                            |  |
 |  |                                                                   |  |
 |  |  Storage: PostgreSQL + Redis cache                                |  |
+|  WHY PG: User data is relational (profiles, contacts, blocks).       |  |
+|  ACID for phone number uniqueness. WHY REDIS CACHE: Profile          |  |
+|  lookups on every message send - cache avoids DB per message.        |  |
 |  |                                                                   |  |
 |  |  TABLE: users                                                     |  |
 |  |  +----------------+-------------+-------------------------------+ |  |

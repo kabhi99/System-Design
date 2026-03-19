@@ -85,44 +85,44 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  FUNCTIONAL REQUIREMENTS:                                               |
 |                                                                         |
 |  1. ONE-TO-ONE CHAT                                                     |
-|     - Send/receive text messages in real-time                           |
-|     - Send media (images, videos, voice notes, documents)               |
-|     - Message delivery status: sent, delivered, read                    |
-|     - Delete messages (for me / for everyone)                           |
-|     - Reply to specific messages                                        |
-|     - Forward messages                                                  |
+|     * Send/receive text messages in real-time                           |
+|     * Send media (images, videos, voice notes, documents)               |
+|     * Message delivery status: sent, delivered, read                    |
+|     * Delete messages (for me / for everyone)                           |
+|     * Reply to specific messages                                        |
+|     * Forward messages                                                  |
 |                                                                         |
 |  2. GROUP CHAT                                                          |
-|     - Create groups (up to 1024 members)                                |
-|     - Add/remove members                                                |
-|     - Admin roles and permissions                                       |
-|     - Group name, description, avatar                                   |
-|     - Mention specific members (@user)                                  |
+|     * Create groups (up to 1024 members)                                |
+|     * Add/remove members                                                |
+|     * Admin roles and permissions                                       |
+|     * Group name, description, avatar                                   |
+|     * Mention specific members (@user)                                  |
 |                                                                         |
 |  3. PRESENCE / ONLINE STATUS                                            |
-|     - Show online/offline/last seen status                              |
-|     - Typing indicators ("User is typing...")                           |
-|     - Privacy controls (hide last seen)                                 |
+|     * Show online/offline/last seen status                              |
+|     * Typing indicators ("User is typing...")                           |
+|     * Privacy controls (hide last seen)                                 |
 |                                                                         |
 |  4. READ RECEIPTS                                                       |
-|     - Double check marks (delivered + read)                             |
-|     - Group: show who has read the message                              |
+|     * Double check marks (delivered + read)                             |
+|     * Group: show who has read the message                              |
 |                                                                         |
 |  5. MEDIA SHARING                                                       |
-|     - Images (with compression)                                         |
-|     - Videos (with transcoding)                                         |
-|     - Voice messages                                                    |
-|     - Documents (PDF, etc.)                                             |
-|     - Location sharing                                                  |
+|     * Images (with compression)                                         |
+|     * Videos (with transcoding)                                         |
+|     * Voice messages                                                    |
+|     * Documents (PDF, etc.)                                             |
+|     * Location sharing                                                  |
 |                                                                         |
 |  6. PUSH NOTIFICATIONS                                                  |
-|     - Notify offline users of new messages                              |
-|     - Badge count on app icon                                           |
-|     - Configurable notification preferences per chat                    |
+|     * Notify offline users of new messages                              |
+|     * Badge count on app icon                                           |
+|     * Configurable notification preferences per chat                    |
 |                                                                         |
 |  7. SEARCH                                                              |
-|     - Search messages within a conversation                             |
-|     - Search across all conversations                                   |
+|     * Search messages within a conversation                             |
+|     * Search across all conversations                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -135,37 +135,37 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  NON-FUNCTIONAL REQUIREMENTS:                                           |
 |                                                                         |
 |  1. REAL-TIME DELIVERY                                                  |
-|     - Message delivery: <100ms (p95) when both users online             |
-|     - Typing indicator: <50ms                                           |
-|     - Presence update: <500ms                                           |
+|     * Message delivery: <100ms (p95) when both users online             |
+|     * Typing indicator: <50ms                                           |
+|     * Presence update: <500ms                                           |
 |                                                                         |
 |  2. RELIABILITY                                                         |
-|     - Zero message loss (at-least-once delivery)                        |
-|     - Messages must be durably stored before acknowledging              |
-|     - Deduplication to handle retries                                   |
+|     * Zero message loss (at-least-once delivery)                        |
+|     * Messages must be durably stored before acknowledging              |
+|     * Deduplication to handle retries                                   |
 |                                                                         |
 |  3. MESSAGE ORDERING                                                    |
-|     - Messages in a conversation appear in correct order                |
-|     - Causal ordering: if A replies to B, A appears after B             |
+|     * Messages in a conversation appear in correct order                |
+|     * Causal ordering: if A replies to B, A appears after B             |
 |                                                                         |
 |  4. HIGH AVAILABILITY                                                   |
-|     - 99.99% uptime                                                     |
-|     - Graceful degradation (stale presence is OK)                       |
+|     * 99.99% uptime                                                     |
+|     * Graceful degradation (stale presence is OK)                       |
 |                                                                         |
 |  5. SCALABILITY                                                         |
-|     - 2B registered users                                               |
-|     - 50M concurrent WebSocket connections                              |
-|     - 100B messages/day                                                 |
+|     * 2B registered users                                               |
+|     * 50M concurrent WebSocket connections                              |
+|     * 100B messages/day                                                 |
 |                                                                         |
 |  6. SECURITY                                                            |
-|     - End-to-end encryption for 1:1 chats                               |
-|     - TLS for all connections                                           |
-|     - Authentication and authorization                                  |
+|     * End-to-end encryption for 1:1 chats                               |
+|     * TLS for all connections                                           |
+|     * Authentication and authorization                                  |
 |                                                                         |
 |  7. STORAGE EFFICIENCY                                                  |
-|     - Messages are write-heavy, append-only                             |
-|     - Time-series access pattern (recent messages read most)            |
-|     - Efficient storage for billions of messages                        |
+|     * Messages are write-heavy, append-only                             |
+|     * Time-series access pattern (recent messages read most)            |
+|     * Efficient storage for billions of messages                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -178,12 +178,12 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  USER BASE:                                                             |
-|  - Total registered users: 2 Billion                                    |
-|  - Daily Active Users (DAU): 500 Million                                |
-|  - Concurrent connections (peak): 50 Million                            |
-|  - Average contacts per user: 100                                       |
-|  - Average groups per user: 10                                          |
-|  - Average group size: 20 members                                       |
+|  * Total registered users: 2 Billion                                    |
+|  * Daily Active Users (DAU): 500 Million                                |
+|  * Concurrent connections (peak): 50 Million                            |
+|  * Average contacts per user: 100                                       |
+|  * Average groups per user: 10                                          |
+|  * Average group size: 20 members                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -194,24 +194,24 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  MESSAGE TRAFFIC:                                                       |
-|  - 100 Billion messages/day                                             |
-|  - 100B / 86,400 = ~1.16 Million messages/second                        |
-|  - Peak (3x): ~3.5 Million messages/second                              |
+|  * 100 Billion messages/day                                             |
+|  * 100B / 86,400 = ~1.16 Million messages/second                        |
+|  * Peak (3x): ~3.5 Million messages/second                              |
 |                                                                         |
 |  BREAKDOWN BY TYPE:                                                     |
-|  - 1:1 text messages: 70B/day (70%)                                     |
-|  - Group text messages: 20B/day (20%)                                   |
-|  - Media messages: 10B/day (10%)                                        |
+|  * 1:1 text messages: 70B/day (70%)                                     |
+|  * Group text messages: 20B/day (20%)                                   |
+|  * Media messages: 10B/day (10%)                                        |
 |                                                                         |
 |  CONNECTION MANAGEMENT:                                                 |
-|  - 50M concurrent WebSocket connections                                 |
-|  - Average connection duration: 30 minutes                              |
-|  - New connections/second: 50M / 1800s ~ 28,000/sec                     |
-|  - Connection churn (reconnects): ~50,000/sec                           |
+|  * 50M concurrent WebSocket connections                                 |
+|  * Average connection duration: 30 minutes                              |
+|  * New connections/second: 50M / 1800s ~ 28,000/sec                     |
+|  * Connection churn (reconnects): ~50,000/sec                           |
 |                                                                         |
 |  PRESENCE UPDATES:                                                      |
-|  - Online/offline events: ~100M/day                                     |
-|  - Heartbeat checks: 50M users x 1/30sec = 1.67M/sec                    |
+|  * Online/offline events: ~100M/day                                     |
+|  * Heartbeat checks: 50M users x 1/30sec = 1.67M/sec                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -222,28 +222,28 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  MESSAGE STORAGE:                                                       |
-|  - Average text message size: 200 bytes                                 |
-|  - 100B messages/day x 200B = 20 TB/day (text only)                     |
-|  - Per year: 7.3 PB                                                     |
-|  - With replication (3x): ~22 PB/year                                   |
+|  * Average text message size: 200 bytes                                 |
+|  * 100B messages/day x 200B = 20 TB/day (text only)                     |
+|  * Per year: 7.3 PB                                                     |
+|  * With replication (3x): ~22 PB/year                                   |
 |                                                                         |
 |  MEDIA STORAGE:                                                         |
-|  - 10B media messages/day                                               |
-|  - Average image: 200 KB (compressed)                                   |
-|  - Average video: 5 MB (compressed)                                     |
-|  - 80% images, 15% videos, 5% docs                                      |
-|  - Images: 8B x 200KB = 1.6 PB/day                                      |
-|  - Videos: 1.5B x 5MB = 7.5 PB/day                                      |
-|  - Total media: ~9 PB/day                                               |
+|  * 10B media messages/day                                               |
+|  * Average image: 200 KB (compressed)                                   |
+|  * Average video: 5 MB (compressed)                                     |
+|  * 80% images, 15% videos, 5% docs                                      |
+|  * Images: 8B x 200KB = 1.6 PB/day                                      |
+|  * Videos: 1.5B x 5MB = 7.5 PB/day                                      |
+|  * Total media: ~9 PB/day                                               |
 |                                                                         |
 |  METADATA STORAGE:                                                      |
-|  - Message metadata (sender, timestamp, status): ~100 bytes each        |
-|  - 100B x 100B = 10 TB/day                                              |
-|  - Conversation metadata: negligible compared to messages               |
+|  * Message metadata (sender, timestamp, status): ~100 bytes each        |
+|  * 100B x 100B = 10 TB/day                                              |
+|  * Conversation metadata: negligible compared to messages               |
 |                                                                         |
 |  CONNECTION STATE:                                                      |
-|  - Per connection: ~2 KB (user ID, device info, session)                |
-|  - 50M connections x 2KB = 100 GB in memory                             |
+|  * Per connection: ~2 KB (user ID, device info, session)                |
+|  * 50M connections x 2KB = 100 GB in memory                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -254,16 +254,16 @@ group conversations, and deliver messages reliably even when recipients are offl
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  TEXT MESSAGES:                                                          |
-|  - 1.16M msgs/sec x 200 bytes = ~232 MB/sec = ~1.86 Gbps                 |
+|  * 1.16M msgs/sec x 200 bytes = ~232 MB/sec = ~1.86 Gbps                 |
 |                                                                          |
 |  MEDIA:                                                                  |
-|  - Images: ~18.5 GB/sec (inbound, before CDN caching)                    |
-|  - Videos: ~86.8 GB/sec (inbound)                                        |
-|  - Outbound served mostly from CDN edge                                  |
+|  * Images: ~18.5 GB/sec (inbound, before CDN caching)                    |
+|  * Videos: ~86.8 GB/sec (inbound)                                        |
+|  * Outbound served mostly from CDN edge                                  |
 |                                                                          |
 |  WEBSOCKET OVERHEAD:                                                     |
-|  - Heartbeat: 50M users x 32 bytes x 1/30sec = ~53 MB/sec                |
-|  - Presence: negligible compared to messages                             |
+|  * Heartbeat: 50M users x 32 bytes x 1/30sec = ~53 MB/sec                |
+|  * Presence: negligible compared to messages                             |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -292,23 +292,23 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  LONG POLLING:                                                          |
 |  Client sends request -> Server holds until new data -> Responds        |
 |  -> Client immediately sends new request                                |
-|  - Overhead: new TCP connection each time                               |
-|  - Higher latency: time to establish connection                         |
-|  - Simpler: works with standard HTTP infrastructure                     |
+|  * Overhead: new TCP connection each time                               |
+|  * Higher latency: time to establish connection                         |
+|  * Simpler: works with standard HTTP infrastructure                     |
 |                                                                         |
 |  SERVER-SENT EVENTS (SSE):                                              |
 |  Server pushes data to client over HTTP connection                      |
-|  - One-directional: server to client only                               |
-|  - Client must use separate HTTP POST for sending messages              |
-|  - No binary support (text/event-stream format)                         |
-|  - Auto-reconnection built in                                           |
+|  * One-directional: server to client only                               |
+|  * Client must use separate HTTP POST for sending messages              |
+|  * No binary support (text/event-stream format)                         |
+|  * Auto-reconnection built in                                           |
 |                                                                         |
 |  WEBSOCKET (CHOSEN):                                                    |
 |  Full-duplex communication over single TCP connection                   |
-|  - Bi-directional: both sides can send anytime                          |
-|  - Very low overhead after initial handshake                            |
-|  - Ideal for chat: both sending and receiving messages                  |
-|  - Challenge: stateful connections require sticky routing               |
+|  * Bi-directional: both sides can send anytime                          |
+|  * Very low overhead after initial handshake                            |
+|  * Ideal for chat: both sending and receiving messages                  |
+|  * Challenge: stateful connections require sticky routing               |
 |                                                                         |
 |  DECISION: WebSocket for chat delivery, HTTP for media upload           |
 |                                                                         |
@@ -399,10 +399,10 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  Manages millions of persistent WebSocket connections.                  |
 |                                                                         |
 |  ARCHITECTURE:                                                          |
-|  - Fleet of WebSocket servers (100s of machines)                        |
-|  - Each server handles ~500K connections                                |
-|  - L4 load balancer (HAProxy) for initial connection routing            |
-|  - Sticky sessions: user reconnects to same server when possible        |
+|  * Fleet of WebSocket servers (100s of machines)                        |
+|  * Each server handles ~500K connections                                |
+|  * L4 load balancer (HAProxy) for initial connection routing            |
+|  * Sticky sessions: user reconnects to same server when possible        |
 |                                                                         |
 |  CONNECTION REGISTRY:                                                   |
 |  Mapping of user_id -> which WS server they're connected to             |
@@ -418,14 +418,14 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  MULTI-DEVICE SUPPORT:                                                  |
 |  conn:user_123:iphone = { server: "ws-42", ... }                        |
 |  conn:user_123:web    = { server: "ws-17", ... }                        |
-|  - Message delivered to ALL active devices                              |
-|  - Read receipt from any device marks as read on all devices            |
+|  * Message delivered to ALL active devices                              |
+|  * Read receipt from any device marks as read on all devices            |
 |                                                                         |
 |  FAILOVER:                                                              |
-|  - If WS server crashes, clients detect via missed heartbeat            |
-|  - Client reconnects (to potentially different server)                  |
-|  - New server pulls undelivered messages from message store             |
-|  - Connection registry updated automatically                            |
+|  * If WS server crashes, clients detect via missed heartbeat            |
+|  * Client reconnects (to potentially different server)                  |
+|  * New server pulls undelivered messages from message store             |
+|  * Connection registry updated automatically                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -506,9 +506,9 @@ group conversations, and deliver messages reliably even when recipients are offl
 |    |           |---push notification to Dave's phone     |               |
 |                                                                          |
 |  OPTIMIZATIONS FOR LARGE GROUPS:                                         |
-|  - Fan-out done in parallel across multiple threads                      |
-|  - Members on same WS server batched into single dispatch                |
-|  - Rate limit for very large groups (send in waves)                      |
+|  * Fan-out done in parallel across multiple threads                      |
+|  * Members on same WS server batched into single dispatch                |
+|  * Rate limit for very large groups (send in waves)                      |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -539,15 +539,15 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  5. Remove from offline queue after ACK                                 |
 |                                                                         |
 |  PUSH NOTIFICATION CONTENT:                                             |
-|  - Sender name + preview text                                           |
-|  - Badge count (total unread messages)                                  |
-|  - Encrypted: notification server only sees metadata                    |
-|  - Collapsed: "3 new messages from Alice" (not 3 separate)              |
+|  * Sender name + preview text                                           |
+|  * Badge count (total unread messages)                                  |
+|  * Encrypted: notification server only sees metadata                    |
+|  * Collapsed: "3 new messages from Alice" (not 3 separate)              |
 |                                                                         |
 |  OFFLINE QUEUE SIZING:                                                  |
-|  - Max messages in queue: 10,000 per user                               |
-|  - Queue TTL: 30 days (messages in DB persist forever)                  |
-|  - At reconnect, fetch last sync_timestamp, get newer messages          |
+|  * Max messages in queue: 10,000 per user                               |
+|  * Queue TTL: 30 days (messages in DB persist forever)                  |
+|  * At reconnect, fetch last sync_timestamp, get newer messages          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -637,7 +637,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 |                                                                         |
 |  -------------------------------------------------------------------    |
 |                                                                         |
-|  OFFLINE QUEUE vs DLQ — KEY DIFFERENCE:                                 |
+|  OFFLINE QUEUE vs DLQ - KEY DIFFERENCE:                                 |
 |                                                                         |
 |  +-------------------------------------------------------------------+  |
 |  |               | Offline Queue         | DLQ                       |  |
@@ -684,30 +684,30 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  WHY NOT A RELATIONAL DATABASE FOR MESSAGES?                            |
 |                                                                         |
 |  Messages have these properties:                                        |
-|  - Write-heavy (100B writes/day vs reads mostly for recent)             |
-|  - Append-only (messages are never updated)                             |
-|  - Time-series access pattern (read recent messages mostly)             |
-|  - No complex joins needed                                              |
-|  - Need to scale to petabytes                                           |
+|  * Write-heavy (100B writes/day vs reads mostly for recent)             |
+|  * Append-only (messages are never updated)                             |
+|  * Time-series access pattern (read recent messages mostly)             |
+|  * No complex joins needed                                              |
+|  * Need to scale to petabytes                                           |
 |                                                                         |
 |  OPTION 1: CASSANDRA (Chosen for 1:1 chats)                             |
 |  + Write-optimized (LSM tree)                                           |
 |  + Linear scalability (add nodes)                                       |
 |  + Time-series friendly (clustering key = timestamp)                    |
 |  + No single point of failure                                           |
-|  - Eventually consistent (tunable, use LOCAL_QUORUM)                    |
+|  * Eventually consistent (tunable, use LOCAL_QUORUM)                    |
 |                                                                         |
 |  OPTION 2: HBASE                                                        |
 |  + Great for sequential reads (sorted by row key)                       |
 |  + Strong consistency per row                                           |
 |  + Built-in versioning                                                  |
-|  - Depends on HDFS/Zookeeper (operational complexity)                   |
+|  * Depends on HDFS/Zookeeper (operational complexity)                   |
 |                                                                         |
 |  OPTION 3: MYSQL + SHARDING (Acceptable for smaller scale)              |
 |  + Familiar, well-understood                                            |
 |  + Strong consistency                                                   |
-|  - Sharding complexity                                                  |
-|  - Not optimized for append-only workloads                              |
+|  * Sharding complexity                                                  |
+|  * Not optimized for append-only workloads                              |
 |                                                                         |
 |  DECISION: Cassandra for message storage, MySQL for user/group          |
 |  metadata, Redis for caches and online state.                           |
@@ -748,9 +748,9 @@ group conversations, and deliver messages reliably even when recipients are offl
 |     LIMIT 50;                                                            |
 |                                                                          |
 |  CONVERSATION ID GENERATION:                                             |
-|  - 1:1 chat: deterministic from sorted user IDs                          |
+|  * 1:1 chat: deterministic from sorted user IDs                          |
 |    conv_id = hash(min(user_a, user_b) + ":" + max(user_a, user_b))       |
-|  - Group chat: randomly generated UUID at group creation                 |
+|  * Group chat: randomly generated UUID at group creation                 |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -763,29 +763,29 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  CASSANDRA PARTITIONING:                                                |
 |                                                                         |
 |  PARTITION KEY: conversation_id                                         |
-|  - All messages for a conversation on same partition                    |
-|  - Single partition read for "load recent messages"                     |
-|  - Efficient range scans within a conversation                          |
+|  * All messages for a conversation on same partition                    |
+|  * Single partition read for "load recent messages"                     |
+|  * Efficient range scans within a conversation                          |
 |                                                                         |
 |  PROBLEM: HOT PARTITIONS                                                |
-|  - Very active group with millions of messages                          |
-|  - Single partition can grow too large (>100MB)                         |
+|  * Very active group with millions of messages                          |
+|  * Single partition can grow too large (>100MB)                         |
 |                                                                         |
 |  SOLUTION: TIME-BUCKETED PARTITIONS                                     |
 |  PRIMARY KEY ((conversation_id, bucket), message_id)                    |
 |                                                                         |
 |  bucket = year_month (e.g., "2024_01")                                  |
 |                                                                         |
-|  - Recent messages: query current month's bucket                        |
-|  - Older messages: query previous month's buckets                       |
-|  - Each partition stays manageable size                                 |
-|  - Slight complexity: may need to query 2 buckets at boundary           |
+|  * Recent messages: query current month's bucket                        |
+|  * Older messages: query previous month's buckets                       |
+|  * Each partition stays manageable size                                 |
+|  * Slight complexity: may need to query 2 buckets at boundary           |
 |                                                                         |
 |  RETENTION POLICY:                                                      |
-|  - Hot data (last 30 days): SSD-backed Cassandra                        |
-|  - Warm data (30 days - 1 year): HDD-backed Cassandra                   |
-|  - Cold data (>1 year): Compressed in S3 / archival storage             |
-|  - Tiered storage significantly reduces cost                            |
+|  * Hot data (last 30 days): SSD-backed Cassandra                        |
+|  * Warm data (30 days - 1 year): HDD-backed Cassandra                   |
+|  * Cold data (>1 year): Compressed in S3 / archival storage             |
+|  * Tiered storage significantly reduces cost                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -810,9 +810,9 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  Network delays vary. Which message came first?                         |
 |                                                                         |
 |  REQUIREMENT:                                                           |
-|  - All participants must see messages in the SAME order                 |
-|  - Causal ordering: replies must appear after the original              |
-|  - Total ordering within a conversation                                 |
+|  * All participants must see messages in the SAME order                 |
+|  * Causal ordering: replies must appear after the original              |
+|  * Total ordering within a conversation                                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -823,36 +823,36 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  SOLUTION 1: SERVER-ASSIGNED TIMESTAMPS                                 |
-|  - Chat server assigns a monotonic timestamp on receipt                 |
-|  - Simple and works when single server handles a conversation           |
-|  - Problem: if conversation spans servers, clocks may differ            |
-|  - Mitigation: use NTP sync + sequence number as tiebreaker             |
+|  * Chat server assigns a monotonic timestamp on receipt                 |
+|  * Simple and works when single server handles a conversation           |
+|  * Problem: if conversation spans servers, clocks may differ            |
+|  * Mitigation: use NTP sync + sequence number as tiebreaker             |
 |                                                                         |
 |  SOLUTION 2: SEQUENCE NUMBERS PER CONVERSATION                          |
-|  - Each conversation has an auto-incrementing sequence counter          |
-|  - Stored in Redis: INCR conv_seq:{conversation_id}                     |
-|  - Guarantees total ordering within a conversation                      |
-|  - Problem: Redis becomes single point of contention                    |
-|  - Mitigation: partition conversations across Redis nodes               |
+|  * Each conversation has an auto-incrementing sequence counter          |
+|  * Stored in Redis: INCR conv_seq:{conversation_id}                     |
+|  * Guarantees total ordering within a conversation                      |
+|  * Problem: Redis becomes single point of contention                    |
+|  * Mitigation: partition conversations across Redis nodes               |
 |                                                                         |
 |  SOLUTION 3: LAMPORT TIMESTAMPS                                         |
-|  - Each message carries a logical clock value                           |
-|  - clock = max(local_clock, received_clock) + 1                         |
-|  - Guarantees causal ordering (if A caused B, A < B)                    |
-|  - Does NOT guarantee total ordering for concurrent messages            |
-|  - Use (lamport_timestamp, server_id) for total order                   |
+|  * Each message carries a logical clock value                           |
+|  * clock = max(local_clock, received_clock) + 1                         |
+|  * Guarantees causal ordering (if A caused B, A < B)                    |
+|  * Does NOT guarantee total ordering for concurrent messages            |
+|  * Use (lamport_timestamp, server_id) for total order                   |
 |                                                                         |
 |  SOLUTION 4: SNOWFLAKE-LIKE IDS (Recommended)                           |
-|  - Generate time-ordered unique IDs                                     |
-|  - timestamp (41 bits) + machine_id (10 bits) + sequence (12 bits)      |
-|  - Roughly time-ordered (within ms), globally unique                    |
-|  - No coordination needed between servers                               |
-|  - Combined with per-conversation sequence for strict ordering          |
+|  * Generate time-ordered unique IDs                                     |
+|  * timestamp (41 bits) + machine_id (10 bits) + sequence (12 bits)      |
+|  * Roughly time-ordered (within ms), globally unique                    |
+|  * No coordination needed between servers                               |
+|  * Combined with per-conversation sequence for strict ordering          |
 |                                                                         |
 |  CHOSEN APPROACH:                                                       |
-|  - Snowflake IDs for global message identity                            |
-|  - Per-conversation sequence number for display ordering                |
-|  - Sequence assigned by the Chat Service (single writer per conv)       |
+|  * Snowflake IDs for global message identity                            |
+|  * Per-conversation sequence number for display ordering                |
+|  * Sequence assigned by the Chat Service (single writer per conv)       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -868,22 +868,22 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  [Alice: 3, Bob: 2, Carol: 1]                                           |
 |                                                                         |
 |  When Alice sends message:                                              |
-|  - Increment own counter: [Alice: 4, Bob: 2, Carol: 1]                  |
-|  - Attach vector to message                                             |
+|  * Increment own counter: [Alice: 4, Bob: 2, Carol: 1]                  |
+|  * Attach vector to message                                             |
 |                                                                         |
 |  When Bob receives Alice's message:                                     |
-|  - Merge: max each component                                            |
-|  - Bob's vector becomes: [Alice: 4, Bob: 2, Carol: 1]                   |
-|  - When Bob sends: [Alice: 4, Bob: 3, Carol: 1]                         |
+|  * Merge: max each component                                            |
+|  * Bob's vector becomes: [Alice: 4, Bob: 2, Carol: 1]                   |
+|  * When Bob sends: [Alice: 4, Bob: 3, Carol: 1]                         |
 |                                                                         |
 |  COMPARING VECTORS:                                                     |
-|  - V1 < V2 if all components of V1 <= V2 and at least one is <          |
-|  - V1 || V2 (concurrent) if neither V1 < V2 nor V2 < V1                 |
+|  * V1 < V2 if all components of V1 <= V2 and at least one is <          |
+|  * V1 || V2 (concurrent) if neither V1 < V2 nor V2 < V1                 |
 |                                                                         |
 |  PRACTICAL USAGE IN CHAT:                                               |
-|  - Overkill for simple message ordering                                 |
-|  - Useful for: offline editing, conflict resolution, sync protocols     |
-|  - WhatsApp uses simpler approach: server-assigned sequence numbers     |
+|  * Overkill for simple message ordering                                 |
+|  * Useful for: offline editing, conflict resolution, sync protocols     |
+|  * WhatsApp uses simpler approach: server-assigned sequence numbers     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -900,6 +900,11 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  Tracks who is online, offline, or "last seen at X".                    |
 |                                                                         |
 |  STORAGE: Redis Hash                                                    |
+|  WHY REDIS? Presence is ephemeral, high-frequency data - updated        |
+|  on every heartbeat (every 30s per user). In-memory gives sub-ms        |
+|  reads. TTL auto-marks users offline if heartbeat stops. No need        |
+|  for disk persistence - presence is rebuilt on reconnect.               |
+|                                                                         |
 |  presence:{user_id} = {                                                 |
 |    status: "online" | "offline",                                        |
 |    last_seen: 1708000500,                                               |
@@ -910,31 +915,31 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  HOW IT WORKS:                                                          |
 |                                                                         |
 |  1. USER COMES ONLINE:                                                  |
-|     - WebSocket connection established                                  |
-|     - Set status = "online" in Redis                                    |
-|     - Notify friends via their WebSocket connections                    |
+|     * WebSocket connection established                                  |
+|     * Set status = "online" in Redis                                    |
+|     * Notify friends via their WebSocket connections                    |
 |                                                                         |
 |  2. HEARTBEAT (every 30 seconds):                                       |
-|     - Client sends ping over WebSocket                                  |
-|     - Server refreshes TTL on presence key                              |
-|     - If 3 consecutive heartbeats missed -> mark offline                |
+|     * Client sends ping over WebSocket                                  |
+|     * Server refreshes TTL on presence key                              |
+|     * If 3 consecutive heartbeats missed -> mark offline                |
 |                                                                         |
 |  3. USER GOES OFFLINE:                                                  |
-|     - Explicit: client sends disconnect message                         |
-|     - Implicit: heartbeat timeout (90 seconds)                          |
-|     - Set status = "offline", last_seen = now                           |
-|     - Notify friends                                                    |
+|     * Explicit: client sends disconnect message                         |
+|     * Implicit: heartbeat timeout (90 seconds)                          |
+|     * Set status = "offline", last_seen = now                           |
+|     * Notify friends                                                    |
 |                                                                         |
 |  SCALING CHALLENGE:                                                     |
-|  - User with 500 friends comes online                                   |
-|  - Must notify 500 friends -> 500 WebSocket pushes                      |
-|  - 100M online/offline events per day x 200 avg friends = 20B pushes    |
+|  * User with 500 friends comes online                                   |
+|  * Must notify 500 friends -> 500 WebSocket pushes                      |
+|  * 100M online/offline events per day x 200 avg friends = 20B pushes    |
 |                                                                         |
 |  OPTIMIZATION:                                                          |
-|  - Only notify friends who have the chat app in foreground              |
-|  - Batch presence updates (aggregate over 5 seconds)                    |
-|  - For users with 1000+ friends: lazy presence (query on demand)        |
-|  - Only push presence for users in active conversations                 |
+|  * Only notify friends who have the chat app in foreground              |
+|  * Batch presence updates (aggregate over 5 seconds)                    |
+|  * For users with 1000+ friends: lazy presence (query on demand)        |
+|  * Only push presence for users in active conversations                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -955,10 +960,10 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  4. Recipient shows indicator for 3 seconds (auto-dismiss)              |
 |                                                                         |
 |  OPTIMIZATION:                                                          |
-|  - Throttle: send typing event at most once per 3 seconds               |
-|  - Don't persist typing events (purely ephemeral)                       |
-|  - Don't send typing events in large groups (>20 members)               |
-|  - UDP-like delivery: best effort, no ACK needed                        |
+|  * Throttle: send typing event at most once per 3 seconds               |
+|  * Don't persist typing events (purely ephemeral)                       |
+|  * Don't send typing events in large groups (>20 members)               |
+|  * UDP-like delivery: best effort, no ACK needed                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -978,9 +983,9 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  KEY CONCEPTS:                                                          |
 |                                                                         |
 |  1. KEY PAIRS                                                           |
-|     - Each device generates a public/private key pair                   |
-|     - Public key uploaded to Key Server                                 |
-|     - Private key NEVER leaves the device                               |
+|     * Each device generates a public/private key pair                   |
+|     * Public key uploaded to Key Server                                 |
+|     * Private key NEVER leaves the device                               |
 |                                                                         |
 |  2. KEY EXCHANGE (X3DH - Extended Triple Diffie-Hellman)                |
 |     Alice wants to message Bob (first time):                            |
@@ -991,22 +996,22 @@ group conversations, and deliver messages reliably even when recipients are offl
 |     e. Bob decrypts message                                             |
 |                                                                         |
 |  3. DOUBLE RATCHET ALGORITHM                                            |
-|     - New encryption key for EVERY message                              |
-|     - Forward secrecy: compromising current key doesn't                 |
+|     * New encryption key for EVERY message                              |
+|     * Forward secrecy: compromising current key doesn't                 |
 |       reveal past messages                                              |
-|     - Future secrecy: compromising current key doesn't                  |
+|     * Future secrecy: compromising current key doesn't                  |
 |       reveal future messages (after next ratchet step)                  |
 |                                                                         |
 |  SERVER'S ROLE:                                                         |
-|  - Store and forward encrypted blobs                                    |
-|  - Store public keys for key exchange                                   |
-|  - Cannot read message content                                          |
-|  - Can see: who messages whom, when, message size (metadata)            |
+|  * Store and forward encrypted blobs                                    |
+|  * Store public keys for key exchange                                   |
+|  * Cannot read message content                                          |
+|  * Can see: who messages whom, when, message size (metadata)            |
 |                                                                         |
 |  GROUP ENCRYPTION:                                                      |
-|  - Sender encrypts once with group key                                  |
-|  - Group key distributed via pairwise encrypted channels                |
-|  - Key rotated when members join/leave                                  |
+|  * Sender encrypts once with group key                                  |
+|  * Group key distributed via pairwise encrypted channels                |
+|  * Key rotated when members join/leave                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1135,9 +1140,9 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  { "type": "presence_update", "user_id": ..., "status": "online" }      |
 |                                                                         |
 |  DEDUPLICATION:                                                         |
-|  - client_msg_id (UUID generated by client) ensures idempotency         |
-|  - If server receives duplicate client_msg_id, return existing ACK      |
-|  - Server maintains recent msg IDs in Redis (TTL: 24 hours)             |
+|  * client_msg_id (UUID generated by client) ensures idempotency         |
+|  * If server receives duplicate client_msg_id, return existing ACK      |
+|  * Server maintains recent msg IDs in Redis (TTL: 24 hours)             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1152,31 +1157,31 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  SCALING EACH COMPONENT:                                                |
 |                                                                         |
 |  WEBSOCKET GATEWAY:                                                     |
-|  - 500K connections per server                                          |
-|  - 50M connections / 500K = 100 servers                                 |
-|  - L4 load balancer (connection-level, not request-level)               |
-|  - Scale by adding more gateway servers                                 |
+|  * 500K connections per server                                          |
+|  * 50M connections / 500K = 100 servers                                 |
+|  * L4 load balancer (connection-level, not request-level)               |
+|  * Scale by adding more gateway servers                                 |
 |                                                                         |
 |  CHAT SERVICE:                                                          |
-|  - Stateless: scale horizontally behind load balancer                   |
-|  - Partition by conversation_id for cache locality                      |
-|  - 50+ instances                                                        |
+|  * Stateless: scale horizontally behind load balancer                   |
+|  * Partition by conversation_id for cache locality                      |
+|  * 50+ instances                                                        |
 |                                                                         |
 |  MESSAGE STORE (Cassandra):                                             |
-|  - 100+ node cluster                                                    |
-|  - Replication factor: 3                                                |
-|  - Consistency: LOCAL_QUORUM for writes, LOCAL_ONE for reads            |
-|  - Add nodes to increase capacity (linear scaling)                      |
+|  * 100+ node cluster                                                    |
+|  * Replication factor: 3                                                |
+|  * Consistency: LOCAL_QUORUM for writes, LOCAL_ONE for reads            |
+|  * Add nodes to increase capacity (linear scaling)                      |
 |                                                                         |
 |  REDIS (Presence + Caches):                                             |
-|  - Redis Cluster: 30+ shards                                            |
-|  - Presence data: ~100 GB                                               |
-|  - Connection registry: ~10 GB                                          |
-|  - Offline queues: ~50 GB                                               |
+|  * Redis Cluster: 30+ shards                                            |
+|  * Presence data: ~100 GB                                               |
+|  * Connection registry: ~10 GB                                          |
+|  * Offline queues: ~50 GB                                               |
 |                                                                         |
 |  MEDIA STORAGE:                                                         |
-|  - S3 / blob store (virtually unlimited)                                |
-|  - CDN for delivery (CloudFront / Akamai)                               |
+|  * S3 / blob store (virtually unlimited)                                |
+|  * CDN for delivery (CloudFront / Akamai)                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1189,35 +1194,35 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  FAILURE SCENARIOS AND MITIGATIONS:                                     |
 |                                                                         |
 |  1. WEBSOCKET SERVER CRASH                                              |
-|     - Clients detect via missed heartbeat (30-90 sec)                   |
-|     - Auto-reconnect to different server                                |
-|     - Fetch undelivered messages from message store                     |
-|     - Connection registry auto-expires stale entries (TTL)              |
+|     * Clients detect via missed heartbeat (30-90 sec)                   |
+|     * Auto-reconnect to different server                                |
+|     * Fetch undelivered messages from message store                     |
+|     * Connection registry auto-expires stale entries (TTL)              |
 |                                                                         |
 |  2. CHAT SERVICE CRASH                                                  |
-|     - Messages already stored in Cassandra are safe                     |
-|     - In-flight messages: client retries with same client_msg_id        |
-|     - Dedup ensures no double delivery                                  |
+|     * Messages already stored in Cassandra are safe                     |
+|     * In-flight messages: client retries with same client_msg_id        |
+|     * Dedup ensures no double delivery                                  |
 |                                                                         |
 |  3. CASSANDRA NODE FAILURE                                              |
-|     - Replication factor 3: 2 replicas still serve reads/writes         |
-|     - Hinted handoff: writes queued for failed node                     |
-|     - Anti-entropy repair after node recovery                           |
+|     * Replication factor 3: 2 replicas still serve reads/writes         |
+|     * Hinted handoff: writes queued for failed node                     |
+|     * Anti-entropy repair after node recovery                           |
 |                                                                         |
 |  4. REDIS FAILURE                                                       |
-|     - Presence: gracefully degrade (show "last seen" only)              |
-|     - Connection registry: rebuild from WS server heartbeats            |
-|     - Offline queue: messages still in Cassandra as backup              |
+|     * Presence: gracefully degrade (show "last seen" only)              |
+|     * Connection registry: rebuild from WS server heartbeats            |
+|     * Offline queue: messages still in Cassandra as backup              |
 |                                                                         |
 |  5. NETWORK PARTITION                                                   |
-|     - Clients queue messages locally                                    |
-|     - Sync when connectivity restored                                   |
-|     - Conflict resolution via message timestamps                        |
+|     * Clients queue messages locally                                    |
+|     * Sync when connectivity restored                                   |
+|     * Conflict resolution via message timestamps                        |
 |                                                                         |
 |  6. ENTIRE REGION FAILURE                                               |
-|     - DNS failover to secondary region                                  |
-|     - Cassandra multi-DC replication                                    |
-|     - Some messages may be delayed but none lost                        |
+|     * DNS failover to secondary region                                  |
+|     * Cassandra multi-DC replication                                    |
+|     * Some messages may be delayed but none lost                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1245,12 +1250,12 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  +--------------------+          +--------------------+                 |
 |                                                                         |
 |  CROSS-REGION MESSAGING:                                                |
-|  - Alice (US) messages Bob (Asia)                                       |
-|  - Message stored in US Cassandra DC                                    |
-|  - Async replicated to Asia Cassandra DC                                |
-|  - Chat Service in Asia detects Bob is local                            |
-|  - Delivers via Asia WS Gateway                                         |
-|  - Total latency: ~200ms (cross-region network)                         |
+|  * Alice (US) messages Bob (Asia)                                       |
+|  * Message stored in US Cassandra DC                                    |
+|  * Async replicated to Asia Cassandra DC                                |
+|  * Chat Service in Asia detects Bob is local                            |
+|  * Delivers via Asia WS Gateway                                         |
+|  * Total latency: ~200ms (cross-region network)                         |
 |                                                                         |
 |  OPTIMIZATION: Route messages directly between regions                  |
 |  via inter-region message bus (skip DB replication path)                |
@@ -1276,10 +1281,10 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  4. LOWER SERVER LOAD: One connection vs thousands of HTTP requests     |
 |                                                                         |
 |  Long polling drawbacks for chat:                                       |
-|  - Each response requires a new HTTP request (header overhead)          |
-|  - Higher latency (time to establish new connection)                    |
-|  - Server must hold many pending HTTP connections                       |
-|  - Not truly bi-directional (client initiates all requests)             |
+|  * Each response requires a new HTTP request (header overhead)          |
+|  * Higher latency (time to establish new connection)                    |
+|  * Server must hold many pending HTTP connections                       |
+|  * Not truly bi-directional (client initiates all requests)             |
 |                                                                         |
 |  Long polling IS acceptable as a fallback when WebSockets are           |
 |  blocked (corporate firewalls, older browsers).                         |
@@ -1304,16 +1309,16 @@ group conversations, and deliver messages reliably even when recipients are offl
 |     requests missing messages                                           |
 |                                                                         |
 |  WHY NOT JUST TIMESTAMPS?                                               |
-|  - Clocks on different servers can differ (clock skew)                  |
-|  - Two messages at "same" millisecond need tiebreaker                   |
-|  - NTP sync is typically within 1-10ms but not guaranteed               |
+|  * Clocks on different servers can differ (clock skew)                  |
+|  * Two messages at "same" millisecond need tiebreaker                   |
+|  * NTP sync is typically within 1-10ms but not guaranteed               |
 |                                                                         |
 |  TRADE-OFF: The Redis INCR is a single point of serialization per       |
 |  conversation. This is fine because:                                    |
-|  - Messages in one conversation are naturally sequential                |
-|  - Even the busiest group sends maybe 100 msgs/sec                      |
-|  - Redis INCR handles 100K+ ops/sec per key                             |
-|  - Different conversations hit different Redis shards                   |
+|  * Messages in one conversation are naturally sequential                |
+|  * Even the busiest group sends maybe 100 msgs/sec                      |
+|  * Redis INCR handles 100K+ ops/sec per key                             |
+|  * Different conversations hit different Redis shards                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1328,20 +1333,20 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  A: Fan-out strategy depends on group size:                             |
 |                                                                         |
 |  SMALL GROUPS (<100 members):                                           |
-|  - Direct fan-out: send to each member's WS connection                  |
-|  - Batch members on same WS server into single dispatch                 |
-|  - All done in Chat Service synchronously                               |
+|  * Direct fan-out: send to each member's WS connection                  |
+|  * Batch members on same WS server into single dispatch                 |
+|  * All done in Chat Service synchronously                               |
 |                                                                         |
 |  MEDIUM GROUPS (100-1000 members):                                      |
-|  - Async fan-out via message queue (Kafka)                              |
-|  - Multiple fan-out workers process in parallel                         |
-|  - Don't block the sender waiting for all deliveries                    |
+|  * Async fan-out via message queue (Kafka)                              |
+|  * Multiple fan-out workers process in parallel                         |
+|  * Don't block the sender waiting for all deliveries                    |
 |                                                                         |
 |  VERY LARGE GROUPS (1000+ members, like channels):                      |
-|  - Use pub/sub model instead of direct delivery                         |
-|  - Group has a "channel" in Redis Pub/Sub                               |
-|  - WS servers subscribe to channels for their connected users           |
-|  - Single publish, multiple WS servers receive and distribute           |
+|  * Use pub/sub model instead of direct delivery                         |
+|  * Group has a "channel" in Redis Pub/Sub                               |
+|  * WS servers subscribe to channels for their connected users           |
+|  * Single publish, multiple WS servers receive and distribute           |
 |                                                                         |
 |  Note: WhatsApp caps groups at 1024 members. Slack channels             |
 |  can be larger but use a different delivery model (pull on open).       |
@@ -1359,22 +1364,22 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  A: Read receipts are implemented differently for 1:1 vs groups:        |
 |                                                                         |
 |  1:1 CHAT:                                                              |
-|  - When Bob opens conversation with Alice:                              |
+|  * When Bob opens conversation with Alice:                              |
 |    a. Client sends: read_receipt(conversation_id, last_msg_id)          |
 |    b. Server updates last_read_msg_id in conversation_members           |
 |    c. Server forwards receipt to Alice's device                         |
 |    d. All messages up to last_msg_id marked as "read"                   |
 |                                                                         |
 |  GROUP CHAT:                                                            |
-|  - Same mechanism but DON'T fan-out read receipts to all members        |
-|  - Instead, store read position per member in DB                        |
-|  - When someone taps "message info", query read positions               |
-|  - This avoids N^2 messages (N members x N read receipts)               |
+|  * Same mechanism but DON'T fan-out read receipts to all members        |
+|  * Instead, store read position per member in DB                        |
+|  * When someone taps "message info", query read positions               |
+|  * This avoids N^2 messages (N members x N read receipts)               |
 |                                                                         |
 |  OPTIMIZATION:                                                          |
-|  - Batch read receipts: send one receipt for "read up to msg X"         |
-|  - Don't send receipt for every individual message                      |
-|  - Debounce: wait 1 second after last scroll before sending             |
+|  * Batch read receipts: send one receipt for "read up to msg X"         |
+|  * Don't send receipt for every individual message                      |
+|  * Debounce: wait 1 second after last scroll before sending             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1387,23 +1392,23 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  Q: How do you prevent duplicate messages?                              |
 |                                                                         |
 |  A: Duplicates can occur when:                                          |
-|  - Client retries after network timeout (didn't receive ACK)            |
-|  - Server processes message but ACK is lost in transit                  |
-|  - Network reconnection replays buffered messages                       |
+|  * Client retries after network timeout (didn't receive ACK)            |
+|  * Server processes message but ACK is lost in transit                  |
+|  * Network reconnection replays buffered messages                       |
 |                                                                         |
 |  SOLUTION: Client-generated idempotency key                             |
 |                                                                         |
 |  1. Client generates UUID (client_msg_id) for each message              |
 |  2. Sends message with client_msg_id                                    |
 |  3. Server checks Redis: EXISTS dedup:{client_msg_id}                   |
-|     - If exists: return previous ACK (duplicate, skip processing)       |
-|     - If not: process message, SET dedup:{client_msg_id} with TTL       |
+|     * If exists: return previous ACK (duplicate, skip processing)       |
+|     * If not: process message, SET dedup:{client_msg_id} with TTL       |
 |  4. TTL: 24 hours (long enough for any retry to be caught)              |
 |                                                                         |
 |  WHY CLIENT-GENERATED ID?                                               |
-|  - Client can retry safely without knowing if server processed it       |
-|  - Server doesn't need to track "was this already sent?"                |
-|  - Works even if client loses connection and reconnects to              |
+|  * Client can retry safely without knowing if server processed it       |
+|  * Server doesn't need to track "was this already sent?"                |
+|  * Works even if client loses connection and reconnects to              |
 |    a different server                                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1431,12 +1436,12 @@ group conversations, and deliver messages reliably even when recipients are offl
 |     and update last_read_msg_id                                         |
 |  4. Store in Redis: unread:{user_id}:{conv_id} = count                  |
 |  5. Total badge count: SUM of all unread counts for a user              |
-|     - Maintain total_unread:{user_id} separately                        |
-|     - Increment/decrement atomically with per-conversation count        |
+|     * Maintain total_unread:{user_id} separately                        |
+|     * Increment/decrement atomically with per-conversation count        |
 |                                                                         |
 |  Edge case: user opens conversation on one device but not another       |
-|  - Sync last_read_msg_id across devices                                 |
-|  - Read on any device updates the shared last_read_msg_id               |
+|  * Sync last_read_msg_id across devices                                 |
+|  * Read on any device updates the shared last_read_msg_id               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1451,25 +1456,25 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  A: Key considerations:                                                 |
 |                                                                         |
 |  1. E2E ENCRYPTION                                                      |
-|     - Server only stores encrypted blobs                                |
-|     - Cannot read message content even if compelled                     |
-|     - Metadata (who, when) is still visible to server                   |
+|     * Server only stores encrypted blobs                                |
+|     * Cannot read message content even if compelled                     |
+|     * Metadata (who, when) is still visible to server                   |
 |                                                                         |
 |  2. DATA DELETION (Right to be forgotten)                               |
-|     - User can delete their account                                     |
-|     - All messages in 1:1 chats: mark as deleted for this user          |
-|     - Group messages: replace sender with "Deleted User"                |
-|     - Media files: queue for deletion from object store                 |
-|     - Propagate deletion to all replicas and backups                    |
+|     * User can delete their account                                     |
+|     * All messages in 1:1 chats: mark as deleted for this user          |
+|     * Group messages: replace sender with "Deleted User"                |
+|     * Media files: queue for deletion from object store                 |
+|     * Propagate deletion to all replicas and backups                    |
 |                                                                         |
 |  3. DATA PORTABILITY                                                    |
-|     - Export chat history feature                                       |
-|     - Decrypt on device, export as readable format                      |
+|     * Export chat history feature                                       |
+|     * Decrypt on device, export as readable format                      |
 |                                                                         |
 |  4. DATA RESIDENCY                                                      |
-|     - Some countries require data stored locally                        |
-|     - Route users to regional clusters                                  |
-|     - Cross-region messaging: store in both regions                     |
+|     * Some countries require data stored locally                        |
+|     * Route users to regional clusters                                  |
+|     * Cross-region messaging: store in both regions                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1491,17 +1496,17 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  5. Recipients download media from CDN when viewing                     |
 |                                                                         |
 |  OPTIMIZATIONS:                                                         |
-|  - Client compresses images before upload (reduce bandwidth)            |
-|  - Generate thumbnail server-side for message preview                   |
-|  - Progressive loading: show blur -> thumbnail -> full image            |
-|  - Videos: stream via HLS, don't download entire file                   |
-|  - Media URLs have expiring tokens (security)                           |
+|  * Client compresses images before upload (reduce bandwidth)            |
+|  * Generate thumbnail server-side for message preview                   |
+|  * Progressive loading: show blur -> thumbnail -> full image            |
+|  * Videos: stream via HLS, don't download entire file                   |
+|  * Media URLs have expiring tokens (security)                           |
 |                                                                         |
 |  E2E ENCRYPTION FOR MEDIA:                                              |
-|  - Client encrypts media with random AES key before upload              |
-|  - AES key sent in the (E2E encrypted) message body                     |
-|  - Server stores encrypted blob, cannot decrypt                         |
-|  - Recipient decrypts using key from message                            |
+|  * Client encrypts media with random AES key before upload              |
+|  * AES key sent in the (E2E encrypted) message body                     |
+|  * Server stores encrypted blob, cannot decrypt                         |
+|  * Recipient decrypts using key from message                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1522,16 +1527,16 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  4. Cache top 50 conversations per user in Redis                        |
 |                                                                         |
 |  WHEN NEW MESSAGE ARRIVES:                                              |
-|  - Update last_message_at for the conversation                          |
-|  - Move conversation to top of the list                                 |
-|  - Increment unread count                                               |
-|  - Push update to client's conversation list view                       |
+|  * Update last_message_at for the conversation                          |
+|  * Move conversation to top of the list                                 |
+|  * Increment unread count                                               |
+|  * Push update to client's conversation list view                       |
 |                                                                         |
 |  ARCHIVING:                                                             |
-|  - Users can archive conversations (move out of main list)              |
-|  - Archived conversations don't appear in default view                  |
-|  - Still receive messages (but muted)                                   |
-|  - Reduces the active conversation list for heavy users                 |
+|  * Users can archive conversations (move out of main list)              |
+|  * Archived conversations don't appear in default view                  |
+|  * Still receive messages (but muted)                                   |
+|  * Reduces the active conversation list for heavy users                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1546,22 +1551,22 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  A: This is challenging with E2E encryption:                            |
 |                                                                         |
 |  WITHOUT E2E ENCRYPTION:                                                |
-|  - Index messages in Elasticsearch                                      |
-|  - Full-text search across user's conversations                         |
-|  - Server-side search is straightforward                                |
+|  * Index messages in Elasticsearch                                      |
+|  * Full-text search across user's conversations                         |
+|  * Server-side search is straightforward                                |
 |                                                                         |
 |  WITH E2E ENCRYPTION (WhatsApp approach):                               |
-|  - Server cannot index encrypted messages                               |
-|  - Search happens ON DEVICE only                                        |
-|  - Client maintains a local SQLite database of decrypted messages       |
-|  - Full-text search on local DB                                         |
-|  - Limitation: can only search messages on current device               |
+|  * Server cannot index encrypted messages                               |
+|  * Search happens ON DEVICE only                                        |
+|  * Client maintains a local SQLite database of decrypted messages       |
+|  * Full-text search on local DB                                         |
+|  * Limitation: can only search messages on current device               |
 |                                                                         |
 |  HYBRID (Slack approach - no E2E by default):                           |
-|  - Messages stored in plaintext server-side                             |
-|  - Elasticsearch index of all messages                                  |
-|  - Server-side search with access control (only your channels)          |
-|  - Faster and more comprehensive but less private                       |
+|  * Messages stored in plaintext server-side                             |
+|  * Elasticsearch index of all messages                                  |
+|  * Server-side search with access control (only your channels)          |
+|  * Faster and more comprehensive but less private                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1610,33 +1615,33 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  A:                                                                      |
 |                                                                          |
 |  DELIVERY METRICS:                                                       |
-|  - Message delivery latency (p50, p95, p99)                              |
-|  - Delivery success rate (target: 99.99%)                                |
-|  - Time to deliver for offline users (after reconnect)                   |
-|  - Message loss rate (target: 0%)                                        |
+|  * Message delivery latency (p50, p95, p99)                              |
+|  * Delivery success rate (target: 99.99%)                                |
+|  * Time to deliver for offline users (after reconnect)                   |
+|  * Message loss rate (target: 0%)                                        |
 |                                                                          |
 |  CONNECTION METRICS:                                                     |
-|  - Active WebSocket connections                                          |
-|  - Connection churn rate (connects/disconnects per second)               |
-|  - Handshake latency                                                     |
-|  - Connection lifetime distribution                                      |
+|  * Active WebSocket connections                                          |
+|  * Connection churn rate (connects/disconnects per second)               |
+|  * Handshake latency                                                     |
+|  * Connection lifetime distribution                                      |
 |                                                                          |
 |  STORAGE METRICS:                                                        |
-|  - Cassandra write latency (p99)                                         |
-|  - Cassandra partition size distribution                                 |
-|  - Storage growth rate                                                   |
-|  - Compaction lag                                                        |
+|  * Cassandra write latency (p99)                                         |
+|  * Cassandra partition size distribution                                 |
+|  * Storage growth rate                                                   |
+|  * Compaction lag                                                        |
 |                                                                          |
 |  PRESENCE METRICS:                                                       |
-|  - Presence update latency                                               |
-|  - False offline rate (user online but shown offline)                    |
-|  - Heartbeat timeout rate                                                |
+|  * Presence update latency                                               |
+|  * False offline rate (user online but shown offline)                    |
+|  * Heartbeat timeout rate                                                |
 |                                                                          |
 |  BUSINESS METRICS:                                                       |
-|  - Messages sent per DAU                                                 |
-|  - Group creation rate                                                   |
-|  - Media message percentage                                              |
-|  - Notification open rate                                                |
+|  * Messages sent per DAU                                                 |
+|  * Group creation rate                                                   |
+|  * Media message percentage                                              |
+|  * Notification open rate                                                |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -1667,10 +1672,10 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  Conversation list load: <200ms                                         |
 |                                                                         |
 |  MAIN TRADEOFFS:                                                        |
-|  - Stateful connections (WS) vs stateless (HTTP) -> chose WS            |
-|  - Consistency vs availability for presence -> chose availability       |
-|  - E2E encryption vs server-side search -> depends on product           |
-|  - Cassandra (AP) vs MySQL (CP) for messages -> chose AP                |
+|  * Stateful connections (WS) vs stateless (HTTP) -> chose WS            |
+|  * Consistency vs availability for presence -> chose availability       |
+|  * E2E encryption vs server-side search -> depends on product           |
+|  * Cassandra (AP) vs MySQL (CP) for messages -> chose AP                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

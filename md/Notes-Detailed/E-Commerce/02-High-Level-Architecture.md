@@ -66,35 +66,35 @@ explaining microservices, data flow, and technology choices.
 ### USER SERVICE
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  USER SERVICE                                                           |
-|                                                                         |
-|  RESPONSIBILITIES:                                                      |
-|  * User registration and authentication                                 |
-|  * Profile management                                                   |
-|  * Address book management                                              |
-|  * Wishlist                                                             |
-|                                                                         |
-|  ENDPOINTS:                                                             |
-|  POST /users/register                                                   |
-|  POST /users/login                                                      |
-|  GET  /users/profile                                                    |
-|  POST /users/addresses                                                  |
-|  GET  /users/wishlist                                                   |
-|                                                                         |
-|  DATABASE: PostgreSQL (users, addresses)                                |
-|  * WHY POSTGRESQL? User data is relational (user->addresses,            |
-|    user->wishlist). Needs ACID for signup/login (no duplicate emails).  |
-|    Mature auth ecosystem (pgcrypto, row-level security).                |
-|                                                                         |
-|  CACHE: Redis (sessions, profile cache)                                 |
-|  * WHY REDIS? Sessions need sub-ms reads on every authenticated         |
-|    request. Redis TTL auto-expires sessions. In-memory speed avoids     |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  USER SERVICE                                                            |
+|                                                                          |
+|  RESPONSIBILITIES:                                                       |
+|  * User registration and authentication                                  |
+|  * Profile management                                                    |
+|  * Address book management                                               |
+|  * Wishlist                                                              |
+|                                                                          |
+|  ENDPOINTS:                                                              |
+|  POST /users/register                                                    |
+|  POST /users/login                                                       |
+|  GET  /users/profile                                                     |
+|  POST /users/addresses                                                   |
+|  GET  /users/wishlist                                                    |
+|                                                                          |
+|  DATABASE: PostgreSQL (users, addresses)                                 |
+|  * WHY POSTGRESQL? User data is relational (user->addresses,             |
+|    user->wishlist). Needs ACID for signup/login (no duplicate emails).   |
+|    Mature auth ecosystem (pgcrypto, row-level security).                 |
+|                                                                          |
+|  CACHE: Redis (sessions, profile cache)                                  |
+|  * WHY REDIS? Sessions need sub-ms reads on every authenticated          |
+|    request. Redis TTL auto-expires sessions. In-memory speed avoids      |
 |    hitting DB on every API call. Profile cache reduces read load         |
-|    (profiles are read 100x more than updated).                          |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|    (profiles are read 100x more than updated).                           |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### PRODUCT CATALOG SERVICE
@@ -119,9 +119,9 @@ explaining microservices, data flow, and technology choices.
 |                                                                         |
 |  WHY MONGODB?                                                           |
 |  Products have varying attributes:                                      |
-|  - Laptop: RAM, processor, screen size                                  |
-|  - Shirt: size, color, material                                         |
-|  - Book: author, pages, ISBN                                            |
+|  * Laptop: RAM, processor, screen size                                  |
+|  * Shirt: size, color, material                                         |
+|  * Book: author, pages, ISBN                                            |
 |                                                                         |
 |  Document model handles this flexibility well.                          |
 |                                                                         |
@@ -159,7 +159,7 @@ explaining microservices, data flow, and technology choices.
 |    ~50ms vs seconds with SQL LIKE. Built-in support for fuzzy           |
 |    matching (typo tolerance), faceted aggregations (filter counts),     |
 |    synonym expansion, and relevance scoring (BM25). MongoDB can't       |
-|    do these at e-commerce scale — ES is purpose-built for search.       |
+|    do these at e-commerce scale - ES is purpose-built for search.       |
 |                                                                         |
 |  FEATURES:                                                              |
 |  * Fuzzy matching for typos                                             |
@@ -182,61 +182,61 @@ explaining microservices, data flow, and technology choices.
 ### CART SERVICE
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  CART SERVICE                                                           |
-|                                                                         |
-|  RESPONSIBILITIES:                                                      |
-|  * Manage shopping cart                                                 |
-|  * Persist cart across sessions                                         |
-|  * Handle cart merging (guest > logged in)                              |
-|  * Price updates                                                        |
-|                                                                         |
-|  ENDPOINTS:                                                             |
-|  GET    /cart                                                           |
-|  POST   /cart/items                                                     |
-|  PUT    /cart/items/{id}                                                |
-|  DELETE /cart/items/{id}                                                |
-|  POST   /cart/apply-coupon                                              |
-|                                                                         |
-|  STORAGE: Redis (primary) + PostgreSQL (backup)                         |
-|  * WHY REDIS PRIMARY? Cart is accessed on every page view and           |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  CART SERVICE                                                            |
+|                                                                          |
+|  RESPONSIBILITIES:                                                       |
+|  * Manage shopping cart                                                  |
+|  * Persist cart across sessions                                          |
+|  * Handle cart merging (guest > logged in)                               |
+|  * Price updates                                                         |
+|                                                                          |
+|  ENDPOINTS:                                                              |
+|  GET    /cart                                                            |
+|  POST   /cart/items                                                      |
+|  PUT    /cart/items/{id}                                                 |
+|  DELETE /cart/items/{id}                                                 |
+|  POST   /cart/apply-coupon                                               |
+|                                                                          |
+|  STORAGE: Redis (primary) + PostgreSQL (backup)                          |
+|  * WHY REDIS PRIMARY? Cart is accessed on every page view and            |
 |    updated frequently (add/remove/quantity change). Redis gives          |
-|    sub-ms reads/writes vs ~5-10ms for PostgreSQL. Hash structure        |
-|    maps naturally to cart:{user_id}. TTL auto-cleans abandoned          |
-|    carts (30-day expiry) without running cleanup jobs.                  |
-|  * WHY POSTGRESQL BACKUP? Redis is volatile — if Redis restarts,        |
+|    sub-ms reads/writes vs ~5-10ms for PostgreSQL. Hash structure         |
+|    maps naturally to cart:{user_id}. TTL auto-cleans abandoned           |
+|    carts (30-day expiry) without running cleanup jobs.                   |
+|  * WHY POSTGRESQL BACKUP? Redis is volatile - if Redis restarts,         |
 |    cart data is lost. Async write-behind to PostgreSQL ensures           |
 |    cart survives Redis failures. Also needed for analytics               |
 |    (abandoned cart reports, conversion tracking).                        |
-|                                                                         |
-|  CART STRUCTURE IN REDIS:                                               |
-|  +------------------------------------------------------------------+   |
-|  | Key: cart:{user_id}                                              |   |
-|  | Value: {                                                         |   |
-|  |   "items": [                                                     |   |
-|  |     {                                                            |   |
-|  |       "product_id": "prod_123",                                  |   |
-|  |       "quantity": 2,                                             |   |
-|  |       "price": 999.00,                                           |   |
-|  |       "added_at": "2024-01-15T10:00:00Z"                         |   |
-|  |     }                                                            |   |
-|  |   ],                                                             |   |
-|  |   "coupon": "SAVE10",                                            |   |
-|  |   "updated_at": "2024-01-15T10:30:00Z"                           |   |
-|  | }                                                                |   |
-|  | TTL: 30 days                                                     |   |
-|  +------------------------------------------------------------------+   |
-|                                                                         |
-|  CART CHALLENGES:                                                       |
-|  * Price changes: Recalculate on checkout                               |
-|  * Out of stock: Notify user on checkout                                |
-|  * Guest carts: Merge when user logs in                                 |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  CART STRUCTURE IN REDIS:                                                |
+|  +-------------------------------------------------------------------+   |
+|  | Key: cart:{user_id}                                               |   |
+|  | Value: {                                                          |   |
+|  |   "items": [                                                      |   |
+|  |     {                                                             |   |
+|  |       "product_id": "prod_123",                                   |   |
+|  |       "quantity": 2,                                              |   |
+|  |       "price": 999.00,                                            |   |
+|  |       "added_at": "2024-01-15T10:00:00Z"                          |   |
+|  |     }                                                             |   |
+|  |   ],                                                              |   |
+|  |   "coupon": "SAVE10",                                             |   |
+|  |   "updated_at": "2024-01-15T10:30:00Z"                            |   |
+|  | }                                                                 |   |
+|  | TTL: 30 days                                                      |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  CART CHALLENGES:                                                        |
+|  * Price changes: Recalculate on checkout                                |
+|  * Out of stock: Notify user on checkout                                 |
+|  * Guest carts: Merge when user logs in                                  |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
-### INVENTORY SERVICE 
+### INVENTORY SERVICE
 
 ```
 +-------------------------------------------------------------------------+
@@ -284,91 +284,91 @@ explaining microservices, data flow, and technology choices.
 +-------------------------------------------------------------------------+
 ```
 
-### ORDER SERVICE 
+### ORDER SERVICE
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  ORDER SERVICE (Critical!)                                              |
-|                                                                         |
-|  RESPONSIBILITIES:                                                      |
-|  * Create orders from cart                                              |
-|  * Order lifecycle management                                           |
-|  * Order history                                                        |
-|  * Cancellation and returns                                             |
-|                                                                         |
-|  ENDPOINTS:                                                             |
-|  POST /orders (create order)                                            |
-|  GET  /orders/{id}                                                      |
-|  GET  /orders (user's orders)                                           |
-|  POST /orders/{id}/cancel                                               |
-|  POST /orders/{id}/return                                               |
-|                                                                         |
-|  ORDER STATES:                                                          |
-|  +------------------------------------------------------------------+   |
-|  |                                                                  |   |
-|  |  CREATED > PAYMENT_PENDING > CONFIRMED > PROCESSING              |   |
-|  |                                              v                   |   |
-|  |                                          SHIPPED                 |   |
-|  |                                              v                   |   |
-|  |                                          DELIVERED               |   |
-|  |                                              v                   |   |
-|  |                                          COMPLETED               |   |
-|  |                                                                  |   |
-|  |  At any point: > CANCELLED or RETURNED                           |   |
-|  |                                                                  |   |
-|  +------------------------------------------------------------------+   |
-|                                                                         |
-|  DATABASE: PostgreSQL                                                   |
-|  * WHY POSTGRESQL? Orders involve money — needs strict ACID             |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  ORDER SERVICE (Critical!)                                               |
+|                                                                          |
+|  RESPONSIBILITIES:                                                       |
+|  * Create orders from cart                                               |
+|  * Order lifecycle management                                            |
+|  * Order history                                                         |
+|  * Cancellation and returns                                              |
+|                                                                          |
+|  ENDPOINTS:                                                              |
+|  POST /orders (create order)                                             |
+|  GET  /orders/{id}                                                       |
+|  GET  /orders (user's orders)                                            |
+|  POST /orders/{id}/cancel                                                |
+|  POST /orders/{id}/return                                                |
+|                                                                          |
+|  ORDER STATES:                                                           |
+|  +-------------------------------------------------------------------+   |
+|  |                                                                   |   |
+|  |  CREATED > PAYMENT_PENDING > CONFIRMED > PROCESSING               |   |
+|  |                                              v                    |   |
+|  |                                          SHIPPED                  |   |
+|  |                                              v                    |   |
+|  |                                          DELIVERED                |   |
+|  |                                              v                    |   |
+|  |                                          COMPLETED                |   |
+|  |                                                                   |   |
+|  |  At any point: > CANCELLED or RETURNED                            |   |
+|  |                                                                   |   |
+|  +-------------------------------------------------------------------+   |
+|                                                                          |
+|  DATABASE: PostgreSQL                                                    |
+|  * WHY POSTGRESQL? Orders involve money - needs strict ACID              |
 |    guarantees (no partial orders, no lost payments). Relational          |
 |    model fits naturally: order->order_items->status_history.             |
 |    Supports complex queries (order reports, seller payouts,              |
 |    refund joins). JSONB column for flexible metadata without             |
 |    sacrificing transactions.                                             |
-|                                                                         |
-|  * orders (main order info)                                             |
-|  * order_items (line items)                                             |
-|  * order_status_history (audit trail)                                   |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  * orders (main order info)                                              |
+|  * order_items (line items)                                              |
+|  * order_status_history (audit trail)                                    |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ### PAYMENT SERVICE
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  PAYMENT SERVICE                                                        |
-|                                                                         |
-|  RESPONSIBILITIES:                                                      |
-|  * Payment processing                                                   |
-|  * Multiple payment methods                                             |
-|  * Refunds                                                              |
-|  * Payment reconciliation                                               |
-|                                                                         |
-|  INTEGRATIONS:                                                          |
-|  * Stripe, Razorpay, PayU (payment gateways)                            |
-|  * UPI (India)                                                          |
-|  * Wallets (PayPal, Paytm)                                              |
-|                                                                         |
-|  CRITICAL FEATURES:                                                     |
-|  * Idempotency keys for retries                                         |
-|  * PCI-DSS compliance                                                   |
-|  * Fraud detection integration                                          |
-|                                                                         |
-|  DATABASE: PostgreSQL                                                   |
-|  * WHY POSTGRESQL? Payments are financial records — ACID is              |
++--------------------------------------------------------------------------+
+|                                                                          |
+|  PAYMENT SERVICE                                                         |
+|                                                                          |
+|  RESPONSIBILITIES:                                                       |
+|  * Payment processing                                                    |
+|  * Multiple payment methods                                              |
+|  * Refunds                                                               |
+|  * Payment reconciliation                                                |
+|                                                                          |
+|  INTEGRATIONS:                                                           |
+|  * Stripe, Razorpay, PayU (payment gateways)                             |
+|  * UPI (India)                                                           |
+|  * Wallets (PayPal, Paytm)                                               |
+|                                                                          |
+|  CRITICAL FEATURES:                                                      |
+|  * Idempotency keys for retries                                          |
+|  * PCI-DSS compliance                                                    |
+|  * Fraud detection integration                                           |
+|                                                                          |
+|  DATABASE: PostgreSQL                                                    |
+|  * WHY POSTGRESQL? Payments are financial records - ACID is              |
 |    non-negotiable (double-charge prevention via unique                   |
 |    idempotency_key constraint). Need strong consistency for              |
 |    refund reconciliation. Audit compliance requires durable,             |
 |    tamper-evident storage. Foreign keys enforce referential              |
 |    integrity (payment->order linkage).                                   |
-|                                                                         |
-|  * payments (with idempotency_key)                                      |
-|  * refunds                                                              |
-|                                                                         |
-+-------------------------------------------------------------------------+
+|                                                                          |
+|  * payments (with idempotency_key)                                       |
+|  * refunds                                                               |
+|                                                                          |
++--------------------------------------------------------------------------+
 ```
 
 ## SECTION 2.3: CHECKOUT FLOW
@@ -412,9 +412,9 @@ explaining microservices, data flow, and technology choices.
 |   |            |          |          |           |          |           |
 |                                                                         |
 |  IF PAYMENT FAILS:                                                      |
-|  - Order marked as PAYMENT_FAILED                                       |
-|  - Inventory released                                                   |
-|  - User notified                                                        |
+|  * Order marked as PAYMENT_FAILED                                       |
+|  * Inventory released                                                   |
+|  * User notified                                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -442,7 +442,7 @@ explaining microservices, data flow, and technology choices.
 +-------------------------------------------------------------------------+
 ```
 
-## CHAPTER SUMMARY
+## SECTION 1: CHAPTER SUMMARY
 
 ```
 +-------------------------------------------------------------------------+
@@ -479,4 +479,3 @@ explaining microservices, data flow, and technology choices.
 ```
 
 ## END OF CHAPTER 2
-

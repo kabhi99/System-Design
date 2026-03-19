@@ -249,7 +249,13 @@ with strict latency and consistency requirements.
 |  * 5 GB x 365 = 1.8 TB/year                                             |
 |  * Must be immutable (event sourcing) + queryable                       |
 |  * Hot storage: last 90 days (~450 GB) in fast DB                       |
+|    WHY FAST DB (PostgreSQL/TimescaleDB): Recent trades queried          |
+|    constantly (portfolio value, P&L, trade history). Need sub-100ms     |
+|    reads with complex filters (by stock, date range, type).             |
 |  * Cold storage: older data in S3/HDFS for compliance                   |
+|    WHY S3: Regulatory requirement to retain 7+ years of trades.         |
+|    S3 is cheapest durable storage ($0.023/GB/mo vs $0.10+ for DB).      |
+|    Rarely queried - batch analytics via Spark/Athena when needed.       |
 |                                                                         |
 |  -------------------------------------------------------------------    |
 |                                                                         |

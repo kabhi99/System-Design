@@ -223,6 +223,10 @@
 |  STORAGE:                                                               |
 |  * Configuration: < 100 MB (in-memory)                                  |
 |  * Rate limit counters: Redis cluster                                   |
+|    WHY REDIS: Counters need atomic INCR + TTL for sliding windows.      |
+|    In-memory gives sub-ms reads (on every request!). Shared state       |
+|    across all gateway nodes. Native support for Lua-based rate          |
+|    limiting scripts (check + increment in single round-trip).           |
 |  * Logs: 1 KB per request x 1.7B = 1.7 TB/day                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -377,4 +381,3 @@
 ```
 
 ## END OF PART 1
-
