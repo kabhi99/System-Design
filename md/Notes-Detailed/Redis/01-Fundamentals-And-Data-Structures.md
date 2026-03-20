@@ -82,6 +82,250 @@ the most popular key-value store in the world.
 +---------------------------------------------------------------------------+
 ```
 
+### HOW IS REDIS SO FAST ON A SINGLE THREAD?
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  The intuition "single thread = slow" comes from CPU-heavy workloads.     |
+|  Redis is different — its bottleneck is NEVER the CPU.                    |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REASON 1: EVERYTHING IS IN RAM                                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Disk read (HDD):     ~10,000,000 ns   (10 ms)                            |
+|  SSD read:               ~100,000 ns   (0.1 ms)                           |
+|  RAM read:                   ~100 ns   (0.0001 ms)                        |
+|                                                                           |
+|  A GET key is a hash table lookup in RAM — ~100 nanoseconds.              |
+|  PostgreSQL for the same: parse SQL, check buffer cache, plan query,      |
+|  possibly read from disk. Redis skips ALL of that.                        |
+|                                                                           |
+|  At 100ns per command, one thread can theoretically do 10M ops/sec.       |
+|  The real limit (~300K ops/sec) is the network, not the CPU.              |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REASON 2: ZERO MULTI-THREADING OVERHEAD                                  |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|                          PostgreSQL/MySQL         Redis                   |
+|                          ----------------         -----                   |
+|  Lock acquisition        ~500ns per row lock      0 (no locks)            |
+|  Context switching       ~5,000ns per switch      0 (one thread)          |
+|  Cache line bouncing     frequent (shared data)   0 (no sharing)          |
+|  Memory barriers         on every lock/unlock     0                       |
+|  Thread coordination     mutex, semaphore, etc.   0                       |
+|                                                                           |
+|  A multi-threaded system doing 100K ops/sec might spend 30-40% of CPU     |
+|  time on lock contention and context switches. Redis spends 0%.           |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REASON 3: OPTIMIZED DATA STRUCTURES                                      |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Hash (small):    ziplist — contiguous memory, CPU cache friendly         |
+|  Hash (large):    hash table — O(1) lookup                                |
+|  Sorted Set:      skip list — O(log n), simpler than B-tree               |
+|  List (small):    ziplist — compact, sequential scan fast in cache        |
+|  List (large):    quicklist — linked list of ziplists                     |
+|                                                                           |
+|  WHY THIS MATTERS: Modern CPUs are 100x faster accessing data in          |
+|  L1/L2 cache vs RAM. A MySQL B-tree node is ~16KB spread across           |
+|  memory. A Redis ziplist for a small hash is ~64 bytes sitting in         |
+|  L1 cache. Cache-friendly = fast.                                         |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REASON 4: NO PARSING OVERHEAD                                            |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  MySQL:   "SELECT value FROM table WHERE key = 'user:123'"                |
+|           -> parse SQL -> build AST -> optimize plan -> execute           |
+|           -> cost: ~50,000 ns just for parsing                            |
+|                                                                           |
+|  Redis:   "GET user:123"                                                  |
+|           -> read command name -> lookup in command table -> call fn      |
+|           -> cost: ~200 ns (RESP protocol is pre-structured)              |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REASON 5: I/O MULTIPLEXING (see next section for deep dive)              |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  One thread handles 10,000+ concurrent connections using epoll/kqueue.    |
+|  Never blocks waiting for a slow client. Only processes clients that      |
+|  already have data ready to read.                                         |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  WHERE THE TIME ACTUALLY GOES (single GET key, p99)                       |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Network: client -> Redis           ~50,000 ns   (50 us)                  |
+|  Protocol parsing (RESP)               ~200 ns                            |
+|  Command lookup                        ~100 ns                            |
+|  Hash table lookup in RAM              ~100 ns                            |
+|  Build response                        ~100 ns                            |
+|  Network: Redis -> client           ~50,000 ns   (50 us)                  |
+|  -------------------------------------------------------                  |
+|  Total                             ~100,500 ns   (~100 us)                |
+|                                                                           |
+|  CPU work (actual Redis code):         ~500 ns   <-- 0.5% of total        |
+|  Network round-trip:               ~100,000 ns   <-- 99.5% of total       |
+|                                                                           |
+|  Adding more threads for ~500ns of CPU work gains almost nothing.         |
+|  The bottleneck is the NETWORK, not the CPU.                              |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+### I/O MULTIPLEXING DEEP DIVE (EPOLL / KQUEUE)
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  THE PROBLEM: 1 thread, 10,000 clients. How?                              |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  APPROACH 1: BLOCKING I/O (naive, doesn't work)                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Analogy: A waiter stands at ONE table until they order.                  |
+|                                                                           |
+|  Thread calls read(client_A_socket)                                       |
+|    -> BLOCKS until Client A sends data                                    |
+|    -> Client A is slow (bad network)... waits 30ms                        |
+|    -> finally reads, processes, responds                                  |
+|  Thread calls read(client_B_socket)                                       |
+|    -> BLOCKS again...                                                     |
+|                                                                           |
+|  Meanwhile Clients C through 10,000 are starving.                         |
+|  Result: 1 client served at a time. Useless at scale.                     |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  APPROACH 2: THREAD-PER-CLIENT (expensive, doesn't scale)                 |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Analogy: Hire 10,000 waiters — one per table.                            |
+|                                                                           |
+|  Spawn a new thread for each client connection.                           |
+|  Each thread blocks on its own socket — that's fine.                      |
+|                                                                           |
+|  BUT:                                                                     |
+|  * 10,000 threads = ~80 GB stack memory (8 MB per thread)                 |
+|  * OS spends all its time CONTEXT SWITCHING between threads               |
+|    instead of doing real work                                             |
+|  * At 50,000 connections, the system collapses                            |
+|  * This is the C10K problem (handling 10K concurrent connections)         |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  APPROACH 3: I/O MULTIPLEXING — WHAT REDIS DOES                           |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Analogy: One waiter stands in the CENTER of the restaurant.              |
+|  Shouts "anyone ready to order?" The host (OS kernel) instantly           |
+|  tells them which tables have their hands up. Waiter only visits          |
+|  tables that are ALREADY READY. Never waits at any table.                 |
+|                                                                           |
+|  HOW IT WORKS:                                                            |
+|                                                                           |
+|  while (true) {                                                           |
+|      // Ask OS: "which of my 10,000 sockets have data RIGHT NOW?"         |
+|      ready_sockets = epoll_wait(all_10000_sockets);                       |
+|                                                                           |
+|      // Only loop over clients that ALREADY have data waiting             |
+|      for (socket in ready_sockets) {                                      |
+|          data = read(socket);        // instant — data already there      |
+|          result = process(data);     // ~100ns — hash table lookup        |
+|          write(socket, result);      // buffer the response               |
+|      }                                                                    |
+|  }                                                                        |
+|                                                                           |
+|  THE MAGIC: epoll_wait() is a single OS call that says "tell me           |
+|  which sockets have data ready to read." The kernel maintains this        |
+|  list using interrupts from the network card. When the call returns,      |
+|  Redis knows EXACTLY which clients to serve — no guessing, no waiting.    |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  EVOLUTION OF I/O MULTIPLEXING                                            |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  +------------------------------------------------------------------+     |
+|  | API       | Year | How it works             | Performance        |     |
+|  +-----------+------+--------------------------+--------------------+     |
+|  | select()  | 1983 | Scans ALL sockets every  | O(n) per call,     |     |
+|  |           |      | time to find ready ones   | max 1024 sockets   |    |
+|  +-----------+------+--------------------------+--------------------+     |
+|  | poll()    | 1997 | Same as select, removes   | O(n) per call,     |    |
+|  |           |      | 1024 limit                | no socket limit    |    |
+|  +-----------+------+--------------------------+--------------------+     |
+|  | epoll()   | 2002 | Kernel tracks changes,    | O(ready) per call, |    |
+|  |  (Linux)  |      | returns ONLY ready ones   | handles 100K+      |    |
+|  +-----------+------+--------------------------+--------------------+     |
+|  | kqueue()  | 2000 | Same idea as epoll         | O(ready) per call  |   |
+|  |  (macOS)  |      | Used on macOS/BSD          | handles 100K+      |   |
+|  +-----------+------+--------------------------+--------------------+     |
+|                                                                           |
+|  THE KEY DIFFERENCE:                                                      |
+|                                                                           |
+|  10,000 connections, 5 are ready:                                         |
+|                                                                           |
+|  select/poll:  scan all 10,000 -> find 5 ready       O(10,000)            |
+|  epoll:        kernel hands you the 5 ready ones      O(5)                |
+|                                                                           |
+|  This is why epoll replaced select for high-connection servers.           |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  REDIS EVENT LOOP — PUTTING IT ALL TOGETHER                               |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  +------------------+                                                     |
+|  | 10,000 clients   |                                                     |
+|  | connected via    |                                                     |
+|  | TCP sockets      |                                                     |
+|  +--------+---------+                                                     |
+|           |                                                               |
+|           v                                                               |
+|  +------------------+     "which sockets     +------------------+         |
+|  |   epoll_wait()   | --> have data ready? -->| OS Kernel        |        |
+|  |   (single call)  | <-- returns: [7,42,891] | (tracks sockets) |        |
+|  +--------+---------+                        +------------------+         |
+|           |                                                               |
+|           v                                                               |
+|  +------------------+                                                     |
+|  | Process socket 7 |  GET user:123  -> hash lookup -> "Alice"            |
+|  | Process socket 42|  INCR counter  -> increment   -> 1001               |
+|  | Process socket 891| SET key val   -> store       -> OK                 |
+|  +------------------+                                                     |
+|  (all 3 processed in ~300ns total — then back to epoll_wait)              |
+|                                                                           |
+|  The thread is NEVER idle:                                                |
+|  * If clients have data -> process commands                               |
+|  * If no clients ready -> epoll_wait blocks efficiently (OS sleeps        |
+|    the thread, wakes it on next network interrupt — zero CPU usage)       |
+|                                                                           |
+|  -------------------------------------------------------------------      |
+|  SUMMARY FOR INTERVIEWS                                                   |
+|  -------------------------------------------------------------------      |
+|                                                                           |
+|  Q: "How does Redis handle 300K ops/sec on a single thread?"              |
+|                                                                           |
+|  A: Five reasons:                                                         |
+|  1. All data in RAM — ~100ns per operation, CPU is never the bottleneck   |
+|  2. I/O multiplexing via epoll — one thread monitors 10K+ sockets,        |
+|     only processes clients with data ready, never blocks                  |
+|  3. No lock overhead — single thread means no mutexes, no contention,     |
+|     no context switching tax that multi-threaded DBs pay                  |
+|  4. Optimized data structures — ziplist, skip list, etc. are CPU          |
+|     cache friendly (64 bytes in L1 vs 16KB B-tree nodes)                  |
+|  5. Simple protocol (RESP) — no SQL parsing, no query planning,           |
+|     command dispatch in ~200ns vs ~50,000ns for SQL                       |
+|                                                                           |
+|  The actual CPU work per command is ~500ns. The remaining 99.5% of        |
+|  request time is network round-trip. Adding more threads to do 500ns      |
+|  of work would gain almost nothing.                                       |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
 ## SECTION 1.2: CORE DATA STRUCTURES
 
 ### STRINGS
