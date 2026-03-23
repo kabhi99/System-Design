@@ -704,3 +704,647 @@ the most popular key-value store in the world.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## SECTION 1.5: TRANSACTIONS (MULTI / EXEC)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  A Redis transaction groups multiple commands into a single atomic      |
+|  execution unit. No other client's command runs in the middle.          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  BASIC FLOW                                                             |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  MULTI              -- start transaction (commands are queued)          |
+|  SET user:1:balance 100                                                 |
+|  DECRBY user:1:balance 30                                               |
+|  INCRBY user:2:balance 30                                               |
+|  EXEC               -- execute all queued commands atomically           |
+|                                                                         |
+|  * Commands between MULTI and EXEC are QUEUED, not executed yet         |
+|  * EXEC runs them all sequentially with no interleaving                 |
+|  * DISCARD aborts the transaction and clears the queue                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  WATCH — OPTIMISTIC LOCKING                                             |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  WATCH lets you implement check-and-set (CAS) behavior:                 |
+|                                                                         |
+|  WATCH user:1:balance        -- watch this key                          |
+|  val = GET user:1:balance    -- read current value (e.g., 100)          |
+|  MULTI                                                                  |
+|  SET user:1:balance (val - 30)                                          |
+|  EXEC                        -- fails if balance changed since WATCH    |
+|                                                                         |
+|  If ANY watched key was modified by another client between WATCH        |
+|  and EXEC, the entire transaction returns nil (aborted).                |
+|  Client must retry the whole sequence.                                  |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  WHAT TRANSACTIONS GUARANTEE                                            |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  * ISOLATION   -- no other command runs during EXEC                     |
+|  * ATOMICITY   -- all commands execute or none (if EXEC succeeds)       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  WHAT TRANSACTIONS DO NOT GUARANTEE                                     |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  * NO ROLLBACK -- if command 3 of 5 fails (e.g., wrong type),           |
+|    commands 1, 2, 4, 5 still execute. Redis does NOT roll back.         |
+|  * NO READ-THEN-WRITE -- you cannot read a value inside MULTI           |
+|    and use it in a subsequent command within the same transaction.      |
+|    All commands are queued blindly; results come after EXEC.            |
+|                                                                         |
+|  EXAMPLE OF THE PROBLEM:                                                |
+|                                                                         |
+|  MULTI                                                                  |
+|  GET user:1:balance        -- returns "QUEUED", NOT the value           |
+|  DECRBY user:1:balance 30  -- you can't use GET result here             |
+|  EXEC                      -- [100, 70] results come together           |
+|                                                                         |
+|  You CANNOT do: "if balance >= 30, then decrby 30" inside MULTI.        |
+|  This is the critical limitation that Lua scripts solve.                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 1.6: PIPELINING
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WHAT IS PIPELINING?                                                    |
+|                                                                         |
+|  Normally, each Redis command is a full network round trip:             |
+|                                                                         |
+|  Client --> SET key1 val1 --> Redis                                     |
+|  Client <-- OK            <-- Redis    (~100us round trip)              |
+|  Client --> SET key2 val2 --> Redis                                     |
+|  Client <-- OK            <-- Redis    (~100us round trip)              |
+|  Client --> SET key3 val3 --> Redis                                     |
+|  Client <-- OK            <-- Redis    (~100us round trip)              |
+|                                                                         |
+|  3 commands = 3 round trips = ~300us                                    |
+|                                                                         |
+|  With pipelining, send ALL commands at once, read ALL responses:        |
+|                                                                         |
+|  Client --> SET key1 val1 \                                             |
+|             SET key2 val2  |  (single network write)                    |
+|             SET key3 val3 /                                             |
+|  Client <-- OK, OK, OK       (single network read)                      |
+|                                                                         |
+|  3 commands = 1 round trip = ~100us   (3x faster)                       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  PIPELINE vs TRANSACTION vs LUA SCRIPT                                  |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  +------------------+------------------+------------------+             |
+|  | Feature          | Pipeline         | MULTI/EXEC       |             |
+|  +------------------+------------------+------------------+             |
+|  | Reduces RTT      | YES              | YES               |            |
+|  | Atomic exec      | NO               | YES               |            |
+|  | Read-then-write  | NO               | NO                |            |
+|  | Other clients    | CAN interleave   | CANNOT interleave |            |
+|  | Rollback         | N/A              | NO                |            |
+|  +------------------+------------------+------------------+             |
+|                                                                         |
+|  Pipeline = performance optimization (batch network I/O)                |
+|  Transaction = correctness guarantee (atomic execution)                 |
+|  You can COMBINE them: MULTI inside a pipeline for both benefits.       |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  REAL-TIME USE CASE: E-COMMERCE PRODUCT PAGE LOAD                       |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  When a user opens a product page, you need to fetch:                   |
+|  * Product details (hash)                                               |
+|  * Price (string)                                                       |
+|  * Inventory count (string)                                             |
+|  * Average rating (sorted set score)                                    |
+|  * Recently viewed count (HyperLogLog)                                  |
+|  * Whether user wishlisted it (set membership)                          |
+|                                                                         |
+|  WITHOUT PIPELINE (6 round trips = ~600us):                             |
+|                                                                         |
+|  HGETALL product:123                                                    |
+|  GET product:123:price                                                  |
+|  GET inventory:123                                                      |
+|  ZSCORE ratings product:123                                             |
+|  PFCOUNT product:123:views                                              |
+|  SISMEMBER wishlist:user:456 product:123                                |
+|                                                                         |
+|  WITH PIPELINE (1 round trip = ~100us):                                 |
+|                                                                         |
+|  pipe = redis.pipeline(transaction=False)                               |
+|  pipe.hgetall("product:123")                                            |
+|  pipe.get("product:123:price")                                          |
+|  pipe.get("inventory:123")                                              |
+|  pipe.zscore("ratings", "product:123")                                  |
+|  pipe.pfcount("product:123:views")                                      |
+|  pipe.sismember("wishlist:user:456", "product:123")                     |
+|  results = pipe.execute()  # single round trip, 6 responses             |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  REAL-TIME USE CASE: LEADERBOARD BULK UPDATE                            |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  After a gaming round ends, update 500 player scores:                   |
+|                                                                         |
+|  pipe = redis.pipeline(transaction=False)                               |
+|  for player_id, score in round_results:                                 |
+|      pipe.zincrby("leaderboard:weekly", score, player_id)               |
+|  pipe.execute()  # 500 updates in 1 round trip (~100us)                 |
+|                                                                         |
+|  Without pipeline: 500 round trips = ~50ms                              |
+|  With pipeline:    1 round trip    = ~0.1ms  (500x faster)              |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  REAL-TIME USE CASE: RATE LIMITER (SLIDING WINDOW)                      |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  Check and update rate limit in a single pipeline:                      |
+|                                                                         |
+|  now = current_timestamp_ms()                                           |
+|  window = 60000  # 60 seconds                                           |
+|  key = "ratelimit:user:456:api"                                         |
+|                                                                         |
+|  pipe = redis.pipeline(transaction=True)  # MULTI/EXEC                  |
+|  pipe.zremrangebyscore(key, 0, now - window)  # remove old entries      |
+|  pipe.zadd(key, {str(now): now})              # add current request     |
+|  pipe.zcard(key)                              # count in window         |
+|  pipe.expire(key, 60)                         # auto-cleanup            |
+|  results = pipe.execute()                                               |
+|  request_count = results[2]                                             |
+|  # if request_count > MAX_REQUESTS: reject                              |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|  BEST PRACTICES                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  * Batch size: 100-1000 commands per pipeline (not 100K)                |
+|  * Too large a pipeline = big memory buffer on client and server        |
+|  * Use transaction=False when atomicity isn't needed (faster)           |
+|  * Use transaction=True (MULTI/EXEC) when you need atomic batches       |
+|  * Pipeline does NOT guarantee atomicity by itself                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 1.7: LUA SCRIPTING
+
+```
++------------------------------------------------------------------------+
+|                                                                        |
+|  IF WE HAVE TRANSACTIONS, WHY DO WE NEED LUA SCRIPTS?                  |
+|                                                                        |
+|  The fundamental problem with MULTI/EXEC:                              |
+|                                                                        |
+|  You CANNOT read a value and make a decision based on it within        |
+|  the same transaction. Commands are queued blindly — results only      |
+|  arrive after EXEC. This means no conditional logic.                   |
+|                                                                        |
+|  +------------------------------------------------------------------+  |
+|  | Capability             | MULTI/EXEC | WATCH+MULTI | Lua Script  |   |
+|  +------------------------+------------+-------------+-------------+   |
+|  | Atomic execution       | YES        | YES         | YES         |   |
+|  | Read-then-write        | NO         | YES (retry) | YES         |   |
+|  | Conditional logic      | NO         | NO          | YES         |   |
+|  | Loops / computation    | NO         | NO          | YES         |   |
+|  | Single round trip      | NO (queue) | NO (retry)  | YES         |   |
+|  | No race condition      | YES        | RETRY-BASED | YES         |   |
+|  | Performance at scale   | GOOD       | BAD (retry) | BEST        |   |
+|  +------------------------------------------------------------------+  |
+|                                                                        |
+|  WATCH+MULTI can do read-then-write, but under high concurrency it     |
+|  degrades badly — many clients retry simultaneously (stampede).        |
+|                                                                        |
+|  Lua scripts execute atomically on the Redis server with full          |
+|  read-then-write capability and zero retries.                          |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  LUA SCRIPT SYNTAX BASICS                                              |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  EVAL "lua_script_string" numkeys key1 key2 ... arg1 arg2 ...          |
+|                                                                        |
+|  * lua_script_string = the Lua code to run                             |
+|  * numkeys           = how many of the following args are keys         |
+|  * KEYS[1], KEYS[2]  = Redis keys (accessed inside Lua)                |
+|  * ARGV[1], ARGV[2]  = arguments/values (accessed inside Lua)          |
+|                                                                        |
+|  WHY separate KEYS and ARGV?                                           |
+|  Redis Cluster routes commands by key. Declaring keys upfront lets     |
+|  Redis know which shard the script should run on.                      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  CALLING REDIS COMMANDS INSIDE LUA                                     |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  redis.call("COMMAND", arg1, arg2, ...)                                |
+|    * Executes the command, returns result                              |
+|    * If command errors, the ENTIRE script aborts                       |
+|                                                                        |
+|  redis.pcall("COMMAND", arg1, arg2, ...)                               |
+|    * Same as call, but returns error as a Lua table instead of         |
+|      aborting. Use when you want to handle errors gracefully.          |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  EXAMPLE 1: CONDITIONAL TRANSFER (impossible with MULTI/EXEC)          |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Problem: Transfer $30 from user:1 to user:2, but ONLY if user:1       |
+|  has enough balance. Must be atomic — no race conditions.              |
+|                                                                        |
+|  EVAL "                                                                |
+|    local balance = tonumber(redis.call('GET', KEYS[1]))                |
+|    local amount  = tonumber(ARGV[1])                                   |
+|    if balance >= amount then                                           |
+|      redis.call('DECRBY', KEYS[1], amount)                             |
+|      redis.call('INCRBY', KEYS[2], amount)                             |
+|      return 1                                                          |
+|    else                                                                |
+|      return 0                                                          |
+|    end                                                                 |
+|  " 2 user:1:balance user:2:balance 30                                  |
+|                                                                        |
+|  Breakdown:                                                            |
+|  * "..." = Lua script                                                  |
+|  * 2     = two keys follow                                             |
+|  * KEYS[1] = user:1:balance                                            |
+|  * KEYS[2] = user:2:balance                                            |
+|  * ARGV[1] = 30 (the transfer amount)                                  |
+|  * tonumber() converts Redis string response to Lua number             |
+|  * Returns 1 (success) or 0 (insufficient funds)                       |
+|                                                                        |
+|  WHY THIS CANNOT WORK WITH MULTI/EXEC:                                 |
+|  In MULTI, GET returns "QUEUED". You cannot check                      |
+|  "if balance >= 30" because you don't have the value yet.              |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  EXAMPLE 2: RATE LIMITER (read + check + write atomically)             |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Problem: Allow max 100 requests per 60 seconds per user.              |
+|                                                                        |
+|  EVAL "                                                                |
+|    local current = tonumber(redis.call('GET', KEYS[1]) or '0')         |
+|    if current < tonumber(ARGV[1]) then                                 |
+|      redis.call('INCR', KEYS[1])                                       |
+|      if current == 0 then                                              |
+|        redis.call('EXPIRE', KEYS[1], tonumber(ARGV[2]))                |
+|      end                                                               |
+|      return 1                                                          |
+|    else                                                                |
+|      return 0                                                          |
+|    end                                                                 |
+|  " 1 ratelimit:user:456 100 60                                         |
+|                                                                        |
+|  Breakdown:                                                            |
+|  * KEYS[1] = ratelimit:user:456                                        |
+|  * ARGV[1] = 100 (max requests)                                        |
+|  * ARGV[2] = 60 (window in seconds)                                    |
+|  * Reads count, checks limit, increments, sets expiry — all atomic     |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  EXAMPLE 3: INVENTORY DECREMENT (e-commerce checkout)                  |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Problem: Decrement inventory only if enough stock exists.             |
+|  Two users buying the last item must not both succeed.                 |
+|                                                                        |
+|  EVAL "                                                                |
+|    local stock = tonumber(redis.call('GET', KEYS[1]))                  |
+|    local qty   = tonumber(ARGV[1])                                     |
+|    if stock >= qty then                                                |
+|      redis.call('DECRBY', KEYS[1], qty)                                |
+|      return stock - qty                                                |
+|    else                                                                |
+|      return -1                                                         |
+|    end                                                                 |
+|  " 1 inventory:sku:ABC123 2                                            |
+|                                                                        |
+|  Breakdown:                                                            |
+|  * KEYS[1] = inventory:sku:ABC123                                      |
+|  * ARGV[1] = 2 (quantity to purchase)                                  |
+|  * Returns remaining stock, or -1 if insufficient                      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  EVALSHA — CACHING SCRIPTS FOR PERFORMANCE                             |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Sending the full script string every time wastes bandwidth.           |
+|                                                                        |
+|  Step 1: Load script, get SHA1 hash                                    |
+|  SCRIPT LOAD "local bal = tonumber(redis.call('GET', KEYS[1])) ..."    |
+|    > "a1b2c3d4e5f6..."  (SHA1 hash)                                    |
+|                                                                        |
+|  Step 2: Execute by hash (much smaller payload)                        |
+|  EVALSHA a1b2c3d4e5f6... 2 user:1:balance user:2:balance 30            |
+|                                                                        |
+|  Redis caches the script in memory. EVALSHA sends only the 40-byte     |
+|  hash instead of the full script each time.                            |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  KEY RULES AND GOTCHAS                                                 |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  * Lua scripts are ATOMIC — Redis is blocked during execution.         |
+|    Keep scripts short (< 5ms). Long scripts block all clients.         |
+|  * Default timeout: 5 seconds (lua-time-limit config).                 |
+|    After timeout, Redis starts accepting SCRIPT KILL commands.         |
+|  * All keys accessed MUST be passed via KEYS[], not hardcoded.         |
+|    Hardcoded keys break Redis Cluster (wrong shard routing).           |
+|  * Lua scripts are pure functions — no random, no time, no             |
+|    external I/O. This ensures replication safety.                      |
+|  * In Redis 7.0+, Redis Functions replace EVAL for production use.     |
+|    Functions are stored server-side and managed like stored procs.     |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  SUMMARY: WHEN TO USE WHAT                                             |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  * PIPELINE    -- batch independent commands to reduce RTT             |
+|  * MULTI/EXEC  -- atomic batch, no read-then-write needed              |
+|  * WATCH+MULTI -- read-then-write, OK with low concurrency             |
+|  * LUA SCRIPT  -- read-then-write + conditional logic + high           |
+|                   concurrency. The go-to for any "check and act"       |
+|                   pattern.                                             |
+|                                                                        |
++------------------------------------------------------------------------+
+```
+
+## SECTION 1.8: DISTRIBUTED LOCKS
+
+```
++------------------------------------------------------------------------+
+|                                                                        |
+|  A distributed lock ensures only ONE process across multiple servers   |
+|  can access a shared resource at a time. Redis is widely used for      |
+|  this because of its speed and atomic operations.                      |
+|                                                                        |
+|  ===================================================================== |
+|  SINGLE INSTANCE DISTRIBUTED LOCK                                      |
+|  ===================================================================== |
+|                                                                        |
+|  The simplest form: use one Redis instance to coordinate locks.        |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  ACQUIRE LOCK                                                          |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  SET lock:order:456 "txn-id-abc" NX EX 30                              |
+|                                                                        |
+|  * lock:order:456   = lock key (scoped to the resource)                |
+|  * "txn-id-abc"     = unique token (UUID) identifying the holder       |
+|  * NX               = only set if key does NOT exist (atomic acquire)  |
+|  * EX 30            = auto-expire in 30 seconds (prevents deadlock)    |
+|                                                                        |
+|  Returns OK   -> lock acquired                                         |
+|  Returns nil  -> lock held by someone else, retry or back off          |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  RELEASE LOCK (must use Lua script)                                    |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  You CANNOT just call DEL lock:order:456. Why?                         |
+|                                                                        |
+|  Timeline of the bug without Lua:                                      |
+|                                                                        |
+|  t=0   Client A acquires lock (SET ... NX EX 30)                       |
+|  t=31  Lock expires (Client A was slow)                                |
+|  t=32  Client B acquires the same lock                                 |
+|  t=33  Client A finishes, calls DEL lock:order:456                     |
+|        --> Deletes Client B's lock! B thinks it's still safe.          |
+|                                                                        |
+|  SAFE RELEASE — Lua script that checks ownership first:                |
+|                                                                        |
+|  EVAL "                                                                |
+|    if redis.call('GET', KEYS[1]) == ARGV[1] then                       |
+|      return redis.call('DEL', KEYS[1])                                 |
+|    else                                                                |
+|      return 0                                                          |
+|    end                                                                 |
+|  " 1 lock:order:456 txn-id-abc                                         |
+|                                                                        |
+|  Breakdown:                                                            |
+|  * KEYS[1] = lock:order:456 (the lock key)                             |
+|  * ARGV[1] = txn-id-abc (the token set during acquire)                 |
+|  * GET + compare + DEL happens atomically                              |
+|  * Only the original holder can delete the lock                        |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  COMPLETE SINGLE-INSTANCE FLOW                                         |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Client A (payment service processing order 456):                      |
+|                                                                        |
+|  1. Generate unique token: token = "pay-svc-uuid-xyz"                  |
+|  2. Acquire: SET lock:order:456 "pay-svc-uuid-xyz" NX EX 30            |
+|     -> OK (lock acquired)                                              |
+|  3. Do critical work (charge card, update balance)                     |
+|  4. Release via Lua: check token matches, then DEL                     |
+|                                                                        |
+|  Client B (refund service for same order 456):                         |
+|                                                                        |
+|  1. Generate token: token = "refund-svc-uuid-abc"                      |
+|  2. Acquire: SET lock:order:456 "refund-svc-uuid-abc" NX EX 30         |
+|     -> nil (lock held by Client A)                                     |
+|  3. Retry with exponential backoff (100ms, 200ms, 400ms...)            |
+|  4. Eventually acquires after Client A releases                        |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  LIMITATIONS OF SINGLE-INSTANCE LOCK                                   |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  * Single point of failure: if the Redis instance goes down,           |
+|    all locks are lost.                                                 |
+|  * Failover risk: if Redis has a replica and master fails,             |
+|    replica may not have the lock key yet (async replication).          |
+|    Two clients can hold the "same" lock simultaneously.                |
+|                                                                        |
+|  +-------+       +--------+       +--------+                           |
+|  |Client A| ----> | Master | ----> |Replica |                          |
+|  +-------+       +--------+       +--------+                           |
+|       |           SET lock OK       (not yet replicated)               |
+|       |               |                   |                            |
+|       |           MASTER DIES             |                            |
+|       |                           Replica promoted                     |
+|       |                                   |                            |
+|  +-------+                        +--------+                           |
+|  |Client B| --------------------> |New Master|                         |
+|  +-------+                        +--------+                           |
+|       |                           SET lock OK  <-- BOTH hold lock!     |
+|                                                                        |
+|  For most use cases (rate limiting, deduplication, idempotency),       |
+|  single-instance is fine. For safety-critical locks (payments,         |
+|  inventory), use Redlock.                                              |
+|                                                                        |
+|  ===================================================================== |
+|  MULTI-INSTANCE DISTRIBUTED LOCK (REDLOCK ALGORITHM)                   |
+|  ===================================================================== |
+|                                                                        |
+|  Redlock uses N independent Redis instances (typically 5) that do      |
+|  NOT replicate to each other. A lock is considered acquired only       |
+|  when a majority (N/2 + 1) of instances grant it.                      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  WHY 5 INDEPENDENT INSTANCES?                                          |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  * NOT a Redis Cluster. NOT master-replica. 5 standalone Redis nodes.  |
+|  * Tolerates up to 2 node failures and still holds the lock safely.    |
+|  * Odd number (5) avoids ties in majority voting.                      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  REDLOCK ALGORITHM STEP BY STEP                                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Setup: 5 independent Redis instances: R1, R2, R3, R4, R5              |
+|  Lock TTL: 30 seconds                                                  |
+|                                                                        |
+|  STEP 1: Record current time (T1)                                      |
+|                                                                        |
+|  STEP 2: Try to acquire lock on ALL 5 instances sequentially           |
+|                                                                        |
+|    For each Ri:                                                        |
+|      SET lock:order:456 "uuid-xyz" NX PX 30000                         |
+|      (use short timeout per instance, e.g., 5-50ms, to avoid           |
+|       blocking on a crashed node)                                      |
+|                                                                        |
+|    Results:                                                            |
+|      R1: OK                                                            |
+|      R2: OK                                                            |
+|      R3: OK   <-- 3 out of 5 = majority achieved                       |
+|      R4: nil  (another client holds it)                                |
+|      R5: OK                                                            |
+|                                                                        |
+|  STEP 3: Record current time (T2)                                      |
+|    Elapsed = T2 - T1                                                   |
+|                                                                        |
+|  STEP 4: Validate lock                                                 |
+|    Lock is valid ONLY IF:                                              |
+|    a) Acquired on majority (>= 3 out of 5), AND                        |
+|    b) Elapsed time < lock TTL                                          |
+|       Effective TTL = 30000ms - elapsed                                |
+|                                                                        |
+|    If valid: proceed with critical section, use effective TTL          |
+|    If not:   release lock on ALL instances (even successful ones)      |
+|                                                                        |
+|  STEP 5: Release lock on ALL 5 instances                               |
+|    (use same Lua script as single-instance — check token, then DEL)    |
+|    Release on ALL, not just the ones that succeeded.                   |
+|    This ensures cleanup even if acquire partially succeeded.           |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  EXAMPLE: PAYMENT PROCESSING WITH REDLOCK                              |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Scenario: Two payment services process order #456 simultaneously.     |
+|                                                                        |
+|  Payment Service A (token: "ps-a-uuid"):                               |
+|                                                                        |
+|  T1 = now()                                                            |
+|  R1: SET lock:order:456 "ps-a-uuid" NX PX 30000 -> OK                  |
+|  R2: SET lock:order:456 "ps-a-uuid" NX PX 30000 -> OK                  |
+|  R3: SET lock:order:456 "ps-a-uuid" NX PX 30000 -> OK                  |
+|  R4: SET lock:order:456 "ps-a-uuid" NX PX 30000 -> OK                  |
+|  R5: SET lock:order:456 "ps-a-uuid" NX PX 30000 -> nil (network lag)   |
+|  T2 = now()                                                            |
+|                                                                        |
+|  4/5 >= 3 (majority) AND elapsed < 30s                                 |
+|  --> LOCK ACQUIRED. Effective TTL = 30s - elapsed                      |
+|  --> Process payment for order #456                                    |
+|                                                                        |
+|  Payment Service B (token: "ps-b-uuid"):                               |
+|                                                                        |
+|  R1: SET lock:order:456 "ps-b-uuid" NX PX 30000 -> nil (A holds it)    |
+|  R2: nil                                                               |
+|  R3: nil                                                               |
+|  R4: nil                                                               |
+|  R5: SET lock:order:456 "ps-b-uuid" NX PX 30000 -> OK (A missed R5)    |
+|                                                                        |
+|  1/5 < 3 (no majority)                                                 |
+|  --> LOCK FAILED. Release lock on R5 (cleanup).                        |
+|  --> Retry with backoff.                                               |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  REDLOCK FAILURE SCENARIO — WHY MAJORITY MATTERS                       |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  What if R3 crashes after granting lock to A?                          |
+|                                                                        |
+|  A holds locks on: R1, R2, R3(crashed), R4                             |
+|  R3 restarts with EMPTY memory (no persistence, or AOF gap)            |
+|  B tries to acquire:                                                   |
+|    R1: nil (A), R2: nil (A), R3: OK (empty!), R4: nil (A), R5: OK      |
+|    B gets 2/5 — still no majority. SAFE.                               |
+|                                                                        |
+|  Even with one node crash and restart, the majority still holds.       |
+|  This is why 5 nodes tolerate up to 2 failures.                        |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  SINGLE vs MULTI-INSTANCE: WHEN TO USE WHAT                            |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  +----------------------------+-----------+------------+               |
+|  | Criteria                   | Single    | Redlock    |               |
+|  +----------------------------+-----------+------------+               |
+|  | Infrastructure             | 1 Redis   | 5 Redis    |               |
+|  | Complexity                 | Simple    | Moderate   |               |
+|  | Fault tolerance            | None      | 2 failures |               |
+|  | Split-brain safe           | No        | Yes        |               |
+|  | Good for                   | Caching,  | Payments,  |               |
+|  |                            | dedup,    | inventory, |               |
+|  |                            | rate limit| checkout   |               |
+|  | Latency                    | ~1ms      | ~5-10ms    |               |
+|  +----------------------------+-----------+------------+               |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  LOCK RENEWAL (WATCHDOG PATTERN)                                       |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Problem: Lock TTL is 30s, but critical section takes 45s.             |
+|  Lock expires while you're still working.                              |
+|                                                                        |
+|  Solution: Background thread extends the lock before expiry.           |
+|                                                                        |
+|  1. Acquire lock with TTL = 30s                                        |
+|  2. Start watchdog thread that runs every 10s:                         |
+|     EVAL "                                                             |
+|       if redis.call('GET', KEYS[1]) == ARGV[1] then                    |
+|         return redis.call('PEXPIRE', KEYS[1], ARGV[2])                 |
+|       else                                                             |
+|         return 0                                                       |
+|       end                                                              |
+|     " 1 lock:order:456 txn-id-abc 30000                                |
+|  3. Watchdog checks ownership (Lua) then extends TTL                   |
+|  4. When critical section completes, stop watchdog + release lock      |
+|                                                                        |
+|  Libraries like Redisson (Java) implement this automatically.          |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  COMMON INTERVIEW POINTS                                               |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Q: "Why not just use SETNX + EXPIRE separately?"                      |
+|  A: Not atomic. If process crashes between SETNX and EXPIRE, the       |
+|     lock lives forever (deadlock). SET ... NX EX is a single command.  |
+|                                                                        |
+|  Q: "Why store a unique token instead of just '1'?"                    |
+|  A: To ensure only the owner can release. Without it, a slow client    |
+|     can delete another client's lock after expiry.                     |
+|                                                                        |
+|  Q: "Is Redlock perfect?"                                              |
+|  A: No. Martin Kleppmann's critique (2016) argues that clock skew      |
+|     and GC pauses can still cause safety violations. For absolute      |
+|     correctness, use a consensus system (ZooKeeper, etcd).             |
+|     Redlock is practical for 99.9% of real-world use cases.            |
+|                                                                        |
++------------------------------------------------------------------------+
+```
