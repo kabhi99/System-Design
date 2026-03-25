@@ -489,6 +489,326 @@ simultaneously. This chapter covers patterns for safe coordination.
 +--------------------------------------------------------------------------+
 ```
 
+## SECTION 21.9: DISTRIBUTED LOCK FOR CRON JOBS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THE PROBLEM: DUPLICATE CRON EXECUTION IN DISTRIBUTED SYSTEMS           |
+|                                                                         |
+|  With N replicas of a service, a cron job scheduled at "every 5 min"    |
+|  fires on ALL N instances simultaneously.                               |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Time T=0: Cron triggers "send-daily-report"                      |  |
+|  |                                                                   |  |
+|  |  Instance 1 ──► runs job ──► sends email                          |  |
+|  |  Instance 2 ──► runs job ──► sends email  (DUPLICATE)             |  |
+|  |  Instance 3 ──► runs job ──► sends email  (DUPLICATE)             |  |
+|  |  Instance 4 ──► runs job ──► sends email  (DUPLICATE)             |  |
+|  |  Instance 5 ──► runs job ──► sends email  (DUPLICATE)             |  |
+|  |                                                                   |  |
+|  |  User receives 5 identical emails!                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  CONSEQUENCES:                                                          |
+|  * Duplicate work     — same email sent N times                         |
+|  * Data corruption    — N instances updating same rows concurrently     |
+|  * Resource waste     — N× compute for work that should happen once     |
+|  * Financial risk     — N× charges in payment/billing cron jobs         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.1: SOLUTION — LOCK BEFORE EXECUTE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Before executing cron logic, each instance tries to ACQUIRE a          |
+|  distributed lock. Only the winner proceeds; the rest skip.             |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Time T=0: Cron fires on all 3 instances                         |  |
+|  |                                                                   |  |
+|  |  Instance A ─► LOCK("daily-report") ─► SUCCESS ─► runs ─► unlock |  |
+|  |  Instance B ─► LOCK("daily-report") ─► FAIL    ─► skip           |  |
+|  |  Instance C ─► LOCK("daily-report") ─► FAIL    ─► skip           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  FLOW:                                                                  |
+|                                                                         |
+|  Cron fires on every instance                                           |
+|           |                                                             |
+|           v                                                             |
+|    Try acquire lock                                                     |
+|    (atomic, with TTL)                                                   |
+|           |                                                             |
+|     +-----+-----+                                                       |
+|     |           |                                                       |
+|   SUCCESS     FAIL                                                      |
+|     |           |                                                       |
+|  Run job      Skip                                                      |
+|     |                                                                   |
+|  Release lock                                                           |
+|                                                                         |
+|  REDIS EXAMPLE:                                                         |
+|                                                                         |
+|  lock_key   = "lock:cron:daily-report"                                  |
+|  lock_value = uuid()  (unique per instance per attempt)                 |
+|  result     = SET lock_key lock_value NX PX 60000                       |
+|                                                                         |
+|  if result == OK:                                                       |
+|      run_job()                                                          |
+|      release_lock(lock_key, lock_value)  // Lua check-and-delete        |
+|  else:                                                                  |
+|      log("Another instance is running this job, skipping")              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.2: TTL — THE CRITICAL SAFETY NET
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  A lock MUST have a TTL. If the winning instance crashes mid-job        |
+|  without releasing the lock, the lock would be held forever.            |
+|                                                                         |
+|  THE TTL TRADE-OFF:                                                     |
+|                                                                         |
+|  TTL too short (< job duration):                                        |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Instance A acquires lock (TTL = 10s)                             |  |
+|  |       |                                                           |  |
+|  |       +── starts job (takes 25s)...                               |  |
+|  |       |                                                           |  |
+|  |  [10 seconds: LOCK EXPIRES while job still running]               |  |
+|  |                                                                   |  |
+|  |  Instance B acquires lock ──► starts same job                     |  |
+|  |  Instance A still running ──► BOTH executing = DUPLICATE!         |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  TTL too long (>> job duration):                                        |
+|  * Instance crashes → lock held until TTL expires                       |
+|  * Next scheduled run blocked → missed job execution                    |
+|  * If TTL = 5min and cron = every 5min → one full cycle missed          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTIONS:                                                             |
+|                                                                         |
+|  1. SET TTL = 2-3× expected job duration                                |
+|     Job takes ~10s → TTL = 30s                                          |
+|     Covers slow runs, but releases reasonably fast on crash             |
+|                                                                         |
+|  2. LOCK RENEWAL (watchdog / heartbeat)                                 |
+|     Start with moderate TTL (e.g., 30s)                                 |
+|     Background thread extends TTL every TTL/3 while job runs            |
+|     If instance crashes → no renewal → TTL expires → lock released      |
+|     (Redisson library does this automatically)                          |
+|                                                                         |
+|  3. FENCING TOKEN (from Section 21.3)                                   |
+|     Even if TTL expires and two instances overlap,                      |
+|     fencing token prevents stale instance from corrupting data          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.3: LOCK GRANULARITY — WHAT SHOULD THE KEY BE?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  The lock key determines WHAT you're protecting and HOW.                |
+|                                                                         |
+|  +------------------------------------------------------------------+   |
+|  | Strategy              | Lock Key Example              | Effect   |  |
+|  |-----------------------|-------------------------------|----------|  |
+|  | Per job type          | lock:send-reminders           | Only one |  |
+|  |                       |                               | instance |  |
+|  |                       |                               | runs it  |  |
+|  |-----------------------|-------------------------------|----------|  |
+|  | Per job + time window | lock:send-reminders:          | Prevents |  |
+|  |                       |   2026-03-25-14:00            | re-run   |  |
+|  |                       |                               | in same  |  |
+|  |                       |                               | window   |  |
+|  |-----------------------|-------------------------------|----------|  |
+|  | Per job + partition   | lock:send-reminders:shard-3   | Parallel |  |
+|  |                       |                               | across   |  |
+|  |                       |                               | shards   |  |
+|  +------------------------------------------------------------------+   |
+|                                                                         |
+|  PER JOB TYPE: "lock:send-reminders"                                    |
+|  * Simplest approach                                                    |
+|  * Only one instance runs the job at any given time                     |
+|  * Risk: if cron fires again before last run finishes, new run skips    |
+|                                                                         |
+|  PER JOB + TIME WINDOW: "lock:send-reminders:2026-03-25-14:00"         |
+|  * Encodes the scheduled time in the key                                |
+|  * Prevents re-execution within the SAME scheduled window               |
+|  * Even if job is retried or delayed, it won't double-run for          |
+|    the same time slot                                                   |
+|  * BEST FOR: most cron jobs — combines dedup with window awareness      |
+|                                                                         |
+|  PER JOB + PARTITION: "lock:send-reminders:shard-3"                     |
+|  * Allows parallelism across shards/partitions                          |
+|  * Each shard locked independently                                      |
+|  * Instance A processes shard-1, Instance B processes shard-2           |
+|  * BEST FOR: large data processing cron jobs that benefit from          |
+|    parallel execution across data partitions                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.4: LEADER ELECTION — ALTERNATIVE PATTERN
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Instead of competing for a lock on every cron tick, elect a            |
+|  single LEADER that is the only instance running cron jobs.             |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  LOCK-PER-TICK vs LEADER ELECTION                                 |  |
+|  |                                                                   |  |
+|  |  LOCK-PER-TICK:                                                   |  |
+|  |  Every cron tick → all instances race for lock                    |  |
+|  |  Winner runs, losers skip                                         |  |
+|  |  Lock contention on every tick (every 5 min = 288 races/day)      |  |
+|  |                                                                   |  |
+|  |  LEADER ELECTION:                                                 |  |
+|  |  One instance elected as leader (via ZK/etcd/K8s Lease)           |  |
+|  |  ONLY the leader has cron enabled                                 |  |
+|  |  Other instances don't even attempt the job                       |  |
+|  |  Leader dies → new leader elected → cron moves to new leader      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  WHEN TO USE EACH:                                                      |
+|                                                                         |
+|  Lock-per-tick:                                                         |
+|  * Simple, no extra infrastructure                                      |
+|  * Few cron jobs, infrequent runs                                       |
+|  * OK if lock contention is low                                         |
+|                                                                         |
+|  Leader election:                                                       |
+|  * Many cron jobs running frequently                                    |
+|  * Already have ZooKeeper/etcd/Kubernetes                               |
+|  * Want zero contention on every tick                                   |
+|  * Prefer deterministic "one node does cron" model                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.5: IDEMPOTENCY — THE SAFETY NET
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Distributed locks are BEST-EFFORT. They reduce duplicates but          |
+|  CANNOT guarantee exactly-once in all failure scenarios.                |
+|                                                                         |
+|  EDGE CASES WHERE LOCK ALONE FAILS:                                     |
+|  * TTL expires mid-execution (GC pause, slow I/O)                       |
+|  * Network partition: instance thinks it has lock, lock server says no  |
+|  * Clock drift in Redlock setup                                         |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  SOLUTION: Make the cron job itself IDEMPOTENT                          |
+|                                                                         |
+|  TECHNIQUES:                                                            |
+|                                                                         |
+|  1. UNIQUE JOB RUN ID                                                   |
+|     Generate: run_id = "daily-report:2026-03-25"                        |
+|     Before executing: check if run_id already processed                 |
+|     After executing: mark run_id as complete                            |
+|                                                                         |
+|     INSERT INTO job_runs (run_id, status, completed_at)                 |
+|       VALUES ('daily-report:2026-03-25', 'done', NOW())                 |
+|       ON CONFLICT (run_id) DO NOTHING;                                  |
+|     -- Rows affected = 0 → already ran → skip                           |
+|                                                                         |
+|  2. CHECK BEFORE ACT                                                    |
+|     Don't "send all pending reminders"                                  |
+|     Instead: "send reminders where sent_at IS NULL"                     |
+|     If job runs twice, second run finds nothing to send                 |
+|                                                                         |
+|  3. DATABASE CONSTRAINTS                                                |
+|     Unique constraint prevents duplicate inserts even if                 |
+|     two instances somehow both execute the job                          |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  THE TRIFECTA FOR SAFE CRON IN DISTRIBUTED SYSTEMS:                     |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. DISTRIBUTED LOCK  — prevents MOST duplicates                  |  |
+|  |  2. TTL / RENEWAL     — prevents deadlocks on crash               |  |
+|  |  3. IDEMPOTENCY       — handles edge cases lock can't prevent     |  |
+|  |                                                                   |  |
+|  |  Lock is the first line of defense.                               |  |
+|  |  Idempotency is the last line of defense.                         |  |
+|  |  Together = safe cron execution in distributed systems.           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 21.9.6: INTERVIEW ANSWER FRAMEWORK
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEW: "How do you prevent duplicate cron job execution            |
+|  across multiple instances?"                                            |
+|                                                                         |
+|  -------------------------------------------------------------------    |
+|                                                                         |
+|  STRUCTURED ANSWER:                                                     |
+|                                                                         |
+|  "When running N replicas, a cron job fires on all instances.           |
+|   To ensure only one executes, I use a three-layer approach:            |
+|                                                                         |
+|   1. DISTRIBUTED LOCK (first line of defense)                           |
+|      Before executing, each instance tries to acquire a lock            |
+|      in Redis using SET lock_key uuid NX PX ttl.                        |
+|      Only the winner proceeds; losers skip immediately.                 |
+|                                                                         |
+|   2. TTL + RENEWAL (prevent deadlocks)                                  |
+|      Lock has a TTL so if the winner crashes, the lock                  |
+|      auto-releases. I set TTL to 2-3× expected job duration.            |
+|      For long jobs, a background thread extends the TTL.                |
+|                                                                         |
+|   3. IDEMPOTENT JOB (safety net)                                        |
+|      The job itself is designed to be safe if run twice.                 |
+|      I use a unique run ID per schedule window                          |
+|      (e.g., 'job:daily-report:2026-03-25') and check                   |
+|      completion status before acting.                                   |
+|                                                                         |
+|   For the lock key, I prefer encoding the time window:                  |
+|   'lock:job-name:2026-03-25-14:00' — this prevents re-execution        |
+|   within the same scheduled window even if the lock expired             |
+|   and was re-acquired.                                                  |
+|                                                                         |
+|   If we have many cron jobs running frequently, I'd consider            |
+|   leader election instead — one node is the designated cron             |
+|   runner via ZooKeeper/etcd/K8s Lease, eliminating per-tick             |
+|   lock contention entirely."                                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 21.6: RACE CONDITIONS IN ASYNC MICROSERVICES
 
 ```

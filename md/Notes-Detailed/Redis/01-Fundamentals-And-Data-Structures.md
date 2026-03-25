@@ -1079,7 +1079,169 @@ the most popular key-value store in the world.
 +------------------------------------------------------------------------+
 ```
 
-## SECTION 1.8: DISTRIBUTED LOCKS
+## SECTION 1.8: CONCURRENCY PROBLEMS IN DISTRIBUTED SYSTEMS
+
+```
++-----------------------------------------------------------------------+
+|                                                                       |
+|  WHY THIS MATTERS FOR REDIS                                           |
+|                                                                       |
+|  On a single machine, concurrency is solved with mutexes, semaphores, |
+|  and shared memory. In a distributed system, NONE of that works.      |
+|  Understanding these problems explains why Redis distributed locks,   |
+|  Lua scripts, and fencing tokens exist.                               |
+|                                                                       |
+|  -------------------------------------------------------------------  |
+|  THE FOUR CONSTRAINTS OF DISTRIBUTED SYSTEMS                          |
+|  -------------------------------------------------------------------  |
+|                                                                       |
+|  1. No shared memory                                                  |
+|  2. Network can fail or delay                                         |
+|  3. Clocks are not synchronized                                       |
+|  4. Nodes can crash                                                   |
+|                                                                       |
+|  Each constraint creates specific concurrency problems:               |
+|                                                                       |
+|  ================================================================     |
+|  PROBLEM 1: NO SHARED MEMORY                                          |
+|  ================================================================     |
+|                                                                       |
+|  Nodes cannot see each other's state. Each works with its own         |
+|  local copy, leading to stale reads and conflicting writes.           |
+|                                                                       |
+|  LOST UPDATE EXAMPLE (e-commerce inventory):                          |
+|                                                                       |
+|  Time  Node A                    Node B                               |
+|  ----  ------                    ------                               |
+|  t=0   READ inventory = 5        READ inventory = 5                   |
+|  t=1   Sell 1 item               Sell 1 item                          |
+|  t=2   WRITE inventory = 4       WRITE inventory = 4                  |
+|                                                                       |
+|  Expected: 3 (two items sold)                                         |
+|  Actual:   4 (one update lost — classic lost update problem)          |
+|                                                                       |
+|  FIX: Use Redis atomic DECR, or a distributed lock so only one        |
+|  node reads+writes at a time, or a Lua script for check-and-set.      |
+|                                                                       |
+|  ================================================================     |
+|  PROBLEM 2: NETWORK CAN FAIL OR DELAY                                 |
+|  ================================================================     |
+|                                                                       |
+|  a) PARTIAL FAILURE                                                   |
+|     You sent "charge $30" to the payment gateway. No response.        |
+|     Did it succeed? Fail? Timeout? You don't know.                    |
+|     If you retry, the customer might be charged twice.                |
+|     FIX: Idempotency keys — same request ID = same result.            |
+|                                                                       |
+|  b) MESSAGE REORDERING                                                |
+|     "deduct $30" arrives AFTER "refund $30" due to network delay.     |
+|     Customer gets refunded for money never charged.                   |
+|     FIX: Sequence numbers or vector clocks for ordering.              |
+|                                                                       |
+|  c) NETWORK PARTITION (SPLIT BRAIN)                                   |
+|                                                                       |
+|     +--------+          PARTITION          +--------+                 |
+|     | Node A |  X-------- BREAK --------X  | Node B |                 |
+|     | "I am  |                             | "I am  |                 |
+|     | leader"|                             | leader"|                 |
+|     +--------+                             +--------+                 |
+|                                                                       |
+|     Both sides think they're the leader. Both accept writes.          |
+|     When partition heals, conflicting writes must be resolved.        |
+|     FIX: Majority quorum — need > N/2 nodes to agree on leader.       |
+|     This is why Redlock needs 3/5 nodes (majority).                   |
+|                                                                       |
+|  ================================================================     |
+|  PROBLEM 3: CLOCKS ARE NOT SYNCHRONIZED                               |
+|  ================================================================     |
+|                                                                       |
+|  a) LAST-WRITE-WINS BREAKS                                            |
+|     Node A writes at T=100 (its clock).                               |
+|     Node B writes at T=99 (its clock, running 2s behind).             |
+|     B's write was actually LATER in real time, but discarded          |
+|     because 99 < 100. Data lost silently.                             |
+|                                                                       |
+|  b) LOCK EXPIRY RACES                                                 |
+|     Node A acquires lock with 30s TTL.                                |
+|     A's clock is 2s behind Redis server's clock.                      |
+|     A thinks it has 10s left, but lock already expired on server.     |
+|     Node B acquires the same lock.                                    |
+|     TWO nodes now hold the "same" lock simultaneously.                |
+|     FIX: Fencing tokens (monotonic counter on lock acquisition).      |
+|                                                                       |
+|  c) EVENT ORDERING                                                    |
+|     Cannot use wall-clock timestamps to determine "which happened     |
+|     first" across nodes. Clocks drift by milliseconds to seconds.     |
+|     FIX: Lamport clocks (logical ordering) or vector clocks           |
+|     (causal ordering) instead of wall-clock time.                     |
+|                                                                       |
+|  ================================================================     |
+|  PROBLEM 4: NODES CAN CRASH                                           |
+|  ================================================================     |
+|                                                                       |
+|  a) INCOMPLETE OPERATIONS                                             |
+|     Node debits account A ($-30), then crashes before crediting       |
+|     account B ($+30). Money vanishes.                                 |
+|     FIX: Sagas (compensating transactions) or 2PC.                    |
+|                                                                       |
+|  b) LOCK HOLDER DIES                                                  |
+|     Node acquires lock, crashes, never releases it.                   |
+|     Without TTL, every other node deadlocks forever.                  |
+|     FIX: Always use SET ... NX EX (TTL as safety net).                |
+|     Redis lock auto-expires even if holder crashes.                   |
+|                                                                       |
+|  c) LEADER FAILURE                                                    |
+|     Leader node dies. Followers must elect a new one.                 |
+|     During election: system is unavailable (CP system) or risks       |
+|     serving stale data (AP system). This is the CAP trade-off.        |
+|                                                                       |
+|  ================================================================     |
+|  THE COMBINED EFFECT — WORST-CASE SCENARIOS                           |
+|  ================================================================     |
+|                                                                       |
+|  The real danger is when these happen TOGETHER:                       |
+|                                                                       |
+|  +-------------------------------+-----------------------------------+|
+|  | Scenario                      | What Goes Wrong                   ||
+|  +-------------------------------+-----------------------------------+|
+|  | Network delay + no shared mem | Two nodes both believe they hold  ||
+|  |                               | the lock (GC pause + expired TTL) ||
+|  +-------------------------------+-----------------------------------+|
+|  | Clock skew + node crash       | Backup comes up with clock ahead, ||
+|  |                               | invalidates still-valid locks     ||
+|  +-------------------------------+-----------------------------------+|
+|  | Partition + leader crash      | Old leader on minority side       ||
+|  |                               | crashes, recovers, thinks it's    ||
+|  |                               | still leader. Two leaders exist.  ||
+|  +-------------------------------+-----------------------------------+|
+|                                                                       |
+|  -------------------------------------------------------------------  |
+|  HOW REDIS ADDRESSES THESE PROBLEMS                                   |
+|  -------------------------------------------------------------------  |
+|                                                                       |
+|  +----------------------------+--------------------------------------+|
+|  | Problem                    | Redis Solution                       ||
+|  +----------------------------+--------------------------------------+|
+|  | Lost updates               | Atomic commands (INCR, DECR),        ||
+|  |                            | Lua scripts for check-and-set        ||
+|  +----------------------------+--------------------------------------+|
+|  | Partial failure / retries  | Idempotent operations, Lua scripts   ||
+|  +----------------------------+--------------------------------------+|
+|  | Split brain                | Redlock (majority quorum, 3/5 nodes) ||
+|  +----------------------------+--------------------------------------+|
+|  | Clock skew on locks        | TTL-based expiry, fencing tokens     ||
+|  +----------------------------+--------------------------------------+|
+|  | Lock holder crash          | SET ... NX EX (auto-expire TTL)      ||
+|  +----------------------------+--------------------------------------+|
+|  | Need atomic read-then-write| Lua scripts (server-side execution)  ||
+|  +----------------------------+--------------------------------------+|
+|                                                                       |
+|  This is why the next section covers Distributed Locks in detail.     |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
+## SECTION 1.9: DISTRIBUTED LOCKS
 
 ```
 +------------------------------------------------------------------------+
