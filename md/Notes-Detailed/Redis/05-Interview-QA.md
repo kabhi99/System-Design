@@ -244,29 +244,65 @@ to production operations and system design scenarios.
 ### Q10: How does Redis replication work? Is it synchronous?
 
 ```
-+-------------------------------------------------------------------------+
-|                                                                         |
-|  ASYNCHRONOUS by default:                                               |
-|  * Master writes to local memory, responds to client                    |
-|  * Master sends write to replicas asynchronously                        |
-|  * Replica may lag behind (eventual consistency)                        |
-|                                                                         |
-|  SEMI-SYNCHRONOUS (optional):                                           |
-|  WAIT 1 5000  -- wait for at least 1 replica to ack, 5s timeout         |
-|  min-replicas-to-write 1    -- reject writes if < 1 replica alive       |
-|  min-replicas-max-lag 10    -- reject if replica > 10s behind           |
-|                                                                         |
-|  REPLICATION PROCESS:                                                   |
-|  1. Initial: Master does BGSAVE (RDB), sends to replica                 |
-|  2. Ongoing: Master streams write commands to replica                   |
-|  3. Short disconnect: Partial sync (from backlog buffer)                |
-|  4. Long disconnect: Full sync again (new RDB)                          |
-|                                                                         |
-|  IMPORTANT: Replication is at the command level, not data level.        |
-|  Non-deterministic commands (RANDOMKEY, TIME) are replaced with         |
-|  deterministic equivalents before replicating.                          |
-|                                                                         |
-+-------------------------------------------------------------------------+
++------------------------------------------------------------------------+
+|                                                                        |
+|  NO — Redis replication is ASYNCHRONOUS by default.                    |
+|                                                                        |
+|  What this means:                                                      |
+|  * Client sends SET key value to Master                                |
+|  * Master writes to memory and responds OK immediately                 |
+|  * Master sends the write to replicas IN THE BACKGROUND                |
+|  * Client does NOT wait for replicas to acknowledge                    |
+|                                                                        |
+|  Client          Master              Replica                           |
+|    |-- SET k v -->|                     |                              |
+|    |              |-- write to memory   |                              |
+|    |<-- OK -------|                     |                              |
+|    |              |-- SET k v --------->| (async, later)               |
+|    | (already     |                     |                              |
+|    |  done)       |                     |                              |
+|                                                                        |
+|  CONSEQUENCE: If master crashes before replicating, that write         |
+|  is LOST. Replica gets promoted without it.                            |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  SEMI-SYNCHRONOUS (WAIT command):                                      |
+|                                                                        |
+|  SET order:789 "paid"                                                  |
+|  WAIT 1 5000  -- block until 1 replica acks, timeout 5s                |
+|                                                                        |
+|  Client blocks until at least 1 replica confirms it received           |
+|  the write. Returns number of replicas that acked.                     |
+|  If returns 0: no replica got it before timeout.                       |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  WRITE SAFETY CONFIG:                                                  |
+|  min-replicas-to-write 1   -- reject writes if < 1 replica alive       |
+|  min-replicas-max-lag 10   -- replica "alive" only if lag < 10s        |
+|  Together: prevents writing to an isolated master (split brain).       |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  REPLICATION PROCESS:                                                  |
+|  1. FULL SYNC: Master forks, creates RDB, sends to replica.            |
+|     Replica flushes old data, loads RDB, catches up on buffer.         |
+|  2. PARTIAL SYNC: Replica reconnects after short disconnect.           |
+|     Sends offset. Master replays missed commands from backlog.         |
+|  3. CONTINUOUS: Master streams every write to all replicas.            |
+|     Replication is at command level (not data level).                  |
+|     Non-deterministic commands converted to deterministic.             |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  INTERVIEW ANSWER:                                                     |
+|  "Async by default — master responds before replicas receive the       |
+|  write. WAIT gives semi-sync. min-replicas-to-write prevents           |
+|  orphan writes. But Redis never offers fully synchronous               |
+|  replication — for that, use ZooKeeper or etcd."                       |
+|                                                                        |
++------------------------------------------------------------------------+
 ```
 
 ### Q11: What is the big-O complexity of Redis operations?

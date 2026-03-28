@@ -114,49 +114,242 @@ scales horizontally with clustering.
 ## SECTION 3.2: REPLICATION
 
 ```
-+--------------------------------------------------------------------------+
-|                                                                          |
-|  REDIS REPLICATION = Master-Replica (formerly master-slave)              |
-|                                                                          |
-|  +----------+     +----------+     +----------+                          |
-|  |  MASTER  | --> | REPLICA 1| --> | REPLICA 3|  (chained)               |
-|  | (read +  |     | (read    |     | (read    |                          |
-|  |  write)  | --> | only)    |     | only)    |                          |
-|  +----------+     +----------+     +----------+                          |
-|                   | REPLICA 2|                                           |
-|                   | (read    |                                           |
-|                   | only)    |                                           |
-|                   +----------+                                           |
-|                                                                          |
-|  -------------------------------------------------------------------     |
-|                                                                          |
-|  HOW IT WORKS:                                                           |
-|                                                                          |
-|  1. FULL SYNC (initial or after long disconnect):                        |
-|     * Master runs BGSAVE, creates RDB snapshot                           |
-|     * Sends RDB to replica                                               |
-|     * Replica loads RDB, then receives buffered writes                   |
-|                                                                          |
-|  2. PARTIAL SYNC (short disconnect):                                     |
-|     * Master has a replication backlog (in-memory buffer)                |
-|     * Replica sends its replication offset                               |
-|     * Master sends only the missed commands (no full sync!)              |
-|                                                                          |
-|  3. CONTINUOUS:                                                          |
-|     * Master sends every write command to all replicas                   |
-|     * Replication is ASYNCHRONOUS by default                             |
-|     * WAIT command for synchronous replication (blocks)                  |
-|                                                                          |
-|  -------------------------------------------------------------------     |
-|                                                                          |
-|  CONFIG:                                                                 |
-|  replicaof 192.168.1.100 6379   -- make this instance a replica          |
-|  replica-read-only yes           -- replicas reject writes (default)     |
-|  repl-backlog-size 1mb           -- backlog for partial sync             |
-|  min-replicas-to-write 1         -- require N replicas for writes        |
-|  min-replicas-max-lag 10         -- max lag (seconds) for above          |
-|                                                                          |
-+--------------------------------------------------------------------------+
++------------------------------------------------------------------------+
+|                                                                        |
+|  REDIS REPLICATION = Master-Replica (formerly master-slave)            |
+|                                                                        |
+|  +----------+     +----------+     +----------+                        |
+|  |  MASTER  | --> | REPLICA 1| --> | REPLICA 3|  (chained)             |
+|  | (read +  |     | (read    |     | (read    |                        |
+|  |  write)  | --> | only)    |     | only)    |                        |
+|  +----------+     +----------+     +----------+                        |
+|                   | REPLICA 2|                                         |
+|                   | (read    |                                         |
+|                   | only)    |                                         |
+|                   +----------+                                         |
+|                                                                        |
+|  * Master handles ALL writes                                           |
+|  * Replicas are READ-ONLY copies                                       |
+|  * Replication is ASYNCHRONOUS by default                              |
+|                                                                        |
+|  ================================================================      |
+|  IS IT SYNCHRONOUS? NO — ASYNC BY DEFAULT                              |
+|  ================================================================      |
+|                                                                        |
+|  What happens when a client writes to master:                          |
+|                                                                        |
+|  Client          Master                 Replica                        |
+|    |                |                      |                           |
+|    |-- SET k v ---->|                      |                           |
+|    |                |-- (write to memory)   |                          |
+|    |<-- OK ---------|                      |                           |
+|    |                |                      |                           |
+|    |  (client is    |-- SET k v ---------->|  (async, in background)   |
+|    |   already done)|                      |-- (apply to memory)       |
+|    |                |                      |                           |
+|                                                                        |
+|  KEY POINT: The master responds OK to the client BEFORE the            |
+|  replica receives the write. The client does NOT wait for              |
+|  replication to complete.                                              |
+|                                                                        |
+|  This means:                                                           |
+|  * Writes are FAST (no waiting for replica ack)                        |
+|  * Replica may LAG behind master (eventual consistency)                |
+|  * If master crashes, unsynced writes are LOST                         |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  DATA LOSS SCENARIO (why async replication is risky)                   |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  t=0  Client writes SET order:789 "paid" to Master   -> OK             |
+|  t=1  Master queues command to send to Replica                         |
+|  t=2  MASTER CRASHES (before sending to Replica)                       |
+|  t=3  Sentinel promotes Replica to new Master                          |
+|  t=4  New Master does NOT have order:789 = "paid"                      |
+|                                                                        |
+|  Result: Client thinks order is paid. Database says it's not.          |
+|  This is the fundamental trade-off of async replication.               |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  SEMI-SYNCHRONOUS REPLICATION (WAIT command)                           |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Redis is NOT fully synchronous, but WAIT gives you a middle ground:   |
+|                                                                        |
+|  SET order:789 "paid"                                                  |
+|  WAIT 1 5000                                                           |
+|    |    |                                                              |
+|    |    +-- timeout: 5000ms (give up after 5 seconds)                  |
+|    +------- wait for at least 1 replica to acknowledge                 |
+|                                                                        |
+|  Client          Master                 Replica                        |
+|    |                |                      |                           |
+|    |-- SET k v ---->|                      |                           |
+|    |                |-- (write to memory)   |                          |
+|    |                |-- SET k v ---------->|                           |
+|    |                |                      |-- (apply to memory)       |
+|    |                |<-- ACK --------------|                           |
+|    |<-- 1 ----------|  (1 replica acked)   |                           |
+|    |                |                      |                           |
+|    | (NOW client    |                      |                           |
+|    |  can proceed)  |                      |                           |
+|                                                                        |
+|  WAIT returns the NUMBER of replicas that acknowledged.                |
+|  If it returns 0, no replica got the write before timeout.             |
+|                                                                        |
+|  IMPORTANT: WAIT does NOT make the write more durable on master.       |
+|  It only tells you whether replicas received it. If master crashes     |
+|  after WAIT returns but before replica is promoted, the write          |
+|  survives on the replica.                                              |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  CONFIG FOR WRITE SAFETY                                               |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  min-replicas-to-write 1                                               |
+|    Master REJECTS writes if fewer than 1 replica is connected          |
+|    and healthy. Prevents writing to a master that lost all replicas.   |
+|                                                                        |
+|  min-replicas-max-lag 10                                               |
+|    A replica is considered "healthy" only if its lag is < 10 seconds.  |
+|    Combined with above: "reject writes if no replica is within 10s."   |
+|                                                                        |
+|  These two settings TOGETHER prevent the split-brain data loss         |
+|  scenario where an isolated master keeps accepting writes.             |
+|                                                                        |
+|  ================================================================      |
+|  REPLICATION PROCESS — STEP BY STEP                                    |
+|  ================================================================      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  PHASE 1: FULL SYNC (initial connect or long disconnect)               |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Replica                        Master                                 |
+|    |                              |                                    |
+|    |-- PSYNC ? -1 -------------->|  ("I'm new, full sync please")      |
+|    |                              |                                    |
+|    |                              |-- fork() child process             |
+|    |                              |-- BGSAVE (create RDB snapshot)     |
+|    |                              |   (master keeps serving clients)   |
+|    |                              |                                    |
+|    |                              |-- buffer new writes that arrive    |
+|    |                              |   during BGSAVE                    |
+|    |                              |                                    |
+|    |<-- RDB file (bulk transfer) -|  (send snapshot to replica)        |
+|    |                              |                                    |
+|    |-- (flush old data)           |                                    |
+|    |-- (load RDB into memory)     |                                    |
+|    |                              |                                    |
+|    |<-- buffered writes ---------|  (catch up on writes during RDB)    |
+|    |                              |                                    |
+|    |  (now in sync)               |                                    |
+|                                                                        |
+|  COST OF FULL SYNC:                                                    |
+|  * Master: CPU for fork() + disk I/O for RDB                           |
+|  * Network: transfer entire dataset (could be GBs)                     |
+|  * Replica: flush + reload (brief unavailability)                      |
+|  * Memory: fork() briefly doubles memory (copy-on-write)               |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  PHASE 2: PARTIAL SYNC (short disconnect and reconnect)                |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Master maintains a REPLICATION BACKLOG — a fixed-size circular        |
+|  buffer (default 1MB) of recent write commands.                        |
+|                                                                        |
+|  +----------------------------------------------------------+          |
+|  | Replication Backlog (circular buffer, 1MB default)        |         |
+|  |                                                          |          |
+|  | [SET a 1] [INCR b] [DEL c] [SET d 4] [ZADD e 1 x] ...  |            |
+|  |                             ^                            |          |
+|  |                             |                            |          |
+|  |                     replica's last offset                |          |
+|  +----------------------------------------------------------+          |
+|                                                                        |
+|  When replica reconnects after a brief disconnect:                     |
+|                                                                        |
+|  Replica                        Master                                 |
+|    |                              |                                    |
+|    |-- PSYNC {repl-id} {offset} ->|  ("I was at offset 12345")         |
+|    |                              |                                    |
+|    |                              |-- check: is offset in backlog?     |
+|    |                              |                                    |
+|    |   IF YES (offset still in backlog):                               |
+|    |<-- +CONTINUE + missed cmds --|  (send only what was missed)       |
+|    |                              |                                    |
+|    |   IF NO (offset fell off backlog — too far behind):               |
+|    |<-- +FULLRESYNC -------------|  (need full sync again)             |
+|                                                                        |
+|  WHY THIS MATTERS:                                                     |
+|  * Short network blip (1-5 seconds): partial sync, ~instant recovery   |
+|  * Long outage (minutes+): backlog overwritten, full sync required     |
+|  * Increase repl-backlog-size if you expect longer disconnects         |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  PHASE 3: CONTINUOUS REPLICATION (steady state)                        |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  After sync, master streams every write command to replicas:           |
+|                                                                        |
+|  Client A --> SET user:1 "Alice" --> Master                            |
+|                                        |                               |
+|                                        +--> Replica 1: SET user:1 ...  |
+|                                        +--> Replica 2: SET user:1 ...  |
+|                                                                        |
+|  * Replication happens at the COMMAND level, not data level            |
+|  * Non-deterministic commands (RANDOMKEY, TIME, SPOP) are converted    |
+|    to deterministic equivalents before replicating                     |
+|  * Replicas send ACKs to master with their current offset              |
+|    (master tracks how far behind each replica is)                      |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  REPLICATION MODES COMPARISON                                          |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  +----------------+-----------+------------+----------+                |
+|  | Mode           | Data Safe | Latency    | Config   |                |
+|  +----------------+-----------+------------+----------+                |
+|  | Async (default)| Risk of   | Fastest    | Default  |                |
+|  |                | data loss | (no wait)  |          |                |
+|  +----------------+-----------+------------+----------+                |
+|  | WAIT N timeout | Better    | Slower     | Per-cmd  |                |
+|  |                | (N acks)  | (wait ack) | WAIT 1 T |                |
+|  +----------------+-----------+------------+----------+                |
+|  | min-replicas   | Prevents  | Same as    | Config   |                |
+|  |                | orphan    | async      | setting  |                |
+|  |                | writes    |            |          |                |
+|  +----------------+-----------+------------+----------+                |
+|                                                                        |
+|  NONE of these give fully synchronous replication like ZooKeeper.      |
+|  Redis prioritizes SPEED over perfect consistency.                     |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  CONFIG                                                                |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  replicaof 192.168.1.100 6379   -- make this instance a replica        |
+|  replica-read-only yes           -- replicas reject writes (default)   |
+|  repl-backlog-size 1mb           -- backlog for partial sync           |
+|  min-replicas-to-write 1         -- require N replicas for writes      |
+|  min-replicas-max-lag 10         -- max lag (seconds) for above        |
+|                                                                        |
+|  -------------------------------------------------------------------   |
+|  INTERVIEW SUMMARY                                                     |
+|  -------------------------------------------------------------------   |
+|                                                                        |
+|  Q: "Is Redis replication synchronous?"                                |
+|                                                                        |
+|  A: "No, it's asynchronous by default. The master responds to the      |
+|  client BEFORE the replica receives the write. This means writes       |
+|  are fast but can be lost if the master crashes before replicating.    |
+|  You can use the WAIT command for semi-synchronous behavior, where     |
+|  the client blocks until N replicas acknowledge. And you can use       |
+|  min-replicas-to-write to reject writes if no healthy replica is       |
+|  connected. But Redis never offers fully synchronous replication —     |
+|  for that you'd use ZooKeeper or etcd."                                |
+|                                                                        |
++------------------------------------------------------------------------+
 ```
 
 ## SECTION 3.3: REDIS SENTINEL (HIGH AVAILABILITY)
