@@ -35,7 +35,65 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: HIGH-LEVEL ARCHITECTURE
+## SECTION 2: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  URL FRONTIER                                                           |
+||  The prioritized queue of URLs waiting to be crawled. Manages           |
+||  scheduling priority (which URL next) and per-host politeness           |
+||  (rate limiting). The central scheduling structure of any crawler.      |
+||                                                                         |
+||  SEED URLS                                                              |
+||  The initial well-known URLs that bootstrap the crawl process.          |
+||  Typically homepages of major sites; the crawler discovers new          |
+||  URLs by following outbound links from these starting points.           |
+||                                                                         |
+||  ROBOTS.TXT                                                             |
+||  A per-domain file dictating which paths crawlers may or may not        |
+||  access, plus optional crawl-delay directives. Must be fetched          |
+||  and cached before any pages on that domain are requested.              |
+||                                                                         |
+||  POLITENESS                                                             |
+||  Limiting crawl rate per host so target servers are not overloaded.     |
+||  Enforced via per-domain queues with cooldown timers between            |
+||  fetches. Violating politeness risks IP bans or legal action.           |
+||                                                                         |
+||  URL NORMALIZATION                                                      |
+||  Converting URLs to a canonical form for deduplication: lowercase,      |
+||  remove fragments, sort query params, strip tracking parameters.        |
+||  Without it, the same page is crawled many times under variant URLs.    |
+||                                                                         |
+||  BLOOM FILTER                                                           |
+||  A space-efficient probabilistic structure for set membership tests.    |
+||  Used to track billions of seen URLs with ~1% false-positive rate.      |
+||  1B URLs need only ~1.2 GB — far cheaper than a full hash set.          |
+||                                                                         |
+||  CONTENT FINGERPRINT (SIMHASH)                                          |
+||  A locality-sensitive hash detecting near-duplicate page content.       |
+||  Catches identical articles served at different URLs, complementing     |
+||  URL dedup. Pages with similarity >90% are typically skipped.           |
+||                                                                         |
+||  DNS RESOLUTION                                                         |
+||  Translating hostnames to IP addresses before fetching. At 12K          |
+||  pages/sec DNS becomes a bottleneck without local per-worker            |
+||  caches, batch pre-resolution, and multiple provider fallbacks.         |
+||                                                                         |
+||  CRAWL DEPTH                                                            |
+||  The number of link hops from a seed URL to the current page.           |
+||  BFS explores shallow pages first (standard approach). Capping          |
+||  depth prevents crawler traps like infinite calendar URLs.              |
+||                                                                         |
+||  SITEMAP                                                                |
+||  An XML file from site owners listing pages with last-modified          |
+||  dates. Lets crawlers discover URLs without link-following and          |
+||  prioritize recently changed content for fresher indexing.              |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 3: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -71,7 +129,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: URL FRONTIER
+## SECTION 4: URL FRONTIER
 
 ```
 +--------------------------------------------------------------------------+
@@ -119,7 +177,7 @@ content aggregation, and data mining.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 4: URL DEDUPLICATION
+## SECTION 5: URL DEDUPLICATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -162,7 +220,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: FETCHER AND CONTENT PARSING
+## SECTION 6: FETCHER AND CONTENT PARSING
 
 ```
 +-------------------------------------------------------------------------+
@@ -211,7 +269,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: SCALING THE CRAWLER
+## SECTION 7: SCALING THE CRAWLER
 
 ```
 +-------------------------------------------------------------------------+
@@ -258,7 +316,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: RE-CRAWL AND FRESHNESS
+## SECTION 8: RE-CRAWL AND FRESHNESS
 
 ```
 +-------------------------------------------------------------------------+
@@ -291,7 +349,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +-------------------------------------------------------------------------+
@@ -360,7 +418,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +-------------------------------------------------------------------------+
@@ -430,7 +488,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: MONITORING AND OPERATIONS
+## SECTION 11: MONITORING AND OPERATIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -457,7 +515,7 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW QUESTIONS
+## SECTION 12: INTERVIEW QUESTIONS
 
 ```
 +--------------------------------------------------------------------------+

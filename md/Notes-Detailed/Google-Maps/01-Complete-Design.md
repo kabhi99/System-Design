@@ -136,7 +136,72 @@ Key dimensions of difficulty:
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: KEY TERMINOLOGY
+
+```
++-----------------------------------------------------------------------+
+|                        KEY TERMINOLOGY                                |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  Tile                                                                 |
+|    A square image or data chunk representing a fixed geographic       |
+|    area at a specific zoom level. The world map is divided into       |
+|    a grid of tiles for efficient rendering and caching.               |
+|                                                                       |
+|  Zoom Level                                                           |
+|    An integer (0-21) controlling map detail. At level z the world     |
+|    is divided into 4^z tiles. Higher levels show finer detail         |
+|    (individual buildings); lower levels show continents.              |
+|                                                                       |
+|  Geohash                                                              |
+|    A hierarchical spatial encoding that converts a (lat, lng) pair    |
+|    into a short alphanumeric string. Nearby locations share a         |
+|    common prefix, enabling efficient spatial partitioning.            |
+|                                                                       |
+|  Geocoding / Reverse Geocoding                                        |
+|    Geocoding converts a human-readable address into coordinates.      |
+|    Reverse geocoding converts coordinates back to an address.         |
+|    Both are core to location search and display.                      |
+|                                                                       |
+|  PoI (Point of Interest)                                              |
+|    A specific location users search for or see on the map, such       |
+|    as restaurants, gas stations, or landmarks. PoIs are indexed       |
+|    for search and rendered as icons on map tiles.                     |
+|                                                                       |
+|  Routing Graph                                                        |
+|    A weighted directed graph where nodes represent intersections      |
+|    and edges represent road segments. Edge weights encode travel      |
+|    time or distance, used by pathfinding algorithms.                  |
+|                                                                       |
+|  ETA (Estimated Time of Arrival)                                      |
+|    The predicted time to reach a destination, computed from route     |
+|    segment speeds, live traffic, and ML models. Continuously          |
+|    updated during active navigation sessions.                         |
+|                                                                       |
+|  Road Segment                                                         |
+|    A directed edge in the routing graph between two intersections.    |
+|    Carries metadata like speed limit, road class, one-way flag,       |
+|    and real-time traffic speed.                                       |
+|                                                                       |
+|  Vector vs Raster Tiles                                               |
+|    Raster tiles are pre-rendered images (PNG/JPEG). Vector tiles      |
+|    are encoded geometry rendered on the client GPU, enabling          |
+|    dynamic styling, smooth rotation, and smaller transfer sizes.      |
+|                                                                       |
+|  Quadtree                                                             |
+|    A tree structure that recursively subdivides 2D space into four    |
+|    quadrants. Used for spatial indexing of PoIs and determining       |
+|    which map tiles to load for a given viewport.                      |
+|                                                                       |
+|  Navigation                                                           |
+|    Real-time turn-by-turn guidance along a computed route. Includes   |
+|    position tracking, off-route detection, automatic rerouting,       |
+|    and voice instruction generation.                                  |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-----------------------------------------------------------------------+
@@ -213,7 +278,7 @@ Key dimensions of difficulty:
 +-------------------+----------------------------------------------------+
 ```
 
-## SECTION 5: MAP TILE RENDERING
+## SECTION 6: MAP TILE RENDERING
 
 ### TILE PYRAMID
 
@@ -308,7 +373,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 6: GEOCODING
+## SECTION 7: GEOCODING
 
 ### FORWARD GEOCODING PIPELINE
 
@@ -408,7 +473,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 7: ROAD NETWORK & GRAPH MODEL
+## SECTION 8: ROAD NETWORK & GRAPH MODEL
 
 ```
 +-----------------------------------------------------------------------+
@@ -477,7 +542,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +------------------------------------------------------------------------+
 ```
 
-## SECTION 8: ROUTING ALGORITHMS
+## SECTION 9: ROUTING ALGORITHMS
 
 ### DIJKSTRA'S ALGORITHM
 
@@ -609,7 +674,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: REAL-TIME TRAFFIC
+## SECTION 10: REAL-TIME TRAFFIC
 
 ### GPS TRACE INGESTION PIPELINE
 
@@ -696,7 +761,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 10: ETA PREDICTION
+## SECTION 11: ETA PREDICTION
 
 ```
 +-----------------------------------------------------------------------+
@@ -739,7 +804,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 11: NAVIGATION
+## SECTION 12: NAVIGATION
 
 ### TURN-BY-TURN NAVIGATION FLOW
 
@@ -809,7 +874,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 12: SCALING
+## SECTION 13: SCALING
 
 ### TILE CDN STRATEGY
 
@@ -938,7 +1003,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 +------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 14: INTERVIEW Q&A
 
 ```
 +------------------------------------------------------------------------+

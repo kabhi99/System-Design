@@ -1,106 +1,173 @@
-# Design a Distributed Task Scheduler
+# DESIGN A DISTRIBUTED TASK SCHEDULER
 
-## Table of Contents
+*Complete Design: Requirements, Architecture, and Interview Guide*
+
+## SECTION 1: TABLE OF CONTENTS
 
 1. Requirements
-2. Scale Estimation
-3. High-Level Architecture
-4. Detailed Design
-5. Task Lifecycle & State Machine
-6. Scheduling Strategies
-7. Task Queue Design
-8. Worker Management & Execution
-9. Exactly-Once Execution & Idempotency
-10. Priority & Fairness
-11. Rate Limiting & Throttling
-12. Dead Letter Queue & Retry Policies
-13. Cron Scheduling & Time Zones
-14. Database Schema / Data Model
-15. API Design
-16. Comparison: Celery vs Temporal vs Airflow vs Custom
-17. Monitoring and Observability
-18. Failure Scenarios and Mitigations
-19. Interview Q&A
-20. Summary
+2. Key Terminology
+3. Scale Estimation
+4. High-Level Architecture
+5. Detailed Design
+6. Task Lifecycle & State Machine
+7. Scheduling Strategies
+8. Task Queue Design
+9. Worker Management & Execution
+10. Exactly-Once Execution & Idempotency
+11. Priority & Fairness
+12. Rate Limiting & Throttling
+13. Dead Letter Queue & Retry Policies
+14. Cron Scheduling & Time Zones
+15. Database Schema / Data Model
+16. API Design
+17. Comparison: Celery vs Temporal vs Airflow vs Custom
+18. Monitoring and Observability
+19. Failure Scenarios and Mitigations
+20. Interview Q&A
+21. Summary
 
----
+## SECTION 1: REQUIREMENTS
 
-## 1. Requirements
-
-### 1.1 Functional Requirements
+### 1.1 FUNCTIONAL REQUIREMENTS
 
 ```
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  Core Operations:                                                        |
-|  - submit(task)          : Submit a task for execution                   |
-|  - schedule(task, time)  : Schedule a task for future execution          |
-|  - cancel(task_id)       : Cancel a pending/scheduled task               |
-|  - status(task_id)       : Query current status of a task                |
-|  - result(task_id)       : Retrieve the result of a completed task       |
+|  * submit(task)          : Submit a task for execution                   |
+|  * schedule(task, time)  : Schedule a task for future execution          |
+|  * cancel(task_id)       : Cancel a pending/scheduled task               |
+|  * status(task_id)       : Query current status of a task                |
+|  * result(task_id)       : Retrieve the result of a completed task       |
 |                                                                          |
 |  Scheduling Types:                                                       |
-|  - Immediate execution (fire-and-forget)                                 |
-|  - Delayed execution (run at a specific time)                            |
-|  - Recurring / Cron (run on a schedule, e.g., every 5 min)               |
-|  - Workflow / DAG execution (task B runs after task A completes)         |
+|  * Immediate execution (fire-and-forget)                                 |
+|  * Delayed execution (run at a specific time)                            |
+|  * Recurring / Cron (run on a schedule, e.g., every 5 min)               |
+|  * Workflow / DAG execution (task B runs after task A completes)         |
 |                                                                          |
 |  Task Characteristics:                                                   |
-|  - Tasks are idempotent (safe to retry)                                  |
-|  - Tasks have a type/handler, payload, priority, and TTL                 |
-|  - Tasks can have dependencies (DAG execution)                           |
-|  - Tasks produce a result or side-effect                                 |
-|  - Max execution time (timeout) per task                                 |
+|  * Tasks are idempotent (safe to retry)                                  |
+|  * Tasks have a type/handler, payload, priority, and TTL                 |
+|  * Tasks can have dependencies (DAG execution)                           |
+|  * Tasks produce a result or side-effect                                 |
+|  * Max execution time (timeout) per task                                 |
 |                                                                          |
 |  Additional Features:                                                    |
-|  - Task deduplication (prevent duplicate submissions)                    |
-|  - Callback / webhook on completion                                      |
-|  - Task grouping and batch operations                                    |
-|  - Pause / resume task queues                                            |
+|  * Task deduplication (prevent duplicate submissions)                    |
+|  * Callback / webhook on completion                                      |
+|  * Task grouping and batch operations                                    |
+|  * Pause / resume task queues                                            |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-### 1.2 Non-Functional Requirements
+### 1.2 NON-FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Reliability:                                                           |
-|  - At-least-once execution guarantee                                    |
-|  - No task silently dropped (durable persistence)                       |
-|  - Exactly-once semantics where possible (with idempotency)             |
-|  - Survive node failures without losing tasks                           |
+|  * At-least-once execution guarantee                                    |
+|  * No task silently dropped (durable persistence)                       |
+|  * Exactly-once semantics where possible (with idempotency)             |
+|  * Survive node failures without losing tasks                           |
 |                                                                         |
 |  Availability:                                                          |
-|  - 99.99% uptime for task submission                                    |
-|  - Graceful degradation under overload                                  |
-|  - No single point of failure                                           |
+|  * 99.99% uptime for task submission                                    |
+|  * Graceful degradation under overload                                  |
+|  * No single point of failure                                           |
 |                                                                         |
 |  Performance:                                                           |
-|  - Task dispatch latency: < 100ms for immediate tasks                   |
-|  - Scheduling accuracy: within 1 second of target time                  |
-|  - Support 100K+ task submissions per second                            |
-|  - Support 50K+ concurrent task executions                              |
+|  * Task dispatch latency: < 100ms for immediate tasks                   |
+|  * Scheduling accuracy: within 1 second of target time                  |
+|  * Support 100K+ task submissions per second                            |
+|  * Support 50K+ concurrent task executions                              |
 |                                                                         |
 |  Scalability:                                                           |
-|  - Horizontal scaling of schedulers and workers                         |
-|  - Handle millions of pending tasks                                     |
-|  - Scale workers independently per task type                            |
+|  * Horizontal scaling of schedulers and workers                         |
+|  * Handle millions of pending tasks                                     |
+|  * Scale workers independently per task type                            |
 |                                                                         |
 |  Observability:                                                         |
-|  - Real-time metrics (queue depth, latency, failure rate)               |
-|  - Full task execution history and audit trail                          |
-|  - Alerting on SLA breaches                                             |
+|  * Real-time metrics (queue depth, latency, failure rate)               |
+|  * Full task execution history and audit trail                          |
+|  * Alerting on SLA breaches                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 2: KEY TERMINOLOGY
 
-## 2. Scale Estimation
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TASK / JOB                                                             |
+|  A discrete unit of work defined by a handler (what to run),            |
+|  payload (input data), priority, and TTL. Tasks can be                  |
+|  immediate, delayed, recurring, or part of a DAG workflow.              |
+|                                                                         |
+|  CRON EXPRESSION                                                        |
+|  Compact syntax (e.g., '0 */5 * * *') defining a recurring              |
+|  schedule. Parsed by the scheduler to determine next fire time,         |
+|  with timezone awareness for global deployments.                        |
+|                                                                         |
+|  DAG (DIRECTED ACYCLIC GRAPH)                                           |
+|  A workflow where tasks have dependencies: task B runs only             |
+|  after task A completes. Enables complex multi-step pipelines           |
+|  while preventing circular dependencies.                                |
+|                                                                         |
+|  WORKER                                                                 |
+|  A process that pulls tasks from a queue and executes them.             |
+|  Workers are stateless and horizontally scalable, often grouped         |
+|  by task type to enable independent scaling per workload.               |
+|                                                                         |
+|  PRIORITY QUEUE                                                         |
+|  Queue where tasks are dequeued by priority rather than arrival         |
+|  order. Ensures critical tasks (e.g., payments) execute before          |
+|  low-priority ones (e.g., report generation).                           |
+|                                                                         |
+|  DEAD LETTER QUEUE (DLQ)                                                |
+|  Holding area for tasks that exhausted all retry attempts.              |
+|  Enables manual inspection, alerting, and batch reprocessing            |
+|  after the root cause of the failure is resolved.                       |
+|                                                                         |
+|  IDEMPOTENCY                                                            |
+|  Property ensuring a task executed multiple times produces the          |
+|  same result as a single execution. Critical for at-least-once          |
+|  delivery where retries may cause duplicate runs.                       |
+|                                                                         |
+|  RETRY POLICY                                                           |
+|  Rules governing how failed tasks are retried: max attempts,            |
+|  backoff strategy (exponential with jitter), and which error            |
+|  types are retryable vs. permanently failed.                            |
+|                                                                         |
+|  TASK STATE MACHINE                                                     |
+|  Lifecycle states a task transitions through: PENDING, QUEUED,          |
+|  RUNNING, SUCCESS, FAILED, RETRYING, DEAD. State changes are            |
+|  persisted for auditability and failure recovery.                       |
+|                                                                         |
+|  BACKPRESSURE                                                           |
+|  Mechanism to slow down task submission when workers or queues          |
+|  are overloaded. Prevents cascading failures by rejecting or            |
+|  delaying new tasks until the system recovers capacity.                 |
+|                                                                         |
+|  CONCURRENCY LIMIT                                                      |
+|  Maximum number of tasks of a given type that can execute               |
+|  simultaneously. Protects downstream resources (database, API)          |
+|  from being overwhelmed by too many parallel tasks.                     |
+|                                                                         |
+|  SCHEDULER                                                              |
+|  Component that evaluates pending and cron tasks, determines            |
+|  which are ready to run, and enqueues them for workers. Runs            |
+|  as a leader-elected process to avoid missed schedules.                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
 
-### 2.1 Traffic Estimates
+## SECTION 3: SCALE ESTIMATION
+
+### 3.1 TRAFFIC ESTIMATES
 
 ```
 +--------------------------------------------------------------------------+
@@ -121,7 +188,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 2.2 Storage Estimates
+### 3.2 STORAGE ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -132,47 +199,45 @@
 |  With indexes and replicas (3x):   258 TB x 3 = ~774 TB                 |
 |                                                                         |
 |  Active / pending task store:                                           |
-|  - Max pending tasks:              10 million                           |
-|  - Pending data:                   10M x 1KB = ~10 GB                   |
-|  - Fits comfortably in memory for fast scheduling                       |
+|  * Max pending tasks:              10 million                           |
+|  * Pending data:                   10M x 1KB = ~10 GB                   |
+|  * Fits comfortably in memory for fast scheduling                       |
 |                                                                         |
 |  Result store:                                                          |
-|  - Average result size:            5 KB                                 |
-|  - Daily results:                  8.6B x 5KB = ~43 TB/day              |
-|  - Results TTL: 7 days -> ~301 TB                                       |
+|  * Average result size:            5 KB                                 |
+|  * Daily results:                  8.6B x 5KB = ~43 TB/day              |
+|  * Results TTL: 7 days -> ~301 TB                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 2.3 Compute Estimates
+### 3.3 COMPUTE ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Workers needed (2s avg execution):                                     |
-|  - Steady state: 100K/s x 2s = 200K concurrent tasks                    |
-|  - At 80% utilization: 200K / 0.8 = 250K worker slots                   |
-|  - Workers per machine (8 cores): ~16 concurrent tasks                  |
-|  - Machines needed: 250K / 16 = ~15,625 worker machines                 |
+|  * Steady state: 100K/s x 2s = 200K concurrent tasks                    |
+|  * At 80% utilization: 200K / 0.8 = 250K worker slots                   |
+|  * Workers per machine (8 cores): ~16 concurrent tasks                  |
+|  * Machines needed: 250K / 16 = ~15,625 worker machines                 |
 |                                                                         |
 |  Scheduler nodes:                                                       |
-|  - Each scheduler handles ~10K scheduling decisions/s                   |
-|  - Schedulers needed: 100K / 10K = ~10 scheduler nodes                  |
-|  - With redundancy: ~15 scheduler nodes                                 |
+|  * Each scheduler handles ~10K scheduling decisions/s                   |
+|  * Schedulers needed: 100K / 10K = ~10 scheduler nodes                  |
+|  * With redundancy: ~15 scheduler nodes                                 |
 |                                                                         |
 |  API servers:                                                           |
-|  - Each handles ~10K req/s                                              |
-|  - API servers needed: 100K / 10K = ~10                                 |
-|  - With redundancy: ~15 API servers                                     |
+|  * Each handles ~10K req/s                                              |
+|  * API servers needed: 100K / 10K = ~10                                 |
+|  * With redundancy: ~15 API servers                                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 4: HIGH-LEVEL ARCHITECTURE
 
-## 3. High-Level Architecture
-
-### 3.1 System Overview
+### 4.1 SYSTEM OVERVIEW
 
 ```
 +---------------------------------------------------------------------------+
@@ -200,16 +265,16 @@
 |     +-----------+  +-----------+  +-----------+                           |
 |                                                                           |
 |   Components:                                                             |
-|   - API Gateway: receives task submissions, queries                       |
-|   - Task Store: durable persistence of all tasks (MySQL/PostgreSQL)       |
-|   - Scheduler Service: moves delayed tasks to queue at trigger time       |
-|   - Task Queue: priority queue for ready-to-execute tasks (Redis/Kafka)   |
-|   - Worker Pools: execute tasks, grouped by task type                     |
+|   * API Gateway: receives task submissions, queries                       |
+|   * Task Store: durable persistence of all tasks (MySQL/PostgreSQL)       |
+|   * Scheduler Service: moves delayed tasks to queue at trigger time       |
+|   * Task Queue: priority queue for ready-to-execute tasks (Redis/Kafka)   |
+|   * Worker Pools: execute tasks, grouped by task type                     |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
-### 3.2 Component Interaction Flow
+### 4.2 COMPONENT INTERACTION FLOW
 
 ```
 +---------------------------------------------------------------------------+
@@ -220,33 +285,31 @@
 |     POST /api/v1/tasks { type: "send_email", payload: {...} }             |
 |                                                                           |
 |  2. API Gateway:                                                          |
-|     - Validates request                                                   |
-|     - Generates unique task_id (UUID / Snowflake)                         |
-|     - Persists task to Task Store (status = PENDING)                      |
-|     - Returns task_id to client immediately                               |
+|     * Validates request                                                   |
+|     * Generates unique task_id (UUID / Snowflake)                         |
+|     * Persists task to Task Store (status = PENDING)                      |
+|     * Returns task_id to client immediately                               |
 |                                                                           |
 |  3. For immediate tasks:                                                  |
-|     - API enqueues task directly into the Task Queue                      |
-|     - Task status updated to QUEUED                                       |
+|     * API enqueues task directly into the Task Queue                      |
+|     * Task status updated to QUEUED                                       |
 |                                                                           |
 |  4. For delayed / scheduled tasks:                                        |
-|     - Task stays in Task Store with execute_at timestamp                  |
-|     - Scheduler Service polls for due tasks and enqueues them             |
+|     * Task stays in Task Store with execute_at timestamp                  |
+|     * Scheduler Service polls for due tasks and enqueues them             |
 |                                                                           |
 |  5. Worker picks up task from queue:                                      |
-|     - Marks task as RUNNING                                               |
-|     - Executes the task handler                                           |
-|     - On success: marks as COMPLETED, stores result                       |
-|     - On failure: marks as FAILED, schedules retry if applicable          |
+|     * Marks task as RUNNING                                               |
+|     * Executes the task handler                                           |
+|     * On success: marks as COMPLETED, stores result                       |
+|     * On failure: marks as FAILED, schedules retry if applicable          |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
----
+## SECTION 5: DETAILED DESIGN
 
-## 4. Detailed Design
-
-### 4.1 API Gateway
+### 5.1 API GATEWAY
 
 ```
 +--------------------------------------------------------------------------+
@@ -254,12 +317,12 @@
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  Responsibilities:                                                       |
-|  - Authentication and authorization                                      |
-|  - Rate limiting per tenant / API key                                    |
-|  - Request validation and sanitization                                   |
-|  - Task deduplication (idempotency key check)                            |
-|  - Persisting task to database                                           |
-|  - Returning task_id for async tracking                                  |
+|  * Authentication and authorization                                      |
+|  * Rate limiting per tenant / API key                                    |
+|  * Request validation and sanitization                                   |
+|  * Task deduplication (idempotency key check)                            |
+|  * Persisting task to database                                           |
+|  * Returning task_id for async tracking                                  |
 |                                                                          |
 |  Deduplication Flow:                                                     |
 |  +--------------------------------------------------------------------+  |
@@ -282,7 +345,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 4.2 Task Store (Database)
+### 5.2 TASK STORE (DATABASE)
 
 ```
 +---------------------------------------------------------------------------+
@@ -309,19 +372,19 @@
 |  +---------------------------------------------------------------------+  |
 |                                                                           |
 |  Sharding Strategy (for SQL):                                             |
-|  - Shard by task_id (hash-based) for write distribution                   |
-|  - Secondary index on (status, execute_at) for scheduler queries          |
-|  - Partition by date for efficient history cleanup                        |
+|  * Shard by task_id (hash-based) for write distribution                   |
+|  * Secondary index on (status, execute_at) for scheduler queries          |
+|  * Partition by date for efficient history cleanup                        |
 |                                                                           |
 |  Hot / Cold Separation:                                                   |
-|  - Hot store: active tasks (PENDING, QUEUED, RUNNING) -- fast SSD         |
-|  - Cold store: completed tasks (COMPLETED, FAILED) -- cheaper storage     |
-|  - Move to cold after task completes + result TTL expires                 |
+|  * Hot store: active tasks (PENDING, QUEUED, RUNNING) -- fast SSD         |
+|  * Cold store: completed tasks (COMPLETED, FAILED) -- cheaper storage     |
+|  * Move to cold after task completes + result TTL expires                 |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
-### 4.3 Scheduler Service
+### 5.3 SCHEDULER SERVICE
 
 ```
 +--------------------------------------------------------------------------+
@@ -383,18 +446,16 @@
 |  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  Leader Election for Scheduler:                                          |
-|  - Only ONE scheduler instance should fire a given task                  |
-|  - Use distributed lock (Redis SETNX or ZooKeeper/etcd lease)            |
-|  - Or partition scheduled tasks by time range across schedulers          |
+|  * Only ONE scheduler instance should fire a given task                  |
+|  * Use distributed lock (Redis SETNX or ZooKeeper/etcd lease)            |
+|  * Or partition scheduled tasks by time range across schedulers          |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 6: TASK LIFECYCLE & STATE MACHINE
 
-## 5. Task Lifecycle & State Machine
-
-### 5.1 Task States
+### 6.1 TASK STATES
 
 ```
 +---------------------------------------------------------------------------+
@@ -444,13 +505,13 @@
 |                      +-------------+                |                     |
 |                                                                           |
 |  Additional transitions:                                                  |
-|  - Any state except COMPLETED -> CANCELLED (via cancel API)               |
-|  - RUNNING -> PENDING (if worker crashes, detected by heartbeat)          |
+|  * Any state except COMPLETED -> CANCELLED (via cancel API)               |
+|  * RUNNING -> PENDING (if worker crashes, detected by heartbeat)          |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
-### 5.2 State Transition Rules
+### 6.2 STATE TRANSITION RULES
 
 ```
 +-------------------------------------------------------------------------+
@@ -470,18 +531,16 @@
 |  RUNNING -> PENDING       : Watchdog (worker heartbeat lost)            |
 |                                                                         |
 |  Atomicity:                                                             |
-|  - State transitions are protected by DB transactions or                |
+|  * State transitions are protected by DB transactions or                |
 |    compare-and-swap (UPDATE ... WHERE status = expected_status)         |
-|  - Prevents race conditions between scheduler, worker, watchdog         |
+|  * Prevents race conditions between scheduler, worker, watchdog         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 7: SCHEDULING STRATEGIES
 
-## 6. Scheduling Strategies
-
-### 6.1 Immediate Execution
+### 7.1 IMMEDIATE EXECUTION
 
 ```
 +-------------------------------------------------------------------------+
@@ -491,19 +550,19 @@
 |  Flow:                                                                  |
 |  Client -> API -> DB (status=QUEUED) -> Task Queue -> Worker            |
 |                                                                         |
-|  - No scheduling delay                                                  |
-|  - Task goes directly to the queue after persistence                    |
-|  - execute_at = NULL or NOW()                                           |
+|  * No scheduling delay                                                  |
+|  * Task goes directly to the queue after persistence                    |
+|  * execute_at = NULL or NOW()                                           |
 |                                                                         |
 |  Use cases:                                                             |
-|  - Send notification after user action                                  |
-|  - Process uploaded file                                                |
-|  - Async API call delegation                                            |
+|  * Send notification after user action                                  |
+|  * Process uploaded file                                                |
+|  * Async API call delegation                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 6.2 Delayed Execution
+### 7.2 DELAYED EXECUTION
 
 ```
 +-------------------------------------------------------------------------+
@@ -540,7 +599,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 6.3 Recurring / Cron Tasks
+### 7.3 RECURRING / CRON TASKS
 
 ```
 +-------------------------------------------------------------------------+
@@ -576,14 +635,14 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Preventing duplicate cron fires:                                       |
-|  - Unique constraint on (cron_id, fire_time)                            |
-|  - Distributed lock per cron_id during fire check                       |
-|  - Idempotent task handlers as safety net                               |
+|  * Unique constraint on (cron_id, fire_time)                            |
+|  * Distributed lock per cron_id during fire check                       |
+|  * Idempotent task handlers as safety net                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 6.4 DAG / Workflow Execution
+### 7.4 DAG / WORKFLOW EXECUTION
 
 ```
 +-------------------------------------------------------------------------+
@@ -627,20 +686,18 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Execution logic:                                                       |
-|  - When a task completes, check all downstream tasks                    |
-|  - A downstream task becomes QUEUED only when ALL its dependencies      |
+|  * When a task completes, check all downstream tasks                    |
+|  * A downstream task becomes QUEUED only when ALL its dependencies      |
 |    are COMPLETED                                                        |
-|  - Transcode and Thumbnail run in parallel (both depend on Metadata)    |
-|  - Notify runs only after both Transcode and Thumbnail complete         |
+|  * Transcode and Thumbnail run in parallel (both depend on Metadata)    |
+|  * Notify runs only after both Transcode and Thumbnail complete         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 8: TASK QUEUE DESIGN
 
-## 7. Task Queue Design
-
-### 7.1 Queue Architecture
+### 8.1 QUEUE ARCHITECTURE
 
 ```
 +---------------------------------------------------------------------------+
@@ -684,7 +741,7 @@
 +---------------------------------------------------------------------------+
 ```
 
-### 7.2 Queue Per Task Type
+### 8.2 QUEUE PER TASK TYPE
 
 ```
 +-------------------------------------------------------------------------+
@@ -702,23 +759,21 @@
 |  +------------------+    +------------------+    +------------------+   |
 |                                                                         |
 |  Benefits:                                                              |
-|  - Noisy neighbor isolation (slow image tasks don't block emails)       |
-|  - Independent scaling (add workers per type as needed)                 |
-|  - Per-type SLA enforcement                                             |
-|  - Easier debugging (queue depth per type)                              |
+|  * Noisy neighbor isolation (slow image tasks don't block emails)       |
+|  * Independent scaling (add workers per type as needed)                 |
+|  * Per-type SLA enforcement                                             |
+|  * Easier debugging (queue depth per type)                              |
 |                                                                         |
 |  Trade-off:                                                             |
-|  - More operational complexity (more queues to manage)                  |
-|  - Potentially lower resource utilization (idle workers)                |
+|  * More operational complexity (more queues to manage)                  |
+|  * Potentially lower resource utilization (idle workers)                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 9: WORKER MANAGEMENT & EXECUTION
 
-## 8. Worker Management & Execution
-
-### 8.1 Worker Architecture
+### 9.1 WORKER ARCHITECTURE
 
 ```
 +---------------------------------------------------------------------------+
@@ -766,7 +821,7 @@
 +---------------------------------------------------------------------------+
 ```
 
-### 8.2 Worker Scaling Strategy
+### 9.2 WORKER SCALING STRATEGY
 
 ```
 +-------------------------------------------------------------------------+
@@ -791,9 +846,9 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Implementation:                                                        |
-|  - Kubernetes HPA (Horizontal Pod Autoscaler) with custom metrics       |
-|  - KEDA (Kubernetes Event-Driven Autoscaling) with queue triggers       |
-|  - Scale-to-zero for infrequent task types                              |
+|  * Kubernetes HPA (Horizontal Pod Autoscaler) with custom metrics       |
+|  * KEDA (Kubernetes Event-Driven Autoscaling) with queue triggers       |
+|  * Scale-to-zero for infrequent task types                              |
 |                                                                         |
 |  Graceful shutdown:                                                     |
 |  1. Stop accepting new tasks                                            |
@@ -804,11 +859,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 10: EXACTLY-ONCE EXECUTION & IDEMPOTENCY
 
-## 9. Exactly-Once Execution & Idempotency
-
-### 9.1 The Problem
+### 10.1 THE PROBLEM
 
 ```
 +--------------------------------------------------------------------------+
@@ -833,9 +886,9 @@
 |  ================================================================        |
 |                                                                          |
 |  The fundamental problem:                                                |
-|  - At-most-once: Don't retry. Risk: task not executed at all.            |
-|  - At-least-once: Retry on failure. Risk: duplicate execution.           |
-|  - Exactly-once: Impossible in distributed systems without               |
+|  * At-most-once: Don't retry. Risk: task not executed at all.            |
+|  * At-least-once: Retry on failure. Risk: duplicate execution.           |
+|  * Exactly-once: Impossible in distributed systems without               |
 |    cooperation from the task handler.                                    |
 |                                                                          |
 |  Solution: At-least-once delivery + idempotent task handlers             |
@@ -844,7 +897,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 9.2 Idempotency Patterns
+### 10.2 IDEMPOTENCY PATTERNS
 
 ```
 +--------------------------------------------------------------------------+
@@ -895,11 +948,9 @@
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 11: PRIORITY & FAIRNESS
 
-## 10. Priority & Fairness
-
-### 10.1 Priority Queue
+### 11.1 PRIORITY QUEUE
 
 ```
 +--------------------------------------------------------------------------+
@@ -948,7 +999,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 10.2 Fairness Across Tenants
+### 11.2 FAIRNESS ACROSS TENANTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -980,9 +1031,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 11. Rate Limiting & Throttling
+## SECTION 12: RATE LIMITING & THROTTLING
 
 ```
 +---------------------------------------------------------------------------+
@@ -990,9 +1039,9 @@
 +---------------------------------------------------------------------------+
 |                                                                           |
 |  Why rate limit task execution?                                           |
-|  - Downstream APIs have rate limits (e.g., email provider: 1000/min)      |
-|  - Prevent resource exhaustion (DB connection pool, CPU)                  |
-|  - Protect downstream services from thundering herd                       |
+|  * Downstream APIs have rate limits (e.g., email provider: 1000/min)      |
+|  * Prevent resource exhaustion (DB connection pool, CPU)                  |
+|  * Protect downstream services from thundering herd                       |
 |                                                                           |
 |  Rate Limiting Layers:                                                    |
 |  +----------------------------------------------------------------------+ |
@@ -1015,18 +1064,16 @@
 |  +----------------------------------------------------------------------+ |
 |                                                                           |
 |  Backpressure handling:                                                   |
-|  - Queue depth exceeds threshold -> reject new submissions (503)          |
-|  - Shed low-priority tasks first (priority-based load shedding)           |
-|  - Alert operators when backpressure triggers                             |
+|  * Queue depth exceeds threshold -> reject new submissions (503)          |
+|  * Shed low-priority tasks first (priority-based load shedding)           |
+|  * Alert operators when backpressure triggers                             |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
----
+## SECTION 13: DEAD LETTER QUEUE & RETRY POLICIES
 
-## 12. Dead Letter Queue & Retry Policies
-
-### 12.1 Retry Strategy
+### 13.1 RETRY STRATEGY
 
 ```
 +--------------------------------------------------------------------------+
@@ -1066,14 +1113,14 @@
 |  +---------------------------------------------------------------------+ |
 |                                                                          |
 |  Non-retryable errors (fail immediately):                                |
-|  - 400 Bad Request (payload invalid)                                     |
-|  - 401/403 Unauthorized (credentials wrong)                              |
-|  - Business logic validation errors                                      |
+|  * 400 Bad Request (payload invalid)                                     |
+|  * 401/403 Unauthorized (credentials wrong)                              |
+|  * Business logic validation errors                                      |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-### 12.2 Dead Letter Queue
+### 13.2 DEAD LETTER QUEUE
 
 ```
 +--------------------------------------------------------------------------+
@@ -1104,10 +1151,10 @@
 |  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  Operations on DLQ:                                                      |
-|  - Inspect: view failed tasks and error details                          |
-|  - Replay: re-submit task back to main queue (after fixing issue)        |
-|  - Purge: delete tasks from DLQ (acknowledged as unrecoverable)          |
-|  - Alert: trigger PagerDuty/Slack when DLQ depth exceeds threshold       |
+|  * Inspect: view failed tasks and error details                          |
+|  * Replay: re-submit task back to main queue (after fixing issue)        |
+|  * Purge: delete tasks from DLQ (acknowledged as unrecoverable)          |
+|  * Alert: trigger PagerDuty/Slack when DLQ depth exceeds threshold       |
 |                                                                          |
 |  DLQ is critical for operational visibility.                             |
 |  Without it, failed tasks silently disappear.                            |
@@ -1115,9 +1162,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 13. Cron Scheduling & Time Zones
+## SECTION 14: CRON SCHEDULING & TIME ZONES
 
 ```
 +--------------------------------------------------------------------------+
@@ -1169,19 +1214,17 @@
 |  +---------------------------------------------------------------------+ |
 |                                                                          |
 |  Missed fire policy (if scheduler was down):                             |
-|  - FIRE_ONCE: fire one catch-up execution, then resume normal            |
-|  - FIRE_ALL: fire all missed executions sequentially                     |
-|  - SKIP: ignore missed, resume from next scheduled time                  |
-|  - Most systems default to FIRE_ONCE                                     |
+|  * FIRE_ONCE: fire one catch-up execution, then resume normal            |
+|  * FIRE_ALL: fire all missed executions sequentially                     |
+|  * SKIP: ignore missed, resume from next scheduled time                  |
+|  * Most systems default to FIRE_ONCE                                     |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 15: DATABASE SCHEMA / DATA MODEL
 
-## 14. Database Schema / Data Model
-
-### 14.1 Core Tables
+### 15.1 CORE TABLES
 
 ```
 +--------------------------------------------------------------------------+
@@ -1215,17 +1258,17 @@
 |  +---------------------------------------------------------------------+ |
 |                                                                          |
 |  Indexes:                                                                |
-|  - (status, execute_at)  -> Scheduler query for due tasks                |
-|  - (status, priority)    -> Priority-based dequeuing                     |
-|  - (tenant_id, status)   -> Per-tenant task listing                      |
-|  - (idempotency_key)     -> Dedup lookup (unique)                        |
-|  - (cron_id)             -> Link cron instances                          |
-|  - (workflow_id, status) -> DAG dependency checks                        |
+|  * (status, execute_at)  -> Scheduler query for due tasks                |
+|  * (status, priority)    -> Priority-based dequeuing                     |
+|  * (tenant_id, status)   -> Per-tenant task listing                      |
+|  * (idempotency_key)     -> Dedup lookup (unique)                        |
+|  * (cron_id)             -> Link cron instances                          |
+|  * (workflow_id, status) -> DAG dependency checks                        |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-### 14.2 Supporting Tables
+### 15.2 SUPPORTING TABLES
 
 ```
 +--------------------------------------------------------------------------+
@@ -1286,11 +1329,9 @@
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 16: API DESIGN
 
-## 15. API Design
-
-### 15.1 REST API
+### 16.1 REST API
 
 ```
 +--------------------------------------------------------------------------+
@@ -1374,9 +1415,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 16. Comparison: Celery vs Temporal vs Airflow vs Custom
+## SECTION 17: COMPARISON: CELERY VS TEMPORAL VS AIRFLOW VS CUSTOM
 
 ```
 +---------------------------------------------------------------------------+
@@ -1434,9 +1473,7 @@
 +---------------------------------------------------------------------------+
 ```
 
----
-
-## 17. Monitoring and Observability
+## SECTION 18: MONITORING AND OBSERVABILITY
 
 ```
 +---------------------------------------------------------------------------+
@@ -1493,17 +1530,15 @@
 |  +----------------------------------------------------------------------+ |
 |                                                                           |
 |  Distributed Tracing:                                                     |
-|  - Inject trace_id into task metadata at submission                       |
-|  - Propagate through queue -> worker -> downstream calls                  |
-|  - Visualize full task lifecycle in Jaeger / Zipkin                       |
-|  - Correlate task execution with downstream service latency               |
+|  * Inject trace_id into task metadata at submission                       |
+|  * Propagate through queue -> worker -> downstream calls                  |
+|  * Visualize full task lifecycle in Jaeger / Zipkin                       |
+|  * Correlate task execution with downstream service latency               |
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
 
----
-
-## 18. Failure Scenarios and Mitigations
+## SECTION 19: FAILURE SCENARIOS AND MITIGATIONS
 
 ```
 +--------------------------------------------------------------------------+
@@ -1591,9 +1626,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 19. Interview Q&A
+## SECTION 20: INTERVIEW Q&A
 
 ### Q1: How do you ensure a task is not executed twice?
 
@@ -1631,18 +1664,18 @@
 |  Three-tier approach:                                                   |
 |                                                                         |
 |  Tier 1 (minutes away): Redis sorted set                                |
-|  - Tasks due within the next 10 minutes are loaded into Redis           |
-|  - ZRANGEBYSCORE polls every second for due tasks                       |
-|  - Supports millions of tasks, O(log N) per operation                   |
+|  * Tasks due within the next 10 minutes are loaded into Redis           |
+|  * ZRANGEBYSCORE polls every second for due tasks                       |
+|  * Supports millions of tasks, O(log N) per operation                   |
 |                                                                         |
 |  Tier 2 (hours away): Database with indexed query                       |
-|  - Tasks due in 10 min to 24 hours stay in DB                           |
-|  - Background loader moves them to Redis as they approach trigger time  |
-|  - Query: SELECT ... WHERE execute_at BETWEEN NOW() AND NOW()+10min     |
+|  * Tasks due in 10 min to 24 hours stay in DB                           |
+|  * Background loader moves them to Redis as they approach trigger time  |
+|  * Query: SELECT ... WHERE execute_at BETWEEN NOW() AND NOW()+10min     |
 |                                                                         |
 |  Tier 3 (days+ away): Cold storage in DB                                |
-|  - Tasks far in the future just sit in DB                               |
-|  - Periodic scan (every hour) checks for tasks entering Tier 2 range    |
+|  * Tasks far in the future just sit in DB                               |
+|  * Periodic scan (every hour) checks for tasks entering Tier 2 range    |
 |                                                                         |
 |  This tiered approach keeps memory usage bounded while maintaining      |
 |  sub-second scheduling accuracy for imminent tasks.                     |
@@ -1659,24 +1692,24 @@
 |  Multiple strategies:                                                   |
 |                                                                         |
 |  1. Active-passive with leader election:                                |
-|     - Multiple scheduler instances, one is leader (via etcd/ZK)         |
-|     - Leader does the scheduling; standby monitors                      |
-|     - If leader dies, standby acquires lease and takes over             |
-|     - Failover time: ~5-10 seconds                                      |
+|     * Multiple scheduler instances, one is leader (via etcd/ZK)         |
+|     * Leader does the scheduling; standby monitors                      |
+|     * If leader dies, standby acquires lease and takes over             |
+|     * Failover time: ~5-10 seconds                                      |
 |                                                                         |
 |  2. Partitioned active-active:                                          |
-|     - Divide tasks by hash(task_id) % N across N schedulers             |
-|     - Each scheduler only processes its partition                       |
-|     - If one dies, its partition is reassigned (consistent hashing)     |
-|     - Higher throughput, no wasted standby capacity                     |
+|     * Divide tasks by hash(task_id) % N across N schedulers             |
+|     * Each scheduler only processes its partition                       |
+|     * If one dies, its partition is reassigned (consistent hashing)     |
+|     * Higher throughput, no wasted standby capacity                     |
 |                                                                         |
 |  3. Database as the coordination point:                                 |
-|     - SELECT ... FOR UPDATE SKIP LOCKED                                 |
-|     - Multiple schedulers query the same DB                             |
-|     - SKIP LOCKED ensures no duplicates (each scheduler grabs           |
+|     * SELECT ... FOR UPDATE SKIP LOCKED                                 |
+|     * Multiple schedulers query the same DB                             |
+|     * SKIP LOCKED ensures no duplicates (each scheduler grabs           |
 |       different tasks)                                                  |
-|     - Simple, no leader election needed                                 |
-|     - Trade-off: DB becomes the bottleneck at extreme scale             |
+|     * Simple, no leader election needed                                 |
+|     * Trade-off: DB becomes the bottleneck at extreme scale             |
 |                                                                         |
 |  Best practice: Approach 2 or 3 depending on scale.                     |
 |                                                                         |
@@ -1704,14 +1737,14 @@
 |  3. If count = 0 (all dependencies done) -> enqueue the task            |
 |                                                                         |
 |  Cycle detection:                                                       |
-|  - At workflow submission time, run topological sort on the DAG         |
-|  - If topological sort fails -> cycle detected -> reject workflow       |
+|  * At workflow submission time, run topological sort on the DAG         |
+|  * If topological sort fails -> cycle detected -> reject workflow       |
 |                                                                         |
 |  Partial failure:                                                       |
-|  - If a task in the DAG fails and exhausts retries, mark the            |
+|  * If a task in the DAG fails and exhausts retries, mark the            |
 |    entire workflow as FAILED (or allow partial completion based on      |
 |    configuration)                                                       |
-|  - Dependent tasks are marked as CANCELLED                              |
+|  * Dependent tasks are marked as CANCELLED                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1727,19 +1760,19 @@
 |  Options (configurable per cron):                                       |
 |                                                                         |
 |  1. ALLOW_CONCURRENT (default: false)                                   |
-|     - If false: skip the next fire if the previous is still running     |
-|     - Check: SELECT ... FROM tasks WHERE cron_id = ? AND                |
+|     * If false: skip the next fire if the previous is still running     |
+|     * Check: SELECT ... FROM tasks WHERE cron_id = ? AND                |
 |       status = 'RUNNING'                                                |
-|     - If running: update next_fire_time, don't create new instance      |
+|     * If running: update next_fire_time, don't create new instance      |
 |                                                                         |
 |  2. QUEUE_NEXT                                                          |
-|     - Queue the next instance; it starts when the current one finishes  |
-|     - At most 1 queued + 1 running                                      |
+|     * Queue the next instance; it starts when the current one finishes  |
+|     * At most 1 queued + 1 running                                      |
 |                                                                         |
 |  3. ALLOW_PARALLEL                                                      |
-|     - Let multiple instances run concurrently                           |
-|     - Risk: resource contention, duplicate work                         |
-|     - Only for tasks designed for parallelism                           |
+|     * Let multiple instances run concurrently                           |
+|     * Risk: resource contention, duplicate work                         |
+|     * Only for tasks designed for parallelism                           |
 |                                                                         |
 |  Best practice: Default to ALLOW_CONCURRENT=false with alerting         |
 |  when executions are consistently overlapping (indicates the task       |
@@ -1757,24 +1790,24 @@
 |  Strict priority ordering causes starvation. Solutions:                  |
 |                                                                          |
 |  1. Weighted Fair Queuing:                                               |
-|     - Assign weights: CRITICAL=50%, HIGH=30%, NORMAL=15%, LOW=5%         |
-|     - Workers pull from queues proportionally                            |
-|     - Even under load, LOW gets 5% of throughput                         |
+|     * Assign weights: CRITICAL=50%, HIGH=30%, NORMAL=15%, LOW=5%         |
+|     * Workers pull from queues proportionally                            |
+|     * Even under load, LOW gets 5% of throughput                         |
 |                                                                          |
 |  2. Aging:                                                               |
-|     - Increase effective priority over time                              |
-|     - effective_priority = base_priority - (age_seconds / 60)            |
-|     - A LOW task waiting 30 minutes becomes equivalent to HIGH           |
-|     - Guarantees bounded wait time for any priority                      |
+|     * Increase effective priority over time                              |
+|     * effective_priority = base_priority - (age_seconds / 60)            |
+|     * A LOW task waiting 30 minutes becomes equivalent to HIGH           |
+|     * Guarantees bounded wait time for any priority                      |
 |                                                                          |
 |  3. Reserved capacity:                                                   |
-|     - Reserve a minimum number of workers per priority level             |
-|     - e.g., 5 workers always reserved for LOW priority                   |
-|     - Remaining workers handle higher priorities first                   |
+|     * Reserve a minimum number of workers per priority level             |
+|     * e.g., 5 workers always reserved for LOW priority                   |
+|     * Remaining workers handle higher priorities first                   |
 |                                                                          |
 |  4. Separate SLAs:                                                       |
-|     - LOW tasks: SLA = execute within 1 hour                             |
-|     - Monitor and alert if SLA at risk                                   |
+|     * LOW tasks: SLA = execute within 1 hour                             |
+|     * Monitor and alert if SLA at risk                                   |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -1809,10 +1842,10 @@
 |        COMMIT;                                                          |
 |                                                                         |
 |  3. If worker crashes after payment but before DB commit:               |
-|     - Retry will hit step (a) -- but key not in DB                      |
-|     - Step (b) calls payment gateway again -- gateway returns           |
+|     * Retry will hit step (a) -- but key not in DB                      |
+|     * Step (b) calls payment gateway again -- gateway returns           |
 |       cached result (idempotency key match)                             |
-|     - Step (c) stores result. No double charge.                         |
+|     * Step (c) stores result. No double charge.                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1826,32 +1859,32 @@
 |  At 1M TPS, every component needs horizontal scaling:                   |
 |                                                                         |
 |  1. API Gateway: 100 instances behind load balancer                     |
-|     - Stateless, each handles ~10K TPS                                  |
+|     * Stateless, each handles ~10K TPS                                  |
 |                                                                         |
 |  2. Task Store: Sharded database                                        |
-|     - 100 shards by hash(task_id) across PostgreSQL/Vitess              |
-|     - Each shard handles ~10K writes/s (well within limits)             |
-|     - Or use Cassandra for linear write scaling                         |
+|     * 100 shards by hash(task_id) across PostgreSQL/Vitess              |
+|     * Each shard handles ~10K writes/s (well within limits)             |
+|     * Or use Cassandra for linear write scaling                         |
 |                                                                         |
 |  3. Queue: Kafka with many partitions                                   |
-|     - 500+ partitions across 50+ brokers                                |
-|     - Each partition: ~5K msg/s throughput                              |
-|     - Topic per task type for isolation                                 |
+|     * 500+ partitions across 50+ brokers                                |
+|     * Each partition: ~5K msg/s throughput                              |
+|     * Topic per task type for isolation                                 |
 |                                                                         |
 |  4. Scheduler: Partitioned across 50 instances                          |
-|     - Each handles a hash range of tasks                                |
-|     - Redis cluster for in-memory timer wheel                           |
+|     * Each handles a hash range of tasks                                |
+|     * Redis cluster for in-memory timer wheel                           |
 |                                                                         |
 |  5. Workers: Auto-scaled on Kubernetes                                  |
-|     - 1M TPS x 2s avg = 2M concurrent tasks                             |
-|     - ~125K worker machines (16 tasks each)                             |
-|     - Separate worker pools per task type                               |
+|     * 1M TPS x 2s avg = 2M concurrent tasks                             |
+|     * ~125K worker machines (16 tasks each)                             |
+|     * Separate worker pools per task type                               |
 |                                                                         |
 |  Key architectural principles at this scale:                            |
-|  - Everything is partitioned (no single hot path)                       |
-|  - No coordination between partitions where possible                    |
-|  - Async everywhere (no synchronous cross-service calls)                |
-|  - Accept eventual consistency for non-critical paths                   |
+|  * Everything is partitioned (no single hot path)                       |
+|  * No coordination between partitions where possible                    |
+|  * Async everywhere (no synchronous cross-service calls)                |
+|  * Accept eventual consistency for non-critical paths                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1897,9 +1930,9 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Recommendation: Hybrid approach                                        |
-|  - Event-driven for hot path (tasks due within minutes)                 |
-|  - DB polling as a sweep/catch-up mechanism (every 30s)                 |
-|  - DB is always the source of truth for recovery                        |
+|  * Event-driven for hot path (tasks due within minutes)                 |
+|  * DB polling as a sweep/catch-up mechanism (every 30s)                 |
+|  * DB is always the source of truth for recovery                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1939,16 +1972,14 @@
 |       at the client SDK level                                           |
 |                                                                         |
 |  Prevention:                                                            |
-|  - Full audit log (every state transition logged with timestamp)        |
-|  - Distributed tracing (trace_id from submission to completion)         |
-|  - Anomaly detection: alert if task count drops unexpectedly            |
+|  * Full audit log (every state transition logged with timestamp)        |
+|  * Distributed tracing (trace_id from submission to completion)         |
+|  * Anomaly detection: alert if task count drops unexpectedly            |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 20. Summary: Key Design Decisions
+## SECTION 21: SUMMARY: KEY DESIGN DECISIONS
 
 ```
 +---------------------------------------------------------------------------+
@@ -1978,7 +2009,5 @@
 |                                                                           |
 +---------------------------------------------------------------------------+
 ```
-
----
 
 *End of Distributed Task Scheduler System Design*

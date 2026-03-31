@@ -170,7 +170,70 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: SCALE ESTIMATION
+## SECTION 2: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WEBSOCKET                                                              |
+|  Full-duplex communication protocol over a single TCP connection.       |
+|  Enables the server to push messages to clients instantly without       |
+|  polling. The connection stays open for the entire user session.        |
+|                                                                         |
+|  LONG POLLING                                                           |
+|  Fallback technique where the client holds a request open and           |
+|  the server responds only when new data arrives. Less efficient         |
+|  than WebSockets but works through firewalls blocking upgrades.         |
+|                                                                         |
+|  CONNECTION GATEWAY                                                     |
+|  Stateful server managing persistent WebSocket connections with         |
+|  clients. Routes messages to the correct recipient and maintains        |
+|  a mapping of which user is connected to which server.                  |
+|                                                                         |
+|  PRESENCE                                                               |
+|  Online/offline/last-seen status of a user in real time.                |
+|  Requires heartbeat mechanisms and efficient pub/sub to notify          |
+|  contacts of status changes at scale.                                   |
+|                                                                         |
+|  DELIVERY RECEIPT (SENT / DELIVERED / READ)                             |
+|  Status indicators tracking a message through its lifecycle.            |
+|  Sent = reached server, Delivered = reached device, Read =              |
+|  user opened the conversation. Requires ACKs from the client.           |
+|                                                                         |
+|  FAN-OUT                                                                |
+|  Distributing a single group message to all group members.              |
+|  A message in a 500-member group must reach everyone, possibly          |
+|  across different servers, making write amplification a concern.        |
+|                                                                         |
+|  MESSAGE QUEUE                                                          |
+|  Async buffer (e.g., Kafka) decoupling producers and consumers.         |
+|  Ensures messages are durably stored and delivered even when a          |
+|  recipient's server is temporarily unavailable.                         |
+|                                                                         |
+|  END-TO-END ENCRYPTION (E2E)                                            |
+|  Only the sender and recipient can decrypt message content.             |
+|  The server relays ciphertext it cannot read, typically using           |
+|  the Signal Protocol with Diffie-Hellman key exchange.                  |
+|                                                                         |
+|  OFFLINE STORAGE                                                        |
+|  Persisting messages for users who are not currently connected.         |
+|  Queued messages are delivered in order upon reconnection,              |
+|  ensuring no message is lost regardless of connectivity gaps.           |
+|                                                                         |
+|  PUSH NOTIFICATION                                                      |
+|  Alert sent via APNs (iOS) or FCM (Android) when the user is            |
+|  not in the app. Triggered when a message cannot be delivered           |
+|  over the active WebSocket because the user is offline.                 |
+|                                                                         |
+|  SESSION                                                                |
+|  Logical connection context tying a user to a gateway server.           |
+|  Tracks auth state, device info, and active WebSocket, letting          |
+|  the system route messages to the correct server instance.              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 3: SCALE ESTIMATION
 
 ### BACK-OF-ENVELOPE CALCULATIONS
 
@@ -268,7 +331,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: COMMUNICATION PROTOCOLS
+## SECTION 4: COMMUNICATION PROTOCOLS
 
 ### WEBSOCKET VS LONG POLLING VS SSE
 
@@ -350,7 +413,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ### SYSTEM OVERVIEW
 
@@ -430,7 +493,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: MESSAGE FLOW (THE CORE)
+## SECTION 6: MESSAGE FLOW (THE CORE)
 
 ### 1:1 MESSAGE FLOW
 
@@ -674,7 +737,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: MESSAGE STORAGE
+## SECTION 7: MESSAGE STORAGE
 
 ### DATABASE CHOICE
 
@@ -790,7 +853,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: MESSAGE ORDERING AND CONSISTENCY
+## SECTION 8: MESSAGE ORDERING AND CONSISTENCY
 
 ### THE ORDERING PROBLEM
 
@@ -888,7 +951,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: PRESENCE / ONLINE STATUS SERVICE
+## SECTION 9: PRESENCE / ONLINE STATUS SERVICE
 
 ### PRESENCE ARCHITECTURE
 
@@ -968,7 +1031,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: END-TO-END ENCRYPTION
+## SECTION 10: END-TO-END ENCRYPTION
 
 ### E2E ENCRYPTION OVERVIEW
 
@@ -1016,7 +1079,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: DATABASE SCHEMA (MYSQL - METADATA)
+## SECTION 11: DATABASE SCHEMA (MYSQL - METADATA)
 
 ### CORE METADATA TABLES
 
@@ -1079,7 +1142,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: API DESIGN
+## SECTION 12: API DESIGN
 
 ### REST + WEBSOCKET API
 
@@ -1147,7 +1210,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 12: SCALING AND RELIABILITY
+## SECTION 13: SCALING AND RELIABILITY
 
 ### HORIZONTAL SCALING
 
@@ -1263,7 +1326,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 14: INTERVIEW Q&A
 
 ### QUESTION 1: WHY WEBSOCKETS OVER LONG POLLING?
 
@@ -1646,7 +1709,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 14: QUICK REFERENCE SUMMARY
+## SECTION 15: QUICK REFERENCE SUMMARY
 
 ```
 +-------------------------------------------------------------------------+

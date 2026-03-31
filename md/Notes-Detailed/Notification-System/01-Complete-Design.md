@@ -154,7 +154,67 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 3: SCALE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PUSH NOTIFICATION                                                      |
+|  Message delivered to a user's device via platform services             |
+|  (APNs for iOS, FCM for Android). Appears on the lock screen            |
+|  or notification tray even when the app is not open.                    |
+|                                                                         |
+|  APNs (APPLE PUSH NOTIFICATION SERVICE)                                 |
+|  Apple's gateway for delivering push notifications to iOS and           |
+|  macOS devices. Requires a device token, HTTP/2 connection,             |
+|  and JWT authentication with a 4 KB payload limit.                      |
+|                                                                         |
+|  FCM (FIREBASE CLOUD MESSAGING)                                         |
+|  Google's service for delivering push notifications to Android          |
+|  and web clients. Supports topic-based and device-based                 |
+|  targeting with a 4 KB payload limit per message.                       |
+|                                                                         |
+|  IN-APP NOTIFICATION                                                    |
+|  Notification displayed within the application UI (bell icon,           |
+|  notification center). Only visible when the user is active             |
+|  in the app, with zero external delivery cost.                          |
+|                                                                         |
+|  TEMPLATE                                                               |
+|  Pre-defined notification format with variable placeholders             |
+|  (e.g., 'Hi {{name}}, your order {{id}} shipped'). Enables              |
+|  consistent messaging, localization, and A/B testing.                   |
+|                                                                         |
+|  NOTIFICATION CHANNEL / PREFERENCE                                      |
+|  User-configurable settings controlling how and when they               |
+|  receive notifications. Includes per-channel opt-in/out,                |
+|  per-category controls, and quiet hours with timezone support.          |
+|                                                                         |
+|  DELIVERY RATE                                                          |
+|  Percentage of notifications successfully reaching the end              |
+|  device. Affected by invalid tokens, provider outages, and              |
+|  device connectivity. A key reliability metric to monitor.              |
+|                                                                         |
+|  RATE LIMITING                                                          |
+|  Capping notifications per user, per service, or globally to            |
+|  prevent spam. Enforced at multiple levels: per-user daily              |
+|  caps, per-service quotas, and provider-imposed limits.                 |
+|                                                                         |
+|  FAN-OUT                                                                |
+|  Distributing a single notification event to many recipients.           |
+|  A campaign targeting 10M users requires efficient batching             |
+|  and queue partitioning to avoid overwhelming providers.                |
+|                                                                         |
+|  DEAD LETTER QUEUE (DLQ)                                                |
+|  Queue for notifications that failed after all retry attempts.          |
+|  Enables alerting, root-cause analysis, and batch reprocessing          |
+|  once the underlying provider or system issue is resolved.              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+*+-------------------------------------------------------------------------+*
+
+## SECTION 4: SCALE ESTIMATION
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -208,7 +268,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -270,7 +330,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 5: COMPONENT DEEP DIVE
+## SECTION 6: COMPONENT DEEP DIVE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -405,7 +465,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 6: DATA MODEL
+## SECTION 7: DATA MODEL
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -519,7 +579,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 7: API DESIGN
+## SECTION 8: API DESIGN
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -653,7 +713,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 8: PUSH NOTIFICATION DEEP DIVE
+## SECTION 9: PUSH NOTIFICATION DEEP DIVE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -766,7 +826,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 9: RELIABILITY & RETRY HANDLING
+## SECTION 10: RELIABILITY & RETRY HANDLING
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -865,7 +925,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 10: RATE LIMITING & THROTTLING
+## SECTION 11: RATE LIMITING & THROTTLING
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -955,7 +1015,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 11: ANALYTICS & TRACKING
+## SECTION 12: ANALYTICS & TRACKING
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -1033,7 +1093,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 12: ADVANCED TOPICS & REAL-WORLD PROBLEMS
+## SECTION 13: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -1185,7 +1245,7 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
-## SECTION 13: INTERVIEW QUICK REFERENCE
+## SECTION 14: INTERVIEW QUICK REFERENCE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |

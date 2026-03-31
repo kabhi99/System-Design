@@ -33,7 +33,67 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: ARCHITECTURE
+## SECTION 2: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                         KEY TERMINOLOGY                                 |
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Block / Chunk                                                          |
+|    A fixed-size piece of a file (64 MB in GFS, 128 MB in HDFS).         |
+|    Files are split into chunks that are stored and replicated           |
+|    independently across multiple machines.                              |
+|                                                                         |
+|  Namespace                                                              |
+|    The hierarchical directory tree (paths like /data/logs/file.log)     |
+|    maintained by the master node. Maps file paths to their              |
+|    constituent chunk identifiers.                                       |
+|                                                                         |
+|  Replication Factor                                                     |
+|    The number of copies kept for each chunk (default 3). Higher         |
+|    factors improve fault tolerance and read parallelism at the          |
+|    cost of storage overhead.                                            |
+|                                                                         |
+|  Master / NameNode                                                      |
+|    The centralized metadata server that tracks the file namespace,      |
+|    chunk-to-server mappings, and replication state. A single point      |
+|    of coordination, protected by standby replicas.                      |
+|                                                                         |
+|  DataNode / ChunkServer                                                 |
+|    A worker machine that stores actual chunk data on local disks.       |
+|    Reports its health and chunk inventory to the master via             |
+|    periodic heartbeats and block reports.                               |
+|                                                                         |
+|  Block Report                                                           |
+|    A full inventory of all chunks stored on a DataNode, sent to         |
+|    the master on startup and periodically thereafter. The master        |
+|    uses these to rebuild chunk-location metadata.                       |
+|                                                                         |
+|  Heartbeat                                                              |
+|    A periodic signal (typically every 3-10 seconds) sent from each      |
+|    DataNode to the master to indicate liveness. Missed heartbeats       |
+|    trigger the master to mark the node as dead.                         |
+|                                                                         |
+|  Rack Awareness                                                         |
+|    A placement policy that spreads chunk replicas across different      |
+|    physical racks so that a single rack failure does not lose all       |
+|    copies of any chunk.                                                 |
+|                                                                         |
+|  Write Pipeline                                                         |
+|    The data flow during writes where the client pushes data through     |
+|    a chain of chunk servers (nearest first) to minimize network         |
+|    bottlenecks and maximize throughput.                                 |
+|                                                                         |
+|  Lease                                                                  |
+|    A time-limited grant from the master designating one chunk           |
+|    server as the primary for a chunk. The primary serializes            |
+|    concurrent writes to maintain consistency.                           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 3: ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -99,7 +159,7 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: READ AND WRITE FLOW
+## SECTION 4: READ AND WRITE FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -139,7 +199,7 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: MASTER NODE DESIGN
+## SECTION 5: MASTER NODE DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -172,7 +232,7 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: FAULT TOLERANCE
+## SECTION 6: FAULT TOLERANCE
 
 ```
 +-------------------------------------------------------------------------+
@@ -202,7 +262,7 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: GFS vs HDFS vs MODERN ALTERNATIVES
+## SECTION 7: GFS vs HDFS vs MODERN ALTERNATIVES
 
 ```
 +-------------------------------------------------------------------------+
@@ -226,7 +286,7 @@ the most influential designs.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: SCALE ESTIMATION
+## SECTION 8: SCALE ESTIMATION
 
 ```
 +--------------------------------------------------------------------------+
@@ -264,7 +324,7 @@ the most influential designs.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +--------------------------------------------------------------------------+
@@ -343,7 +403,7 @@ the most influential designs.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 9: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +--------------------------------------------------------------------------+
@@ -409,7 +469,7 @@ the most influential designs.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: INTERVIEW QUESTIONS
+## SECTION 11: INTERVIEW QUESTIONS
 
 ```
 +-------------------------------------------------------------------------+

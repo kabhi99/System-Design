@@ -153,7 +153,65 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  GEOSPATIAL INDEX                                                       |
+||  A data structure (geohash, quadtree) that organizes entities by        |
+||  location for fast proximity lookups. Used to quickly determine         |
+||  which friends are nearby without scanning every user.                  |
+||                                                                         |
+||  PUB/SUB (PUBLISH / SUBSCRIBE)                                          |
+||  A messaging pattern where location updates are published to a          |
+||  channel and delivered to all subscribers. Each sharing user has        |
+||  a channel; their friends subscribe to receive real-time updates.       |
+||                                                                         |
+||  GEOFENCE                                                               |
+||  A virtual boundary around a geographic area that triggers events       |
+||  on entry/exit. Used here to alert a user when a friend enters          |
+||  or leaves their configurable "nearby" radius.                          |
+||                                                                         |
+||  LOCATION UPDATE                                                        |
+||  A GPS coordinate payload (lat, lng, accuracy, speed, timestamp)        |
+||  sent periodically from a mobile device to the server. The server       |
+||  stores only the latest update per user in a cache with TTL.            |
+||                                                                         |
+||  PRESENCE                                                               |
+||  Whether a user is actively sharing their location right now.           |
+||  Implemented as a cache key with TTL; if no update arrives within       |
+||  the TTL window, the user is considered offline.                        |
+||                                                                         |
+||  WEBSOCKET                                                              |
+||  A persistent bidirectional connection between client and server.       |
+||  Used to push friend location updates in real-time and to receive       |
+||  GPS fixes from the client with minimal per-message overhead.           |
+||                                                                         |
+||  GEOHASH CHANNEL                                                        |
+||  An optional pub/sub optimization where channels are organized by       |
+||  geohash cell. Subscribers only receive updates from friends in         |
+||  nearby cells, reducing irrelevant network fan-out.                     |
+||                                                                         |
+||  FAN-OUT                                                                |
+||  The process of distributing one user's location update to all          |
+||  subscribing friends. At 333K updates/sec with 20 friends each,         |
+||  fan-out reaches ~6.6M deliveries/sec — the costliest operation.        |
+||                                                                         |
+||  PROXIMITY THRESHOLD                                                    |
+||  The configurable radius (e.g., 1 km, 5 km) within which a friend       |
+||  is considered "nearby." Can be user-set or adaptive based on           |
+||  urban vs rural density.                                                |
+||                                                                         |
+||  BATTERY OPTIMIZATION                                                   |
+||  Techniques to reduce GPS polling drain: adaptive frequency based       |
+||  on movement/speed, cell-tower triangulation when coarse location       |
+||  suffices, batch uploads, and OS significant-change APIs.               |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -191,7 +249,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -276,7 +334,7 @@ privacy guarantees, and minimal battery drain.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 5: DEEP DIVE - LOCATION INGESTION
+## SECTION 6: DEEP DIVE - LOCATION INGESTION
 
 ### HOW MOBILE SENDS LOCATION UPDATES
 
@@ -409,7 +467,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DEEP DIVE - PROXIMITY CALCULATION
+## SECTION 7: DEEP DIVE - PROXIMITY CALCULATION
 
 ### APPROACH 1: BRUTE FORCE
 
@@ -587,7 +645,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: DEEP DIVE - PUB/SUB ARCHITECTURE
+## SECTION 8: DEEP DIVE - PUB/SUB ARCHITECTURE
 
 ### PER-USER CHANNEL MODEL
 
@@ -748,7 +806,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DEEP DIVE - LOCATION CACHE
+## SECTION 9: DEEP DIVE - LOCATION CACHE
 
 ### REDIS CACHE DESIGN
 
@@ -836,7 +894,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DEEP DIVE - PRIVACY
+## SECTION 10: DEEP DIVE - PRIVACY
 
 ### PRIVACY CONTROLS
 
@@ -935,7 +993,7 @@ privacy guarantees, and minimal battery drain.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: DEEP DIVE - BATTERY OPTIMIZATION
+## SECTION 11: DEEP DIVE - BATTERY OPTIMIZATION
 
 ```
 +--------------------------------------------------------------------------+
@@ -952,7 +1010,7 @@ privacy guarantees, and minimal battery drain.
 |  +---------------------+------------------+-----------------+            |
 |                                                                          |
 |  STRATEGY 1: ADAPTIVE GPS FREQUENCY                                      |
-|  (Already covered in Section 5)                                          |
+|  (Already covered in Section 6)                                          |
 |  * High frequency when moving, low when stationary                       |
 |  * Use accelerometer to detect motion without GPS                        |
 |                                                                          |
@@ -974,7 +1032,7 @@ privacy guarantees, and minimal battery drain.
 |  * Reserve GPS for "show me their exact position on map"                 |
 |                                                                          |
 |  STRATEGY 4: BATCH UPLOADS                                               |
-|  (Already covered in Section 5)                                          |
+|  (Already covered in Section 6)                                          |
 |  * Buffer locations, send in batch                                       |
 |  * Reduces radio wake-ups                                                |
 |                                                                          |
@@ -997,7 +1055,7 @@ privacy guarantees, and minimal battery drain.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: SCALING
+## SECTION 12: SCALING
 
 ### LOCATION INGESTION SCALING
 
@@ -1131,7 +1189,7 @@ privacy guarantees, and minimal battery drain.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW Q&A
+## SECTION 13: INTERVIEW Q&A
 
 ```
 +--------------------------------------------------------------------------+
@@ -1158,7 +1216,7 @@ privacy guarantees, and minimal battery drain.
 |  A: Since we only care about the LATEST location, a lost update          |
 |  is naturally corrected by the next update (10-30 sec later). The        |
 |  system is eventually consistent. We don't need exactly-once delivery    |
-|  - at-least-once with idempotent overwrites is sufficient. The cache     |
+|  * at-least-once with idempotent overwrites is sufficient. The cache     |
 |  always has the latest timestamp; stale updates are discarded.           |
 |                                                                          |
 |  Q4: How do you prevent a user's location from being leaked?             |

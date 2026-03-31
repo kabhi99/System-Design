@@ -29,7 +29,70 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: HIGH-LEVEL ARCHITECTURE
+## SECTION 2: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  ORDER BOOK                                                             |
+||  A per-stock data structure listing all outstanding buy (bid) and       |
+||  sell (ask) orders at every price level. Bids are sorted highest        |
+||  first, asks lowest first. The core state of a matching engine.         |
+||                                                                         |
+||  BID / ASK (SPREAD)                                                     |
+||  Bid is the highest price a buyer will pay; ask is the lowest a         |
+||  seller will accept. The spread (ask − bid) reflects liquidity.         |
+||  Tighter spreads indicate a more liquid, actively traded stock.         |
+||                                                                         |
+||  MATCHING ENGINE                                                        |
+||  The component that pairs buy and sell orders using price-time          |
+||  priority (FIFO at each price level). Typically single-threaded         |
+||  and in-memory for determinism and sub-millisecond latency.             |
+||                                                                         |
+||  LIMIT ORDER                                                            |
+||  An order to buy or sell at a specified price or better. Stays in       |
+||  the order book until filled, cancelled, or expired. The most           |
+||  common order type on exchanges.                                        |
+||                                                                         |
+||  MARKET ORDER                                                           |
+||  An order executed immediately at the best available price.             |
+||  Guarantees execution but not price. Can cause slippage in              |
+||  illiquid markets where the book is thin.                               |
+||                                                                         |
+||  STOP ORDER                                                             |
+||  A dormant order that activates when a stock reaches a trigger          |
+||  price, then converts into a market or limit order. Used for            |
+||  loss protection or breakout entry strategies.                          |
+||                                                                         |
+||  TRADE EXECUTION                                                        |
+||  The completed match between a buy and sell order, producing a          |
+||  trade record (price, quantity, timestamp). Generates events for        |
+||  settlement, market data, and portfolio updates.                        |
+||                                                                         |
+||  SETTLEMENT (T+1 / T+2)                                                 |
+||  The process of transferring cash and securities after a trade.         |
+||  T+1 means settlement occurs one business day after trade date.         |
+||  Until settled, the trade is a legal obligation, not a transfer.        |
+||                                                                         |
+||  TICKER SYMBOL                                                          |
+||  A unique short code identifying a publicly traded security             |
+||  (e.g., AAPL, TSLA). Used as the partition key for routing              |
+||  orders to the correct matching engine shard.                           |
+||                                                                         |
+||  ORDER GATEWAY                                                          |
+||  The entry point that receives client orders, validates them,           |
+||  runs pre-trade risk checks (balance, limits, circuit breakers),        |
+||  and routes valid orders to the correct matching engine.                |
+||                                                                         |
+||  CIRCUIT BREAKER                                                        |
+||  A safety mechanism that halts trading when a stock or market           |
+||  moves beyond a threshold (e.g., ±10% in 5 min). Prevents flash         |
+||  crashes and gives the market time to absorb information.               |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 3: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -67,7 +130,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: MATCHING ENGINE
+## SECTION 4: MATCHING ENGINE
 
 ```
 +-------------------------------------------------------------------------+
@@ -114,7 +177,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: ORDER TYPES AND RISK MANAGEMENT
+## SECTION 5: ORDER TYPES AND RISK MANAGEMENT
 
 ```
 +-------------------------------------------------------------------------+
@@ -147,7 +210,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: REAL-TIME MARKET DATA
+## SECTION 6: REAL-TIME MARKET DATA
 
 ```
 +--------------------------------------------------------------------------+
@@ -182,7 +245,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 6: SETTLEMENT AND RELIABILITY
+## SECTION 7: SETTLEMENT AND RELIABILITY
 
 ```
 +-------------------------------------------------------------------------+
@@ -215,7 +278,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: SCALE ESTIMATION
+## SECTION 8: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -277,7 +340,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +--------------------------------------------------------------------------+
@@ -371,7 +434,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 9: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +--------------------------------------------------------------------------+
@@ -470,7 +533,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: INTERVIEW QUESTIONS
+## SECTION 11: INTERVIEW QUESTIONS
 
 ```
 +--------------------------------------------------------------------------+

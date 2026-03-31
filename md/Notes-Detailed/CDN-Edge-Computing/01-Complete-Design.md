@@ -29,7 +29,75 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: HIGH-LEVEL ARCHITECTURE
+## SECTION 2: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PoP (Point of Presence)                                                |
+|    A physical location (data center) hosting edge servers.              |
+|    CDNs deploy 200-400+ PoPs globally to minimize the network           |
+|    distance between users and cached content.                           |
+|                                                                         |
+|  Edge Server                                                            |
+|    A server located in a PoP that caches and serves content             |
+|    to nearby users. Handles TLS termination, caching, WAF,              |
+|    and optionally runs edge compute functions.                          |
+|                                                                         |
+|  Origin Server                                                          |
+|    The authoritative source of content (your application                |
+|    server or object store). The edge fetches from origin                |
+|    on a cache miss.                                                     |
+|                                                                         |
+|  Cache Hit / Cache Miss                                                 |
+|    A hit means the edge served the response from its local              |
+|    cache. A miss means the edge had to fetch from origin                |
+|    or a mid-tier cache, adding latency.                                 |
+|                                                                         |
+|  TTL (Time To Live)                                                     |
+|    Duration for which a cached response is considered fresh.            |
+|    Controlled via Cache-Control headers (max-age, s-maxage).            |
+|    After TTL expires, the edge must revalidate or refetch.              |
+|                                                                         |
+|  Cache Invalidation                                                     |
+|    The process of removing or marking stale content across              |
+|    all edge PoPs. Methods include purge APIs, versioned URLs,           |
+|    and TTL expiry.                                                      |
+|                                                                         |
+|  Anycast                                                                |
+|    A routing technique where the same IP address is advertised          |
+|    from multiple PoPs via BGP. The network routes each user             |
+|    to the topologically nearest PoP automatically.                      |
+|                                                                         |
+|  Pull vs Push CDN                                                       |
+|    Pull: edge fetches content from origin on first request              |
+|    (lazy). Push: content is pre-loaded to edges before any              |
+|    request (eager). Most CDNs use pull with optional pre-warming.       |
+|                                                                         |
+|  Shield / Mid-Tier Cache                                                |
+|    An intermediate cache layer between edge PoPs and origin.            |
+|    Collapses duplicate origin fetches from many PoPs into               |
+|    a single request, protecting the origin from thundering herd.        |
+|                                                                         |
+|  Stale-While-Revalidate                                                 |
+|    A cache strategy where the edge serves a stale response              |
+|    immediately while asynchronously fetching a fresh copy               |
+|    in the background. Improves perceived latency.                       |
+|                                                                         |
+|  Edge Computing                                                         |
+|    Running application logic (JS, WASM) directly at edge PoPs           |
+|    rather than at a central origin. Enables sub-millisecond             |
+|    personalization, auth, and A/B testing at the edge.                  |
+|                                                                         |
+|  Request Coalescing                                                     |
+|    When multiple concurrent cache misses arrive for the same            |
+|    resource, only one request is sent to origin. All waiting            |
+|    clients share the single response.                                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 3: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -65,7 +133,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-### PoP (POINT OF PRESENCE) INTERNALS
+### POP (POINT OF PRESENCE) INTERNALS
 
 ```
 +--------------------------------------------------------------------------+
@@ -95,7 +163,7 @@ latency and offloading origin servers.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: ROUTING AND DNS
+## SECTION 4: ROUTING AND DNS
 
 ```
 +-------------------------------------------------------------------------+
@@ -130,7 +198,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: CACHING STRATEGIES
+## SECTION 5: CACHING STRATEGIES
 
 ```
 +-------------------------------------------------------------------------+
@@ -174,7 +242,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: EDGE COMPUTING
+## SECTION 6: EDGE COMPUTING
 
 ```
 +-------------------------------------------------------------------------+
@@ -223,7 +291,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: CDN FOR VIDEO AND LARGE FILES
+## SECTION 7: CDN FOR VIDEO AND LARGE FILES
 
 ```
 +--------------------------------------------------------------------------+
@@ -263,7 +331,7 @@ latency and offloading origin servers.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 7: SECURITY AT THE EDGE
+## SECTION 8: SECURITY AT THE EDGE
 
 ```
 +-------------------------------------------------------------------------+
@@ -294,7 +362,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: SCALE ESTIMATION
+## SECTION 9: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -330,7 +398,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 10: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +-------------------------------------------------------------------------+
@@ -408,7 +476,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 11: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +-------------------------------------------------------------------------+
@@ -482,7 +550,7 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW QUESTIONS
+## SECTION 12: INTERVIEW QUESTIONS
 
 ```
 +-------------------------------------------------------------------------+

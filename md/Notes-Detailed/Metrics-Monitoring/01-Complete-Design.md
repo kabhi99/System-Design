@@ -166,7 +166,67 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: KEY TERMINOLOGY
+
+```
+  +-----------------------------------------------------------------+
+  |                       KEY TERMINOLOGY                           |
+  +-----------------------------------------------------------------+
+  |                                                                 |
+  |  Time Series                                                    |
+  |    A sequence of (timestamp, value) data points recorded at     |
+  |    regular intervals for a single metric + label combination.   |
+  |    The fundamental data structure in monitoring systems.        |
+  |                                                                 |
+  |  Metric                                                         |
+  |    A named numeric measurement (e.g., http_requests_total).     |
+  |    Combined with labels, a metric describes many dimensions     |
+  |    of system behavior over time.                                |
+  |                                                                 |
+  |  Label / Tag                                                    |
+  |    Key-value pairs attached to a metric that add dimensions     |
+  |    (e.g., method="GET", status="500"). Each unique label-value  |
+  |    combination creates a separate time series.                  |
+  |                                                                 |
+  |  Resolution / Granularity                                       |
+  |    The time interval between consecutive data points in a       |
+  |    series (e.g., 15 seconds). Finer resolution gives more       |
+  |    detail but requires more storage and write throughput.       |
+  |                                                                 |
+  |  Aggregation                                                    |
+  |    Combining multiple time series using functions like sum,     |
+  |    avg, min, max, or percentile. Used to roll up per-instance   |
+  |    metrics into service-level or cluster-level views.           |
+  |                                                                 |
+  |  Alert / Threshold                                              |
+  |    A rule that fires when a metric expression crosses a         |
+  |    defined boundary (e.g., error_rate > 5%). Alerts trigger     |
+  |    notifications to on-call engineers via Slack or PagerDuty.   |
+  |                                                                 |
+  |  Dashboard                                                      |
+  |    A visual display of metric graphs, tables, and gauges        |
+  |    (e.g., Grafana). Dashboards query the TSDB in real-time      |
+  |    and are the primary interface for observability.             |
+  |                                                                 |
+  |  Pull vs Push Model                                             |
+  |    In pull, the monitoring server scrapes targets periodically. |
+  |    In push, targets send metrics to a collector. Pull gives     |
+  |    better backpressure; push suits short-lived jobs.            |
+  |                                                                 |
+  |  Counter vs Gauge vs Histogram                                  |
+  |    Counter: monotonically increasing (requests, errors).        |
+  |    Gauge: value that goes up and down (CPU, memory).            |
+  |    Histogram: distributes observations into buckets (latency).  |
+  |                                                                 |
+  |  Downsampling                                                   |
+  |    Reducing data resolution over time (e.g., 15s raw to 5m      |
+  |    avg to 1h avg) to save storage while retaining long-term     |
+  |    trends. Old data keeps shape but loses fine-grained detail.  |
+  |                                                                 |
+  +-----------------------------------------------------------------+
+```
+
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
   +====================================================================-+
@@ -212,7 +272,7 @@ the health and behavior of a system over time.
   +====================================================================-+
 ```
 
-## SECTION 5: DEEP DIVE: DATA MODEL
+## SECTION 6: DEEP DIVE: DATA MODEL
 
 ### METRIC STRUCTURE
 
@@ -306,7 +366,7 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 6: DEEP DIVE: COLLECTION - PULL VS PUSH
+## SECTION 7: DEEP DIVE: COLLECTION - PULL VS PUSH
 
 ### PULL MODEL (PROMETHEUS STYLE)
 
@@ -408,7 +468,7 @@ the health and behavior of a system over time.
   +--------------------+----------------------------+----------------------------+
 ```
 
-## SECTION 7: DEEP DIVE: TIME-SERIES STORAGE
+## SECTION 8: DEEP DIVE: TIME-SERIES STORAGE
 
 ### WHY REGULAR DATABASES FAIL
 
@@ -589,7 +649,7 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 8: DEEP DIVE: QUERY ENGINE
+## SECTION 9: DEEP DIVE: QUERY ENGINE
 
 ### PROMQL-STYLE QUERIES
 
@@ -709,7 +769,7 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 9: DEEP DIVE: ALERTING
+## SECTION 10: DEEP DIVE: ALERTING
 
 ### ALERT RULE LIFECYCLE
 
@@ -861,7 +921,7 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 10: SCALING
+## SECTION 11: SCALING
 
 ### SCALING CHALLENGES
 
@@ -1056,7 +1116,7 @@ the health and behavior of a system over time.
   +-----------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW Q&A
+## SECTION 12: INTERVIEW Q&A
 
 ### Q1: Why do we need a specialized time-series database instead of PostgreSQL?
 
@@ -1346,7 +1406,7 @@ the health and behavior of a system over time.
   +----------------------------------------------------------------+
 ```
 
-## SECTION 12: SUMMARY
+## SECTION 13: SUMMARY
 
 ```
   +================================================================+

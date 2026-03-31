@@ -188,7 +188,60 @@ SECTION 3: REQUIREMENTS
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 4: SCALE ESTIMATION
+SECTION 4: KEY TERMINOLOGY
+## +-------------------------------------------------------------------------+
+*|                                                                         |*
+*|  JOB                                                                    |*
+*|  A unit of work defined by a type, payload, and schedule.               |*
+*|  A job may be one-time (delayed) or recurring (cron).                   |*
+*|                                                                         |*
+*|  TASK                                                                   |*
+*|  A single executable instance of a job. A recurring job spawns          |*
+*|  a new task for each scheduled execution.                               |*
+*|                                                                         |*
+*|  DAG (DIRECTED ACYCLIC GRAPH)                                           |*
+*|  A dependency graph where tasks form nodes and edges define             |*
+*|  execution order. Prerequisites must complete before dependents.        |*
+*|                                                                         |*
+*|  CRON EXPRESSION                                                        |*
+*|  A string defining a recurring schedule (e.g., '0 9 * * *' =            |*
+*|  daily at 9 AM). Parsed to compute the next execution time.             |*
+*|                                                                         |*
+*|  WORKER POOL                                                            |*
+*|  A fleet of worker processes that pull and execute tasks from           |*
+*|  the queue. Scales horizontally to handle load.                         |*
+*|                                                                         |*
+*|  DEAD LETTER QUEUE (DLQ)                                                |*
+*|  A queue for tasks that failed after all retry attempts.                |*
+*|  Allows manual inspection and reprocessing of failures.                 |*
+*|                                                                         |*
+*|  IDEMPOTENCY                                                            |*
+*|  The property that running a task multiple times produces the           |*
+*|  same result as running it once. Critical for safe retries.             |*
+*|                                                                         |*
+*|  AT-LEAST-ONCE / AT-MOST-ONCE / EXACTLY-ONCE                            |*
+*|  Delivery guarantees for task execution. At-least-once may              |*
+*|  duplicate; exactly-once requires idempotent task design.               |*
+*|                                                                         |*
+*|  BACKPRESSURE                                                           |*
+*|  A mechanism to slow task production when workers are                   |*
+*|  overwhelmed. Prevents queue buildup and OOM crashes.                   |*
+*|                                                                         |*
+*|  PRIORITY QUEUE                                                         |*
+*|  A queue that dequeues tasks by priority level rather than              |*
+*|  FIFO order. Ensures urgent tasks are processed first.                  |*
+*|                                                                         |*
+*|  HEARTBEAT                                                              |*
+*|  Periodic signal sent by workers to prove liveness. Missing             |*
+*|  heartbeats trigger task reassignment to healthy workers.               |*
+*|                                                                         |*
+*|  TASK STATE MACHINE                                                     |*
+*|  The lifecycle states of a task: PENDING > RUNNING > SUCCESS            |*
+*|  or FAILED > RETRYING. Tracks progress and enables recovery.            |*
+*|                                                                         |*
+*+-------------------------------------------------------------------------+*
+
+SECTION 5: SCALE ESTIMATION
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  EXAMPLE SCALE (Large Enterprise)                                      |*
@@ -230,7 +283,7 @@ SECTION 4: SCALE ESTIMATION
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 5: HIGH-LEVEL ARCHITECTURE
+SECTION 6: HIGH-LEVEL ARCHITECTURE
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  ARCHITECTURE OVERVIEW                                                 |*
@@ -322,7 +375,7 @@ SECTION 5: HIGH-LEVEL ARCHITECTURE
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 6: DATABASE DESIGN
+SECTION 7: DATABASE DESIGN
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  CORE TABLES                                                           |*
@@ -396,7 +449,7 @@ SECTION 6: DATABASE DESIGN
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 7: FINDING DUE JOBS (The Core Problem)
+SECTION 8: FINDING DUE JOBS (The Core Problem)
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  THE CHALLENGE                                                         |*
@@ -502,7 +555,7 @@ SECTION 7: FINDING DUE JOBS (The Core Problem)
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 8: EXACTLY-ONCE EXECUTION
+SECTION 9: EXACTLY-ONCE EXECUTION
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  THE PROBLEM                                                           |*
@@ -624,7 +677,7 @@ SECTION 8: EXACTLY-ONCE EXECUTION
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 9: LEADER ELECTION FOR SCHEDULER
+SECTION 10: LEADER ELECTION FOR SCHEDULER
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  WHY LEADER ELECTION?                                                  |*
@@ -720,7 +773,7 @@ SECTION 9: LEADER ELECTION FOR SCHEDULER
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 10: WORKER DESIGN
+SECTION 11: WORKER DESIGN
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  WORKER RESPONSIBILITIES                                               |*
@@ -1062,7 +1115,7 @@ SECTION 10: WORKER DESIGN
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 11: RECURRING JOB HANDLING
+SECTION 12: RECURRING JOB HANDLING
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  CRON JOB EXECUTION CYCLE                                              |*
@@ -1128,7 +1181,7 @@ SECTION 11: RECURRING JOB HANDLING
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 12: API DESIGN
+SECTION 13: API DESIGN
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  REST API                                                              |*
@@ -1218,7 +1271,7 @@ SECTION 12: API DESIGN
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 13: INTERVIEW QUICK REFERENCE
+SECTION 14: INTERVIEW QUICK REFERENCE
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  KEY TALKING POINTS                                                    |*

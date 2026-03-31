@@ -87,7 +87,70 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: SCALE ESTIMATION (BACK OF ENVELOPE)
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  BASE62 ENCODING                                                        |
+|  Encoding scheme using 62 characters (a-z, A-Z, 0-9) to                 |
+|  convert numeric IDs into compact alphanumeric strings.                 |
+|  Produces short, URL-safe codes like 'xY7kLm' from counters.            |
+|                                                                         |
+|  SHORT URL / LONG URL                                                   |
+|  Short URL is the compact alias (e.g., bit.ly/xY7kLm); long             |
+|  URL is the original destination. The system maintains a                |
+|  persistent mapping between the two for redirection.                    |
+|                                                                         |
+|  HASH FUNCTION                                                          |
+|  Algorithm (MD5, SHA-256) that maps an input to a fixed-size            |
+|  output. Used to generate short codes, but truncating the hash          |
+|  introduces collision risk that must be handled.                        |
+|                                                                         |
+|  COLLISION                                                              |
+|  When two different long URLs produce the same short code.              |
+|  Must be detected and resolved via retry, appending counters,           |
+|  or using collision-free approaches like pre-allocated ranges.          |
+|                                                                         |
+|  301 vs 302 REDIRECT                                                    |
+|  301 (Permanent) tells the browser to cache the redirect,               |
+|  reducing server load but losing analytics. 302 (Temporary)             |
+|  forces every click through the server, enabling tracking.              |
+|                                                                         |
+|  COUNTER-BASED ID GENERATION                                            |
+|  Using an auto-incrementing counter converted to Base62 as the          |
+|  short code. Guarantees uniqueness with no collisions but               |
+|  produces predictable, sequential URLs that need scrambling.            |
+|                                                                         |
+|  KEY GENERATION SERVICE (KGS)                                           |
+|  Centralized service that pre-allocates ranges of unique IDs            |
+|  to app servers. Each server generates codes locally within             |
+|  its range, eliminating DB lookups and contention at write time.        |
+|                                                                         |
+|  CUSTOM ALIAS                                                           |
+|  User-defined short code (e.g., bit.ly/my-brand) instead of a           |
+|  system-generated one. Requires availability checks, validation         |
+|  for reserved words, and potential premium pricing.                     |
+|                                                                         |
+|  TTL / EXPIRATION                                                       |
+|  Time-To-Live controlling when a short URL stops redirecting.           |
+|  Implemented via an expires_at timestamp checked on each                |
+|  redirect, with background cleanup of expired entries.                  |
+|                                                                         |
+|  CLICK TRACKING / ANALYTICS                                             |
+|  Recording metadata (timestamp, IP, user-agent, referrer) for           |
+|  every redirect. Processed asynchronously via a message queue           |
+|  to avoid adding latency to the redirect path.                          |
+|                                                                         |
+|  BLOOM FILTER                                                           |
+|  Probabilistic data structure for fast set-membership checks.           |
+|  Used to quickly test if a short code might already exist               |
+|  before querying the database, reducing unnecessary lookups.            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4: SCALE ESTIMATION (BACK OF ENVELOPE)
 
 ```
 +-------------------------------------------------------------------------+
@@ -146,7 +209,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -239,7 +302,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: THE CORE PROBLEM - GENERATING UNIQUE SHORT CODES
+## SECTION 6: THE CORE PROBLEM - GENERATING UNIQUE SHORT CODES
 
 ```
 +--------------------------------------------------------------------------+
@@ -403,7 +466,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DATABASE DESIGN
+## SECTION 7: DATABASE DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -491,7 +554,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: CACHING STRATEGY
+## SECTION 8: CACHING STRATEGY
 
 ```
 +-------------------------------------------------------------------------+
@@ -571,7 +634,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: REDIRECTION - 301 vs 302
+## SECTION 9: REDIRECTION - 301 vs 302
 
 ```
 +-------------------------------------------------------------------------+
@@ -614,7 +677,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: ANALYTICS SYSTEM
+## SECTION 10: ANALYTICS SYSTEM
 
 ```
 +-------------------------------------------------------------------------+
@@ -685,7 +748,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: ADDITIONAL FEATURES
+## SECTION 11: ADDITIONAL FEATURES
 
 ```
 +-------------------------------------------------------------------------+
@@ -750,7 +813,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: TRADE-OFFS AND DESIGN DECISIONS
+## SECTION 12: TRADE-OFFS AND DESIGN DECISIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -804,7 +867,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 12: DESIGN ALTERNATIVES
+## SECTION 13: DESIGN ALTERNATIVES
 
 ```
 +-------------------------------------------------------------------------+
@@ -904,13 +967,13 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 |  * No coordination, no collision at 7 chars for millions                |
 |  * But need DB uniqueness check (collision possible at scale)           |
 |                                                                         |
-|  BEST: Counter + key range + scramble (Approach 4 from Section 5)       |
+|  BEST: Counter + key range + scramble (Approach 4 from Section 6)       |
 |  Gives you: short (7 chars), unique (guaranteed), non-predictable       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 13: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 14: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1025,7 +1088,7 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: INTERVIEW QUICK REFERENCE
+## SECTION 15: INTERVIEW QUICK REFERENCE
 
 ```
 +-------------------------------------------------------------------------+

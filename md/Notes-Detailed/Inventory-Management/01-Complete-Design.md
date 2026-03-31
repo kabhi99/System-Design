@@ -124,7 +124,63 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+||                                                                        |
+||  SKU (STOCK KEEPING UNIT)                                              |
+||  A unique identifier for a specific product variant (size,             |
+||  color). The atomic unit tracked in inventory systems.                 |
+||                                                                        |
+||  WAREHOUSE                                                             |
+||  A physical location (fulfillment center, store, distribution          |
+||  hub) that holds stock. Each has its own inventory counts.             |
+||                                                                        |
+||  STOCK LEVEL                                                           |
+||  The quantity of a SKU at a location, broken into: available,          |
+||  reserved, in-transit, and damaged. Sum = total on hand.               |
+||                                                                        |
+||  RESERVATION / HOLD                                                    |
+||  Temporarily claiming stock for a pending order. Decrements            |
+||  available, increments reserved. Released if order cancels.            |
+||                                                                        |
+||  FULFILLMENT                                                           |
+||  The end-to-end process of completing an order: allocation,            |
+||  picking, packing, and shipping to the customer.                       |
+||                                                                        |
+||  PICK / PACK / SHIP                                                    |
+||  Warehouse workflow stages: pick items from bins, pack into            |
+||  boxes, and hand to carrier. Each step updates inventory.              |
+||                                                                        |
+||  SAFETY STOCK                                                          |
+||  Minimum buffer quantity kept on hand to prevent stockouts             |
+||  from demand spikes or supply delays. Triggers reorder alerts.         |
+||                                                                        |
+||  REORDER POINT                                                         |
+||  The stock level at which a new purchase order is triggered.           |
+||  Calculated from lead time, demand rate, and safety stock.             |
+||                                                                        |
+||  FIFO / LIFO                                                           |
+||  Inventory picking methods. FIFO (first in, first out) is              |
+||  standard for perishables; LIFO used for accounting purposes.          |
+||                                                                        |
+||  INVENTORY RECONCILIATION                                              |
+||  Comparing physical stock counts against system records to             |
+||  detect drift, shrinkage, or data errors. Typically nightly.           |
+||                                                                        |
+||  BACKORDER                                                             |
+||  An order accepted when stock is unavailable, fulfilled once           |
+||  new stock arrives. Requires supplier lead-time tracking.              |
+||                                                                        |
+||  DISTRIBUTED INVENTORY                                                 |
+||  Stock spread across multiple warehouses and regions. Needs            |
+||  cross-location visibility, transfer logic, and routing.               |
+||                                                                        |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -173,7 +229,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -259,7 +315,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: DATA MODEL
+## SECTION 6: DATA MODEL
 
 ### CORE TABLES
 
@@ -349,7 +405,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 6: STOCK OPERATIONS
+## SECTION 7: STOCK OPERATIONS
 
 ### RESERVE OPERATION
 
@@ -439,7 +495,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 7: OVERSELLING PREVENTION
+## SECTION 8: OVERSELLING PREVENTION
 
 ### DATABASE-LEVEL STRATEGIES
 
@@ -551,7 +607,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 8: MULTI-CHANNEL SYNC
+## SECTION 9: MULTI-CHANNEL SYNC
 
 ```
 +-------------------------------------------------------------------------+
@@ -630,7 +686,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: EVENT-DRIVEN ARCHITECTURE
+## SECTION 10: EVENT-DRIVEN ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -686,7 +742,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: WAREHOUSE OPERATIONS
+## SECTION 11: WAREHOUSE OPERATIONS
 
 ### BIN AND SHELF TRACKING
 
@@ -800,7 +856,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: SCALING STRATEGIES
+## SECTION 12: SCALING STRATEGIES
 
 ### DATABASE SCALING
 
@@ -913,7 +969,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW QUESTIONS AND ANSWERS
+## SECTION 13: INTERVIEW QUESTIONS AND ANSWERS
 
 ### Q1: HOW DO YOU PREVENT OVERSELLING DURING A FLASH SALE?
 

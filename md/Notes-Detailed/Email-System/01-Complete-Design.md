@@ -174,7 +174,63 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+||                                                                        |
+||  SMTP (SIMPLE MAIL TRANSFER PROTOCOL)                                  |
+||  The standard protocol for sending and relaying email between          |
+||  mail servers. Uses port 25 (relay) and 587 (submission).              |
+||                                                                        |
+||  IMAP (INTERNET MESSAGE ACCESS PROTOCOL)                               |
+||  Protocol for reading email while keeping messages on the              |
+||  server. Supports folders, flags, and multi-device sync.               |
+||                                                                        |
+||  POP3 (POST OFFICE PROTOCOL)                                           |
+||  Legacy protocol that downloads email to the client and                |
+||  deletes from server. No multi-device sync or folders.                 |
+||                                                                        |
+||  MX RECORD                                                             |
+||  A DNS record specifying which mail server accepts email               |
+||  for a domain. Senders look up MX to know where to deliver.            |
+||                                                                        |
+||  SPF (SENDER POLICY FRAMEWORK)                                         |
+||  A DNS TXT record listing IPs authorized to send for a                 |
+||  domain. Receivers check SPF to detect forged senders.                 |
+||                                                                        |
+||  DKIM (DOMAINKEYS IDENTIFIED MAIL)                                     |
+||  Cryptographic signing of email headers and body by the                |
+||  sender. Verified by receivers using a public key in DNS.              |
+||                                                                        |
+||  DMARC                                                                 |
+||  Policy layer on top of SPF + DKIM. Tells receivers what to            |
+||  do if both fail: none, quarantine (spam), or reject (bounce).         |
+||                                                                        |
+||  MIME (MULTIPURPOSE INTERNET MAIL EXTENSIONS)                          |
+||  Standard for encoding non-ASCII content in email: HTML body,          |
+||  attachments, images, and character sets beyond plain text.            |
+||                                                                        |
+||  ENVELOPE VS HEADER                                                    |
+||  Envelope (MAIL FROM / RCPT TO) routes the email; headers              |
+||  (From / To) are what the user sees. They can differ (BCC).            |
+||                                                                        |
+||  MAIL TRANSFER AGENT (MTA)                                             |
+||  Server software that routes email between domains via SMTP.           |
+||  Examples: Postfix, Sendmail, Microsoft Exchange.                      |
+||                                                                        |
+||  MAIL DELIVERY AGENT (MDA)                                             |
+||  Component that writes incoming email to the recipient's               |
+||  mailbox. Applies user rules, labels, and spam filtering.              |
+||                                                                        |
+||  SPAM FILTER                                                           |
+||  Multi-layer defense (IP reputation, SPF/DKIM checks, ML               |
+||  content analysis, user feedback) blocking >99.9% of spam.             |
+||                                                                        |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -221,7 +277,7 @@ guaranteeing that no legitimate email is ever lost.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -306,7 +362,7 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 5: DEEP DIVE - EMAIL PROTOCOLS
+## SECTION 6: DEEP DIVE - EMAIL PROTOCOLS
 
 ### SMTP (SIMPLE MAIL TRANSFER PROTOCOL)
 
@@ -443,7 +499,7 @@ guaranteeing that no legitimate email is ever lost.
 +---------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DEEP DIVE - SEND FLOW
+## SECTION 7: DEEP DIVE - SEND FLOW
 
 ```
 +--------------------------------------------------------------------------+
@@ -543,7 +599,7 @@ guaranteeing that no legitimate email is ever lost.
 +---------------------------------------------------------------------------+
 ```
 
-## SECTION 7: DEEP DIVE - RECEIVE FLOW
+## SECTION 8: DEEP DIVE - RECEIVE FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -611,7 +667,7 @@ guaranteeing that no legitimate email is ever lost.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DEEP DIVE - MAILBOX STORAGE
+## SECTION 9: DEEP DIVE - MAILBOX STORAGE
 
 ### EMAIL AS IMMUTABLE OBJECTS
 
@@ -754,7 +810,7 @@ guaranteeing that no legitimate email is ever lost.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DEEP DIVE - SEARCH
+## SECTION 10: DEEP DIVE - SEARCH
 
 ### FULL-TEXT SEARCH ARCHITECTURE
 
@@ -847,7 +903,7 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: DEEP DIVE - SPAM AND SECURITY
+## SECTION 11: DEEP DIVE - SPAM AND SECURITY
 
 ### SPAM FILTERING PIPELINE
 
@@ -939,7 +995,7 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: SCALING
+## SECTION 12: SCALING
 
 ### MAILBOX SHARDING
 
@@ -1128,7 +1184,7 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW Q&A
+## SECTION 13: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+

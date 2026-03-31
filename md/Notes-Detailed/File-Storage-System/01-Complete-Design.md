@@ -102,7 +102,56 @@ SECTION 2: REQUIREMENTS
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 3: SCALE ESTIMATION
+SECTION 3: KEY TERMINOLOGY
+## +-------------------------------------------------------------------------+
+*|                                                                         |*
+*|  BLOCK STORAGE                                                          |*
+*|  Files are split into fixed-size blocks (typically 4-64 MB)             |*
+*|  for parallel upload/download and efficient distributed storage.        |*
+*|                                                                         |*
+*|  CHUNK                                                                  |*
+*|  A subdivision of a file block. Chunking enables deduplication,         |*
+*|  delta sync, and resumable transfers of large files.                    |*
+*|                                                                         |*
+*|  DEDUPLICATION                                                          |*
+*|  Detecting and eliminating redundant data copies using content          |*
+*|  hashing (SHA-256). Saves storage when identical files repeat.          |*
+*|                                                                         |*
+*|  ERASURE CODING                                                         |*
+*|  A data protection scheme that splits data into fragments with          |*
+*|  parity pieces. More storage-efficient than full replication.           |*
+*|                                                                         |*
+*|  METADATA SERVER                                                        |*
+*|  Stores the file namespace, permissions, and block locations.           |*
+*|  Separating metadata from data allows independent scaling.              |*
+*|                                                                         |*
+*|  REPLICATION FACTOR                                                     |*
+*|  The number of copies of each block stored across nodes.                |*
+*|  Typically 3x for durability; higher for critical data.                 |*
+*|                                                                         |*
+*|  CONSISTENCY MODEL                                                      |*
+*|  Defines guarantees about when a write becomes visible.                 |*
+*|  Strong for metadata; eventual for file content propagation.            |*
+*|                                                                         |*
+*|  NAMESPACE                                                              |*
+*|  The hierarchical directory tree (/user/folder/file.txt) that           |*
+*|  organizes files. Stored in the metadata database.                      |*
+*|                                                                         |*
+*|  SYNC / CONFLICT RESOLUTION                                             |*
+*|  Reconciling divergent file versions when the same file is              |*
+*|  edited on multiple devices while offline.                              |*
+*|                                                                         |*
+*|  DELTA SYNC                                                             |*
+*|  Transmitting only the changed portions of a file instead of            |*
+*|  the entire file. Dramatically reduces sync bandwidth.                  |*
+*|                                                                         |*
+*|  UPLOAD / DOWNLOAD CHUNKING                                             |*
+*|  Breaking file transfers into chunks for parallel processing,           |*
+*|  resumability on failure, and bandwidth optimization.                   |*
+*|                                                                         |*
+*+-------------------------------------------------------------------------+*
+
+SECTION 4: SCALE ESTIMATION
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  ASSUMPTIONS                                                           |*
@@ -165,7 +214,7 @@ SECTION 3: SCALE ESTIMATION
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 4: HIGH-LEVEL ARCHITECTURE
+SECTION 5: HIGH-LEVEL ARCHITECTURE
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  SYSTEM COMPONENTS OVERVIEW                                            |*
@@ -217,7 +266,7 @@ SECTION 4: HIGH-LEVEL ARCHITECTURE
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 5: CORE COMPONENTS DEEP DIVE
+SECTION 6: CORE COMPONENTS DEEP DIVE
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  1. BLOCK SERVICE (File Chunking)                                     |*
@@ -466,7 +515,7 @@ SECTION 5: CORE COMPONENTS DEEP DIVE
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 6: FILE UPLOAD/DOWNLOAD FLOWS
+SECTION 7: FILE UPLOAD/DOWNLOAD FLOWS
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  UPLOAD FLOW (Detailed)                                               |*
@@ -560,7 +609,7 @@ SECTION 6: FILE UPLOAD/DOWNLOAD FLOWS
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 7: CONFLICT RESOLUTION
+SECTION 8: CONFLICT RESOLUTION
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  THE CONFLICT PROBLEM                                                  |*
@@ -643,7 +692,7 @@ SECTION 7: CONFLICT RESOLUTION
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 8: DEDUPLICATION
+SECTION 9: DEDUPLICATION
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  WHY DEDUPLICATION?                                                    |*
@@ -720,7 +769,7 @@ SECTION 8: DEDUPLICATION
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 9: SECURITY
+SECTION 10: SECURITY
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  ENCRYPTION                                                            |*
@@ -910,7 +959,7 @@ SECTION 9: SECURITY
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 10: SCALING AND RELIABILITY
+SECTION 11: SCALING AND RELIABILITY
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  METADATA DATABASE SCALING                                            |*
@@ -983,7 +1032,7 @@ SECTION 10: SCALING AND RELIABILITY
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 11: ADDITIONAL FEATURES
+SECTION 12: ADDITIONAL FEATURES
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  VERSION HISTORY (DETAILED)                                           |*
@@ -1171,7 +1220,7 @@ SECTION 11: ADDITIONAL FEATURES
 *|                                                                         |*
 *+-------------------------------------------------------------------------+*
 
-SECTION 12: INTERVIEW QUICK REFERENCE
+SECTION 13: INTERVIEW QUICK REFERENCE
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
 *|  KEY DESIGN DECISIONS                                                  |*

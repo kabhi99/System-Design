@@ -175,7 +175,76 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+| key terminology:                                                        |
+|                                                                         |
+| ledger                                                                  |
+|   an immutable, append-only record of every financial transaction.      |
+|   serves as the single source of truth for all money movements          |
+|   and is used for auditing, reconciliation, and dispute resolution.     |
+|                                                                         |
+| double-entry bookkeeping                                                |
+|   every transaction creates exactly two entries: a debit from one       |
+|   account and a credit to another. the sum of all debits always         |
+|   equals the sum of all credits, ensuring mathematical correctness.     |
+|                                                                         |
+| idempotency key                                                         |
+|   a unique client-generated token sent with each payment request.       |
+|   if the same key is seen again (retry/duplicate), the system           |
+|   returns the original result without re-executing the transaction.     |
+|                                                                         |
+| settlement                                                              |
+|   the actual movement of funds between bank accounts after a            |
+|   transaction is authorized. can be real-time (UPI/IMPS) or             |
+|   batched (NEFT, card networks settle T+1 or T+2).                      |
+|                                                                         |
+| float                                                                   |
+|   money sitting in the wallet provider's escrow/pooled account          |
+|   that has been loaded by users but not yet spent. the interest         |
+|   earned on float can be a significant revenue source.                  |
+|                                                                         |
+| transaction                                                             |
+|   a single atomic money movement (P2P transfer, merchant payment,       |
+|   top-up, withdrawal). has a lifecycle: initiated -> processing ->      |
+|   success/failed/reversed.                                              |
+|                                                                         |
+| balance                                                                 |
+|   the current available amount in a user's wallet. maintained as        |
+|   a derived value from ledger entries and must be strongly              |
+|   consistent to prevent double-spending.                                |
+|                                                                         |
+| debit / credit                                                          |
+|   debit = money going out of an account (reduces balance).              |
+|   credit = money coming into an account (increases balance).            |
+|   every wallet transaction has one debit and one credit side.           |
+|                                                                         |
+| reconciliation                                                          |
+|   the process of comparing internal ledger records against              |
+|   external bank/payment gateway statements to detect and resolve        |
+|   discrepancies (missing settlements, duplicate charges, etc.).         |
+|                                                                         |
+| payment gateway                                                         |
+|   a third-party service that connects the wallet to external            |
+|   payment rails (card networks, UPI/NPCI, net banking). handles         |
+|   authorization, capture, and settlement with acquiring banks.          |
+|                                                                         |
+| KYC (know your customer)                                                |
+|   regulatory-mandated identity verification (aadhaar, PAN, etc.)        |
+|   required before users can transact. minimum KYC allows small          |
+|   limits; full KYC unlocks higher transaction and balance limits.       |
+|                                                                         |
+| escrow                                                                  |
+|   a pooled bank account held by the wallet provider where user          |
+|   funds are parked. regulated by RBI guidelines to ensure user          |
+|   money is segregated from the company's operating funds.               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ### COMPONENT OVERVIEW
 
@@ -250,7 +319,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: WALLET DATA MODEL
+## SECTION 6: WALLET DATA MODEL
 
 ### USER WALLET SCHEMA
 
@@ -345,7 +414,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: TRANSACTION FLOW
+## SECTION 7: TRANSACTION FLOW
 
 ### P2P TRANSFER FLOW
 
@@ -476,7 +545,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: CONSISTENCY AND DOUBLE-SPEND PREVENTION
+## SECTION 8: CONSISTENCY AND DOUBLE-SPEND PREVENTION
 
 ### THE DOUBLE-SPEND PROBLEM
 
@@ -546,7 +615,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: LEDGER AND RECONCILIATION
+## SECTION 9: LEDGER AND RECONCILIATION
 
 ### IMMUTABLE APPEND-ONLY LEDGER
 
@@ -638,7 +707,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 9: UPI ARCHITECTURE
+## SECTION 10: UPI ARCHITECTURE
 
 ### NPCI SWITCH
 
@@ -730,7 +799,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: SECURITY AND COMPLIANCE
+## SECTION 11: SECURITY AND COMPLIANCE
 
 ### PCI-DSS AND TOKENIZATION
 
@@ -822,7 +891,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: CASHBACK AND REWARDS
+## SECTION 12: CASHBACK AND REWARDS
 
 ### EVENT-DRIVEN CASHBACK SYSTEM
 
@@ -919,7 +988,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 12: SCALING
+## SECTION 13: SCALING
 
 ### WALLET SHARDING
 
@@ -1018,7 +1087,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 14: INTERVIEW Q&A
 
 ### QUESTION 1
 

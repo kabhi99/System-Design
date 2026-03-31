@@ -30,7 +30,107 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: HIGH-LEVEL ARCHITECTURE
+## SECTION 2: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TRANSCODING                                                            |
+|  Converting video from one format/codec to another.                     |
+|  Example: ProRes (camera raw) -> H.264 (web playable)                   |
+|  Involves decoding the source then re-encoding to target format.        |
+|                                                                         |
+|  ENCODING                                                               |
+|  Compressing raw video into a specific codec format.                    |
+|  Trades CPU time for smaller file size.                                 |
+|  More compression = smaller file but longer encode + quality loss.      |
+|                                                                         |
+|  CODEC (Coder-Decoder)                                                  |
+|  Algorithm that compresses (encodes) and decompresses (decodes) video.  |
+|  Examples: H.264, H.265 (HEVC), VP9, AV1                                |
+|  H.264: universal support, baseline compression                         |
+|  AV1:   best compression, but 10-20x slower to encode                   |
+|                                                                         |
+|  CONTAINER FORMAT                                                       |
+|  Wrapper that packages video, audio, subtitles, and metadata together.  |
+|  Examples: MP4 (.mp4), MPEG-TS (.ts), fMP4 (.m4s), MKV (.mkv)           |
+|  Container != codec. MP4 can hold H.264 or H.265 inside.                |
+|                                                                         |
+|  BITRATE                                                                |
+|  Amount of data per second of video. Measured in Mbps or Kbps.          |
+|  Higher bitrate = better quality but larger file and more bandwidth.    |
+|  CBR (Constant): fixed bitrate throughout.                              |
+|  VBR (Variable): adjusts bitrate per scene complexity.                  |
+|                                                                         |
+|  RENDITION                                                              |
+|  A specific version of a video at a particular resolution + bitrate.    |
+|  Example: 1080p at 5 Mbps is one rendition, 720p at 2.5 Mbps another.   |
+|  Platform stores multiple renditions for adaptive streaming.            |
+|                                                                         |
+|  GOP (Group of Pictures)                                                |
+|  Sequence of frames between two keyframes (I-frames).                   |
+|  I-frame: full image (large). P-frame: changes from previous (small).   |
+|  B-frame: changes from both previous and next (smallest).               |
+|  GOP size of 2 seconds = keyframe every 2 seconds.                      |
+|  Segments must be split at GOP boundaries for clean cuts.               |
+|                                                                         |
+|  SEGMENT / CHUNK                                                        |
+|  Small piece of a video (2-10 seconds), independently decodable.        |
+|  Each segment starts with a keyframe (I-frame).                         |
+|  Client downloads segments one at a time for streaming.                 |
+|                                                                         |
+|  MANIFEST FILE                                                          |
+|  Index file that lists all available renditions and their segments.     |
+|  M3U8: manifest format for HLS (Apple).                                 |
+|  MPD: manifest format for DASH (open standard).                         |
+|  Player reads manifest to know what quality levels + segments exist.    |
+|                                                                         |
+|  HLS (HTTP Live Streaming)                                              |
+|  Apple's adaptive streaming protocol. Uses M3U8 manifest + .ts/.fmp4    |
+|  segments. Dominant protocol, works natively on iOS/Safari.             |
+|                                                                         |
+|  DASH (Dynamic Adaptive Streaming over HTTP)                            |
+|  Open standard adaptive streaming protocol. Uses MPD manifest + .m4s    |
+|  segments. Better DRM support on Android/Chrome (Widevine).             |
+|                                                                         |
+|  ABR (Adaptive Bitrate Streaming)                                       |
+|  Player dynamically switches between renditions based on network        |
+|  conditions. Bandwidth drops -> lower quality. Improves -> higher.      |
+|  Decisions made client-side, per-segment.                               |
+|                                                                         |
+|  CMAF (Common Media Application Format)                                 |
+|  Unified container format (fMP4) that works with BOTH HLS and DASH.     |
+|  One set of segments, two manifests -> saves ~50% storage.              |
+|                                                                         |
+|  CDN (Content Delivery Network)                                         |
+|  Globally distributed edge servers that cache and serve video segments. |
+|  Viewer fetches from nearest edge PoP (Point of Presence).              |
+|  Reduces latency and offloads origin. Handles 99%+ of video traffic.    |
+|                                                                         |
+|  PRESIGNED URL                                                          |
+|  Temporary URL with embedded auth that allows direct upload to object   |
+|  storage (S3). Upload service generates it; client uploads directly.    |
+|  Avoids routing large video files through application servers.          |
+|                                                                         |
+|  DRM (Digital Rights Management)                                        |
+|  Encryption of video segments to prevent unauthorized copying.          |
+|  Widevine (Google), FairPlay (Apple), PlayReady (Microsoft).            |
+|  Player requests decryption key from license server per session.        |
+|                                                                         |
+|  RTMP (Real-Time Messaging Protocol)                                    |
+|  Protocol used for ingesting live video from broadcaster to server.     |
+|  Low latency, persistent TCP connection. Not used for playback.         |
+|  Broadcaster (OBS) -> RTMP -> Ingest server -> transcode -> HLS/DASH.   |
+|                                                                         |
+|  PER-TITLE ENCODING (Content-Aware Encoding)                            |
+|  Analyze each video's scene complexity before choosing bitrate.         |
+|  Static scenes (lecture) -> lower bitrate. Action scenes -> higher.     |
+|  Netflix pioneered this. Saves ~20% bandwidth with no quality loss.     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 3: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -74,7 +174,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: VIDEO UPLOAD AND TRANSCODING
+## SECTION 4: VIDEO UPLOAD AND TRANSCODING
 
 ```
 +-------------------------------------------------------------------------+
@@ -116,7 +216,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: ADAPTIVE BITRATE STREAMING
+## SECTION 5: ADAPTIVE BITRATE STREAMING
 
 ```
 +-------------------------------------------------------------------------+
@@ -156,7 +256,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: STORAGE OPTIMIZATION
+## SECTION 6: STORAGE OPTIMIZATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -190,7 +290,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: LIVE STREAMING
+## SECTION 7: LIVE STREAMING
 
 ```
 +-------------------------------------------------------------------------+
@@ -221,7 +321,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: SCALE ESTIMATION
+## SECTION 8: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -277,7 +377,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: API DESIGN AND DATA MODEL
+## SECTION 9: API DESIGN AND DATA MODEL
 
 ```
 +-------------------------------------------------------------------------+
@@ -343,7 +443,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 10: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +-------------------------------------------------------------------------+
@@ -460,7 +560,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 11: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +-------------------------------------------------------------------------+
@@ -538,7 +638,7 @@ across varying network conditions and devices.
 |  90% of videos get <100 views. Storing 4K for these is waste.           |
 |                                                                         |
 |  Solution:                                                              |
-|  * Tiered storage (hot/warm/cold) -- see Section 5                      |
+|  * Tiered storage (hot/warm/cold) -- see Section 6                      |
 |  * Delete unpopular renditions: keep only 720p + original for           |
 |    videos with < 100 views after 90 days                                |
 |  * On-demand transcoding: re-transcode cold videos if requested         |
@@ -580,7 +680,7 @@ across varying network conditions and devices.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW QUESTIONS
+## SECTION 12: INTERVIEW QUESTIONS
 
 ```
 +-------------------------------------------------------------------------+

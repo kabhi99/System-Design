@@ -95,7 +95,65 @@ auto-incrementing counter works fine. At large scale, it falls apart.
   +------------------------------------------------------------+
 ```
 
-## SECTION 3: ALL APPROACHES - DEEP COMPARISON
+## SECTION 3: KEY TERMINOLOGY
+
+```
+  +----------------------------------------------------------------+
+  |                                                                |
+  |  SNOWFLAKE ID                                                  |
+  |  A 64-bit ID layout invented by Twitter: 41-bit timestamp +    |
+  |  10-bit machine ID + 12-bit sequence. Time-sortable, unique    |
+  |  without coordination, generates 4M+ IDs/sec per machine.      |
+  |                                                                |
+  |  UUID (UNIVERSALLY UNIQUE IDENTIFIER)                          |
+  |  A 128-bit identifier standardized in RFC 4122. v4 is random   |
+  |  (not sortable), v7 is timestamp-prefixed (sortable). No       |
+  |  coordination needed but double the storage of a 64-bit ID.    |
+  |                                                                |
+  |  CLOCK SKEW                                                    |
+  |  Disagreement between clocks on different servers caused by    |
+  |  NTP corrections. If a clock jumps backward, Snowflake may     |
+  |  generate duplicate or non-monotonic IDs — must detect & halt. |
+  |                                                                |
+  |  EPOCH (CUSTOM)                                                |
+  |  The zero-reference timestamp for the ID's time bits. Using    |
+  |  a recent custom epoch (e.g., your launch date) instead of     |
+  |  Unix 1970 maximizes the 41-bit timestamp's ~69-year lifespan. |
+  |                                                                |
+  |  MACHINE ID                                                    |
+  |  A unique number assigned to each generator instance (10 bits  |
+  |  = 1024 machines). Ensures no two servers produce the same     |
+  |  ID. Assigned via ZooKeeper, etcd, or a lease table.           |
+  |                                                                |
+  |  SEQUENCE NUMBER                                               |
+  |  A per-millisecond counter (12 bits = 0-4095) distinguishing   |
+  |  IDs generated in the same millisecond on the same machine.    |
+  |  Resets to 0 each new millisecond; overflow waits for next ms. |
+  |                                                                |
+  |  K-SORTABLE                                                    |
+  |  An ID whose binary or lexicographic order approximates        |
+  |  creation time. Snowflake and ULID are K-sortable; UUID v4     |
+  |  is not. Critical for efficient B-tree index insert locality.  |
+  |                                                                |
+  |  MONOTONIC                                                     |
+  |  Strictly increasing IDs on a single generator — each new ID   |
+  |  is greater than the last. Guaranteed within one machine;      |
+  |  only approximately true across machines (clock-dependent).    |
+  |                                                                |
+  |  ULID                                                          |
+  |  A 128-bit ID: 48-bit timestamp prefix + 80-bit random suffix  |
+  |  encoded as 26-char Crockford Base32. Lexicographically        |
+  |  sortable and UUID-column compatible. No coordination needed.  |
+  |                                                                |
+  |  BIT LAYOUT                                                    |
+  |  The scheme dividing a 64-bit integer into fields (timestamp,  |
+  |  machine, sequence). The allocation determines max lifetime,   |
+  |  max machines, and burst throughput of the generator.          |
+  |                                                                |
+  +----------------------------------------------------------------+
+```
+
+## SECTION 4: ALL APPROACHES - DEEP COMPARISON
 
 ### APPROACH 1: UUID (UNIVERSALLY UNIQUE IDENTIFIER)
 
@@ -335,7 +393,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------------------------------------------+
 ```
 
-## SECTION 4: DEEP DIVE: SNOWFLAKE ARCHITECTURE
+## SECTION 5: DEEP DIVE: SNOWFLAKE ARCHITECTURE
 
 ### SYSTEM ARCHITECTURE
 
@@ -446,7 +504,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------------------------------------------+
 ```
 
-## SECTION 5: DEEP DIVE: CLOCK SYNCHRONIZATION
+## SECTION 6: DEEP DIVE: CLOCK SYNCHRONIZATION
 
 ### THE CLOCK SKEW PROBLEM
 
@@ -584,7 +642,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------------------------------------------+
 ```
 
-## SECTION 6: COMPARISON TABLE
+## SECTION 7: COMPARISON TABLE
 
 ```
   +------------------+----------+-----------+---------+------------+-------------+
@@ -616,7 +674,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +------------------+----------+-----------+---------+------------+-------------+
 ```
 
-## SECTION 7: USE CASES - WHEN TO PICK WHICH
+## SECTION 8: USE CASES - WHEN TO PICK WHICH
 
 ```
   +--------------------------------------------------------------------+
@@ -664,7 +722,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------+-----------------------------------+
 ```
 
-## SECTION 8: FULL SYSTEM DIAGRAM
+## SECTION 9: FULL SYSTEM DIAGRAM
 
 ```
   +====================================================================--+
@@ -703,7 +761,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +====================================================================--+
 ```
 
-## SECTION 9: INTERVIEW Q&A
+## SECTION 10: INTERVIEW Q&A
 
 ### Q1: Why not just use UUIDs everywhere?
 
@@ -909,7 +967,7 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------------------------------------------+
 ```
 
-## SECTION 10: SUMMARY
+## SECTION 11: SUMMARY
 
 ```
   +================================================================-+

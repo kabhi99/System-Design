@@ -157,7 +157,66 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  GEOHASH                                                                |
+||  An encoding that converts a 2D (lat, lng) coordinate into a 1D         |
+||  string where shared prefixes indicate spatial proximity. Easy to       |
+||  store in B-tree indexes and cache by prefix. The most common           |
+||  spatial index for proximity services.                                  |
+||                                                                         |
+||  QUADTREE                                                               |
+||  A tree that recursively subdivides space into four quadrants.          |
+||  Dense areas get more subdivisions; sparse areas stay coarse.           |
+||  Great for in-memory search with adaptive density handling.             |
+||                                                                         |
+||  R-TREE                                                                 |
+||  A balanced tree of bounding rectangles used by PostGIS for             |
+||  spatial range queries. Self-balancing on insert/delete. Best           |
+||  when you already run PostgreSQL and want built-in geo support.         |
+||                                                                         |
+||  HILBERT CURVE (S2 GEOMETRY)                                            |
+||  A space-filling curve mapping 2D cells to 1D IDs with better           |
+||  spatial locality than geohash's Z-order curve. Used by Google          |
+||  Maps. Handles sphere geometry natively without distortion.             |
+||                                                                         |
+||  HAVERSINE FORMULA                                                      |
+||  Computes great-circle distance between two points on a sphere          |
+||  given their lat/lng. Necessary because Euclidean distance is           |
+||  inaccurate on the curved Earth surface.                                |
+||                                                                         |
+||  SPATIAL INDEX                                                          |
+||  A data structure that organizes objects by location for fast           |
+||  proximity queries. Without one, every search is O(n) over all          |
+||  records. Geohash, quadtree, R-tree, and S2 are all spatial indexes.    |
+||                                                                         |
+||  POI (POINT OF INTEREST)                                                |
+||  Any business, landmark, or location entity indexed in the system       |
+||  (restaurant, gas station, ATM). Each PoI has a lat/lng, category,      |
+||  and metadata like rating, hours, and photos.                           |
+||                                                                         |
+||  BOUNDING BOX                                                           |
+||  A rectangular region defined by min/max lat and min/max lng.           |
+||  Used as a coarse first-pass filter before exact Haversine distance     |
+||  calculation. Fast to compute but includes false positives at corners.  |
+||                                                                         |
+||  GEOFENCE                                                               |
+||  A virtual perimeter around a geographic area. Triggers events          |
+||  when a device enters or exits the boundary. Used for location-         |
+||  based alerts, marketing, and compliance.                               |
+||                                                                         |
+||  RADIUS QUERY                                                           |
+||  "Find all PoIs within X meters of my location." The fundamental        |
+||  operation of a proximity service. Implemented as spatial index         |
+||  lookup + exact Haversine distance filter for precision.                |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -210,7 +269,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -356,7 +415,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: DEEP DIVE — GEOSPATIAL INDEXING
+## SECTION 6: DEEP DIVE — GEOSPATIAL INDEXING
 
 ### APPROACH 1: NAIVE BRUTE FORCE
 
@@ -752,7 +811,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DEEP DIVE — SEARCH FLOW
+## SECTION 7: DEEP DIVE — SEARCH FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -843,7 +902,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: DEEP DIVE — DATABASE DESIGN
+## SECTION 8: DEEP DIVE — DATABASE DESIGN
 
 ### SCHEMA
 
@@ -971,7 +1030,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DEEP DIVE — CACHING
+## SECTION 9: DEEP DIVE — CACHING
 
 ```
 +-------------------------------------------------------------------------+
@@ -1055,7 +1114,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: SCALING
+## SECTION 10: SCALING
 
 ```
 +-------------------------------------------------------------------------+
@@ -1166,7 +1225,7 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: INTERVIEW Q&A
+## SECTION 11: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+

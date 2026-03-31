@@ -162,7 +162,77 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: KEY TERMINOLOGY
+
+```
++-----------------------------------------------------------------------+
+|                      KEY TERMINOLOGY                                  |
++-----------------------------------------------------------------------+
+|                                                                       |
+|  Object                                                               |
+|    The fundamental unit of storage: a blob of data (up to 5 TB)       |
+|    identified by a key, along with metadata and a version ID.         |
+|    Objects are immutable once written.                                |
+|                                                                       |
+|  Bucket                                                               |
+|    A globally unique logical namespace that holds objects.            |
+|    Buckets define region, access policies, versioning, and            |
+|    lifecycle rules for the objects they contain.                      |
+|                                                                       |
+|  Key                                                                  |
+|    The unique identifier for an object within a bucket.               |
+|    Keys form a flat namespace but "/" in keys simulates a             |
+|    directory hierarchy (prefix-based listing).                        |
+|                                                                       |
+|  Metadata                                                             |
+|    Key-value pairs stored with an object (content-type, size,         |
+|    custom headers). System metadata is auto-generated; user           |
+|    metadata is set at upload time.                                    |
+|                                                                       |
+|  Multipart Upload                                                     |
+|    A mechanism to upload large objects in parallel parts              |
+|    (5 MB - 5 GB each). Parts upload independently; the final          |
+|    Complete call assembles them into one object.                      |
+|                                                                       |
+|  Presigned URL                                                        |
+|    A time-limited, cryptographically signed URL that grants           |
+|    temporary GET or PUT access to a private object without            |
+|    requiring the caller to have credentials.                          |
+|                                                                       |
+|  Eventual Consistency                                                 |
+|    A model where reads may temporarily return stale data after        |
+|    writes. S3 historically used this for overwrites and deletes       |
+|    (now strong read-after-write consistency since Dec 2020).          |
+|                                                                       |
+|  Erasure Coding                                                       |
+|    A durability technique that splits data into N data chunks         |
+|    and K parity chunks. Any N of (N+K) chunks can reconstruct         |
+|    the object (e.g., RS 8+4 tolerates 4 losses at 1.5x overhead).     |
+|                                                                       |
+|  Storage Class / Tier                                                 |
+|    Categories defining access frequency and cost: Standard (hot),     |
+|    Infrequent Access (warm), Glacier (cold), Deep Archive.            |
+|    Each tier has different pricing for storage, retrieval, and API.   |
+|                                                                       |
+|  Lifecycle Policy                                                     |
+|    Rules that automatically transition objects between storage        |
+|    classes or delete them after a specified age (e.g., move to        |
+|    Glacier after 90 days, delete after 365 days).                     |
+|                                                                       |
+|  Versioning                                                           |
+|    A bucket-level feature that preserves every version of every       |
+|    object. Deletes insert a delete marker; old versions remain        |
+|    accessible by version ID.                                          |
+|                                                                       |
+|  ETag                                                                 |
+|    An entity tag (usually the MD5 hash of the object data) used       |
+|    for integrity verification and conditional requests                |
+|    (If-None-Match, If-Match).                                         |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-----------------------------------------------------------------------+
@@ -220,7 +290,7 @@ block storage.
 +---------------------+-------------------------------------------------+
 ```
 
-## SECTION 5: DATA STORAGE
+## SECTION 6: DATA STORAGE
 
 ### CHUNKING & LAYOUT
 
@@ -315,7 +385,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 6: METADATA
+## SECTION 7: METADATA
 
 ### KEY-TO-LOCATION MAPPING
 
@@ -415,7 +485,7 @@ block storage.
 +------------------------------------------------------------------------+
 ```
 
-## SECTION 7: WRITE PATH
+## SECTION 8: WRITE PATH
 
 ### STANDARD PUT FLOW
 
@@ -504,7 +574,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 8: READ PATH
+## SECTION 9: READ PATH
 
 ### STANDARD GET FLOW
 
@@ -606,7 +676,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 9: DURABILITY & AVAILABILITY
+## SECTION 10: DURABILITY & AVAILABILITY
 
 ### ERASURE CODING DURABILITY MATH
 
@@ -719,7 +789,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 10: VERSIONING & LIFECYCLE
+## SECTION 11: VERSIONING & LIFECYCLE
 
 ### OBJECT VERSIONING
 
@@ -798,7 +868,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 11: ACCESS CONTROL
+## SECTION 12: ACCESS CONTROL
 
 ### AUTHORIZATION MODEL
 
@@ -917,7 +987,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 12: SCALING
+## SECTION 13: SCALING
 
 ### METADATA SCALING
 
@@ -1056,7 +1126,7 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 14: INTERVIEW Q&A
 
 ```
 +-----------------------------------------------------------------------+
@@ -1095,7 +1165,7 @@ block storage.
 |  metadata is committed (quorum ack). Any subsequent GET reads from    |
 |  the metadata leader (or a synchronized follower), which guarantees   |
 |  it sees the latest committed write. This is per-shard consistency    |
-|  - no global ordering across shards, but each key's history is        |
+|  * no global ordering across shards, but each key's history is        |
 |  linearizable.                                                        |
 +-----------------------------------------------------------------------+
 

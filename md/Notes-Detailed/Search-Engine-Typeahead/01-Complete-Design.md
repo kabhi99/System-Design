@@ -1,87 +1,144 @@
-# Design a Search Engine and Typeahead/Autocomplete System
+# DESIGN A SEARCH ENGINE AND TYPEAHEAD/AUTOCOMPLETE SYSTEM
 
-## Table of Contents
+*Complete Design: Requirements, Architecture, and Interview Guide*
+
+## SECTION 1: TABLE OF CONTENTS
 
 1. Requirements
-2. Scale Estimation
-3. High-Level Architecture
-4. Detailed Design - Search Engine
-5. Detailed Design - Typeahead/Autocomplete
-6. Inverted Index Deep Dive
-7. Ranking Algorithms (TF-IDF, BM25)
-8. Query Processing Pipeline
-9. Sharding Strategy
-10. Real-Time vs Batch Indexing
-11. Spell Correction
-12. Relevance Tuning and Personalization
-13. Database Schema
-14. API Design
-15. Key Algorithms
-16. Monitoring and Observability
-17. Failure Scenarios and Mitigations
-18. Interview Q&A
+2. Key Terminology
+3. Scale Estimation
+4. High-Level Architecture
+5. Detailed Design - Search Engine
+6. Detailed Design - Typeahead/Autocomplete
+7. Inverted Index Deep Dive
+8. Ranking Algorithms (TF-IDF, BM25)
+9. Query Processing Pipeline
+10. Sharding Strategy
+11. Real-Time vs Batch Indexing
+12. Spell Correction
+13. Relevance Tuning and Personalization
+14. Database Schema
+15. API Design
+16. Key Algorithms
+17. Monitoring and Observability
+18. Failure Scenarios and Mitigations
+19. Interview Q&A
 
----
+## SECTION 1: REQUIREMENTS
 
-## 1. Requirements
-
-### 1.1 Functional Requirements
+### 1.1 FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Search Engine:                                                         |
-|  - Full-text search across billions of documents                        |
-|  - Ranked results by relevance                                          |
-|  - Support Boolean queries (AND, OR, NOT)                               |
-|  - Phrase search ("exact match")                                        |
-|  - Faceted search / filters (date, type, domain)                        |
-|  - Pagination of results                                                |
-|  - Spell correction ("Did you mean...?")                                |
-|  - Snippet generation (highlighted matches)                             |
+|  * Full-text search across billions of documents                        |
+|  * Ranked results by relevance                                          |
+|  * Support Boolean queries (AND, OR, NOT)                               |
+|  * Phrase search ("exact match")                                        |
+|  * Faceted search / filters (date, type, domain)                        |
+|  * Pagination of results                                                |
+|  * Spell correction ("Did you mean...?")                                |
+|  * Snippet generation (highlighted matches)                             |
 |                                                                         |
 |  Typeahead / Autocomplete:                                              |
-|  - Suggest completions as user types                                    |
-|  - Frequency-based ranking of suggestions                               |
-|  - Personalized suggestions                                             |
-|  - Trending queries surfaced                                            |
-|  - Support multi-language queries                                       |
-|  - Maximum 10 suggestions per prefix                                    |
+|  * Suggest completions as user types                                    |
+|  * Frequency-based ranking of suggestions                               |
+|  * Personalized suggestions                                             |
+|  * Trending queries surfaced                                            |
+|  * Support multi-language queries                                       |
+|  * Maximum 10 suggestions per prefix                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 1.2 Non-Functional Requirements
+### 1.2 NON-FUNCTIONAL REQUIREMENTS
 
 ```
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  Performance:                                                            |
-|  - Typeahead latency: < 50ms (p99)                                       |
-|  - Search latency: < 200ms (p99)                                         |
-|  - Indexing lag: < 5 minutes for new content                             |
+|  * Typeahead latency: < 50ms (p99)                                       |
+|  * Search latency: < 200ms (p99)                                         |
+|  * Indexing lag: < 5 minutes for new content                             |
 |                                                                          |
 |  Availability:                                                           |
-|  - 99.99% uptime for search                                              |
-|  - 99.999% uptime for typeahead                                          |
+|  * 99.99% uptime for search                                              |
+|  * 99.999% uptime for typeahead                                          |
 |                                                                          |
 |  Scalability:                                                            |
-|  - Handle 5 billion searches per day                                     |
-|  - Index 50+ billion documents                                           |
-|  - Support 100 million unique queries per day                            |
+|  * Handle 5 billion searches per day                                     |
+|  * Index 50+ billion documents                                           |
+|  * Support 100 million unique queries per day                            |
 |                                                                          |
 |  Consistency:                                                            |
-|  - Eventual consistency acceptable for index updates                     |
-|  - Strong consistency NOT required                                       |
+|  * Eventual consistency acceptable for index updates                     |
+|  * Strong consistency NOT required                                       |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 2: KEY TERMINOLOGY
 
-## 2. Scale Estimation
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TRIE (PREFIX TREE)                                                     |
+|  Tree data structure where each node represents a character.            |
+|  Enables O(prefix_length) lookups for autocomplete by traversing        |
+|  from root to prefix node, then returning stored top-K results.         |
+|                                                                         |
+|  INVERTED INDEX                                                         |
+|  Core search data structure mapping each term to a posting list         |
+|  of document IDs containing that term. Enables fast full-text           |
+|  search by intersecting posting lists for multi-term queries.           |
+|                                                                         |
+|  TOKENIZATION                                                           |
+|  Breaking raw text into individual terms (tokens) for indexing.         |
+|  Includes lowercasing, removing punctuation, and splitting on           |
+|  whitespace. The first step in both indexing and query processing.      |
+|                                                                         |
+|  BM25 (RANKING / SCORING)                                               |
+|  Industry-standard ranking algorithm that scores documents by           |
+|  term frequency with saturation and length normalization.               |
+|  Improves on TF-IDF and is the default in Elasticsearch/Solr.           |
+|                                                                         |
+|  AUTOCOMPLETE / QUERY SUGGESTION                                        |
+|  Predicting and displaying completions as the user types.               |
+|  Powered by a Trie with pre-computed top-K suggestions at each          |
+|  node, enabling sub-50ms response times per keystroke.                  |
+|                                                                         |
+|  PREFIX MATCHING                                                        |
+|  Finding all strings that start with a given prefix. The core           |
+|  operation for typeahead, efficiently supported by Trie data            |
+|  structures where traversal to the prefix node yields matches.          |
+|                                                                         |
+|  TOP-K                                                                  |
+|  Retrieving the K highest-scoring results from a large set.             |
+|  Pre-computed at each Trie node to avoid expensive traversals           |
+|  at query time, trading build-time cost for O(1) lookups.               |
+|                                                                         |
+|  FREQUENCY COUNT                                                        |
+|  Tracking how often each query is searched to rank suggestions.         |
+|  Aggregated from query logs via batch and streaming pipelines           |
+|  to keep suggestion rankings fresh and relevant.                        |
+|                                                                         |
+|  DEBOUNCE                                                               |
+|  Client-side optimization that delays the typeahead request             |
+|  until the user pauses typing (100-200ms). Reduces server load          |
+|  by avoiding a network request for every single keystroke.              |
+|                                                                         |
+|  PERSONALIZATION                                                        |
+|  Tailoring search results and suggestions to individual users           |
+|  based on their history, location, and preferences. Applied as          |
+|  a re-ranking layer on top of global relevance scores.                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
 
-### 2.1 Traffic Estimates
+## SECTION 3: SCALE ESTIMATION
+
+### 3.1 TRAFFIC ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -100,7 +157,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 2.2 Storage Estimates
+### 3.2 STORAGE ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -117,7 +174,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 2.3 Bandwidth Estimates
+### 3.3 BANDWIDTH ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -134,11 +191,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 4: HIGH-LEVEL ARCHITECTURE
 
-## 3. High-Level Architecture
-
-### 3.1 Search Engine Architecture
+### 4.1 SEARCH ENGINE ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -173,7 +228,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 3.2 Typeahead Architecture
+### 4.2 TYPEAHEAD ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -204,7 +259,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 3.3 Combined System Overview
+### 4.3 COMBINED SYSTEM OVERVIEW
 
 ```
 +-------------------------------------------------------------------------+
@@ -230,11 +285,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 5: DETAILED DESIGN - SEARCH ENGINE
 
-## 4. Detailed Design - Search Engine
-
-### 4.1 Document Ingestion Pipeline
+### 5.1 DOCUMENT INGESTION PIPELINE
 
 ```
 +-------------------------------------------------------------------------+
@@ -258,7 +311,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 4.2 Query Execution Flow
+### 5.2 QUERY EXECUTION FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -297,7 +350,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 4.3 Elasticsearch/Solr Architecture Overview
+### 5.3 ELASTICSEARCH/SOLR ARCHITECTURE OVERVIEW
 
 ```
 +--------------------------------------------------------------------------+
@@ -325,19 +378,17 @@
 |   P = Primary Shard,  R = Replica Shard                                  |
 |                                                                          |
 |   Each Shard = Complete Lucene Index:                                    |
-|   - Inverted Index (term -> posting list)                                |
-|   - Stored Fields (original document)                                    |
-|   - Doc Values (columnar data for sorting/aggregation)                   |
-|   - Term Vectors (per-document term info)                                |
+|   * Inverted Index (term -> posting list)                                |
+|   * Stored Fields (original document)                                    |
+|   * Doc Values (columnar data for sorting/aggregation)                   |
+|   * Term Vectors (per-document term info)                                |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 6: DETAILED DESIGN - TYPEAHEAD/AUTOCOMPLETE
 
-## 5. Detailed Design - Typeahead/Autocomplete
-
-### 5.1 Trie Data Structure
+### 6.1 TRIE DATA STRUCTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -345,10 +396,10 @@
 +--------------------------------------------------------------------------+
 |                                                                          |
 |   Each node stores:                                                      |
-|   - Character                                                            |
-|   - Is end of word (boolean)                                             |
-|   - Top-K suggestions (pre-computed)                                     |
-|   - Frequency/score for ranking                                          |
+|   * Character                                                            |
+|   * Is end of word (boolean)                                             |
+|   * Top-K suggestions (pre-computed)                                     |
+|   * Frequency/score for ranking                                          |
 |                                                                          |
 |   Example Trie for: "tree", "try", "true", "trunk"                       |
 |                                                                          |
@@ -373,7 +424,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 5.2 Typeahead Service Flow
+### 6.2 TYPEAHEAD SERVICE FLOW
 
 ```
 +--------------------------------------------------------------------------+
@@ -403,7 +454,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 5.3 Trie Update Strategy
+### 6.3 TRIE UPDATE STRATEGY
 
 ```
 +-------------------------------------------------------------------------+
@@ -437,11 +488,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 7: INVERTED INDEX DEEP DIVE
 
-## 6. Inverted Index Deep Dive
-
-### 6.1 Structure
+### 7.1 STRUCTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -467,15 +516,15 @@
 |                           +------------------------------------+        |
 |                                                                         |
 |  Each posting entry contains:                                           |
-|  - Document ID                                                          |
-|  - Term Frequency (TF): how many times term appears in doc              |
-|  - Position List: where in document the term appears                    |
-|  - (Optional) Field info: title vs body occurrence                      |
+|  * Document ID                                                          |
+|  * Term Frequency (TF): how many times term appears in doc              |
+|  * Position List: where in document the term appears                    |
+|  * (Optional) Field info: title vs body occurrence                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 6.2 Forward Index (Document Store)
+### 7.2 FORWARD INDEX (DOCUMENT STORE)
 
 ```
 +-------------------------------------------------------------------------+
@@ -494,14 +543,14 @@
 |  +------+-------------------------------------------+                   |
 |                                                                         |
 |  Used for:                                                              |
-|  - Snippet generation (retrieve original text)                          |
-|  - Document length normalization in BM25                                |
-|  - Returning document metadata in search results                        |
+|  * Snippet generation (retrieve original text)                          |
+|  * Document length normalization in BM25                                |
+|  * Returning document metadata in search results                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 6.3 Index Compression
+### 7.3 INDEX COMPRESSION
 
 ```
 +--------------------------------------------------------------------------+
@@ -516,25 +565,23 @@
 |  (Store gaps between consecutive IDs)                                    |
 |                                                                          |
 |  Variable-Byte Encoding (VByte):                                         |
-|  - Small gaps = 1 byte, large gaps = 2+ bytes                            |
-|  - Significant space savings for clustered DocIDs                        |
+|  * Small gaps = 1 byte, large gaps = 2+ bytes                            |
+|  * Significant space savings for clustered DocIDs                        |
 |                                                                          |
 |  Frame of Reference (FOR):                                               |
-|  - Divide into blocks of 128 DocIDs                                      |
-|  - Store min value + bit-packed offsets                                  |
+|  * Divide into blocks of 128 DocIDs                                      |
+|  * Store min value + bit-packed offsets                                  |
 |                                                                          |
 |  Typical compression ratios:                                             |
-|  - Posting lists: 4-10x compression                                      |
-|  - Overall index: 15-20% of raw document size                            |
+|  * Posting lists: 4-10x compression                                      |
+|  * Overall index: 15-20% of raw document size                            |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 8: RANKING ALGORITHMS (TF-IDF, BM25)
 
-## 7. Ranking Algorithms (TF-IDF, BM25)
-
-### 7.1 TF-IDF
+### 8.1 TF-IDF
 
 ```
 +--------------------------------------------------------------------------+
@@ -542,32 +589,32 @@
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  TF (Term Frequency):                                                    |
-|  - How often a term appears in a document                                |
-|  - TF(t,d) = count(t in d) / total_terms(d)                              |
-|  - Or logarithmic: TF = 1 + log(count)                                   |
+|  * How often a term appears in a document                                |
+|  * TF(t,d) = count(t in d) / total_terms(d)                              |
+|  * Or logarithmic: TF = 1 + log(count)                                   |
 |                                                                          |
 |  IDF (Inverse Document Frequency):                                       |
-|  - How rare a term is across all documents                               |
-|  - IDF(t) = log(N / DF(t))                                               |
+|  * How rare a term is across all documents                               |
+|  * IDF(t) = log(N / DF(t))                                               |
 |    where N = total docs, DF(t) = docs containing term t                  |
 |                                                                          |
 |  TF-IDF Score:                                                           |
-|  - score(t, d) = TF(t, d) x IDF(t)                                       |
+|  * score(t, d) = TF(t, d) x IDF(t)                                       |
 |                                                                          |
 |  Example:                                                                |
-|  - Query: "weather forecast"                                             |
-|  - N = 50,000,000,000 documents                                          |
-|  - "weather" appears in 500M docs -> IDF = log(50B/500M) = 2.0           |
-|  - "forecast" appears in 50M docs -> IDF = log(50B/50M) = 3.0            |
-|  - Doc with TF("weather")=0.05 and TF("forecast")=0.03                   |
-|  - Score = (0.05 x 2.0) + (0.03 x 3.0) = 0.19                            |
+|  * Query: "weather forecast"                                             |
+|  * N = 50,000,000,000 documents                                          |
+|  * "weather" appears in 500M docs -> IDF = log(50B/500M) = 2.0           |
+|  * "forecast" appears in 50M docs -> IDF = log(50B/50M) = 3.0            |
+|  * Doc with TF("weather")=0.05 and TF("forecast")=0.03                   |
+|  * Score = (0.05 x 2.0) + (0.03 x 3.0) = 0.19                            |
 |                                                                          |
 |  Limitation: Does not account for document length normalization          |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-### 7.2 BM25 (Best Match 25)
+### 8.2 BM25 (BEST MATCH 25)
 
 ```
 +--------------------------------------------------------------------------+
@@ -585,11 +632,11 @@
 |     f(qi,D) + k1 x (1 - b + b x |D| / avgdl)                             |
 |                                                                          |
 |  Where:                                                                  |
-|  - f(qi, D) = term frequency of qi in document D                         |
-|  - |D|      = document length (in terms)                                 |
-|  - avgdl    = average document length across corpus                      |
-|  - k1       = term frequency saturation parameter (default: 1.2)         |
-|  - b        = length normalization parameter (default: 0.75)             |
+|  * f(qi, D) = term frequency of qi in document D                         |
+|  * |D|      = document length (in terms)                                 |
+|  * avgdl    = average document length across corpus                      |
+|  * k1       = term frequency saturation parameter (default: 1.2)         |
+|  * b        = length normalization parameter (default: 0.75)             |
 |                                                                          |
 |  Key Properties:                                                         |
 |  +--------------------------------------------------------------------+  |
@@ -604,7 +651,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 7.3 Beyond BM25 - Learning to Rank
+### 8.3 BEYOND BM25 - LEARNING TO RANK
 
 ```
 +-------------------------------------------------------------------------+
@@ -634,11 +681,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 9: QUERY PROCESSING PIPELINE
 
-## 8. Query Processing Pipeline
-
-### 8.1 Pipeline Stages
+### 9.1 PIPELINE STAGES
 
 ```
 +-------------------------------------------------------------------------+
@@ -684,7 +729,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 8.2 Stemming Algorithms
+### 9.2 STEMMING ALGORITHMS
 
 ```
 +-------------------------------------------------------------------------+
@@ -692,18 +737,18 @@
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Porter Stemmer (most common):                                          |
-|  - "running"    -> "run"                                                |
-|  - "connection" -> "connect"                                            |
-|  - "organization" -> "organ" (over-stemming issue!)                     |
+|  * "running"    -> "run"                                                |
+|  * "connection" -> "connect"                                            |
+|  * "organization" -> "organ" (over-stemming issue!)                     |
 |                                                                         |
 |  Snowball Stemmer (improved Porter):                                    |
-|  - Better handling of edge cases                                        |
-|  - Multi-language support                                               |
+|  * Better handling of edge cases                                        |
+|  * Multi-language support                                               |
 |                                                                         |
 |  Lemmatization (dictionary-based):                                      |
-|  - "better"  -> "good" (understands morphology)                         |
-|  - "running" -> "run"                                                   |
-|  - More accurate but slower                                             |
+|  * "better"  -> "good" (understands morphology)                         |
+|  * "running" -> "run"                                                   |
+|  * More accurate but slower                                             |
 |                                                                         |
 |  Trade-off: Stemming = faster, less accurate                            |
 |             Lemmatization = slower, more accurate                       |
@@ -711,11 +756,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 10: SHARDING STRATEGY
 
-## 9. Sharding Strategy
-
-### 9.1 Document-Based Sharding (Preferred)
+### 10.1 DOCUMENT-BASED SHARDING (PREFERRED)
 
 ```
 +-------------------------------------------------------------------------+
@@ -735,9 +778,9 @@
 |  +-------------------+  +-------------------+  +-------------------+    |
 |                                                                         |
 |  Query execution: SCATTER-GATHER                                        |
-|  - Send query to ALL shards                                             |
-|  - Each shard returns local top-K                                       |
-|  - Coordinator merges and re-ranks globally                             |
+|  * Send query to ALL shards                                             |
+|  * Each shard returns local top-K                                       |
+|  * Coordinator merges and re-ranks globally                             |
 |                                                                         |
 |  Pros:                                                                  |
 |  + Each shard is independent                                            |
@@ -745,13 +788,13 @@
 |  + Reindexing affects only one shard                                    |
 |                                                                         |
 |  Cons:                                                                  |
-|  - Every query hits ALL shards (fan-out)                                |
-|  - High query amplification                                             |
+|  * Every query hits ALL shards (fan-out)                                |
+|  * High query amplification                                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 9.2 Term-Based Sharding
+### 10.2 TERM-BASED SHARDING
 
 ```
 +-------------------------------------------------------------------------+
@@ -770,26 +813,24 @@
 |  +-------------------+  +-------------------+  +-------------------+    |
 |                                                                         |
 |  Query "weather forecast":                                              |
-|  - "weather" -> Shard 2 (Q-Z)                                           |
-|  - "forecast" -> Shard 0 (A-H)                                          |
-|  - Must intersect posting lists from different shards                   |
+|  * "weather" -> Shard 2 (Q-Z)                                           |
+|  * "forecast" -> Shard 0 (A-H)                                          |
+|  * Must intersect posting lists from different shards                   |
 |                                                                         |
 |  Pros:                                                                  |
 |  + Only relevant shards queried                                         |
 |  + Less fan-out for single-term queries                                 |
 |                                                                         |
 |  Cons:                                                                  |
-|  - Multi-term queries need cross-shard coordination                     |
-|  - Hot terms (e.g., "the") create hotspot shards                        |
-|  - Document scoring harder (need global doc info)                       |
-|  - Industry prefers document-based sharding                             |
+|  * Multi-term queries need cross-shard coordination                     |
+|  * Hot terms (e.g., "the") create hotspot shards                        |
+|  * Document scoring harder (need global doc info)                       |
+|  * Industry prefers document-based sharding                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 10. Real-Time vs Batch Indexing
+## SECTION 11: REAL-TIME VS BATCH INDEXING
 
 ```
 +--------------------------------------------------------------------------+
@@ -831,11 +872,9 @@
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 12: SPELL CORRECTION
 
-## 11. Spell Correction
-
-### 11.1 Edit Distance (Levenshtein)
+### 12.1 EDIT DISTANCE (LEVENSHTEIN)
 
 ```
 +-------------------------------------------------------------------------+
@@ -865,7 +904,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 11.2 Spell Correction Pipeline
+### 12.2 SPELL CORRECTION PIPELINE
 
 ```
 +-------------------------------------------------------------------------+
@@ -873,33 +912,31 @@
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  1. Candidate Generation:                                               |
-|     - Edit distance 1 from query term                                   |
-|     - Edit distance 2 for short words                                   |
-|     - Phonetic matching (Soundex, Metaphone)                            |
+|     * Edit distance 1 from query term                                   |
+|     * Edit distance 2 for short words                                   |
+|     * Phonetic matching (Soundex, Metaphone)                            |
 |       e.g., "fone" -> "phone" (same phonetic code)                      |
 |                                                                         |
 |  2. Candidate Filtering:                                                |
-|     - Keep only candidates that exist in dictionary                     |
-|     - Dictionary = all terms in the inverted index                      |
+|     * Keep only candidates that exist in dictionary                     |
+|     * Dictionary = all terms in the inverted index                      |
 |                                                                         |
 |  3. Candidate Ranking:                                                  |
-|     - Frequency of candidate term in corpus                             |
-|     - Edit distance (prefer distance 1 over 2)                          |
-|     - N-gram overlap with original term                                 |
-|     - Context: what makes sense given other query terms                 |
+|     * Frequency of candidate term in corpus                             |
+|     * Edit distance (prefer distance 1 over 2)                          |
+|     * N-gram overlap with original term                                 |
+|     * Context: what makes sense given other query terms                 |
 |                                                                         |
 |  4. Noisy Channel Model:                                                |
 |     P(correction | misspelling) ~ P(misspelling | correction)           |
 |                                     x P(correction)                     |
-|     - P(correction) = language model probability                        |
-|     - P(misspelling | correction) = error model probability             |
+|     * P(correction) = language model probability                        |
+|     * P(misspelling | correction) = error model probability             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 12. Relevance Tuning and Personalization
+## SECTION 13: RELEVANCE TUNING AND PERSONALIZATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -940,11 +977,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 14: DATABASE SCHEMA
 
-## 13. Database Schema
-
-### 13.1 Document Metadata Store
+### 14.1 DOCUMENT METADATA STORE
 
 ```
 +--------------------------------------------------------------------------+
@@ -1005,11 +1040,9 @@
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 15: API DESIGN
 
-## 14. API Design
-
-### 14.1 Search API
+### 15.1 SEARCH API
 
 ```
 +-------------------------------------------------------------------------+
@@ -1057,7 +1090,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 14.2 Typeahead API
+### 15.2 TYPEAHEAD API
 
 ```
 +-------------------------------------------------------------------------+
@@ -1085,18 +1118,16 @@
 |  }                                                                      |
 |                                                                         |
 |  Client-side optimizations:                                             |
-|  - Debounce: wait 100-200ms after last keystroke before requesting      |
-|  - Cache: store recent prefix -> results mapping                        |
-|  - Prefetch: if user typed "we", cache "wea","web","wes" results        |
+|  * Debounce: wait 100-200ms after last keystroke before requesting      |
+|  * Cache: store recent prefix -> results mapping                        |
+|  * Prefetch: if user typed "we", cache "wea","web","wes" results        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 16: KEY ALGORITHMS
 
-## 15. Key Algorithms
-
-### 15.1 Posting List Intersection
+### 16.1 POSTING LIST INTERSECTION
 
 ```
 +-------------------------------------------------------------------------+
@@ -1133,7 +1164,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 15.2 Top-K in Trie
+### 16.2 TOP-K IN TRIE
 
 ```
 +-------------------------------------------------------------------------+
@@ -1167,9 +1198,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 16. Monitoring and Observability
+## SECTION 17: MONITORING AND OBSERVABILITY
 
 ```
 +-------------------------------------------------------------------------+
@@ -1208,9 +1237,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 17. Failure Scenarios and Mitigations
+## SECTION 18: FAILURE SCENARIOS AND MITIGATIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1268,9 +1295,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 18. Interview Q&A
+## SECTION 19: INTERVIEW Q&A
 
 ### Q1: How would you design a typeahead system that handles 1M QPS?
 
@@ -1376,9 +1401,9 @@
 |  Answer:                                                                 |
 |  1. Language detection at indexing time (CLD2, fastText)                 |
 |  2. Language-specific analyzers:                                         |
-|     - Different stemmers per language                                    |
-|     - Language-specific stop word lists                                  |
-|     - CJK languages need different tokenizers (character n-grams)        |
+|     * Different stemmers per language                                    |
+|     * Language-specific stop word lists                                  |
+|     * CJK languages need different tokenizers (character n-grams)        |
 |  3. Separate indices per language (or language field in single index)    |
 |  4. Cross-language retrieval: translate query or use multilingual        |
 |     embeddings (mBERT, XLM-R)                                            |
@@ -1396,9 +1421,9 @@
 |  1. Generate candidates: edit distance 1-2 from each query term          |
 |  2. Filter: only keep candidates that exist in term dictionary           |
 |  3. Score candidates using:                                              |
-|     - Frequency in corpus (prefer common words)                          |
-|     - Edit distance (prefer closer matches)                              |
-|     - Noisy channel model: P(correction) x P(typo|correction)            |
+|     * Frequency in corpus (prefer common words)                          |
+|     * Edit distance (prefer closer matches)                              |
+|     * Noisy channel model: P(correction) x P(typo|correction)            |
 |  4. Context-aware: use bigram/trigram language model                     |
 |     "best wether apps" -> "weather" not "whether"                        |
 |  5. Show suggestion only if corrected query would return                 |
@@ -1442,8 +1467,8 @@
 |  5. Term-based creates hotspots (common terms like "the")               |
 |                                                                         |
 |  Trade-off accepted:                                                    |
-|  - Every query must fan out to all shards (scatter-gather)              |
-|  - Mitigated by: caching, tiered indices, speculative execution         |
+|  * Every query must fan out to all shards (scatter-gather)              |
+|  * Mitigated by: caching, tiered indices, speculative execution         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1457,19 +1482,19 @@
 |  Multi-level caching:                                                   |
 |                                                                         |
 |  Level 1: CDN/Edge Cache                                                |
-|  - Cache popular query results at edge                                  |
-|  - TTL: 5-15 minutes                                                    |
-|  - High hit rate for trending/head queries                              |
+|  * Cache popular query results at edge                                  |
+|  * TTL: 5-15 minutes                                                    |
+|  * High hit rate for trending/head queries                              |
 |                                                                         |
 |  Level 2: Application Cache (Redis/Memcached)                           |
-|  - Query string -> serialized results                                   |
-|  - TTL: 1-5 minutes                                                     |
-|  - Handles ~30-40% of queries (head/torso)                              |
+|  * Query string -> serialized results                                   |
+|  * TTL: 1-5 minutes                                                     |
+|  * Handles ~30-40% of queries (head/torso)                              |
 |                                                                         |
 |  Level 3: Shard-Level Cache                                             |
-|  - Cache posting list intersections for common term pairs               |
-|  - Cache top-K results for frequent queries per shard                   |
-|  - OS page cache for index files                                        |
+|  * Cache posting list intersections for common term pairs               |
+|  * Cache top-K results for frequent queries per shard                   |
+|  * OS page cache for index files                                        |
 |                                                                         |
 |  Invalidation: Time-based (TTL) rather than event-based                 |
 |  (eventual consistency is acceptable for search)                        |
@@ -1531,9 +1556,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## Summary: Key Design Decisions
+## SECTION 20: SUMMARY: KEY DESIGN DECISIONS
 
 ```
 +--------------------------------------------------------------------------+
@@ -1558,7 +1581,5 @@
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
-
----
 
 *End of Search Engine and Typeahead System Design*

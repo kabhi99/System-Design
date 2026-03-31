@@ -121,7 +121,65 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  SANDBOX (CONTAINER ISOLATION)                                          |
+||  An isolated execution environment (Docker container or microVM)        |
+||  where untrusted user code runs. Prevents access to the host            |
+||  system, network, and other submissions via namespace/cgroup limits.    |
+||                                                                         |
+||  VERDICT                                                                |
+||  The result returned after judging a submission: AC (accepted),         |
+||  WA (wrong answer), TLE (time limit exceeded), MLE (memory limit        |
+||  exceeded), RE (runtime error), or CE (compilation error).              |
+||                                                                         |
+||  TEST CASE                                                              |
+||  A pair of input and expected output used to verify a solution.         |
+||  Hidden test cases judge correctness; sample test cases are visible     |
+||  to users. Test quality directly impacts judging fairness.              |
+||                                                                         |
+||  TIME LIMIT / MEMORY LIMIT                                              |
+||  Per-problem resource caps enforced via cgroups. A solution that        |
+||  exceeds the CPU time limit gets TLE; exceeding the memory ceiling      |
+||  triggers OOM-kill and returns MLE. Limits vary by language.            |
+||                                                                         |
+||  JUDGE WORKER                                                           |
+||  A server (or pod) that picks a submission from the queue, compiles     |
+||  it, runs it against test cases in a sandbox, and reports the           |
+||  verdict. Workers auto-scale based on queue depth.                      |
+||                                                                         |
+||  SUBMISSION QUEUE                                                       |
+||  A message broker (Kafka) that buffers submissions between the          |
+||  web tier and judge workers. Decouples acceptance from judging,         |
+||  absorbs traffic spikes, and supports priority levels.                  |
+||                                                                         |
+||  COMPILE & EXECUTE PIPELINE                                             |
+||  The two-phase judge process: first compile the source code (with       |
+||  a timeout), then execute the binary against each test case             |
+||  sequentially. A compilation failure short-circuits to CE verdict.      |
+||                                                                         |
+||  STANDARD I/O (STDIN / STDOUT)                                          |
+||  The convention for passing test input and capturing solution           |
+||  output. Input is piped to the process via stdin; the judge             |
+||  compares stdout against expected output for each test case.            |
+||                                                                         |
+||  SPECIAL JUDGE (CHECKER)                                                |
+||  A custom validation program for problems with multiple valid           |
+||  answers. Receives input, expected output, and user output, then        |
+||  returns AC or WA. Required for floating-point or multi-answer tasks.   |
+||                                                                         |
+||  SECCOMP / CGROUPS                                                      |
+||  Linux kernel mechanisms for sandboxing. Seccomp-BPF restricts          |
+||  available system calls (blocks socket, execve, ptrace); cgroups v2     |
+||  enforce CPU, memory, and PID limits per container.                     |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ### TRAFFIC ESTIMATES
 
@@ -200,7 +258,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ### COMPONENT OVERVIEW
 
@@ -281,7 +339,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 5: SUBMISSION FLOW
+## SECTION 6: SUBMISSION FLOW
 
 ### END-TO-END SUBMISSION PIPELINE
 
@@ -371,7 +429,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: SANDBOXED EXECUTION
+## SECTION 7: SANDBOXED EXECUTION
 
 ### ISOLATION LAYERS
 
@@ -480,7 +538,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: TEST CASE MANAGEMENT
+## SECTION 8: TEST CASE MANAGEMENT
 
 ### HIDDEN VS SAMPLE TEST CASES
 
@@ -582,7 +640,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: LANGUAGE SUPPORT
+## SECTION 9: LANGUAGE SUPPORT
 
 ### COMPILER AND RUNTIME CONFIGURATION
 
@@ -644,7 +702,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: CONTEST SYSTEM
+## SECTION 10: CONTEST SYSTEM
 
 ### CONTEST LIFECYCLE
 
@@ -746,7 +804,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: SCALING
+## SECTION 11: SCALING
 
 ### WORKER AUTO-SCALING
 
@@ -845,7 +903,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW Q&A
+## SECTION 12: INTERVIEW Q&A
 
 ### QUESTION 1
 

@@ -1,30 +1,31 @@
-# Time-Series Database System Design
+# TIME-SERIES DATABASE SYSTEM DESIGN
 
-## Table of Contents
+*Complete Design: Requirements, Architecture, and Interview Guide*
+
+## SECTION 1: TABLE OF CONTENTS
 
 1. [Introduction](#introduction)
 2. [What is a Time-Series Database](#what-is-a-time-series-database)
 3. [Requirements](#requirements)
 4. [Scale Estimation](#scale-estimation)
-5. [High-Level Architecture](#high-level-architecture)
-6. [Data Model](#data-model)
-7. [Storage Engine Design](#storage-engine-design)
-8. [Write Path](#write-path)
-9. [Read Path](#read-path)
-10. [Compression Techniques](#compression-techniques)
-11. [Retention Policies and Downsampling](#retention-policies-and-downsampling)
-12. [Sharding and Partitioning](#sharding-and-partitioning)
-13. [Query Language Comparison](#query-language-comparison)
-14. [Real-World System Comparison](#real-world-system-comparison)
-15. [Use Cases](#use-cases)
-16. [Trade-offs and Design Decisions](#trade-offs-and-design-decisions)
-17. [Failure Handling and Reliability](#failure-handling-and-reliability)
-18. [Monitoring the Monitor](#monitoring-the-monitor)
-19. [Interview Q&A](#interview-qa)
+5. [Key Terminology](#key-terminology)
+6. [High-Level Architecture](#high-level-architecture)
+7. [Data Model](#data-model)
+8. [Storage Engine Design](#storage-engine-design)
+9. [Write Path](#write-path)
+10. [Read Path](#read-path)
+11. [Compression Techniques](#compression-techniques)
+12. [Retention Policies and Downsampling](#retention-policies-and-downsampling)
+13. [Sharding and Partitioning](#sharding-and-partitioning)
+14. [Query Language Comparison](#query-language-comparison)
+15. [Real-World System Comparison](#real-world-system-comparison)
+16. [Use Cases](#use-cases)
+17. [Trade-offs and Design Decisions](#trade-offs-and-design-decisions)
+18. [Failure Handling and Reliability](#failure-handling-and-reliability)
+19. [Monitoring the Monitor](#monitoring-the-monitor)
+20. [Interview Q&A](#interview-qa)
 
----
-
-## Introduction
+## SECTION 2: INTRODUCTION
 
 Time-series data is one of the fastest-growing categories of data. From server
 monitoring to IoT sensors to financial tick data, the need to store, query, and
@@ -32,11 +33,9 @@ analyze timestamped data points at massive scale has driven the creation of
 specialized database systems. This document covers the end-to-end design of a
 time-series database (TSDB) system suitable for a system design interview.
 
----
+## SECTION 3: WHAT IS A TIME-SERIES DATABASE
 
-## What is a Time-Series Database
-
-### Definition
+### DEFINITION
 
 A time-series database is a database optimized for storing and querying data
 points that are indexed by time. Each data point typically consists of:
@@ -46,7 +45,7 @@ points that are indexed by time. Each data point typically consists of:
 - A **timestamp** (when the measurement was taken)
 - One or more **values** (the actual measurement)
 
-### Why Not Just Use a Relational Database?
+### WHY NOT JUST USE A RELATIONAL DATABASE?
 
 ```
 +-------------------------------------------------------------------------+
@@ -71,7 +70,7 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
-### Key Properties of Time-Series Data
+### KEY PROPERTIES OF TIME-SERIES DATA
 
 ```
 +--------------------------------------------------------------------------+
@@ -91,11 +90,9 @@ points that are indexed by time. Each data point typically consists of:
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 4: REQUIREMENTS
 
-## Requirements
-
-### Functional Requirements
+### FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -113,7 +110,7 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
-### Non-Functional Requirements
+### NON-FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -130,11 +127,9 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 5: SCALE ESTIMATION
 
-## Scale Estimation
-
-### Given Numbers
+### GIVEN NUMBERS
 
 ```
 +-------------------------------------------------------------------------+
@@ -149,62 +144,123 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
-### Storage Estimation
+### STORAGE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Single data point (uncompressed):                                      |
-|    - Timestamp:  8 bytes (int64, nanoseconds)                           |
-|    - Value:      8 bytes (float64)                                      |
-|    - Overhead:   ~4 bytes (series reference, alignment)                 |
-|    - Total:      ~20 bytes per point                                    |
+|    * Timestamp:  8 bytes (int64, nanoseconds)                           |
+|    * Value:      8 bytes (float64)                                      |
+|    * Overhead:   ~4 bytes (series reference, alignment)                 |
+|    * Total:      ~20 bytes per point                                    |
 |                                                                         |
 |  With compression (Gorilla-style, ~12:1 ratio):                         |
-|    - Compressed: ~1.6 bytes per point                                   |
+|    * Compressed: ~1.6 bytes per point                                   |
 |                                                                         |
 |  Daily raw storage:                                                     |
-|    - Uncompressed: 1B points x 20 bytes = 20 GB/day                     |
-|    - Compressed:   1B points x 1.6 bytes = 1.6 GB/day                   |
+|    * Uncompressed: 1B points x 20 bytes = 20 GB/day                     |
+|    * Compressed:   1B points x 1.6 bytes = 1.6 GB/day                   |
 |                                                                         |
 |  30-day raw retention:                                                  |
-|    - Compressed: 1.6 GB x 30 = ~48 GB                                   |
+|    * Compressed: 1.6 GB x 30 = ~48 GB                                   |
 |                                                                         |
 |  1-min rollups (1 year):                                                |
-|    - Points/day: 1B / 60 = ~16.7M                                       |
-|    - Per rollup: ~40 bytes (min, max, sum, count, avg)                  |
-|    - Daily: 16.7M x 40 bytes = ~670 MB (compressed ~60 MB)              |
-|    - Yearly: 60 MB x 365 = ~22 GB                                       |
+|    * Points/day: 1B / 60 = ~16.7M                                       |
+|    * Per rollup: ~40 bytes (min, max, sum, count, avg)                  |
+|    * Daily: 16.7M x 40 bytes = ~670 MB (compressed ~60 MB)              |
+|    * Yearly: 60 MB x 365 = ~22 GB                                       |
 |                                                                         |
 |  Total estimated storage: ~100-200 GB (well within single-cluster)      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Throughput Estimation
+### THROUGHPUT ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Write throughput:                                                      |
-|    - 1M points/sec x 20 bytes = 20 MB/sec sustained write               |
-|    - With batching: ~50K batch inserts/sec (20 points/batch avg)        |
+|    * 1M points/sec x 20 bytes = 20 MB/sec sustained write               |
+|    * With batching: ~50K batch inserts/sec (20 points/batch avg)        |
 |                                                                         |
 |  Read throughput:                                                       |
-|    - Dashboard queries: ~10K queries/sec (mostly recent data)           |
-|    - Alerting evaluations: ~100K rule evaluations/min                   |
-|    - Typical query: scan 1 hour of 1 metric = ~3600 points              |
+|    * Dashboard queries: ~10K queries/sec (mostly recent data)           |
+|    * Alerting evaluations: ~100K rule evaluations/min                   |
+|    * Typical query: scan 1 hour of 1 metric = ~3600 points              |
 |                                                                         |
 |  Network:                                                               |
-|    - Ingestion: 20 MB/sec + protocol overhead = ~40 MB/sec              |
-|    - Query responses: ~100 MB/sec peak                                  |
+|    * Ingestion: 20 MB/sec + protocol overhead = ~40 MB/sec              |
+|    * Query responses: ~100 MB/sec peak                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 6: KEY TERMINOLOGY
 
-## High-Level Architecture
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  Time Series                                                             |
+|    A sequence of data points indexed by timestamp, typically             |
+|    representing measurements taken at successive, evenly-spaced          |
+|    intervals (e.g., CPU usage every 10 seconds).                         |
+|                                                                          |
+|  WAL (Write-Ahead Log)                                                   |
+|    An append-only log where incoming writes are persisted before         |
+|    being applied to the main storage engine. Ensures durability          |
+|    and crash recovery without data loss.                                 |
+|                                                                          |
+|  LSM Tree (Log-Structured Merge Tree)                                    |
+|    A write-optimized data structure that buffers writes in memory        |
+|    (memtable) and flushes sorted runs to disk. Ideal for TSDB            |
+|    workloads due to sequential I/O and high write throughput.            |
+|                                                                          |
+|  Compaction                                                              |
+|    Background process that merges multiple sorted SSTable files          |
+|    into fewer, larger files. Reclaims space from deleted/expired         |
+|    data and improves read performance.                                   |
+|                                                                          |
+|  Downsampling                                                            |
+|    Reducing the resolution of time-series data by aggregating            |
+|    fine-grained points into coarser intervals (e.g., 10-second           |
+|    raw data rolled up into 1-minute averages).                           |
+|                                                                          |
+|  Retention Policy                                                        |
+|    Rules that define how long data is kept at each resolution.           |
+|    Expired data is automatically dropped by deleting entire              |
+|    time-partitioned blocks.                                              |
+|                                                                          |
+|  Tag / Label                                                             |
+|    Key-value pairs attached to a metric that describe dimensions         |
+|    (e.g., host=web01, region=us-east). Used for filtering,               |
+|    grouping, and identifying unique time series.                         |
+|                                                                          |
+|  Cardinality                                                             |
+|    The number of unique combinations of metric name and tag              |
+|    values. High cardinality (millions of unique series) is the           |
+|    primary scaling challenge for TSDBs.                                  |
+|                                                                          |
+|  Columnar Storage                                                        |
+|    Storing all values of a single column together rather than            |
+|    row-by-row. Enables better compression ratios and faster              |
+|    aggregation queries on time-series data.                              |
+|                                                                          |
+|  Delta Encoding                                                          |
+|    Compression technique that stores the difference between              |
+|    successive values instead of absolute values. Especially              |
+|    effective for timestamps with regular intervals.                      |
+|                                                                          |
+|  Gorilla Compression                                                     |
+|    Facebook's encoding scheme that XORs successive floating-point        |
+|    values and stores only the changed bits. Achieves ~12:1               |
+|    compression on typical metric data.                                   |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 7: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -253,7 +309,7 @@ points that are indexed by time. Each data point typically consists of:
 +--------------------------------------------------------------------------+
 ```
 
-### Component Overview
+### COMPONENT OVERVIEW
 
 ```
 +-------------------------------------------------------------------------+
@@ -271,11 +327,9 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 8: DATA MODEL
 
-## Data Model
-
-### Core Concepts
+### CORE CONCEPTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -297,29 +351,29 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
-### Internal Representation
+### INTERNAL REPRESENTATION
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Series ID (TSID):                                                      |
-|    - Hash of (metric_name + sorted tags)                                |
-|    - uint64, used as internal identifier                                |
-|    - Avoids repeating full label set for every point                    |
+|    * Hash of (metric_name + sorted tags)                                |
+|    * uint64, used as internal identifier                                |
+|    * Avoids repeating full label set for every point                    |
 |                                                                         |
 |  Series Index (Inverted Index):                                         |
-|    - tag_key=tag_value -> Set of TSIDs                                  |
-|    - Enables fast lookup: "give me all series where region=us-east"     |
+|    * tag_key=tag_value -> Set of TSIDs                                  |
+|    * Enables fast lookup: "give me all series where region=us-east"     |
 |                                                                         |
 |  Data Storage:                                                          |
-|    - Organized by TSID + time block                                     |
-|    - Each block covers a fixed time range (e.g., 2 hours)               |
-|    - Within a block: compressed arrays of timestamps and values         |
+|    * Organized by TSID + time block                                     |
+|    * Each block covers a fixed time range (e.g., 2 hours)               |
+|    * Within a block: compressed arrays of timestamps and values         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Schema Example
+### SCHEMA EXAMPLE
 
 ```
 +-------------------------------------------------------------------------+
@@ -346,11 +400,9 @@ points that are indexed by time. Each data point typically consists of:
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 9: STORAGE ENGINE DESIGN
 
-## Storage Engine Design
-
-### LSM-Tree Optimized for Time-Series
+### LSM-TREE OPTIMIZED FOR TIME-SERIES
 
 Traditional LSM-trees work well for write-heavy workloads, but we adapt them
 specifically for time-series patterns.
@@ -389,7 +441,7 @@ specifically for time-series patterns.
 +--------------------------------------------------------------------------+
 ```
 
-### Time-Based Block Organization
+### TIME-BASED BLOCK ORGANIZATION
 
 ```
 +--------------------------------------------------------------------------+
@@ -419,22 +471,22 @@ specifically for time-series patterns.
 +--------------------------------------------------------------------------+
 ```
 
-### Columnar vs Row-Based Storage
+### COLUMNAR VS ROW-BASED STORAGE
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Row-Based (traditional):                                               |
 |    [ts1, val1] [ts2, val2] [ts3, val3] ...                              |
-|    - Good for point lookups                                             |
-|    - Poor compression (mixed types interleaved)                         |
+|    * Good for point lookups                                             |
+|    * Poor compression (mixed types interleaved)                         |
 |                                                                         |
 |  Columnar (TSDB preferred):                                             |
 |    Timestamps: [ts1, ts2, ts3, ...]  <- delta encoding works great      |
 |    Values:     [val1, val2, val3, ...] <- XOR compression works great   |
-|    - Excellent compression (same-type arrays)                           |
-|    - Ideal for range scans and aggregations                             |
-|    - Can skip value column if only checking timestamps                  |
+|    * Excellent compression (same-type arrays)                           |
+|    * Ideal for range scans and aggregations                             |
+|    * Can skip value column if only checking timestamps                  |
 |                                                                         |
 |  Recommendation: Columnar storage within each block, organized by       |
 |  time series. Each series chunk stores timestamps and values as         |
@@ -443,11 +495,9 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 10: WRITE PATH
 
-## Write Path
-
-### End-to-End Write Flow
+### END-TO-END WRITE FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -458,33 +508,33 @@ specifically for time-series patterns.
 |     |                                                                   |
 |     v                                                                   |
 |  2. Write Gateway receives request                                      |
-|     - Validates format and timestamps                                   |
-|     - Resolves or creates Series IDs (TSID)                             |
-|     - Routes to correct shard based on TSID                             |
+|     * Validates format and timestamps                                   |
+|     * Resolves or creates Series IDs (TSID)                             |
+|     * Routes to correct shard based on TSID                             |
 |     |                                                                   |
 |     v                                                                   |
 |  3. Ingestion Node processes the batch                                  |
-|     - Appends to Write-Ahead Log (WAL) for durability                   |
-|     - Inserts into in-memory MemTable                                   |
+|     * Appends to Write-Ahead Log (WAL) for durability                   |
+|     * Inserts into in-memory MemTable                                   |
 |     |                                                                   |
 |     v                                                                   |
 |  4. MemTable accumulates data points                                    |
-|     - Organized per-series for efficient compression                    |
-|     - When block time window closes (e.g., every 2 hours):              |
+|     * Organized per-series for efficient compression                    |
+|     * When block time window closes (e.g., every 2 hours):              |
 |       a. Freeze current MemTable                                        |
 |       b. Compress and flush to disk as immutable Block                  |
 |       c. Truncate WAL up to flushed point                               |
 |     |                                                                   |
 |     v                                                                   |
 |  5. Background compaction                                               |
-|     - Merges small blocks into larger ones                              |
-|     - Removes deleted series                                            |
-|     - Optimizes for sequential reads                                    |
+|     * Merges small blocks into larger ones                              |
+|     * Removes deleted series                                            |
+|     * Optimizes for sequential reads                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Write-Ahead Log (WAL)
+### WRITE-AHEAD LOG (WAL)
 
 ```
 +-------------------------------------------------------------------------+
@@ -502,19 +552,19 @@ specifically for time-series patterns.
 |  +------------------------------------------+                           |
 |                                                                         |
 |  Properties:                                                            |
-|  - Sequential append only (fast on any storage)                         |
-|  - Segmented into fixed-size files (e.g., 128 MB)                       |
-|  - Old segments deleted after successful block flush                    |
-|  - On crash recovery: replay WAL from last checkpoint                   |
+|  * Sequential append only (fast on any storage)                         |
+|  * Segmented into fixed-size files (e.g., 128 MB)                       |
+|  * Old segments deleted after successful block flush                    |
+|  * On crash recovery: replay WAL from last checkpoint                   |
 |                                                                         |
 |  Optimization: Batch WAL writes (group commit)                          |
-|  - Accumulate entries for ~10ms, then fsync once                        |
-|  - Trades tiny latency increase for massive throughput gain             |
+|  * Accumulate entries for ~10ms, then fsync once                        |
+|  * Trades tiny latency increase for massive throughput gain             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### MemTable Design
+### MEMTABLE DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -545,7 +595,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Compaction Strategy
+### COMPACTION STRATEGY
 
 ```
 +-------------------------------------------------------------------------+
@@ -565,19 +615,17 @@ specifically for time-series patterns.
 |  |        B1+B2+B3+B4+B5+B6    |                                        |
 |                                                                         |
 |  Benefits:                                                              |
-|  - Fewer files to open for range queries                                |
-|  - Better compression ratios (more data to compress together)           |
-|  - Opportunity to drop deleted series                                   |
-|  - Aligned time boundaries simplify query planning                      |
+|  * Fewer files to open for range queries                                |
+|  * Better compression ratios (more data to compress together)           |
+|  * Opportunity to drop deleted series                                   |
+|  * Aligned time boundaries simplify query planning                      |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 11: READ PATH
 
-## Read Path
-
-### Query Execution Flow
+### QUERY EXECUTION FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -589,38 +637,38 @@ specifically for time-series patterns.
 |     |                                                                   |
 |     v                                                                   |
 |  2. Query Gateway parses and plans                                      |
-|     - Parse query into AST                                              |
-|     - Identify time range: [now-1h, now]                                |
-|     - Identify label matchers: region="us-east"                         |
-|     - Determine which shards to query                                   |
+|     * Parse query into AST                                              |
+|     * Identify time range: [now-1h, now]                                |
+|     * Identify label matchers: region="us-east"                         |
+|     * Determine which shards to query                                   |
 |     |                                                                   |
 |     v                                                                   |
 |  3. Series Resolution                                                   |
-|     - Query inverted index: region="us-east" -> {TSID1, TSID2, ...}     |
-|     - Intersect with metric_name="cpu_usage" -> final TSID set          |
+|     * Query inverted index: region="us-east" -> {TSID1, TSID2, ...}     |
+|     * Intersect with metric_name="cpu_usage" -> final TSID set          |
 |     |                                                                   |
 |     v                                                                   |
 |  4. Block Selection                                                     |
-|     - Find blocks overlapping [now-1h, now]                             |
-|     - For each matching block, read series index                        |
-|     - Locate data chunks for matching TSIDs                             |
+|     * Find blocks overlapping [now-1h, now]                             |
+|     * For each matching block, read series index                        |
+|     * Locate data chunks for matching TSIDs                             |
 |     |                                                                   |
 |     v                                                                   |
 |  5. Data Retrieval                                                      |
-|     - Decompress timestamp + value arrays                               |
-|     - Apply time range filter (trim to exact range)                     |
-|     - For MemTable data: read directly from memory                      |
+|     * Decompress timestamp + value arrays                               |
+|     * Apply time range filter (trim to exact range)                     |
+|     * For MemTable data: read directly from memory                      |
 |     |                                                                   |
 |     v                                                                   |
 |  6. Aggregation                                                         |
-|     - Compute avg() across all matching series                          |
-|     - Apply step interval (e.g., 1 point per minute)                    |
-|     - Return result as time series of aggregated values                 |
+|     * Compute avg() across all matching series                          |
+|     * Apply step interval (e.g., 1 point per minute)                    |
+|     * Return result as time series of aggregated values                 |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Aggregation Types
+### AGGREGATION TYPES
 
 ```
 +-------------------------------------------------------------------------+
@@ -628,31 +676,31 @@ specifically for time-series patterns.
 |  Supported Aggregations:                                                |
 |                                                                         |
 |  Basic:                                                                 |
-|    - avg(series)    : Mean of values in each time step                  |
-|    - sum(series)    : Sum of values in each time step                   |
-|    - min(series)    : Minimum value in each time step                   |
-|    - max(series)    : Maximum value in each time step                   |
-|    - count(series)  : Number of data points per step                    |
+|    * avg(series)    : Mean of values in each time step                  |
+|    * sum(series)    : Sum of values in each time step                   |
+|    * min(series)    : Minimum value in each time step                   |
+|    * max(series)    : Maximum value in each time step                   |
+|    * count(series)  : Number of data points per step                    |
 |                                                                         |
 |  Statistical:                                                           |
-|    - percentile(series, 99)  : P99 latency calculation                  |
-|    - stddev(series)          : Standard deviation                       |
-|    - rate(series)            : Per-second rate of change                |
-|    - irate(series)           : Instantaneous rate (last 2 points)       |
-|    - increase(series)        : Total increase over range                |
+|    * percentile(series, 99)  : P99 latency calculation                  |
+|    * stddev(series)          : Standard deviation                       |
+|    * rate(series)            : Per-second rate of change                |
+|    * irate(series)           : Instantaneous rate (last 2 points)       |
+|    * increase(series)        : Total increase over range                |
 |                                                                         |
 |  Grouping:                                                              |
-|    - ... by (tag)            : Split into groups by tag value           |
-|    - ... without (tag)       : Group by all tags except specified       |
+|    * ... by (tag)            : Split into groups by tag value           |
+|    * ... without (tag)       : Group by all tags except specified       |
 |                                                                         |
 |  Percentile computation:                                                |
-|    - Exact: sort all values, pick index (expensive for large sets)      |
-|    - Approximate: t-digest or HDR histogram (streaming-friendly)        |
+|    * Exact: sort all values, pick index (expensive for large sets)      |
+|    * Approximate: t-digest or HDR histogram (streaming-friendly)        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Query Optimization
+### QUERY OPTIMIZATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -660,55 +708,53 @@ specifically for time-series patterns.
 |  Optimization Techniques:                                               |
 |                                                                         |
 |  1. Block-level min/max filtering                                       |
-|     - Each block stores min/max timestamps and value ranges             |
-|     - Skip entire blocks that cannot contain matching data              |
+|     * Each block stores min/max timestamps and value ranges             |
+|     * Skip entire blocks that cannot contain matching data              |
 |                                                                         |
 |  2. Predicate pushdown                                                  |
-|     - Push label filters into the index lookup phase                    |
-|     - Avoid scanning data for non-matching series                       |
+|     * Push label filters into the index lookup phase                    |
+|     * Avoid scanning data for non-matching series                       |
 |                                                                         |
 |  3. Chunk-level caching                                                 |
-|     - LRU cache for recently accessed compressed chunks                 |
-|     - Hot data stays in memory after first access                       |
+|     * LRU cache for recently accessed compressed chunks                 |
+|     * Hot data stays in memory after first access                       |
 |                                                                         |
 |  4. Parallel scan                                                       |
-|     - Different blocks/series scanned concurrently                      |
-|     - Aggregate partial results with merge step                         |
+|     * Different blocks/series scanned concurrently                      |
+|     * Aggregate partial results with merge step                         |
 |                                                                         |
 |  5. Pre-aggregation (materialized rollups)                              |
-|     - For common queries, store pre-computed aggregates                 |
-|     - Trade storage for query speed                                     |
+|     * For common queries, store pre-computed aggregates                 |
+|     * Trade storage for query speed                                     |
 |                                                                         |
 |  6. Query result caching                                                |
-|     - Cache immutable time range results                                |
-|     - Only recompute the "open" (current) time block                    |
+|     * Cache immutable time range results                                |
+|     * Only recompute the "open" (current) time block                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 12: COMPRESSION TECHNIQUES
 
-## Compression Techniques
-
-### Why Compression Matters
+### WHY COMPRESSION MATTERS
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  At 1B points/day, compression directly determines:                     |
-|    - Storage cost (10x compression = 10x cost reduction)                |
-|    - I/O throughput (less data to read = faster queries)                |
-|    - Cache efficiency (more data fits in memory)                        |
+|    * Storage cost (10x compression = 10x cost reduction)                |
+|    * I/O throughput (less data to read = faster queries)                |
+|    * Cache efficiency (more data fits in memory)                        |
 |                                                                         |
 |  Typical compression ratios for time-series data:                       |
-|    - Generic (gzip, lz4):         3-5x                                  |
-|    - Specialized (Gorilla):       10-15x                                |
-|    - Specialized + generic:       15-20x                                |
+|    * Generic (gzip, lz4):         3-5x                                  |
+|    * Specialized (Gorilla):       10-15x                                |
+|    * Specialized + generic:       15-20x                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### Timestamp Compression: Delta-of-Delta
+### TIMESTAMP COMPRESSION: DELTA-OF-DELTA
 
 ```
 +--------------------------------------------------------------------------+
@@ -747,7 +793,7 @@ specifically for time-series patterns.
 +--------------------------------------------------------------------------+
 ```
 
-### Value Compression: XOR Float Encoding
+### VALUE COMPRESSION: XOR FLOAT ENCODING
 
 ```
 +-------------------------------------------------------------------------+
@@ -759,10 +805,10 @@ specifically for time-series patterns.
 |                                                                         |
 |  1. Store first value as raw 64-bit float                               |
 |  2. For each subsequent value, XOR with previous                        |
-|     - If XOR == 0: values are identical, store single '0' bit           |
-|     - If XOR != 0: find leading and trailing zeros                      |
-|       - If same window as previous: '10' + significant bits             |
-|       - If different window: '11' + 5 bits leading + 6 bits length      |
+|     * If XOR == 0: values are identical, store single '0' bit           |
+|     * If XOR != 0: find leading and trailing zeros                      |
+|       * If same window as previous: '10' + significant bits             |
+|       * If different window: '11' + 5 bits leading + 6 bits length      |
 |         + significant bits                                              |
 |                                                                         |
 |  Example:                                                               |
@@ -779,7 +825,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Combined Compression Pipeline
+### COMBINED COMPRESSION PIPELINE
 
 ```
 +-------------------------------------------------------------------------+
@@ -806,11 +852,9 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 13: RETENTION POLICIES AND DOWNSAMPLING
 
-## Retention Policies and Downsampling
-
-### Retention Tiers
+### RETENTION TIERS
 
 ```
 +-------------------------------------------------------------------------+
@@ -829,7 +873,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Downsampling (Rollup) Process
+### DOWNSAMPLING (ROLLUP) PROCESS
 
 ```
 +-------------------------------------------------------------------------+
@@ -867,7 +911,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Automatic Retention Enforcement
+### AUTOMATIC RETENTION ENFORCEMENT
 
 ```
 +-------------------------------------------------------------------------+
@@ -875,29 +919,27 @@ specifically for time-series patterns.
 |  Retention Enforcement:                                                 |
 |                                                                         |
 |  1. Time-based block organization makes deletion trivial:               |
-|     - Each block covers a fixed time range                              |
-|     - To delete data older than 30 days: delete block files             |
-|     - No expensive row-by-row deletion                                  |
+|     * Each block covers a fixed time range                              |
+|     * To delete data older than 30 days: delete block files             |
+|     * No expensive row-by-row deletion                                  |
 |                                                                         |
 |  2. Downsampling runs as a background job:                              |
-|     - Triggered when blocks age past a threshold                        |
-|     - Reads raw blocks, computes rollups, writes rollup blocks          |
-|     - Raw blocks deleted only after rollups are confirmed durable       |
+|     * Triggered when blocks age past a threshold                        |
+|     * Reads raw blocks, computes rollups, writes rollup blocks          |
+|     * Raw blocks deleted only after rollups are confirmed durable       |
 |                                                                         |
 |  3. Tiered storage migration:                                           |
-|     - Hot blocks (recent) on fast SSD                                   |
-|     - Warm blocks moved to cheaper SSD/HDD                              |
-|     - Cold blocks moved to object storage (S3)                          |
-|     - Metadata always on SSD for fast lookups                           |
+|     * Hot blocks (recent) on fast SSD                                   |
+|     * Warm blocks moved to cheaper SSD/HDD                              |
+|     * Cold blocks moved to object storage (S3)                          |
+|     * Metadata always on SSD for fast lookups                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 14: SHARDING AND PARTITIONING
 
-## Sharding and Partitioning
-
-### Sharding Strategies
+### SHARDING STRATEGIES
 
 ```
 +-------------------------------------------------------------------------+
@@ -944,7 +986,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Consistent Hashing for Series Assignment
+### CONSISTENT HASHING FOR SERIES ASSIGNMENT
 
 ```
 +-------------------------------------------------------------------------+
@@ -976,16 +1018,16 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Replication
+### REPLICATION
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Replication Strategy:                                                  |
 |                                                                         |
-|  - Replication factor: 3 (configurable)                                 |
-|  - Write quorum: 2 of 3 (W=2)                                           |
-|  - Read quorum: 1 of 3 (R=1) for recent data                            |
+|  * Replication factor: 3 (configurable)                                 |
+|  * Write quorum: 2 of 3 (W=2)                                           |
+|  * Read quorum: 1 of 3 (R=1) for recent data                            |
 |                                                                         |
 |  Write Flow:                                                            |
 |  Client -> Write Gateway -> Primary Shard -> Replica 1                  |
@@ -995,42 +1037,40 @@ specifically for time-series patterns.
 |  Async replication for remaining replicas.                              |
 |                                                                         |
 |  For time-series, eventual consistency is usually acceptable:           |
-|  - Monitoring dashboards tolerate slight delays                         |
-|  - Alerts can use the primary replica                                   |
-|  - Historical queries are immutable once block is closed                |
+|  * Monitoring dashboards tolerate slight delays                         |
+|  * Alerts can use the primary replica                                   |
+|  * Historical queries are immutable once block is closed                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## Query Language Comparison
+## SECTION 15: QUERY LANGUAGE COMPARISON
 
 ```
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  PromQL (Prometheus):                                                    |
 |    avg(rate(http_requests_total{job="api"}[5m])) by (method)             |
-|    - Functional style                                                    |
-|    - Built-in rate, histogram functions                                  |
-|    - No JOIN or subqueries (limited)                                     |
+|    * Functional style                                                    |
+|    * Built-in rate, histogram functions                                  |
+|    * No JOIN or subqueries (limited)                                     |
 |                                                                          |
 |  InfluxQL (InfluxDB):                                                    |
 |    SELECT mean("value") FROM "cpu_usage"                                 |
 |    WHERE "region" = 'us-east' AND time > now() - 1h                      |
 |    GROUP BY time(1m), "host"                                             |
-|    - SQL-like syntax                                                     |
-|    - Familiar to SQL users                                               |
-|    - Limited expressiveness for complex transformations                  |
+|    * SQL-like syntax                                                     |
+|    * Familiar to SQL users                                               |
+|    * Limited expressiveness for complex transformations                  |
 |                                                                          |
 |  Flux (InfluxDB 2.0):                                                    |
 |    from(bucket: "metrics")                                               |
 |      |> range(start: -1h)                                                |
 |      |> filter(fn: (r) => r._measurement == "cpu")                       |
 |      |> aggregateWindow(every: 1m, fn: mean)                             |
-|    - Pipe-based functional language                                      |
-|    - Very expressive                                                     |
-|    - Steeper learning curve                                              |
+|    * Pipe-based functional language                                      |
+|    * Very expressive                                                     |
+|    * Steeper learning curve                                              |
 |                                                                          |
 |  SQL Extensions (TimescaleDB):                                           |
 |    SELECT time_bucket('1 minute', time) AS bucket,                       |
@@ -1040,16 +1080,14 @@ specifically for time-series patterns.
 |      AND time > NOW() - INTERVAL '1 hour'                                |
 |    GROUP BY bucket                                                       |
 |    ORDER BY bucket;                                                      |
-|    - Full SQL + time-series extensions                                   |
-|    - JOINs, subqueries, CTEs all work                                    |
-|    - Leverages existing SQL ecosystem                                    |
+|    * Full SQL + time-series extensions                                   |
+|    * JOINs, subqueries, CTEs all work                                    |
+|    * Leverages existing SQL ecosystem                                    |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## Real-World System Comparison
+## SECTION 16: REAL-WORLD SYSTEM COMPARISON
 
 ```
 +-------------------------------------------------------------------------+
@@ -1075,81 +1113,77 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Key Architectural Differences
+### KEY ARCHITECTURAL DIFFERENCES
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  InfluxDB:                                                              |
-|  - Custom storage engine (TSM - Time Structured Merge Tree)             |
-|  - Inverted index for tag lookups                                       |
-|  - Write-optimized with WAL + TSM files                                 |
-|  - Cardinality limits can be a problem at scale                         |
+|  * Custom storage engine (TSM - Time Structured Merge Tree)             |
+|  * Inverted index for tag lookups                                       |
+|  * Write-optimized with WAL + TSM files                                 |
+|  * Cardinality limits can be a problem at scale                         |
 |                                                                         |
 |  TimescaleDB:                                                           |
-|  - Extension on top of PostgreSQL                                       |
-|  - Hypertables = auto-partitioned tables by time                        |
-|  - Full SQL support including JOINs with relational data                |
-|  - Leverages PostgreSQL ecosystem (backup, replication, etc.)           |
+|  * Extension on top of PostgreSQL                                       |
+|  * Hypertables = auto-partitioned tables by time                        |
+|  * Full SQL support including JOINs with relational data                |
+|  * Leverages PostgreSQL ecosystem (backup, replication, etc.)           |
 |                                                                         |
 |  Prometheus:                                                            |
-|  - Pull-based model (scrapes targets on schedule)                       |
-|  - Local storage only (not designed for long-term)                      |
-|  - Thanos/Cortex adds long-term storage and global view                 |
-|  - Excellent Kubernetes integration                                     |
+|  * Pull-based model (scrapes targets on schedule)                       |
+|  * Local storage only (not designed for long-term)                      |
+|  * Thanos/Cortex adds long-term storage and global view                 |
+|  * Excellent Kubernetes integration                                     |
 |                                                                         |
 |  VictoriaMetrics:                                                       |
-|  - Prometheus-compatible but much more efficient                        |
-|  - Handles very high cardinality better                                 |
-|  - Built-in clustering and long-term storage                            |
-|  - Lower resource usage than alternatives                               |
+|  * Prometheus-compatible but much more efficient                        |
+|  * Handles very high cardinality better                                 |
+|  * Built-in clustering and long-term storage                            |
+|  * Lower resource usage than alternatives                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## Use Cases
+## SECTION 17: USE CASES
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  1. Infrastructure Monitoring                                           |
-|     - CPU, memory, disk, network metrics from servers                   |
-|     - Container/pod metrics from Kubernetes                             |
-|     - Typical: 100K-10M series, 15-60 second intervals                  |
-|     - Query pattern: dashboards + alerting rules                        |
+|     * CPU, memory, disk, network metrics from servers                   |
+|     * Container/pod metrics from Kubernetes                             |
+|     * Typical: 100K-10M series, 15-60 second intervals                  |
+|     * Query pattern: dashboards + alerting rules                        |
 |                                                                         |
 |  2. Application Performance Monitoring (APM)                            |
-|     - Request latency histograms, error rates, throughput               |
-|     - Distributed tracing metrics (span durations)                      |
-|     - Typical: 1M-100M series, high cardinality tags                    |
-|     - Query pattern: P99 latency over time, error rate spikes           |
+|     * Request latency histograms, error rates, throughput               |
+|     * Distributed tracing metrics (span durations)                      |
+|     * Typical: 1M-100M series, high cardinality tags                    |
+|     * Query pattern: P99 latency over time, error rate spikes           |
 |                                                                         |
 |  3. IoT / Sensor Data                                                   |
-|     - Temperature, humidity, pressure from millions of devices          |
-|     - Typical: 10M-1B series, irregular intervals                       |
-|     - Query pattern: aggregations over device groups, anomaly detect    |
+|     * Temperature, humidity, pressure from millions of devices          |
+|     * Typical: 10M-1B series, irregular intervals                       |
+|     * Query pattern: aggregations over device groups, anomaly detect    |
 |                                                                         |
 |  4. Financial Market Data                                               |
-|     - Stock prices, trading volumes, order book snapshots               |
-|     - Typical: 100K series, sub-second intervals                        |
-|     - Query pattern: OHLCV candles, VWAP, technical indicators          |
-|     - Requirement: exact values, no lossy compression                   |
+|     * Stock prices, trading volumes, order book snapshots               |
+|     * Typical: 100K series, sub-second intervals                        |
+|     * Query pattern: OHLCV candles, VWAP, technical indicators          |
+|     * Requirement: exact values, no lossy compression                   |
 |                                                                         |
 |  5. Network / Telecom Monitoring                                        |
-|     - Bandwidth, packet loss, latency per link/device                   |
-|     - Typical: millions of interfaces, 5-minute SNMP polls              |
-|     - Query pattern: top-N talkers, capacity planning                   |
+|     * Bandwidth, packet loss, latency per link/device                   |
+|     * Typical: millions of interfaces, 5-minute SNMP polls              |
+|     * Query pattern: top-N talkers, capacity planning                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 18: TRADE-OFFS AND DESIGN DECISIONS
 
-## Trade-offs and Design Decisions
-
-### Key Trade-offs
+### KEY TRADE-OFFS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1158,11 +1192,11 @@ specifically for time-series patterns.
 |                                                                         |
 |  Option A: Sync WAL on every write                                      |
 |    + Zero data loss on crash                                            |
-|    - 10x slower writes (fsync bottleneck)                               |
+|    * 10x slower writes (fsync bottleneck)                               |
 |                                                                         |
 |  Option B: Batch WAL writes (group commit every 10ms)                   |
 |    + 10x higher write throughput                                        |
-|    - Up to 10ms of data loss on crash                                   |
+|    * Up to 10ms of data loss on crash                                   |
 |                                                                         |
 |  Decision: Option B for monitoring (10ms loss acceptable)               |
 |            Option A for financial data (no loss tolerated)              |
@@ -1173,13 +1207,13 @@ specifically for time-series patterns.
 |                                                                         |
 |  Option A: Full SQL support (TimescaleDB approach)                      |
 |    + JOINs, subqueries, familiar syntax                                 |
-|    - SQL optimizer not tuned for time-series patterns                   |
-|    - Higher per-query overhead                                          |
+|    * SQL optimizer not tuned for time-series patterns                   |
+|    * Higher per-query overhead                                          |
 |                                                                         |
 |  Option B: Custom query language (PromQL approach)                      |
 |    + Highly optimized for time-series operations                        |
-|    - Limited expressiveness                                             |
-|    - Another language to learn                                          |
+|    * Limited expressiveness                                             |
+|    * Another language to learn                                          |
 |                                                                         |
 |  Decision: Depends on user base. PromQL for DevOps, SQL for analysts    |
 |                                                                         |
@@ -1189,11 +1223,11 @@ specifically for time-series patterns.
 |                                                                         |
 |  Option A: Compress entire series as one chunk                          |
 |    + Maximum compression ratio                                          |
-|    - Must decompress entire chunk for any access                        |
+|    * Must decompress entire chunk for any access                        |
 |                                                                         |
 |  Option B: Compress in small chunks (e.g., 120 points)                  |
 |    + Can skip chunks outside query range                                |
-|    - Slightly worse compression ratio                                   |
+|    * Slightly worse compression ratio                                   |
 |                                                                         |
 |  Decision: Option B with chunk boundaries aligned to time intervals     |
 |                                                                         |
@@ -1204,22 +1238,20 @@ specifically for time-series patterns.
 |  Push (InfluxDB, VictoriaMetrics):                                      |
 |    + Lower latency, applications control when to send                   |
 |    + Works across firewalls/NATs                                        |
-|    - Risk of overwhelming the TSDB (need backpressure)                  |
+|    * Risk of overwhelming the TSDB (need backpressure)                  |
 |                                                                         |
 |  Pull (Prometheus):                                                     |
 |    + TSDB controls ingestion rate                                       |
 |    + Can detect target failures (scrape failed)                         |
-|    - Requires network access to all targets                             |
-|    - Harder to scale across networks                                    |
+|    * Requires network access to all targets                             |
+|    * Harder to scale across networks                                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 19: FAILURE HANDLING AND RELIABILITY
 
-## Failure Handling and Reliability
-
-### Node Failure Scenarios
+### NODE FAILURE SCENARIOS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1253,7 +1285,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
-### Data Integrity
+### DATA INTEGRITY
 
 ```
 +--------------------------------------------------------------------------+
@@ -1261,26 +1293,24 @@ specifically for time-series patterns.
 |  Integrity Measures:                                                     |
 |                                                                          |
 |  1. WAL entries: CRC32 checksum per entry                                |
-|     - Detects corruption during replay                                   |
+|     * Detects corruption during replay                                   |
 |                                                                          |
 |  2. Block files: CRC32 per chunk + SHA256 per block                      |
-|     - Verified on reads (optional, configurable)                         |
-|     - Verified during compaction                                         |
+|     * Verified on reads (optional, configurable)                         |
+|     * Verified during compaction                                         |
 |                                                                          |
 |  3. Replication: Compare block checksums across replicas                 |
-|     - Background consistency check (anti-entropy)                        |
-|     - Repair from healthy replica if mismatch                            |
+|     * Background consistency check (anti-entropy)                        |
+|     * Repair from healthy replica if mismatch                            |
 |                                                                          |
 |  4. Idempotent writes:                                                   |
-|     - Same (series, timestamp, value) written twice = no effect          |
-|     - Enables safe retries on failure                                    |
+|     * Same (series, timestamp, value) written twice = no effect          |
+|     * Enables safe retries on failure                                    |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## Monitoring the Monitor
+## SECTION 20: MONITORING THE MONITOR
 
 ```
 +--------------------------------------------------------------------------+
@@ -1290,21 +1320,21 @@ specifically for time-series patterns.
 |  Key Internal Metrics:                                                   |
 |                                                                          |
 |  Ingestion:                                                              |
-|    - tsdb_ingested_samples_total (rate of ingestion)                     |
-|    - tsdb_wal_write_duration_seconds (WAL write latency)                 |
-|    - tsdb_head_active_series (current active series count)               |
-|    - tsdb_head_series_created_total (series churn rate)                  |
+|    * tsdb_ingested_samples_total (rate of ingestion)                     |
+|    * tsdb_wal_write_duration_seconds (WAL write latency)                 |
+|    * tsdb_head_active_series (current active series count)               |
+|    * tsdb_head_series_created_total (series churn rate)                  |
 |                                                                          |
 |  Storage:                                                                |
-|    - tsdb_blocks_total (number of on-disk blocks)                        |
-|    - tsdb_compactions_total (compaction rate)                            |
-|    - tsdb_storage_size_bytes (total storage used)                        |
-|    - tsdb_compression_ratio (actual compression achieved)                |
+|    * tsdb_blocks_total (number of on-disk blocks)                        |
+|    * tsdb_compactions_total (compaction rate)                            |
+|    * tsdb_storage_size_bytes (total storage used)                        |
+|    * tsdb_compression_ratio (actual compression achieved)                |
 |                                                                          |
 |  Queries:                                                                |
-|    - tsdb_query_duration_seconds (query latency histogram)               |
-|    - tsdb_query_samples_scanned (per-query efficiency)                   |
-|    - tsdb_query_cache_hit_ratio (cache effectiveness)                    |
+|    * tsdb_query_duration_seconds (query latency histogram)               |
+|    * tsdb_query_samples_scanned (per-query efficiency)                   |
+|    * tsdb_query_cache_hit_ratio (cache effectiveness)                    |
 |                                                                          |
 |  Approach: Export these metrics in the same format the TSDB ingests      |
 |  (e.g., Prometheus exposition format). Use a separate, small             |
@@ -1313,9 +1343,7 @@ specifically for time-series patterns.
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## Interview Q&A
+## SECTION 21: INTERVIEW Q&A
 
 ### Q1: Why not use a regular relational database for time-series data?
 
@@ -1368,9 +1396,9 @@ specifically for time-series patterns.
 |  for 2 billion series in 1.5 TB of RAM.                                 |
 |                                                                         |
 |  Why it works specifically for time-series:                             |
-|  - Regular collection intervals -> delta-of-delta ~= 0                  |
-|  - Slowly changing values -> XOR has few significant bits               |
-|  - Append-only -> can compress in streaming fashion                     |
+|  * Regular collection intervals -> delta-of-delta ~= 0                  |
+|  * Slowly changing values -> XOR has few significant bits               |
+|  * Append-only -> can compress in streaming fashion                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1384,9 +1412,9 @@ specifically for time-series patterns.
 |  operational problem for TSDBs.                                         |
 |                                                                         |
 |  Problems:                                                              |
-|  - Inverted index grows large (memory pressure)                         |
-|  - Series churn (new series created/destroyed frequently)               |
-|  - Query planning becomes expensive (many series to resolve)            |
+|  * Inverted index grows large (memory pressure)                         |
+|  * Series churn (new series created/destroyed frequently)               |
+|  * Query planning becomes expensive (many series to resolve)            |
 |                                                                         |
 |  Solutions:                                                             |
 |  1. Limit cardinality per metric (configurable cap)                     |
@@ -1398,9 +1426,9 @@ specifically for time-series patterns.
 |  7. Label value interning (store each unique string once)               |
 |                                                                         |
 |  Real-world limits:                                                     |
-|  - Prometheus: ~10M active series per instance (practical)              |
-|  - VictoriaMetrics: handles 100M+ series with efficient indexing        |
-|  - InfluxDB: historically struggled, improved in newer versions         |
+|  * Prometheus: ~10M active series per instance (practical)              |
+|  * VictoriaMetrics: handles 100M+ series with efficient indexing        |
+|  * InfluxDB: historically struggled, improved in newer versions         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1414,15 +1442,15 @@ specifically for time-series patterns.
 |  a single aggregate over a time window.                                 |
 |                                                                         |
 |  Why not just store avg?                                                |
-|  - avg(avg(x)) != avg(x) for unequal group sizes                        |
-|  - If 1-minute window has 4 points and another has 2 points,            |
+|  * avg(avg(x)) != avg(x) for unequal group sizes                        |
+|  * If 1-minute window has 4 points and another has 2 points,            |
 |    averaging the averages gives wrong result                            |
 |                                                                         |
 |  By storing min, max, sum, count we can:                                |
-|  - Recompute correct avg at any coarser granularity: avg = sum/count    |
-|  - Get correct min/max (min of mins, max of maxes)                      |
-|  - Get correct count (sum of counts)                                    |
-|  - This is the basis of the "summary statistics" approach               |
+|  * Recompute correct avg at any coarser granularity: avg = sum/count    |
+|  * Get correct min/max (min of mins, max of maxes)                      |
+|  * Get correct count (sum of counts)                                    |
+|  * This is the basis of the "summary statistics" approach               |
 |                                                                         |
 |  Limitation: percentiles cannot be re-aggregated from summaries.        |
 |  For percentiles, use t-digest or histogram sketches that can be        |
@@ -1439,18 +1467,18 @@ specifically for time-series patterns.
 |  A: Two-dimensional sharding: by time AND by series.                    |
 |                                                                         |
 |  Time dimension:                                                        |
-|  - Partition data into time blocks (e.g., 2 hours, 1 day)               |
-|  - Enables efficient retention (drop old partitions)                    |
-|  - Queries usually span limited time ranges                             |
+|  * Partition data into time blocks (e.g., 2 hours, 1 day)               |
+|  * Enables efficient retention (drop old partitions)                    |
+|  * Queries usually span limited time ranges                             |
 |                                                                         |
 |  Series dimension:                                                      |
-|  - Hash series ID to assign to a shard (consistent hashing)             |
-|  - Distributes write load across nodes                                  |
-|  - Each shard handles a subset of all series                            |
+|  * Hash series ID to assign to a shard (consistent hashing)             |
+|  * Distributes write load across nodes                                  |
+|  * Each shard handles a subset of all series                            |
 |                                                                         |
 |  Query routing:                                                         |
-|  - Single-series query: route to specific shard                         |
-|  - Multi-series query (e.g., sum by region): fan out to all shards,     |
+|  * Single-series query: route to specific shard                         |
+|  * Multi-series query (e.g., sum by region): fan out to all shards,     |
 |    aggregate results at the query gateway                               |
 |                                                                         |
 |  Rebalancing: Use consistent hashing with virtual nodes to minimize     |
@@ -1475,9 +1503,9 @@ specifically for time-series patterns.
 |     replica while primary recovers                                      |
 |                                                                         |
 |  Data loss potential:                                                   |
-|  - With synchronous replication: zero data loss                         |
-|  - With async replication: up to replication lag (usually < 1 second)   |
-|  - Without replication: up to last group commit (usually < 10ms)        |
+|  * With synchronous replication: zero data loss                         |
+|  * With async replication: up to replication lag (usually < 1 second)   |
+|  * Without replication: up to last group commit (usually < 10ms)        |
 |                                                                         |
 |  In practice: Most monitoring TSDBs accept tiny data loss windows       |
 |  (a few seconds of metrics) in exchange for higher write throughput.    |
@@ -1496,17 +1524,17 @@ specifically for time-series patterns.
 |  Approaches:                                                            |
 |                                                                         |
 |  1. Reject out-of-order (Prometheus < 2.39):                            |
-|     - Simplest approach, enforces monotonic timestamps                  |
-|     - Data loss for late arrivals                                       |
+|     * Simplest approach, enforces monotonic timestamps                  |
+|     * Data loss for late arrivals                                       |
 |                                                                         |
 |  2. OOO buffer (Prometheus >= 2.39, VictoriaMetrics):                   |
-|     - Maintain a separate buffer for out-of-order points                |
-|     - Merge during compaction                                           |
-|     - Configurable OOO window (e.g., accept data up to 1 hour late)     |
+|     * Maintain a separate buffer for out-of-order points                |
+|     * Merge during compaction                                           |
+|     * Configurable OOO window (e.g., accept data up to 1 hour late)     |
 |                                                                         |
 |  3. Write to correct time block (InfluxDB):                             |
-|     - Keep recent blocks open for writes                                |
-|     - Higher complexity but seamless for users                          |
+|     * Keep recent blocks open for writes                                |
+|     * Higher complexity but seamless for users                          |
 |                                                                         |
 |  Recommendation: Allow configurable OOO window. Data outside the        |
 |  window is rejected with an error. This balances flexibility with       |
@@ -1522,20 +1550,20 @@ specifically for time-series patterns.
 |                                                                         |
 |  A:                                                                     |
 |  Pull (Prometheus model):                                               |
-|  - TSDB scrapes HTTP endpoints on a schedule                            |
-|  - Pros: TSDB controls load, detects target failures                    |
-|  - Cons: Requires network access to targets, harder across firewalls    |
+|  * TSDB scrapes HTTP endpoints on a schedule                            |
+|  * Pros: TSDB controls load, detects target failures                    |
+|  * Cons: Requires network access to targets, harder across firewalls    |
 |                                                                         |
 |  Push (InfluxDB/VictoriaMetrics model):                                 |
-|  - Applications send data to TSDB endpoint                              |
-|  - Pros: Works across firewalls, lower latency, simpler for clients     |
-|  - Cons: Risk of overwhelming TSDB, need backpressure mechanism         |
+|  * Applications send data to TSDB endpoint                              |
+|  * Pros: Works across firewalls, lower latency, simpler for clients     |
+|  * Cons: Risk of overwhelming TSDB, need backpressure mechanism         |
 |                                                                         |
 |  Hybrid (modern best practice):                                         |
-|  - Support both models                                                  |
-|  - Use pull for infrastructure (Prometheus-style)                       |
-|  - Use push for applications and IoT (direct send)                      |
-|  - Agent/collector handles the translation                              |
+|  * Support both models                                                  |
+|  * Use pull for infrastructure (Prometheus-style)                       |
+|  * Use push for applications and IoT (direct send)                      |
+|  * Agent/collector handles the translation                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1554,21 +1582,21 @@ specifically for time-series patterns.
 |     severity: critical                                                   |
 |                                                                          |
 |  2. Evaluation loop (every 15-60 seconds):                               |
-|     - Execute the query expression against recent data                   |
-|     - Check if threshold is breached                                     |
-|     - Track "pending" state (must be true for `for` duration)            |
-|     - Fire alert when confirmed                                          |
+|     * Execute the query expression against recent data                   |
+|     * Check if threshold is breached                                     |
+|     * Track "pending" state (must be true for `for` duration)            |
+|     * Fire alert when confirmed                                          |
 |                                                                          |
 |  3. Optimization:                                                        |
-|     - Cache recent data in memory (hot path)                             |
-|     - Pre-compute common sub-expressions                                 |
-|     - Batch rule evaluations (100K rules/minute feasible)                |
+|     * Cache recent data in memory (hot path)                             |
+|     * Pre-compute common sub-expressions                                 |
+|     * Batch rule evaluations (100K rules/minute feasible)                |
 |                                                                          |
 |  4. Alert routing:                                                       |
-|     - Deduplication (don't re-fire same alert)                           |
-|     - Grouping (batch related alerts)                                    |
-|     - Silencing/inhibition rules                                         |
-|     - Notification channels (PagerDuty, Slack, email)                    |
+|     * Deduplication (don't re-fire same alert)                           |
+|     * Grouping (batch related alerts)                                    |
+|     * Silencing/inhibition rules                                         |
+|     * Notification channels (PagerDuty, Slack, email)                    |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -1581,26 +1609,26 @@ specifically for time-series patterns.
 |  A: The main bottlenecks shift as the system scales:                    |
 |                                                                         |
 |  At small scale (< 1M series):                                          |
-|  - Usually not bottlenecked; single node handles it                     |
+|  * Usually not bottlenecked; single node handles it                     |
 |                                                                         |
 |  At medium scale (1M - 50M series):                                     |
-|  - Inverted index memory: O(unique_tag_values * series_count)           |
-|  - Solution: Shard the index, use roaring bitmaps                       |
+|  * Inverted index memory: O(unique_tag_values * series_count)           |
+|  * Solution: Shard the index, use roaring bitmaps                       |
 |                                                                         |
 |  At large scale (50M - 1B series):                                      |
-|  - Series churn: Creating/deleting series is expensive                  |
-|  - Solution: Pre-allocate series IDs, batch index updates               |
+|  * Series churn: Creating/deleting series is expensive                  |
+|  * Solution: Pre-allocate series IDs, batch index updates               |
 |                                                                         |
-|  - Query fan-out: Cross-shard queries slow as shards increase           |
-|  - Solution: Pre-aggregation, materialized views                        |
+|  * Query fan-out: Cross-shard queries slow as shards increase           |
+|  * Solution: Pre-aggregation, materialized views                        |
 |                                                                         |
-|  - Compaction I/O: Background compaction competes with queries          |
-|  - Solution: Dedicated compaction nodes, rate limiting                  |
+|  * Compaction I/O: Background compaction competes with queries          |
+|  * Solution: Dedicated compaction nodes, rate limiting                  |
 |                                                                         |
 |  At extreme scale (> 1B series):                                        |
-|  - Metadata management: Tracking chunk locations for billions of        |
+|  * Metadata management: Tracking chunk locations for billions of        |
 |    series is itself a distributed systems problem                       |
-|  - Solution: Hierarchical sharding, metadata caching                    |
+|  * Solution: Hierarchical sharding, metadata caching                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1612,17 +1640,17 @@ specifically for time-series patterns.
 |                                                                         |
 |  A: Unlike relational databases, TSDBs are typically schema-on-write:   |
 |                                                                         |
-|  - New metric names: Automatically created on first write. The TSDB     |
+|  * New metric names: Automatically created on first write. The TSDB     |
 |    creates a new series ID and adds it to the inverted index.           |
 |                                                                         |
-|  - New tags: Also automatically handled. Each unique combination of     |
+|  * New tags: Also automatically handled. Each unique combination of     |
 |    metric + tags creates a new series. No ALTER TABLE needed.           |
 |                                                                         |
-|  - Changing tags: This creates a new series (different TSID). The old   |
+|  * Changing tags: This creates a new series (different TSID). The old   |
 |    series continues to exist with historical data. Queries must union   |
 |    both series for full history.                                        |
 |                                                                         |
-|  - Value type changes: Most TSDBs enforce type per series. Changing     |
+|  * Value type changes: Most TSDBs enforce type per series. Changing     |
 |    from float to int would require a new metric name.                   |
 |                                                                         |
 |  Trade-off: Schema-on-write is flexible but can lead to "cardinality    |
@@ -1642,28 +1670,28 @@ specifically for time-series patterns.
 |  A: Multi-tenancy requires isolation between tenants:                   |
 |                                                                         |
 |  Data isolation:                                                        |
-|  - Prefix series with tenant ID: tenant_123/cpu_usage{host="a"}         |
-|  - Or: separate storage per tenant (stronger isolation)                 |
-|  - Queries always filtered by tenant ID                                 |
+|  * Prefix series with tenant ID: tenant_123/cpu_usage{host="a"}         |
+|  * Or: separate storage per tenant (stronger isolation)                 |
+|  * Queries always filtered by tenant ID                                 |
 |                                                                         |
 |  Resource isolation:                                                    |
-|  - Per-tenant rate limits (writes/sec, active series, query rate)       |
-|  - Per-tenant storage quotas                                            |
-|  - Priority queues for query execution (paid tier gets priority)        |
+|  * Per-tenant rate limits (writes/sec, active series, query rate)       |
+|  * Per-tenant storage quotas                                            |
+|  * Priority queues for query execution (paid tier gets priority)        |
 |                                                                         |
 |  Architecture options:                                                  |
 |  1. Shared everything: All tenants on same cluster, isolated by ID      |
 |     + Efficient resource utilization                                    |
-|     - Noisy neighbor risk                                               |
+|     * Noisy neighbor risk                                               |
 |                                                                         |
 |  2. Shared storage, dedicated compute: Separate query/ingest per        |
 |     tenant, shared storage layer                                        |
 |     + Better isolation                                                  |
-|     - More complex routing                                              |
+|     * More complex routing                                              |
 |                                                                         |
 |  3. Dedicated clusters: Each tenant gets own cluster                    |
 |     + Complete isolation                                                |
-|     - Expensive, hard to manage at scale                                |
+|     * Expensive, hard to manage at scale                                |
 |                                                                         |
 |  Real-world: Grafana Cloud (Cortex/Mimir) uses shared-everything        |
 |  with per-tenant limits. Datadog uses dedicated shards for large        |
@@ -1672,9 +1700,7 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## Summary
+## SECTION 22: SUMMARY
 
 ```
 +-------------------------------------------------------------------------+

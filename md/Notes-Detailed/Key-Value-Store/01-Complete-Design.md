@@ -1,94 +1,149 @@
-# Design a Distributed Key-Value Store (Dynamo/Cassandra)
+# DESIGN A DISTRIBUTED KEY-VALUE STORE (DYNAMO/CASSANDRA)
 
-## Table of Contents
+*Complete Design: Requirements, Architecture, and Interview Guide*
+
+## SECTION 1: TABLE OF CONTENTS
 
 1. Requirements
-2. Scale Estimation
-3. High-Level Architecture
-4. Detailed Design
-5. Consistent Hashing
-6. Data Replication
-7. Consistency and Quorum
-8. Vector Clocks
-9. Merkle Trees
-10. Gossip Protocol
-11. Hinted Handoff
-12. Read Repair and Anti-Entropy
-13. Bloom Filters
-14. Storage Engines (LSM-Tree vs B-Tree)
-15. Compaction Strategies
-16. Database Schema / Data Model
-17. API Design
-18. Comparison: Dynamo vs Cassandra vs Redis vs etcd
-19. Monitoring and Observability
-20. Failure Scenarios and Mitigations
-21. Interview Q&A
+2. Key Terminology
+3. Scale Estimation
+4. High-Level Architecture
+5. Detailed Design
+6. Consistent Hashing
+7. Data Replication
+8. Consistency and Quorum
+9. Vector Clocks
+10. Merkle Trees
+11. Gossip Protocol
+12. Hinted Handoff
+13. Read Repair and Anti-Entropy
+14. Bloom Filters
+15. Storage Engines (LSM-Tree vs B-Tree)
+16. Compaction Strategies
+17. Database Schema / Data Model
+18. API Design
+19. Comparison: Dynamo vs Cassandra vs Redis vs etcd
+20. Monitoring and Observability
+21. Failure Scenarios and Mitigations
+22. Interview Q&A
 
----
+## SECTION 1: REQUIREMENTS
 
-## 1. Requirements
-
-### 1.1 Functional Requirements
+### 1.1 FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Core Operations:                                                       |
-|  - put(key, value)    : Store a key-value pair                          |
-|  - get(key)           : Retrieve value for a given key                  |
-|  - delete(key)        : Remove a key-value pair                         |
+|  * put(key, value)    : Store a key-value pair                          |
+|  * get(key)           : Retrieve value for a given key                  |
+|  * delete(key)        : Remove a key-value pair                         |
 |                                                                         |
 |  Extended Operations:                                                   |
-|  - Multi-get (batch reads)                                              |
-|  - Range queries (for ordered key stores)                               |
-|  - TTL (time-to-live) for automatic expiration                          |
-|  - Compare-and-swap (CAS) for conditional updates                       |
-|  - Secondary indexes (optional, Cassandra-style)                        |
+|  * Multi-get (batch reads)                                              |
+|  * Range queries (for ordered key stores)                               |
+|  * TTL (time-to-live) for automatic expiration                          |
+|  * Compare-and-swap (CAS) for conditional updates                       |
+|  * Secondary indexes (optional, Cassandra-style)                        |
 |                                                                         |
 |  Data Characteristics:                                                  |
-|  - Key: typically < 256 bytes                                           |
-|  - Value: up to 1 MB (configurable)                                     |
-|  - No cross-key transactions (single-key atomicity)                     |
+|  * Key: typically < 256 bytes                                           |
+|  * Value: up to 1 MB (configurable)                                     |
+|  * No cross-key transactions (single-key atomicity)                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 1.2 Non-Functional Requirements
+### 1.2 NON-FUNCTIONAL REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  Availability:                                                          |
-|  - 99.99% uptime (< 52.6 minutes downtime/year)                         |
-|  - Always writable (AP in CAP theorem)                                  |
-|  - No single point of failure                                           |
+|  * 99.99% uptime (< 52.6 minutes downtime/year)                         |
+|  * Always writable (AP in CAP theorem)                                  |
+|  * No single point of failure                                           |
 |                                                                         |
 |  Performance:                                                           |
-|  - Read latency: < 10ms (p99)                                           |
-|  - Write latency: < 10ms (p99)                                          |
-|  - Support millions of operations per second                            |
+|  * Read latency: < 10ms (p99)                                           |
+|  * Write latency: < 10ms (p99)                                          |
+|  * Support millions of operations per second                            |
 |                                                                         |
 |  Scalability:                                                           |
-|  - Horizontal scaling (add nodes to increase capacity)                  |
-|  - Petabytes of data across thousands of nodes                          |
-|  - Linear throughput scaling with node count                            |
+|  * Horizontal scaling (add nodes to increase capacity)                  |
+|  * Petabytes of data across thousands of nodes                          |
+|  * Linear throughput scaling with node count                            |
 |                                                                         |
 |  Partition Tolerance:                                                   |
-|  - Continue operating during network partitions                         |
-|  - Tolerate up to N/2 - 1 node failures                                 |
+|  * Continue operating during network partitions                         |
+|  * Tolerate up to N/2 - 1 node failures                                 |
 |                                                                         |
 |  Consistency:                                                           |
-|  - Tunable consistency (eventual to strong)                             |
-|  - Conflict resolution via vector clocks or LWW                         |
+|  * Tunable consistency (eventual to strong)                             |
+|  * Conflict resolution via vector clocks or LWW                         |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 2: KEY TERMINOLOGY
 
-## 2. Scale Estimation
+```
++-------------------------------------------------------------------------+
+||                                                                        |
+||  CONSISTENT HASHING                                                    |
+||  A ring-based partitioning scheme that maps keys to nodes.             |
+||  Adding/removing a node only moves K/N keys on average.                |
+||                                                                        |
+||  VIRTUAL NODE (VNODE)                                                  |
+||  Multiple hash positions per physical node on the ring.                |
+||  Ensures even data distribution and smooth rebalancing.                |
+||                                                                        |
+||  GOSSIP PROTOCOL                                                       |
+||  Peer-to-peer protocol where nodes periodically exchange               |
+||  state info. Used for failure detection and membership.                |
+||                                                                        |
+||  VECTOR CLOCK                                                          |
+||  A list of (node, counter) pairs tracking causal ordering.             |
+||  Detects conflicts from concurrent writes to the same key.             |
+||                                                                        |
+||  MERKLE TREE                                                           |
+||  A hash tree used to efficiently detect differences between            |
+||  replicas. Enables fast anti-entropy synchronization.                  |
+||                                                                        |
+||  READ/WRITE QUORUM (W, R, N)                                           |
+||  N = replicas, W = write acks, R = read acks required.                 |
+||  If W + R > N, strong consistency. Tunable per operation.              |
+||                                                                        |
+||  HINTED HANDOFF                                                        |
+||  When a target node is down, a neighbor temporarily stores             |
+||  the write and forwards it once the failed node recovers.              |
+||                                                                        |
+||  ANTI-ENTROPY                                                          |
+||  Background process comparing replicas using Merkle trees              |
+||  and repairing divergence to ensure eventual consistency.              |
+||                                                                        |
+||  SSTABLE (SORTED STRING TABLE)                                         |
+||  An immutable, sorted on-disk file of key-value pairs.                 |
+||  Created when a memtable flushes. Read via binary search.              |
+||                                                                        |
+||  MEMTABLE                                                              |
+||  In-memory sorted structure (e.g., red-black tree) that                |
+||  buffers writes before flushing to SSTables on disk.                   |
+||                                                                        |
+||  BLOOM FILTER                                                          |
+||  A space-efficient probabilistic structure for set membership.         |
+||  Avoids unnecessary disk reads for keys not in an SSTable.             |
+||                                                                        |
+||  TOMBSTONE                                                             |
+||  A special deletion marker for a key. Needed because not all           |
+||  replicas see the delete immediately; removed at compaction.           |
+||                                                                        |
++-------------------------------------------------------------------------+
+```
 
-### 2.1 Traffic Estimates
+## SECTION 3: SCALE ESTIMATION
+
+### 3.1 TRAFFIC ESTIMATES
 
 ```
 +--------------------------------------------------------------------------+
@@ -100,17 +155,17 @@
 |  Peak QPS (3x):                   3,000,000                              |
 |                                                                          |
 |  Data volume:                                                            |
-|  - Total keys:                    10 billion                             |
-|  - Average key size:              100 bytes                              |
-|  - Average value size:            10 KB                                  |
-|  - New writes per day:            200K/s x 86400 = ~17 billion writes    |
-|  - Daily data ingested:           17B x 10KB = ~170 TB/day               |
+|  * Total keys:                    10 billion                             |
+|  * Average key size:              100 bytes                              |
+|  * Average value size:            10 KB                                  |
+|  * New writes per day:            200K/s x 86400 = ~17 billion writes    |
+|  * Daily data ingested:           17B x 10KB = ~170 TB/day               |
 |    (with dedup/overwrites, net new ~ 5 TB/day)                           |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-### 2.2 Storage Estimates
+### 3.2 STORAGE ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -130,7 +185,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 2.3 Network Estimates
+### 3.3 NETWORK ESTIMATES
 
 ```
 +-------------------------------------------------------------------------+
@@ -146,11 +201,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 4: HIGH-LEVEL ARCHITECTURE
 
-## 3. High-Level Architecture
-
-### 3.1 System Overview
+### 4.1 SYSTEM OVERVIEW
 
 ```
 +--------------------------------------------------------------------------+
@@ -185,7 +238,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 3.2 Single Node Architecture
+### 4.2 SINGLE NODE ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -223,11 +276,9 @@
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 5: DETAILED DESIGN
 
-## 4. Detailed Design
-
-### 4.1 Write Path
+### 5.1 WRITE PATH
 
 ```
 +--------------------------------------------------------------------------+
@@ -274,7 +325,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-### 4.2 Read Path
+### 5.2 READ PATH
 
 ```
 +-------------------------------------------------------------------------+
@@ -317,11 +368,9 @@
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 6: CONSISTENT HASHING
 
-## 5. Consistent Hashing
-
-### 5.1 Basic Consistent Hashing
+### 6.1 BASIC CONSISTENT HASHING
 
 ```
 +-------------------------------------------------------------------------+
@@ -341,13 +390,13 @@
 |                        Node C                                           |
 |                                                                         |
 |  Key placement:                                                         |
-|  - Hash(key) -> position on ring                                        |
-|  - Walk clockwise to find first node -> that's the owner                |
-|  - key "user:123" hashes between Node A and Node B -> owned by B        |
+|  * Hash(key) -> position on ring                                        |
+|  * Walk clockwise to find first node -> that's the owner                |
+|  * key "user:123" hashes between Node A and Node B -> owned by B        |
 |                                                                         |
 |  Adding a node:                                                         |
-|  - Only keys between the new node and its predecessor move              |
-|  - Minimal data redistribution: ~K/N keys move (K=total keys, N=nodes)  |
+|  * Only keys between the new node and its predecessor move              |
+|  * Minimal data redistribution: ~K/N keys move (K=total keys, N=nodes)  |
 |                                                                         |
 |  Problem: Uneven distribution with few nodes                            |
 |  Solution: Virtual nodes                                                |
@@ -355,7 +404,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 5.2 Virtual Nodes (VNodes)
+### 6.2 VIRTUAL NODES (VNODES)
 
 ```
 +--------------------------------------------------------------------------+
@@ -394,9 +443,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 6. Data Replication
+## SECTION 7: DATA REPLICATION
 
 ```
 +--------------------------------------------------------------------------+
@@ -436,17 +483,15 @@
 |  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  Rack/DC-Aware Replication:                                              |
-|  - Place replicas in different racks/availability zones                  |
-|  - Survives rack failure or entire AZ outage                             |
+|  * Place replicas in different racks/availability zones                  |
+|  * Survives rack failure or entire AZ outage                             |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
+## SECTION 8: CONSISTENCY AND QUORUM
 
-## 7. Consistency and Quorum
-
-### 7.1 Quorum Configurations
+### 8.1 QUORUM CONFIGURATIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -487,7 +532,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 7.2 Consistency Levels (Cassandra-style)
+### 8.2 CONSISTENCY LEVELS (CASSANDRA-STYLE)
 
 ```
 +-------------------------------------------------------------------------+
@@ -495,36 +540,34 @@
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  ONE:                                                                   |
-|  - Write/Read from 1 replica                                            |
-|  - Fastest, least consistent                                            |
-|  - Use: Logging, metrics, non-critical data                             |
+|  * Write/Read from 1 replica                                            |
+|  * Fastest, least consistent                                            |
+|  * Use: Logging, metrics, non-critical data                             |
 |                                                                         |
 |  QUORUM:                                                                |
-|  - Write/Read from floor(N/2) + 1 replicas                              |
-|  - Strong consistency when used for both reads and writes               |
-|  - Use: User profiles, account data                                     |
+|  * Write/Read from floor(N/2) + 1 replicas                              |
+|  * Strong consistency when used for both reads and writes               |
+|  * Use: User profiles, account data                                     |
 |                                                                         |
 |  ALL:                                                                   |
-|  - Write/Read from all N replicas                                       |
-|  - Strongest consistency, lowest availability                           |
-|  - Use: Financial transactions (rare in KV stores)                      |
+|  * Write/Read from all N replicas                                       |
+|  * Strongest consistency, lowest availability                           |
+|  * Use: Financial transactions (rare in KV stores)                      |
 |                                                                         |
 |  LOCAL_QUORUM:                                                          |
-|  - Quorum within the local datacenter only                              |
-|  - Cross-DC replication is async                                        |
-|  - Use: Multi-DC deployments, low-latency with local consistency        |
+|  * Quorum within the local datacenter only                              |
+|  * Cross-DC replication is async                                        |
+|  * Use: Multi-DC deployments, low-latency with local consistency        |
 |                                                                         |
 |  EACH_QUORUM:                                                           |
-|  - Quorum in every datacenter                                           |
-|  - Strongest multi-DC consistency                                       |
-|  - Use: Critical data in multi-DC setups                                |
+|  * Quorum in every datacenter                                           |
+|  * Strongest multi-DC consistency                                       |
+|  * Use: Critical data in multi-DC setups                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 8. Vector Clocks
+## SECTION 9: VECTOR CLOCKS
 
 ```
 +--------------------------------------------------------------------------+
@@ -566,17 +609,15 @@
 |  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  Alternative: Last-Write-Wins (LWW)                                      |
-|  - Use wall-clock timestamps instead of vector clocks                    |
-|  - Simpler but can lose writes (clock skew issues)                       |
-|  - Cassandra uses LWW by default                                         |
-|  - Dynamo uses vector clocks                                             |
+|  * Use wall-clock timestamps instead of vector clocks                    |
+|  * Simpler but can lose writes (clock skew issues)                       |
+|  * Cassandra uses LWW by default                                         |
+|  * Dynamo uses vector clocks                                             |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 9. Merkle Trees
+## SECTION 10: MERKLE TREES
 
 ```
 +--------------------------------------------------------------------------+
@@ -625,16 +666,14 @@
 |  +--------------------------------------------------------------------+  |
 |                                                                          |
 |  Key Property:                                                           |
-|  - Changing ANY key changes hashes all the way up to root                |
-|  - Can detect even a single bit flip                                     |
-|  - Commonly used in: Cassandra, Dynamo, Git, Bitcoin                     |
+|  * Changing ANY key changes hashes all the way up to root                |
+|  * Can detect even a single bit flip                                     |
+|  * Commonly used in: Cassandra, Dynamo, Git, Bitcoin                     |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 10. Gossip Protocol
+## SECTION 11: GOSSIP PROTOCOL
 
 ```
 +-------------------------------------------------------------------------+
@@ -672,21 +711,19 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Properties:                                                            |
-|  - Eventually consistent: information spreads in O(log N) rounds        |
-|  - Scalable: each node communicates with constant number of peers       |
-|  - Fault tolerant: no single point of failure                           |
-|  - Convergent: all nodes eventually reach same view                     |
+|  * Eventually consistent: information spreads in O(log N) rounds        |
+|  * Scalable: each node communicates with constant number of peers       |
+|  * Fault tolerant: no single point of failure                           |
+|  * Convergent: all nodes eventually reach same view                     |
 |                                                                         |
 |  Variants:                                                              |
-|  - SWIM (Scalable Weakly-consistent Infection-style Membership)         |
-|  - Uses direct probes + indirect probes for faster failure detection    |
+|  * SWIM (Scalable Weakly-consistent Infection-style Membership)         |
+|  * Uses direct probes + indirect probes for faster failure detection    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 11. Hinted Handoff
+## SECTION 12: HINTED HANDOFF
 
 ```
 +-------------------------------------------------------------------------+
@@ -737,9 +774,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 12. Read Repair and Anti-Entropy
+## SECTION 13: READ REPAIR AND ANTI-ENTROPY
 
 ```
 +-------------------------------------------------------------------------+
@@ -788,9 +823,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 13. Bloom Filters
+## SECTION 14: BLOOM FILTERS
 
 ```
 +-------------------------------------------------------------------------+
@@ -826,24 +859,22 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Properties:                                                            |
-|  - False Positives: YES (says "maybe" when key doesn't exist)           |
-|  - False Negatives: NO  (never says "no" when key exists)               |
-|  - Space: ~10 bits per key = ~1% false positive rate                    |
-|  - Lookup: O(k) where k = number of hash functions                      |
+|  * False Positives: YES (says "maybe" when key doesn't exist)           |
+|  * False Negatives: NO  (never says "no" when key exists)               |
+|  * Space: ~10 bits per key = ~1% false positive rate                    |
+|  * Lookup: O(k) where k = number of hash functions                      |
 |                                                                         |
 |  Impact on Read Performance:                                            |
-|  - Without Bloom filter: read every SSTable on disk (slow)              |
-|  - With Bloom filter: skip SSTables that definitely don't have key      |
-|  - Typically eliminates 99% of unnecessary disk reads                   |
+|  * Without Bloom filter: read every SSTable on disk (slow)              |
+|  * With Bloom filter: skip SSTables that definitely don't have key      |
+|  * Typically eliminates 99% of unnecessary disk reads                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
+## SECTION 15: STORAGE ENGINES (LSM-TREE VS B-TREE)
 
-## 14. Storage Engines (LSM-Tree vs B-Tree)
-
-### 14.1 LSM-Tree (Log-Structured Merge Tree)
+### 15.1 LSM-TREE (LOG-STRUCTURED MERGE TREE)
 
 ```
 +-------------------------------------------------------------------------+
@@ -889,7 +920,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-### 14.2 B-Tree
+### 15.2 B-TREE
 
 ```
 +-------------------------------------------------------------------------+
@@ -913,19 +944,19 @@
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
 |  Write Path:                                                            |
-|  - Find correct leaf page                                               |
-|  - Update value in place (or split page if full)                        |
-|  - Write = random I/O (slower on HDD, OK on SSD)                        |
+|  * Find correct leaf page                                               |
+|  * Update value in place (or split page if full)                        |
+|  * Write = random I/O (slower on HDD, OK on SSD)                        |
 |                                                                         |
 |  Read Path:                                                             |
-|  - Traverse from root to leaf: O(log_B N)                               |
-|  - Very efficient for point lookups and range scans                     |
-|  - One read per tree level (typically 3-4 levels)                       |
+|  * Traverse from root to leaf: O(log_B N)                               |
+|  * Very efficient for point lookups and range scans                     |
+|  * One read per tree level (typically 3-4 levels)                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-### 14.3 Comparison
+### 15.3 COMPARISON
 
 ```
 +-------------------------------------------------------------------------+
@@ -954,9 +985,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 15. Compaction Strategies
+## SECTION 16: COMPACTION STRATEGIES
 
 ```
 +--------------------------------------------------------------------------+
@@ -1015,9 +1044,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 16. Database Schema / Data Model
+## SECTION 17: DATABASE SCHEMA / DATA MODEL
 
 ```
 +--------------------------------------------------------------------------+
@@ -1063,9 +1090,7 @@
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 17. API Design
+## SECTION 18: API DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -1109,18 +1134,16 @@
 |  }                                                                      |
 |                                                                         |
 |  Internal RPC (node-to-node):                                           |
-|  - ReplicaWrite(key, value, version, hint_target)                       |
-|  - ReplicaRead(key, consistency)                                        |
-|  - GossipDigest(node_states)                                            |
-|  - MerkleTreeExchange(token_range, tree_hash)                           |
-|  - HintedHandoff(key, value, target_node)                               |
+|  * ReplicaWrite(key, value, version, hint_target)                       |
+|  * ReplicaRead(key, consistency)                                        |
+|  * GossipDigest(node_states)                                            |
+|  * MerkleTreeExchange(token_range, tree_hash)                           |
+|  * HintedHandoff(key, value, target_node)                               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 18. Comparison: Dynamo vs Cassandra vs Redis vs etcd
+## SECTION 19: COMPARISON: DYNAMO VS CASSANDRA VS REDIS VS ETCD
 
 ```
 +-------------------------------------------------------------------------+
@@ -1152,36 +1175,34 @@
 +--------------------------------------------------------------------------+
 |                                                                          |
 |  Use Dynamo/DynamoDB when:                                               |
-|  - AWS ecosystem                                                         |
-|  - Managed service preferred                                             |
-|  - Simple KV with predictable workloads                                  |
-|  - Need single-digit millisecond latency at any scale                    |
+|  * AWS ecosystem                                                         |
+|  * Managed service preferred                                             |
+|  * Simple KV with predictable workloads                                  |
+|  * Need single-digit millisecond latency at any scale                    |
 |                                                                          |
 |  Use Cassandra when:                                                     |
-|  - Write-heavy workloads (IoT, time-series, logs)                        |
-|  - Need to operate across multiple datacenters                           |
-|  - Wide-column data model fits (query by partition key + clustering)     |
-|  - Petabyte scale with linear scalability                                |
+|  * Write-heavy workloads (IoT, time-series, logs)                        |
+|  * Need to operate across multiple datacenters                           |
+|  * Wide-column data model fits (query by partition key + clustering)     |
+|  * Petabyte scale with linear scalability                                |
 |                                                                          |
 |  Use Redis when:                                                         |
-|  - Sub-millisecond latency required                                      |
-|  - Data fits in memory                                                   |
-|  - Caching, session store, real-time leaderboards                        |
-|  - Rich data structures needed (lists, sets, sorted sets, streams)       |
+|  * Sub-millisecond latency required                                      |
+|  * Data fits in memory                                                   |
+|  * Caching, session store, real-time leaderboards                        |
+|  * Rich data structures needed (lists, sets, sorted sets, streams)       |
 |                                                                          |
 |  Use etcd when:                                                          |
-|  - Strong consistency required (CP system)                               |
-|  - Configuration storage, service discovery                              |
-|  - Leader election, distributed locking                                  |
-|  - Small dataset (< few GB)                                              |
-|  - Kubernetes ecosystem                                                  |
+|  * Strong consistency required (CP system)                               |
+|  * Configuration storage, service discovery                              |
+|  * Leader election, distributed locking                                  |
+|  * Small dataset (< few GB)                                              |
+|  * Kubernetes ecosystem                                                  |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
----
-
-## 19. Monitoring and Observability
+## SECTION 20: MONITORING AND OBSERVABILITY
 
 ```
 +-------------------------------------------------------------------------+
@@ -1223,9 +1244,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 20. Failure Scenarios and Mitigations
+## SECTION 21: FAILURE SCENARIOS AND MITIGATIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1288,9 +1307,7 @@
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## 21. Interview Q&A
+## SECTION 22: INTERVIEW Q&A
 
 ### Q1: Why use consistent hashing instead of simple hash partitioning?
 
@@ -1319,11 +1336,11 @@
 |  CAP: In a distributed system, during a network partition, you can       |
 |  guarantee either Consistency OR Availability, but not both.             |
 |                                                                          |
-|  - Dynamo/Cassandra: AP (Available + Partition-tolerant)                 |
+|  * Dynamo/Cassandra: AP (Available + Partition-tolerant)                 |
 |    Both sides of partition continue serving requests.                    |
 |    Conflicts resolved after partition heals.                             |
 |                                                                          |
-|  - etcd/Zookeeper: CP (Consistent + Partition-tolerant)                  |
+|  * etcd/Zookeeper: CP (Consistent + Partition-tolerant)                  |
 |    Minority partition refuses writes.                                    |
 |    Strong consistency guaranteed.                                        |
 |                                                                          |
@@ -1387,10 +1404,10 @@
 |  latest write. This guarantees the read will see the most recent data.  |
 |                                                                         |
 |  Example (N=3, W=2, R=2):                                               |
-|  - Write goes to nodes {A, B} (W=2)                                     |
-|  - Read goes to nodes {B, C} (R=2)                                      |
-|  - Overlap: Node B has the latest write                                 |
-|  - Coordinator picks the newest version from R responses                |
+|  * Write goes to nodes {A, B} (W=2)                                     |
+|  * Read goes to nodes {B, C} (R=2)                                      |
+|  * Overlap: Node B has the latest write                                 |
+|  * Coordinator picks the newest version from R responses                |
 |                                                                         |
 |  If W + R <= N, there could be no overlap -> stale read possible.       |
 |                                                                         |
@@ -1437,9 +1454,9 @@
 |  6. Gossip propagates the new membership to all nodes                   |
 |                                                                         |
 |  During streaming:                                                      |
-|  - Existing nodes continue serving requests (no downtime)               |
-|  - New node starts accepting writes immediately (hinted until ready)    |
-|  - Process can take minutes to hours depending on data volume           |
+|  * Existing nodes continue serving requests (no downtime)               |
+|  * New node starts accepting writes immediately (hinted until ready)    |
+|  * Process can take minutes to hours depending on data volume           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1454,20 +1471,20 @@
 |  Vector Clocks:                                                         |
 |  + No data loss (concurrent writes both preserved)                      |
 |  + Client can make intelligent merge decisions                          |
-|  - Complex: vector grows with number of writers                         |
-|  - Client must handle conflict resolution                               |
-|  - Used by: Dynamo, Riak                                                |
+|  * Complex: vector grows with number of writers                         |
+|  * Client must handle conflict resolution                               |
+|  * Used by: Dynamo, Riak                                                |
 |                                                                         |
 |  Last-Write-Wins (LWW):                                                 |
 |  + Simple implementation                                                |
 |  + No client-side conflict resolution needed                            |
-|  - Can silently lose writes (clock skew)                                |
-|  - Depends on synchronized clocks (NTP)                                 |
-|  - Used by: Cassandra (default)                                         |
+|  * Can silently lose writes (clock skew)                                |
+|  * Depends on synchronized clocks (NTP)                                 |
+|  * Used by: Cassandra (default)                                         |
 |                                                                         |
 |  Recommendation:                                                        |
-|  - LWW for most use cases (simpler, good enough)                        |
-|  - Vector clocks when every write matters (shopping carts, counters)    |
+|  * LWW for most use cases (simpler, good enough)                        |
+|  * Vector clocks when every write matters (shopping carts, counters)    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1483,13 +1500,13 @@
 |                                                                         |
 |  With Bloom filters: Each SSTable has an in-memory Bloom filter.        |
 |  Before reading from disk, check the Bloom filter:                      |
-|  - "Definitely not here" -> skip this SSTable (no disk I/O)             |
-|  - "Maybe here" -> read from disk to confirm                            |
+|  * "Definitely not here" -> skip this SSTable (no disk I/O)             |
+|  * "Maybe here" -> read from disk to confirm                            |
 |                                                                         |
 |  With 1% false positive rate (10 bits per key):                         |
-|  - 99% of unnecessary disk reads are eliminated                         |
-|  - Only ~1% of Bloom filter "yes" answers are false positives           |
-|  - Memory cost: ~1.25 bytes per key                                     |
+|  * 99% of unnecessary disk reads are eliminated                         |
+|  * Only ~1% of Bloom filter "yes" answers are false positives           |
+|  * Memory cost: ~1.25 bytes per key                                     |
 |                                                                         |
 |  For 10 billion keys: ~12.5 GB of Bloom filters in memory               |
 |  (very affordable for the massive I/O savings)                          |
@@ -1513,13 +1530,13 @@
 |     (this is the actual deletion)                                       |
 |                                                                         |
 |  4. For exact TTL: background sweeper process                           |
-|     - Scans for expired keys periodically                               |
-|     - Removes them proactively (not just on read/compaction)            |
+|     * Scans for expired keys periodically                               |
+|     * Removes them proactively (not just on read/compaction)            |
 |                                                                         |
 |  5. Optimization: TTL-based compaction                                  |
-|     - Group records with similar TTLs in same SSTable                   |
-|     - Drop entire SSTable when all records expired                      |
-|     - Much more efficient than per-record expiry checking               |
+|     * Group records with similar TTLs in same SSTable                   |
+|     * Drop entire SSTable when all records expired                      |
+|     * Much more efficient than per-record expiry checking               |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1531,32 +1548,30 @@
 |                                                                         |
 |  Answer:                                                                |
 |  1. NetworkTopologyStrategy (Cassandra approach):                       |
-|     - Specify replication factor per datacenter                         |
-|     - Example: DC-East: 3, DC-West: 3 (6 total replicas)                |
+|     * Specify replication factor per datacenter                         |
+|     * Example: DC-East: 3, DC-West: 3 (6 total replicas)                |
 |                                                                         |
 |  2. Write path:                                                         |
-|     - LOCAL_QUORUM: quorum in local DC only (fast)                      |
-|     - Async replication to remote DC                                    |
+|     * LOCAL_QUORUM: quorum in local DC only (fast)                      |
+|     * Async replication to remote DC                                    |
 |                                                                         |
 |  3. Read path:                                                          |
-|     - LOCAL_QUORUM: read from local DC only                             |
-|     - Low latency (no cross-DC round trip)                              |
+|     * LOCAL_QUORUM: read from local DC only                             |
+|     * Low latency (no cross-DC round trip)                              |
 |                                                                         |
 |  4. Conflict resolution:                                                |
-|     - Cross-DC writes may conflict                                      |
-|     - LWW or vector clocks resolve during read repair                   |
+|     * Cross-DC writes may conflict                                      |
+|     * LWW or vector clocks resolve during read repair                   |
 |                                                                         |
 |  5. Benefits:                                                           |
-|     - Survive entire DC failure                                         |
-|     - Low-latency reads from local DC                                   |
-|     - Geo-distributed for user proximity                                |
+|     * Survive entire DC failure                                         |
+|     * Low-latency reads from local DC                                   |
+|     * Geo-distributed for user proximity                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
----
-
-## Summary: Key Design Decisions
+## SECTION 23: SUMMARY: KEY DESIGN DECISIONS
 
 ```
 +--------------------------------------------------------------------------+
@@ -1580,7 +1595,5 @@
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
-
----
 
 *End of Distributed Key-Value Store System Design*

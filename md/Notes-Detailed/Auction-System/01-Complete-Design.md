@@ -117,7 +117,65 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  ENGLISH AUCTION (ASCENDING)                                            |
+||  The most common auction type: bids increase from a starting price      |
+||  and the highest bidder wins when the timer expires. Used by eBay       |
+||  for standard listings. Also called an open ascending-price auction.    |
+||                                                                         |
+||  RESERVE PRICE                                                          |
+||  A hidden minimum price set by the seller. If the highest bid does      |
+||  not meet or exceed the reserve, the item is not sold. Protects         |
+||  sellers from selling too cheaply on low-traffic auctions.              |
+||                                                                         |
+||  PROXY BIDDING (AUTO-BID)                                               |
+||  A mechanism where the user sets a maximum bid and the system           |
+||  automatically places the minimum winning bid on their behalf.          |
+||  The true maximum is never revealed to other bidders.                   |
+||                                                                         |
+||  BID INCREMENT                                                          |
+||  The minimum amount a new bid must exceed the current highest bid.      |
+||  Typically tiered by price range (e.g., $0.50 for items under $25,      |
+||  $5.00 for items $250-$499). Prevents trivial 1-cent outbids.           |
+||                                                                         |
+||  SNIPING (BID SNIPING)                                                  |
+||  Placing a bid in the final seconds of an auction so competitors        |
+||  have no time to respond. Countered by auto-extension logic that        |
+||  adds extra time when late bids arrive (anti-sniping).                  |
+||                                                                         |
+||  BUY NOW PRICE                                                          |
+||  An optional fixed price allowing instant purchase without bidding.     |
+||  Usually available only before the first bid or before bids reach       |
+||  a percentage of the buy-now price. Bypasses the auction entirely.      |
+||                                                                         |
+||  ESCROW                                                                 |
+||  A neutral holding account where the winner's payment is held until     |
+||  the item is delivered and confirmed. Protects both buyer (refund       |
+||  if item not received) and seller (guaranteed payment on delivery).     |
+||                                                                         |
+||  SHILL BIDDING                                                          |
+||  Fraudulent bidding by the seller or accomplices to artificially        |
+||  inflate the price. Detected via IP correlation, bidding pattern        |
+||  analysis, and graph analysis of bidder-seller relationships.           |
+||                                                                         |
+||  SEALED-BID AUCTION                                                     |
+||  An auction where each bidder submits a single hidden bid. The          |
+||  highest bid wins. Used for government contracts and real estate.       |
+||  Prevents bidding wars but requires trust in the auction operator.      |
+||                                                                         |
+||  VICKREY AUCTION                                                        |
+||  A sealed-bid auction where the highest bidder wins but pays the        |
+||  second-highest price. Encourages truthful bidding. Widely used         |
+||  in online ad auctions (e.g., Google Ads keyword bidding).              |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -171,7 +229,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -258,7 +316,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: AUCTION LIFECYCLE
+## SECTION 6: AUCTION LIFECYCLE
 
 ```
 +-------------------------------------------------------------------------+
@@ -344,7 +402,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 6: BID PROCESSING
+## SECTION 7: BID PROCESSING
 
 ### BID VALIDATION
 
@@ -464,7 +522,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: REAL-TIME UPDATES
+## SECTION 8: REAL-TIME UPDATES
 
 ```
 +--------------------------------------------------------------------------+
@@ -547,7 +605,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 8: AUCTION END AND SETTLEMENT
+## SECTION 9: AUCTION END AND SETTLEMENT
 
 ```
 +-------------------------------------------------------------------------+
@@ -619,7 +677,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 9: ANTI-FRAUD MEASURES
+## SECTION 10: ANTI-FRAUD MEASURES
 
 ```
 +-------------------------------------------------------------------------+
@@ -673,7 +731,7 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: SCALING STRATEGIES
+## SECTION 11: SCALING STRATEGIES
 
 ### AUCTION DATA SHARDING
 
@@ -805,7 +863,7 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW QUESTIONS AND ANSWERS
+## SECTION 12: INTERVIEW QUESTIONS AND ANSWERS
 
 ### Q1: HOW DO YOU PREVENT AUCTION SNIPING?
 

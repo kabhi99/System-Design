@@ -216,7 +216,57 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                         KEY TERMINOLOGY                                 |
++-------------------------------------------------------------------------+
+|                                                                         |
+|  OT (Operational Transformation)                                        |
+|    An algorithm that transforms concurrent operations against each      |
+|    other so they produce consistent results regardless of arrival       |
+|    order. Requires a central server to serialize operations.            |
+|                                                                         |
+|  CRDT (Conflict-Free Replicated Data Type)                              |
+|    A data structure designed so concurrent operations automatically     |
+|    merge without conflicts. Convergence is mathematically guaranteed    |
+|    without requiring a central coordinator.                             |
+|                                                                         |
+|  Conflict Resolution                                                    |
+|    The mechanism that reconciles concurrent edits to the same text.     |
+|    OT uses transformation functions; CRDTs use commutative data         |
+|    structures to ensure all replicas converge to the same state.        |
+|                                                                         |
+|  Causal Ordering                                                        |
+|    A partial ordering of events where operation A causally precedes     |
+|    B if B could have been influenced by A. Maintained via version       |
+|    vectors or Lamport timestamps to detect concurrency.                 |
+|                                                                         |
+|  Cursor Position                                                        |
+|    The current caret location or selection range of a user in the       |
+|    document. Broadcast in real-time so remote collaborators can see     |
+|    where each person is editing.                                        |
+|                                                                         |
+|  Tombstone                                                              |
+|    A marker indicating a deleted character in a CRDT. The element is    |
+|    flagged as deleted rather than physically removed so that            |
+|    concurrent operations referencing it still resolve correctly.        |
+|                                                                         |
+|  Operation Log                                                          |
+|    An append-only record of every edit operation applied to a           |
+|    document. Used for conflict resolution, version history,             |
+|    crash recovery, and replaying state from a snapshot.                 |
+|                                                                         |
+|  Version Vector                                                         |
+|    A vector of per-replica counters tracking how many operations        |
+|    each participant has produced. Used to detect concurrent edits       |
+|    and establish causal ordering between operations.                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -353,7 +403,7 @@ and persist every version of the document - all with sub-100ms latency.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 5: DEEP DIVE - CONFLICT RESOLUTION
+## SECTION 6: DEEP DIVE - CONFLICT RESOLUTION
 
 ### THE CORE PROBLEM
 
@@ -592,7 +642,7 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DEEP DIVE - REAL-TIME SYNC
+## SECTION 7: DEEP DIVE - REAL-TIME SYNC
 
 ### WEBSOCKET CONNECTION MANAGEMENT
 
@@ -743,7 +793,7 @@ and persist every version of the document - all with sub-100ms latency.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 7: DEEP DIVE - STORAGE
+## SECTION 8: DEEP DIVE - STORAGE
 
 ### DOCUMENT MODEL
 
@@ -901,7 +951,7 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: DEEP DIVE - PRESENCE & CURSORS
+## SECTION 9: DEEP DIVE - PRESENCE & CURSORS
 
 ```
 +-------------------------------------------------------------------------+
@@ -984,7 +1034,7 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DEEP DIVE - PERMISSIONS & SHARING
+## SECTION 10: DEEP DIVE - PERMISSIONS & SHARING
 
 ```
 +--------------------------------------------------------------------------+
@@ -1059,7 +1109,7 @@ and persist every version of the document - all with sub-100ms latency.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: SCALING
+## SECTION 11: SCALING
 
 ```
 +-------------------------------------------------------------------------+
@@ -1174,7 +1224,7 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW Q&A
+## SECTION 12: INTERVIEW Q&A
 
 ```
 +--------------------------------------------------------------------------+
@@ -1359,7 +1409,7 @@ and persist every version of the document - all with sub-100ms latency.
 |     rather than positions.                                               |
 |  2. If anchored text is edited, the comment "follows" the text.          |
 |  3. If anchored text is deleted, the comment becomes "orphaned"          |
-|     - show it with "referenced text was deleted" note.                   |
+|     * show it with "referenced text was deleted" note.                   |
 |  4. Comments themselves are a separate data structure (not part of       |
 |     the document OT/CRDT), synced via their own channel.                 |
 |  5. Comment CRUD operations: create, reply, resolve, delete - all        |

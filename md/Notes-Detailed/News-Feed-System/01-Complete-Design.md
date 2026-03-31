@@ -79,38 +79,38 @@ activity, and likes from people, pages, and groups that a user follows.
 |  FUNCTIONAL REQUIREMENTS:                                               |
 |                                                                         |
 |  1. POST CREATION                                                       |
-|     - Create text posts (up to 280 chars for Twitter-like)              |
-|     - Attach images (up to 4), videos (up to 1), links                  |
-|     - Tag other users, add hashtags                                     |
-|     - Edit posts within a time window                                   |
-|     - Delete own posts                                                  |
+|     * Create text posts (up to 280 chars for Twitter-like)              |
+|     * Attach images (up to 4), videos (up to 1), links                  |
+|     * Tag other users, add hashtags                                     |
+|     * Edit posts within a time window                                   |
+|     * Delete own posts                                                  |
 |                                                                         |
 |  2. NEWS FEED GENERATION                                                |
-|     - Display posts from followed users                                 |
-|     - Ranked by relevance OR chronological (user choice)                |
-|     - Paginated (infinite scroll)                                       |
-|     - Real-time updates for new posts                                   |
+|     * Display posts from followed users                                 |
+|     * Ranked by relevance OR chronological (user choice)                |
+|     * Paginated (infinite scroll)                                       |
+|     * Real-time updates for new posts                                   |
 |                                                                         |
 |  3. SOCIAL GRAPH                                                        |
-|     - Follow / Unfollow users                                           |
-|     - View followers / following lists                                  |
-|     - Suggested users to follow                                         |
+|     * Follow / Unfollow users                                           |
+|     * View followers / following lists                                  |
+|     * Suggested users to follow                                         |
 |                                                                         |
 |  4. INTERACTIONS                                                        |
-|     - Like / Unlike posts                                               |
-|     - Comment on posts (threaded comments)                              |
-|     - Share / Retweet posts                                             |
-|     - Bookmark posts for later                                          |
+|     * Like / Unlike posts                                               |
+|     * Comment on posts (threaded comments)                              |
+|     * Share / Retweet posts                                             |
+|     * Bookmark posts for later                                          |
 |                                                                         |
 |  5. NOTIFICATIONS                                                       |
-|     - Notify when someone likes/comments on your post                   |
-|     - Notify when followed by someone                                   |
-|     - Notify for mentions and tags                                      |
+|     * Notify when someone likes/comments on your post                   |
+|     * Notify when followed by someone                                   |
+|     * Notify for mentions and tags                                      |
 |                                                                         |
 |  6. SEARCH                                                              |
-|     - Search posts by keywords, hashtags                                |
-|     - Search users by name, handle                                      |
-|     - Trending topics                                                   |
+|     * Search posts by keywords, hashtags                                |
+|     * Search users by name, handle                                      |
+|     * Trending topics                                                   |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -123,33 +123,85 @@ activity, and likes from people, pages, and groups that a user follows.
 |  NON-FUNCTIONAL REQUIREMENTS:                                           |
 |                                                                         |
 |  1. LOW LATENCY                                                         |
-|     - Feed generation: <500ms (p99)                                     |
-|     - Post creation: <1s                                                |
-|     - Like/Comment: <200ms                                              |
+|     * Feed generation: <500ms (p99)                                     |
+|     * Post creation: <1s                                                |
+|     * Like/Comment: <200ms                                              |
 |                                                                         |
 |  2. HIGH AVAILABILITY                                                   |
-|     - 99.99% uptime (52 min downtime / year)                            |
-|     - Graceful degradation during failures                              |
-|     - Multi-region deployment                                           |
+|     * 99.99% uptime (52 min downtime / year)                            |
+|     * Graceful degradation during failures                              |
+|     * Multi-region deployment                                           |
 |                                                                         |
 |  3. EVENTUAL CONSISTENCY                                                |
-|     - Posts can take a few seconds to appear in followers' feeds        |
-|     - Like counts may be slightly stale (acceptable)                    |
-|     - Strong consistency for user's own timeline                        |
+|     * Posts can take a few seconds to appear in followers' feeds        |
+|     * Like counts may be slightly stale (acceptable)                    |
+|     * Strong consistency for user's own timeline                        |
 |                                                                         |
 |  4. SCALABILITY                                                         |
-|     - Horizontal scaling for all components                             |
-|     - Handle viral posts (sudden 1000x traffic spike)                   |
-|     - Auto-scaling based on load                                        |
+|     * Horizontal scaling for all components                             |
+|     * Handle viral posts (sudden 1000x traffic spike)                   |
+|     * Auto-scaling based on load                                        |
 |                                                                         |
 |  5. DURABILITY                                                          |
-|     - Zero data loss for posts and interactions                         |
-|     - Multi-region replication for disaster recovery                    |
+|     * Zero data loss for posts and interactions                         |
+|     * Multi-region replication for disaster recovery                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: SCALE ESTIMATION
+## SECTION 2: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+||                                                                        |
+||  NEWS FEED                                                             |
+||  The constantly updating stream of posts on a user's home page,        |
+||  aggregated from accounts they follow. Also called "timeline."         |
+||                                                                        |
+||  FAN-OUT ON WRITE (PUSH MODEL)                                         |
+||  When a user posts, content is immediately pushed to every             |
+||  follower's feed cache. Fast reads but costly for popular users.       |
+||                                                                        |
+||  FAN-OUT ON READ (PULL MODEL)                                          |
+||  Feed is assembled on-the-fly at request time by pulling recent        |
+||  posts from each followed user. Cheap writes but slower reads.         |
+||                                                                        |
+||  HYBRID FAN-OUT                                                        |
+||  Combines push and pull: regular users fan out on write, while         |
+||  celebrity posts (millions of followers) are fetched on demand.        |
+||                                                                        |
+||  SOCIAL GRAPH                                                          |
+||  The data structure mapping follow/friend relationships between        |
+||  users. Determines whose posts appear in a user's feed.                |
+||                                                                        |
+||  TIMELINE                                                              |
+||  A user's pre-computed feed stored in cache (e.g., Redis).             |
+||  Ordered by relevance or chronologically per user preference.          |
+||                                                                        |
+||  RANKING                                                               |
+||  ML-driven scoring of posts by predicted engagement. Considers         |
+||  affinity, recency, content type, and interaction history.             |
+||                                                                        |
+||  FEED GENERATION                                                       |
+||  Background process that merges posts from followed accounts,          |
+||  applies ranking, and writes the result to the user's feed cache.      |
+||                                                                        |
+||  HOT KEY / CELEBRITY PROBLEM                                           |
+||  A user with millions of followers posts, requiring fan-out on         |
+||  write to update millions of caches -- extreme write amplification.    |
+||                                                                        |
+||  CACHE INVALIDATION                                                    |
+||  Removing or updating stale feed entries when posts are deleted,       |
+||  edited, or when follow relationships change.                          |
+||                                                                        |
+||  DENORMALIZATION                                                       |
+||  Storing redundant post data in each follower's feed cache to          |
+||  avoid expensive joins at read time. Trades storage for speed.         |
+||                                                                        |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 3: SCALE ESTIMATION
 
 ### BACK-OF-ENVELOPE CALCULATIONS
 
@@ -157,10 +209,10 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  USER BASE:                                                             |
-|  - Total users: 1 Billion                                               |
-|  - Daily Active Users (DAU): 500 Million                                |
-|  - Average follows per user: 200                                        |
-|  - Celebrity users (>1M followers): ~50,000                             |
+|  * Total users: 1 Billion                                               |
+|  * Daily Active Users (DAU): 500 Million                                |
+|  * Average follows per user: 200                                        |
+|  * Celebrity users (>1M followers): ~50,000                             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -171,20 +223,20 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  WRITE TRAFFIC (Post Creation):                                         |
-|  - 1 Billion posts/day                                                  |
-|  - 1B / 86,400 = ~11,574 posts/second                                   |
-|  - Peak (2x): ~23,000 posts/second                                      |
+|  * 1 Billion posts/day                                                  |
+|  * 1B / 86,400 = ~11,574 posts/second                                   |
+|  * Peak (2x): ~23,000 posts/second                                      |
 |                                                                         |
 |  READ TRAFFIC (Feed Reads):                                             |
-|  - 10 Billion feed reads/day                                            |
-|  - 10B / 86,400 = ~115,740 reads/second                                 |
-|  - Peak (3x): ~350,000 reads/second                                     |
-|  - Read:Write ratio = 10:1                                              |
+|  * 10 Billion feed reads/day                                            |
+|  * 10B / 86,400 = ~115,740 reads/second                                 |
+|  * Peak (3x): ~350,000 reads/second                                     |
+|  * Read:Write ratio = 10:1                                              |
 |                                                                         |
 |  SOCIAL GRAPH OPERATIONS:                                               |
-|  - Follow/Unfollow: ~50M/day = ~580/second                              |
-|  - Like operations: ~5B/day = ~57,870/second                            |
-|  - Comments: ~500M/day = ~5,787/second                                  |
+|  * Follow/Unfollow: ~50M/day = ~580/second                              |
+|  * Like operations: ~5B/day = ~57,870/second                            |
+|  * Comments: ~500M/day = ~5,787/second                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -195,28 +247,28 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  POST STORAGE:                                                          |
-|  - Average post size (text + metadata): ~1 KB                           |
-|  - 1B posts/day x 1KB = 1 TB/day                                        |
-|  - Per year: 365 TB                                                     |
-|  - With replication (3x): ~1 PB/year                                    |
+|  * Average post size (text + metadata): ~1 KB                           |
+|  * 1B posts/day x 1KB = 1 TB/day                                        |
+|  * Per year: 365 TB                                                     |
+|  * With replication (3x): ~1 PB/year                                    |
 |                                                                         |
 |  MEDIA STORAGE:                                                         |
-|  - 20% of posts have images: 200M images/day                            |
-|  - Average image: 500 KB                                                |
-|  - Image storage/day: 200M x 500KB = 100 TB/day                         |
-|  - 5% of posts have videos: 50M videos/day                              |
-|  - Average video: 10 MB                                                 |
-|  - Video storage/day: 50M x 10MB = 500 TB/day                           |
+|  * 20% of posts have images: 200M images/day                            |
+|  * Average image: 500 KB                                                |
+|  * Image storage/day: 200M x 500KB = 100 TB/day                         |
+|  * 5% of posts have videos: 50M videos/day                              |
+|  * Average video: 10 MB                                                 |
+|  * Video storage/day: 50M x 10MB = 500 TB/day                           |
 |                                                                         |
 |  FEED CACHE:                                                            |
-|  - Cache feed for each active user                                      |
-|  - 500M users x 200 post IDs x 8 bytes = ~800 GB                        |
-|  - With metadata: ~5 TB cache needed                                    |
+|  * Cache feed for each active user                                      |
+|  * 500M users x 200 post IDs x 8 bytes = ~800 GB                        |
+|  * With metadata: ~5 TB cache needed                                    |
 |                                                                         |
 |  SOCIAL GRAPH:                                                          |
-|  - 1B users x 200 avg follows = 200B edges                              |
-|  - Each edge: ~16 bytes (2 user IDs)                                    |
-|  - Total: 200B x 16B = ~3.2 TB                                          |
+|  * 1B users x 200 avg follows = 200B edges                              |
+|  * Each edge: ~16 bytes (2 user IDs)                                    |
+|  * Total: 200B x 16B = ~3.2 TB                                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -227,21 +279,21 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  INCOMING (Writes):                                                     |
-|  - Posts: 11,574/s x 1KB = ~12 MB/s                                     |
-|  - Images: 2,300/s x 500KB = ~1.15 GB/s                                 |
-|  - Videos: 580/s x 10MB = ~5.8 GB/s                                     |
-|  - Total incoming: ~7 GB/s                                              |
+|  * Posts: 11,574/s x 1KB = ~12 MB/s                                     |
+|  * Images: 2,300/s x 500KB = ~1.15 GB/s                                 |
+|  * Videos: 580/s x 10MB = ~5.8 GB/s                                     |
+|  * Total incoming: ~7 GB/s                                              |
 |                                                                         |
 |  OUTGOING (Reads):                                                      |
-|  - Feed reads: 115,740/s                                                |
-|  - Each feed page: ~50 KB (post metadata + thumbnails)                  |
-|  - Total outgoing: ~5.8 GB/s (text + metadata)                          |
-|  - With media: ~50 GB/s (served via CDN)                                |
+|  * Feed reads: 115,740/s                                                |
+|  * Each feed page: ~50 KB (post metadata + thumbnails)                  |
+|  * Total outgoing: ~5.8 GB/s (text + metadata)                          |
+|  * With media: ~50 GB/s (served via CDN)                                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: HIGH-LEVEL ARCHITECTURE
 
 ### SYSTEM OVERVIEW
 
@@ -353,7 +405,7 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: FAN-OUT STRATEGIES (THE CORE PROBLEM)
+## SECTION 5: FAN-OUT STRATEGIES (THE CORE PROBLEM)
 
 ### FAN-OUT ON WRITE (PUSH MODEL)
 
@@ -386,10 +438,10 @@ activity, and likes from people, pages, and groups that a user follows.
 |  + Real-time: followers see post immediately                             |
 |                                                                          |
 |  CONS:                                                                   |
-|  - Celebrity problem: user with 100M followers = 100M writes             |
-|  - Wasted work for inactive users (may never read feed)                  |
-|  - High write amplification                                              |
-|  - Slow post publishing for high-follower users                          |
+|  * Celebrity problem: user with 100M followers = 100M writes             |
+|  * Wasted work for inactive users (may never read feed)                  |
+|  * High write amplification                                              |
+|  * Slow post publishing for high-follower users                          |
 |                                                                          |
 |  BEST FOR: Users with < 10,000 followers (majority of users)             |
 |                                                                          |
@@ -430,9 +482,9 @@ activity, and likes from people, pages, and groups that a user follows.
 |  + No wasted work for inactive users                                    |
 |                                                                         |
 |  CONS:                                                                  |
-|  - Slow feed reads (must fetch from many sources)                       |
-|  - High read latency, especially for users following many accounts      |
-|  - Difficult to rank without fetching everything first                  |
+|  * Slow feed reads (must fetch from many sources)                       |
+|  * High read latency, especially for users following many accounts      |
+|  * Difficult to rank without fetching everything first                  |
 |                                                                         |
 |  BEST FOR: Celebrity/hot users with millions of followers               |
 |                                                                         |
@@ -449,8 +501,8 @@ activity, and likes from people, pages, and groups that a user follows.
 |  Combine both approaches based on user type:                             |
 |                                                                          |
 |  CLASSIFICATION:                                                         |
-|  - Normal users (<10K followers): Fan-out on WRITE                       |
-|  - Celebrity users (>10K followers): Fan-out on READ                     |
+|  * Normal users (<10K followers): Fan-out on WRITE                       |
+|  * Celebrity users (>10K followers): Fan-out on READ                     |
 |                                                                          |
 |  HOW IT WORKS:                                                           |
 |                                                                          |
@@ -498,10 +550,10 @@ activity, and likes from people, pages, and groups that a user follows.
 |  THE CELEBRITY PROBLEM:                                                 |
 |                                                                         |
 |  SCENARIO:                                                              |
-|  - Celebrity with 100M followers posts                                  |
-|  - Fan-out on write: 100M cache insertions needed                       |
-|  - At 100K writes/sec: takes ~17 minutes to fan out                     |
-|  - Some followers see post 17 min after others!                         |
+|  * Celebrity with 100M followers posts                                  |
+|  * Fan-out on write: 100M cache insertions needed                       |
+|  * At 100K writes/sec: takes ~17 minutes to fan out                     |
+|  * Some followers see post 17 min after others!                         |
 |                                                                         |
 |  SOLUTIONS:                                                             |
 |                                                                         |
@@ -509,23 +561,23 @@ activity, and likes from people, pages, and groups that a user follows.
 |     Celebrities use fan-out on read                                     |
 |                                                                         |
 |  2. TIERED FAN-OUT                                                      |
-|     - Immediate: Push to active users online right now                  |
-|     - Deferred: Push to recently active users                           |
-|     - On-demand: Pull for inactive users when they come online          |
+|     * Immediate: Push to active users online right now                  |
+|     * Deferred: Push to recently active users                           |
+|     * On-demand: Pull for inactive users when they come online          |
 |                                                                         |
 |  3. CACHE-ASIDE FOR CELEBRITY POSTS                                     |
-|     - Maintain a separate "celebrity timeline" cache                    |
-|     - Each user's feed = their cache + celebrity timeline merge         |
-|     - Celebrity cache: ~50K celebrities x 100 posts x 8B = ~40 MB       |
+|     * Maintain a separate "celebrity timeline" cache                    |
+|     * Each user's feed = their cache + celebrity timeline merge         |
+|     * Celebrity cache: ~50K celebrities x 100 posts x 8B = ~40 MB       |
 |                                                                         |
 |  4. PRIORITY QUEUES                                                     |
-|     - Fan-out workers process high-engagement followers first           |
-|     - Users who frequently engage get updates sooner                    |
+|     * Fan-out workers process high-engagement followers first           |
+|     * Users who frequently engage get updates sooner                    |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: FEED RANKING ALGORITHM
+## SECTION 6: FEED RANKING ALGORITHM
 
 ### CHRONOLOGICAL VS RANKED FEED
 
@@ -533,17 +585,17 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 |                                                                         |
 |  CHRONOLOGICAL FEED:                                                    |
-|  - Simply sort by post creation time (newest first)                     |
-|  - Simple, transparent, predictable                                     |
-|  - Problem: users miss important posts from close friends               |
-|  - Problem: low-quality posts from high-frequency posters dominate      |
+|  * Simply sort by post creation time (newest first)                     |
+|  * Simple, transparent, predictable                                     |
+|  * Problem: users miss important posts from close friends               |
+|  * Problem: low-quality posts from high-frequency posters dominate      |
 |                                                                         |
 |  RANKED FEED:                                                           |
-|  - Use ML model to predict engagement probability                       |
-|  - Show posts most likely to be interesting to this specific user       |
-|  - Much higher engagement metrics                                       |
-|  - Problem: filter bubble, less serendipity                             |
-|  - Problem: perceived as less "fair"                                    |
+|  * Use ML model to predict engagement probability                       |
+|  * Show posts most likely to be interesting to this specific user       |
+|  * Much higher engagement metrics                                       |
+|  * Problem: filter bubble, less serendipity                             |
+|  * Problem: perceived as less "fair"                                    |
 |                                                                         |
 |  MODERN APPROACH: Let users choose (toggle), default to ranked.         |
 |                                                                         |
@@ -582,9 +634,9 @@ activity, and likes from people, pages, and groups that a user follows.
 |  +---------------------------------------------+                        |
 |                                                                         |
 |  TIME DECAY:                                                            |
-|  - Recent posts weighted higher                                         |
-|  - Exponential decay: score *= e^(-lambda * age_hours)                  |
-|  - lambda tuned so posts >48 hours old score near 0                     |
+|  * Recent posts weighted higher                                         |
+|  * Exponential decay: score *= e^(-lambda * age_hours)                  |
+|  * lambda tuned so posts >48 hours old score near 0                     |
 |                                                                         |
 |  FINAL SCORE = Affinity * PostQuality * TimeDecay * DiversityBoost      |
 |                                                                         |
@@ -640,7 +692,7 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: DETAILED COMPONENT DESIGN
+## SECTION 7: DETAILED COMPONENT DESIGN
 
 ### POST SERVICE
 
@@ -687,8 +739,8 @@ activity, and likes from people, pages, and groups that a user follows.
 |  FLOW:                                                                  |
 |  1. Receive PostCreated event                                           |
 |  2. Check author's follower count                                       |
-|     - If < 10K: proceed with fan-out on write                           |
-|     - If >= 10K: skip (handled on read)                                 |
+|     * If < 10K: proceed with fan-out on write                           |
+|     * If >= 10K: skip (handled on read)                                 |
 |  3. Fetch follower list from Social Graph Service                       |
 |  4. For each follower:                                                  |
 |     a. Check if follower has muted/blocked author                       |
@@ -697,16 +749,16 @@ activity, and likes from people, pages, and groups that a user follows.
 |  5. Update fan-out metrics (latency, count)                             |
 |                                                                         |
 |  SCALING:                                                               |
-|  - Multiple Kafka partitions (partition by author_id)                   |
-|  - Many consumer instances processing in parallel                       |
-|  - Batch Redis writes (pipeline) for efficiency                         |
-|  - Async processing: post is immediately visible to author              |
+|  * Multiple Kafka partitions (partition by author_id)                   |
+|  * Many consumer instances processing in parallel                       |
+|  * Batch Redis writes (pipeline) for efficiency                         |
+|  * Async processing: post is immediately visible to author              |
 |                                                                         |
 |  FAILURE HANDLING:                                                      |
-|  - Kafka ensures at-least-once delivery                                 |
-|  - Idempotent writes (sorted set with score = timestamp)                |
-|  - Dead letter queue for persistent failures                            |
-|  - Retry with exponential backoff                                       |
+|  * Kafka ensures at-least-once delivery                                 |
+|  * Idempotent writes (sorted set with score = timestamp)                |
+|  * Dead letter queue for persistent failures                            |
+|  * Retry with exponential backoff                                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -723,20 +775,20 @@ activity, and likes from people, pages, and groups that a user follows.
 |  STORAGE OPTIONS:                                                       |
 |                                                                         |
 |  Option 1: ADJACENCY LIST IN REDIS                                      |
-|  - followers:{user_id} -> Set of follower IDs                           |
-|  - following:{user_id} -> Set of following IDs                          |
-|  - O(1) follow/unfollow, O(N) list all followers                        |
-|  - Memory: 200B edges x 8B = 1.6 TB (needs cluster)                     |
+|  * followers:{user_id} -> Set of follower IDs                           |
+|  * following:{user_id} -> Set of following IDs                          |
+|  * O(1) follow/unfollow, O(N) list all followers                        |
+|  * Memory: 200B edges x 8B = 1.6 TB (needs cluster)                     |
 |                                                                         |
 |  Option 2: GRAPH DATABASE (Neo4j)                                       |
-|  - (User)-[:FOLLOWS]->(User)                                            |
-|  - Great for complex queries (mutual friends, 2nd degree)               |
-|  - Harder to scale horizontally                                         |
+|  * (User)-[:FOLLOWS]->(User)                                            |
+|  * Great for complex queries (mutual friends, 2nd degree)               |
+|  * Harder to scale horizontally                                         |
 |                                                                         |
 |  Option 3: RELATIONAL TABLE (Recommended for simplicity)                |
-|  - followers(follower_id, followee_id, created_at)                      |
-|  - Sharded by followee_id (efficient follower list retrieval)           |
-|  - Index on follower_id for "who am I following?" queries               |
+|  * followers(follower_id, followee_id, created_at)                      |
+|  * Sharded by followee_id (efficient follower list retrieval)           |
+|  * Index on follower_id for "who am I following?" queries               |
 |                                                                         |
 |  RECOMMENDED: MySQL/Postgres sharded table + Redis cache for hot data   |
 |                                                                         |
@@ -772,24 +824,24 @@ activity, and likes from people, pages, and groups that a user follows.
 |  }                                                                      |
 |                                                                         |
 |  OPERATIONS:                                                            |
-|  - Add post to feed:  ZADD feed:user123 <timestamp> <post_id>           |
-|  - Get feed page:     ZREVRANGEBYSCORE feed:user123 +inf -inf           |
+|  * Add post to feed:  ZADD feed:user123 <timestamp> <post_id>           |
+|  * Get feed page:     ZREVRANGEBYSCORE feed:user123 +inf -inf           |
 |                       LIMIT <offset> <count>                            |
-|  - Trim old entries:  ZREMRANGEBYRANK feed:user123 0 -801               |
+|  * Trim old entries:  ZREMRANGEBYRANK feed:user123 0 -801               |
 |                                                                         |
 |  CACHE SIZING:                                                          |
-|  - 500M active users x 800 entries x 8B = 3.2 TB                        |
-|  - Redis cluster: 50 nodes x 64 GB each = 3.2 TB                        |
-|  - With replication (3x): 150 Redis nodes                               |
+|  * 500M active users x 800 entries x 8B = 3.2 TB                        |
+|  * Redis cluster: 50 nodes x 64 GB each = 3.2 TB                        |
+|  * With replication (3x): 150 Redis nodes                               |
 |                                                                         |
 |  EVICTION POLICY:                                                       |
-|  - LRU eviction for users who haven't been active in 7+ days            |
-|  - On-demand rebuild when evicted user returns                          |
+|  * LRU eviction for users who haven't been active in 7+ days            |
+|  * On-demand rebuild when evicted user returns                          |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: DATABASE SCHEMA
+## SECTION 8: DATABASE SCHEMA
 
 ### CORE TABLES
 
@@ -883,7 +935,7 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: API DESIGN
+## SECTION 9: API DESIGN
 
 ### REST API ENDPOINTS
 
@@ -938,14 +990,14 @@ activity, and likes from people, pages, and groups that a user follows.
 |  -------------------------------------------------------------------    |
 |                                                                         |
 |  PAGINATION: Cursor-based (not offset-based)                            |
-|  - Offset-based breaks with real-time inserts                           |
-|  - Cursor = last seen post_id (Snowflake, time-ordered)                 |
-|  - WHERE post_id < cursor ORDER BY post_id DESC LIMIT 20                |
+|  * Offset-based breaks with real-time inserts                           |
+|  * Cursor = last seen post_id (Snowflake, time-ordered)                 |
+|  * WHERE post_id < cursor ORDER BY post_id DESC LIMIT 20                |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: CACHING STRATEGY
+## SECTION 10: CACHING STRATEGY
 
 ### MULTI-LAYER CACHING
 
@@ -955,9 +1007,9 @@ activity, and likes from people, pages, and groups that a user follows.
 |  CACHING LAYERS:                                                        |
 |                                                                         |
 |  Layer 1: CDN (Edge Cache)                                              |
-|  - Static assets: profile pictures, media thumbnails                    |
-|  - Trending posts (same for all users)                                  |
-|  - TTL: minutes to hours                                                |
+|  * Static assets: profile pictures, media thumbnails                    |
+|  * Trending posts (same for all users)                                  |
+|  * TTL: minutes to hours                                                |
 |                                                                         |
 |  Layer 2: APPLICATION CACHE (Redis Cluster)                             |
 |  +--------------------------------------------------+                   |
@@ -982,18 +1034,18 @@ activity, and likes from people, pages, and groups that a user follows.
 |  +--------------------------------------------------+                   |
 |                                                                         |
 |  Layer 3: DATABASE QUERY CACHE                                          |
-|  - MySQL query cache / PgBouncer connection pooling                     |
-|  - Prepared statement cache                                             |
+|  * MySQL query cache / PgBouncer connection pooling                     |
+|  * Prepared statement cache                                             |
 |                                                                         |
 |  CACHE INVALIDATION:                                                    |
-|  - Post deleted -> Remove from all feed caches (async via Kafka)        |
-|  - User unfollows -> Remove author's posts from feed cache              |
-|  - Post edited -> Update post cache, feed remains same (just IDs)       |
+|  * Post deleted -> Remove from all feed caches (async via Kafka)        |
+|  * User unfollows -> Remove author's posts from feed cache              |
+|  * Post edited -> Update post cache, feed remains same (just IDs)       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: MEDIA HANDLING
+## SECTION 11: MEDIA HANDLING
 
 ### IMAGE AND VIDEO PIPELINE
 
@@ -1004,7 +1056,7 @@ activity, and likes from people, pages, and groups that a user follows.
 |                                                                         |
 |  1. Client requests pre-signed upload URL from API                      |
 |  2. Client uploads directly to Object Store (S3)                        |
-|     - Bypasses application server (saves bandwidth)                     |
+|     * Bypasses application server (saves bandwidth)                     |
 |  3. Object Store triggers processing pipeline                           |
 |                                                                         |
 |  IMAGE PROCESSING:                                                      |
@@ -1045,7 +1097,7 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: NOTIFICATION INTEGRATION
+## SECTION 12: NOTIFICATION INTEGRATION
 
 ### NOTIFICATION FLOW
 
@@ -1065,23 +1117,23 @@ activity, and likes from people, pages, and groups that a user follows.
 |  +------------------------------------+----------------+                 |
 |                                                                          |
 |  ARCHITECTURE:                                                           |
-|  - Events published to Kafka topic: "notifications"                      |
-|  - Notification Service consumes events                                  |
-|  - For each event:                                                       |
+|  * Events published to Kafka topic: "notifications"                      |
+|  * Notification Service consumes events                                  |
+|  * For each event:                                                       |
 |    1. Check user's notification preferences                              |
 |    2. If user is ONLINE: send via WebSocket (real-time)                  |
 |    3. If user is OFFLINE: send push notification (APNs/FCM)              |
 |    4. Store notification in DB for notification inbox                    |
 |                                                                          |
 |  BATCHING:                                                               |
-|  - "John and 49 others liked your post" instead of 50 notifications      |
-|  - Aggregate within a time window (e.g., 5 minutes)                      |
-|  - Celebrity posts: only notify for the first N likes                    |
+|  * "John and 49 others liked your post" instead of 50 notifications      |
+|  * Aggregate within a time window (e.g., 5 minutes)                      |
+|  * Celebrity posts: only notify for the first N likes                    |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: SCALING AND RELIABILITY
+## SECTION 13: SCALING AND RELIABILITY
 
 ### SHARDING STRATEGY
 
@@ -1091,17 +1143,17 @@ activity, and likes from people, pages, and groups that a user follows.
 |  DATABASE SHARDING:                                                     |
 |                                                                         |
 |  POSTS TABLE: Shard by author_id                                        |
-|  - All posts by same user on same shard                                 |
-|  - User timeline query hits single shard                                |
-|  - Fan-out reads are cross-shard (acceptable, cached)                   |
+|  * All posts by same user on same shard                                 |
+|  * User timeline query hits single shard                                |
+|  * Fan-out reads are cross-shard (acceptable, cached)                   |
 |                                                                         |
 |  FOLLOWERS TABLE: Shard by followee_id                                  |
-|  - "Get all followers of user X" hits single shard                      |
-|  - Critical for fan-out service performance                             |
+|  * "Get all followers of user X" hits single shard                      |
+|  * Critical for fan-out service performance                             |
 |                                                                         |
 |  LIKES/COMMENTS: Shard by post_id                                       |
-|  - All interactions for a post on same shard                            |
-|  - "Get all likes for post Y" hits single shard                         |
+|  * All interactions for a post on same shard                            |
+|  * "Get all likes for post Y" hits single shard                         |
 |                                                                         |
 |  SHARD COUNT: Start with 256 shards (allows growth)                     |
 |  SHARD MAP: Consistent hashing for minimal resharding                   |
@@ -1117,27 +1169,27 @@ activity, and likes from people, pages, and groups that a user follows.
 |  RELIABILITY AND FAULT TOLERANCE:                                       |
 |                                                                         |
 |  1. CIRCUIT BREAKER                                                     |
-|     - If Feed Service is slow, return stale cached feed                 |
-|     - If Ranking Service is down, fall back to chronological            |
-|     - If Notification Service is down, queue and retry                  |
+|     * If Feed Service is slow, return stale cached feed                 |
+|     * If Ranking Service is down, fall back to chronological            |
+|     * If Notification Service is down, queue and retry                  |
 |                                                                         |
 |  2. GRACEFUL DEGRADATION                                                |
-|     - Level 1: Full experience (ranked feed + real-time)                |
-|     - Level 2: Chronological feed (ranking down)                        |
-|     - Level 3: Cached feed only (feed generation down)                  |
-|     - Level 4: Show user's own timeline (feed service down)             |
+|     * Level 1: Full experience (ranked feed + real-time)                |
+|     * Level 2: Chronological feed (ranking down)                        |
+|     * Level 3: Cached feed only (feed generation down)                  |
+|     * Level 4: Show user's own timeline (feed service down)             |
 |                                                                         |
 |  3. RATE LIMITING                                                       |
-|     - Post creation: 50 posts/hour per user                             |
-|     - Feed reads: 100 requests/minute per user                          |
-|     - Follow actions: 200/day per user                                  |
-|     - API: token bucket algorithm                                       |
+|     * Post creation: 50 posts/hour per user                             |
+|     * Feed reads: 100 requests/minute per user                          |
+|     * Follow actions: 200/day per user                                  |
+|     * API: token bucket algorithm                                       |
 |                                                                         |
 |  4. MONITORING                                                          |
-|     - Feed generation latency (p50, p95, p99)                           |
-|     - Fan-out lag (time from post to last follower cache update)        |
-|     - Cache hit rate (target > 95%)                                     |
-|     - Error rates per service                                           |
+|     * Feed generation latency (p50, p95, p99)                           |
+|     * Fan-out lag (time from post to last follower cache update)        |
+|     * Cache hit rate (target > 95%)                                     |
+|     * Error rates per service                                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1163,15 +1215,15 @@ activity, and likes from people, pages, and groups that a user follows.
 |  | +------+ +-----+|          | +------+ +-----+|                       |
 |  +------------------+          +------------------+                     |
 |                                                                         |
-|  - Users routed to nearest region via GeoDNS                            |
-|  - Writes go to primary region, async replicated                        |
-|  - Reads served from local region (eventual consistency OK)             |
-|  - Cross-region follow relationships handled via async sync             |
+|  * Users routed to nearest region via GeoDNS                            |
+|  * Writes go to primary region, async replicated                        |
+|  * Reads served from local region (eventual consistency OK)             |
+|  * Cross-region follow relationships handled via async sync             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 14: INTERVIEW Q&A
 
 ### QUESTION 1: WHY HYBRID FAN-OUT?
 
@@ -1207,9 +1259,9 @@ activity, and likes from people, pages, and groups that a user follows.
 |  Q: What consistency guarantees does the feed provide?                  |
 |                                                                         |
 |  A: We use eventual consistency for feeds. When a user posts:           |
-|  - The post appears on the author's own timeline immediately            |
+|  * The post appears on the author's own timeline immediately            |
 |    (strong consistency for own content)                                 |
-|  - The post appears in followers' feeds within seconds                  |
+|  * The post appears in followers' feeds within seconds                  |
 |    (eventual consistency via async fan-out)                             |
 |                                                                         |
 |  This is acceptable because:                                            |
@@ -1235,16 +1287,16 @@ activity, and likes from people, pages, and groups that a user follows.
 |  real-time feeds because new posts shift the offset.                    |
 |                                                                         |
 |  PROBLEM WITH OFFSET:                                                   |
-|  - User loads page 1 (posts 1-20)                                       |
-|  - 5 new posts arrive                                                   |
-|  - User loads page 2 (OFFSET 20) -- sees 5 duplicates!                  |
+|  * User loads page 1 (posts 1-20)                                       |
+|  * 5 new posts arrive                                                   |
+|  * User loads page 2 (OFFSET 20) -- sees 5 duplicates!                  |
 |                                                                         |
 |  CURSOR-BASED SOLUTION:                                                 |
-|  - Page 1: GET /feed?limit=20                                           |
-|  - Response includes cursor = last_post_id (e.g., post_789)             |
-|  - Page 2: GET /feed?cursor=post_789&limit=20                           |
-|  - Query: WHERE post_id < 789 ORDER BY post_id DESC LIMIT 20            |
-|  - New posts don't affect pagination since we're using the post_id      |
+|  * Page 1: GET /feed?limit=20                                           |
+|  * Response includes cursor = last_post_id (e.g., post_789)             |
+|  * Page 2: GET /feed?cursor=post_789&limit=20                           |
+|  * Query: WHERE post_id < 789 ORDER BY post_id DESC LIMIT 20            |
+|  * New posts don't affect pagination since we're using the post_id      |
 |    as a stable anchor point.                                            |
 |                                                                         |
 +-------------------------------------------------------------------------+
@@ -1285,21 +1337,21 @@ activity, and likes from people, pages, and groups that a user follows.
 |                                                                         |
 |  SOLUTIONS:                                                             |
 |  1. REQUEST COALESCING                                                  |
-|     - If multiple users request the same celebrity's timeline           |
+|     * If multiple users request the same celebrity's timeline           |
 |       simultaneously, only one DB query is made                         |
-|     - Others wait for the result and share it                           |
+|     * Others wait for the result and share it                           |
 |                                                                         |
 |  2. PRE-WARMING CACHE                                                   |
-|     - When celebrity posts, immediately cache their post                |
-|     - Don't wait for first read to trigger cache population             |
+|     * When celebrity posts, immediately cache their post                |
+|     * Don't wait for first read to trigger cache population             |
 |                                                                         |
 |  3. LEASE-BASED LOCKING                                                 |
-|     - Only one process can rebuild a cache entry at a time              |
-|     - Others serve stale data or wait briefly                           |
+|     * Only one process can rebuild a cache entry at a time              |
+|     * Others serve stale data or wait briefly                           |
 |                                                                         |
 |  4. STALE-WHILE-REVALIDATE                                              |
-|     - Serve slightly stale feed while refreshing in background          |
-|     - Users get fast response, data refreshes async                     |
+|     * Serve slightly stale feed while refreshing in background          |
+|     * Users get fast response, data refreshes async                     |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1314,22 +1366,22 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Use a streaming count-min sketch approach:                          |
 |                                                                         |
 |  1. REAL-TIME COUNTING                                                  |
-|     - Every post with a hashtag publishes to Kafka                      |
-|     - Stream processor (Flink/Spark) maintains sliding window counts    |
-|     - Count hashtag occurrences in last 1h, 4h, 24h windows             |
+|     * Every post with a hashtag publishes to Kafka                      |
+|     * Stream processor (Flink/Spark) maintains sliding window counts    |
+|     * Count hashtag occurrences in last 1h, 4h, 24h windows             |
 |                                                                         |
 |  2. TRENDING SCORE                                                      |
-|     - Not just absolute count (would always be generic topics)          |
-|     - Score = current_velocity / baseline_velocity                      |
-|     - A hashtag trending is one with unusually high current activity    |
+|     * Not just absolute count (would always be generic topics)          |
+|     * Score = current_velocity / baseline_velocity                      |
+|     * A hashtag trending is one with unusually high current activity    |
 |                                                                         |
 |  3. STORAGE                                                             |
-|     - Top 100 trending topics stored in Redis (updated every minute)    |
-|     - Personalized trending: filter by user's interests/location        |
+|     * Top 100 trending topics stored in Redis (updated every minute)    |
+|     * Personalized trending: filter by user's interests/location        |
 |                                                                         |
 |  4. DISPLAY                                                             |
-|     - Trending topics cached at CDN level (same for region)             |
-|     - Updated every 5 minutes (not real-time, reduces load)             |
+|     * Trending topics cached at CDN level (same for region)             |
+|     * Updated every 5 minutes (not real-time, reduces load)             |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1344,27 +1396,27 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Multi-layered approach:                                             |
 |                                                                         |
 |  1. RATE LIMITING                                                       |
-|     - Max posts per hour/day per user                                   |
-|     - Max follows per day                                               |
-|     - Max likes per minute                                              |
+|     * Max posts per hour/day per user                                   |
+|     * Max follows per day                                               |
+|     * Max likes per minute                                              |
 |                                                                         |
 |  2. CONTENT FILTERING (at post creation)                                |
-|     - ML model classifies content as spam/not-spam                      |
-|     - Blocked word lists                                                |
-|     - URL scanning against known malicious domains                      |
+|     * ML model classifies content as spam/not-spam                      |
+|     * Blocked word lists                                                |
+|     * URL scanning against known malicious domains                      |
 |                                                                         |
 |  3. BEHAVIORAL SIGNALS                                                  |
-|     - New accounts with high posting frequency flagged                  |
-|     - Accounts with low follower:following ratio flagged                |
-|     - Duplicate content detection (near-duplicate hashing)              |
+|     * New accounts with high posting frequency flagged                  |
+|     * Accounts with low follower:following ratio flagged                |
+|     * Duplicate content detection (near-duplicate hashing)              |
 |                                                                         |
 |  4. USER REPORTS                                                        |
-|     - Users can report spam posts                                       |
-|     - High-report posts auto-hidden pending review                      |
+|     * Users can report spam posts                                       |
+|     * High-report posts auto-hidden pending review                      |
 |                                                                         |
 |  5. SHADOW BANNING                                                      |
-|     - Spam accounts' posts only visible to themselves                   |
-|     - Not pushed to any follower feeds                                  |
+|     * Spam accounts' posts only visible to themselves                   |
+|     * Not pushed to any follower feeds                                  |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1379,32 +1431,32 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Each database is chosen for its specific access pattern:            |
 |                                                                         |
 |  MySQL/PostgreSQL (Posts, Users):                                       |
-|  - Strong consistency for user data                                     |
-|  - Rich query support (joins for hydrating feed)                        |
-|  - Mature sharding solutions (Vitess, Citus)                            |
-|  - Well-understood operationally                                        |
+|  * Strong consistency for user data                                     |
+|  * Rich query support (joins for hydrating feed)                        |
+|  * Mature sharding solutions (Vitess, Citus)                            |
+|  * Well-understood operationally                                        |
 |                                                                         |
 |  Redis (Feed Cache, Counters):                                          |
-|  - Sub-millisecond reads for feed retrieval                             |
-|  - Sorted sets perfect for ordered feed storage                         |
-|  - Atomic operations for counters (INCR/DECR)                           |
-|  - Pub/Sub for real-time feed updates                                   |
+|  * Sub-millisecond reads for feed retrieval                             |
+|  * Sorted sets perfect for ordered feed storage                         |
+|  * Atomic operations for counters (INCR/DECR)                           |
+|  * Pub/Sub for real-time feed updates                                   |
 |                                                                         |
 |  Elasticsearch (Search):                                                |
-|  - Full-text search on post content                                     |
-|  - Hashtag and user search                                              |
-|  - Trending topic aggregation                                           |
+|  * Full-text search on post content                                     |
+|  * Hashtag and user search                                              |
+|  * Trending topic aggregation                                           |
 |                                                                         |
 |  Kafka (Event Streaming):                                               |
-|  - Decouples post creation from fan-out                                 |
-|  - Handles burst traffic (buffer during spikes)                         |
-|  - Exactly-once semantics for fan-out                                   |
-|  - Multiple consumers (fan-out, notifications, analytics)               |
+|  * Decouples post creation from fan-out                                 |
+|  * Handles burst traffic (buffer during spikes)                         |
+|  * Exactly-once semantics for fan-out                                   |
+|  * Multiple consumers (fan-out, notifications, analytics)               |
 |                                                                         |
 |  S3 / Object Store (Media):                                             |
-|  - Cheap, durable storage for images/videos                             |
-|  - Direct upload from client (pre-signed URLs)                          |
-|  - CDN integration for global distribution                              |
+|  * Cheap, durable storage for images/videos                             |
+|  * Direct upload from client (pre-signed URLs)                          |
+|  * CDN integration for global distribution                              |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1419,19 +1471,19 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Cold start problem - solved with multiple strategies:               |
 |                                                                         |
 |  1. ONBOARDING FLOW                                                     |
-|     - Ask user to select interests (sports, tech, music, etc.)          |
-|     - Suggest popular accounts to follow in those categories            |
-|     - Pre-populate feed with trending content in interests              |
+|     * Ask user to select interests (sports, tech, music, etc.)          |
+|     * Suggest popular accounts to follow in those categories            |
+|     * Pre-populate feed with trending content in interests              |
 |                                                                         |
 |  2. EXPLORE/DISCOVER FEED                                               |
-|     - Show globally popular and trending content                        |
-|     - Personalize based on what user engages with                       |
-|     - Gradually transition from explore to personalized feed            |
+|     * Show globally popular and trending content                        |
+|     * Personalize based on what user engages with                       |
+|     * Gradually transition from explore to personalized feed            |
 |                                                                         |
 |  3. SOCIAL GRAPH BOOTSTRAP                                              |
-|     - Import contacts (with permission) to find existing users          |
-|     - Suggest friends-of-friends                                        |
-|     - "People you may know" based on demographics                       |
+|     * Import contacts (with permission) to find existing users          |
+|     * Suggest friends-of-friends                                        |
+|     * "People you may know" based on demographics                       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
@@ -1446,28 +1498,28 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Organized by category:                                               |
 |                                                                          |
 |  PERFORMANCE:                                                            |
-|  - Feed generation latency: p50, p95, p99 (target: <500ms p99)           |
-|  - Post creation latency (target: <1s)                                   |
-|  - Fan-out completion time (target: <5s for 99% of posts)                |
-|  - Cache hit rate (target: >95%)                                         |
+|  * Feed generation latency: p50, p95, p99 (target: <500ms p99)           |
+|  * Post creation latency (target: <1s)                                   |
+|  * Fan-out completion time (target: <5s for 99% of posts)                |
+|  * Cache hit rate (target: >95%)                                         |
 |                                                                          |
 |  AVAILABILITY:                                                           |
-|  - Service uptime (target: 99.99%)                                       |
-|  - Error rate per endpoint (target: <0.1%)                               |
-|  - Database replication lag                                              |
-|  - Redis cluster health                                                  |
+|  * Service uptime (target: 99.99%)                                       |
+|  * Error rate per endpoint (target: <0.1%)                               |
+|  * Database replication lag                                              |
+|  * Redis cluster health                                                  |
 |                                                                          |
 |  BUSINESS:                                                               |
-|  - DAU / MAU ratio (engagement health)                                   |
-|  - Posts per user per day                                                |
-|  - Feed scroll depth (how many posts users view)                         |
-|  - Time to first interaction after feed load                             |
+|  * DAU / MAU ratio (engagement health)                                   |
+|  * Posts per user per day                                                |
+|  * Feed scroll depth (how many posts users view)                         |
+|  * Time to first interaction after feed load                             |
 |                                                                          |
 |  CAPACITY:                                                               |
-|  - Queue depth (Kafka consumer lag)                                      |
-|  - Storage growth rate                                                   |
-|  - CPU/memory utilization across services                                |
-|  - Network bandwidth utilization                                         |
+|  * Queue depth (Kafka consumer lag)                                      |
+|  * Storage growth rate                                                   |
+|  * CPU/memory utilization across services                                |
+|  * Network bandwidth utilization                                         |
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -1490,8 +1542,8 @@ activity, and likes from people, pages, and groups that a user follows.
 |     feed state immediately (client-side optimistic update).             |
 |                                                                         |
 |  3. If the user refreshes, the API checks both:                         |
-|     - The feed cache (may not have the post yet)                        |
-|     - The user's own timeline (will have the post)                      |
+|     * The feed cache (may not have the post yet)                        |
+|     * The user's own timeline (will have the post)                      |
 |     And merges them, ensuring own posts are always visible.             |
 |                                                                         |
 |  This way, the author always sees their post while followers            |
@@ -1510,33 +1562,33 @@ activity, and likes from people, pages, and groups that a user follows.
 |  A: Evolution roadmap:                                                  |
 |                                                                         |
 |  PHASE 1 (0-10M users): Monolith                                        |
-|  - Single service, single DB                                            |
-|  - Simple chronological feed                                            |
-|  - In-memory cache                                                      |
+|  * Single service, single DB                                            |
+|  * Simple chronological feed                                            |
+|  * In-memory cache                                                      |
 |                                                                         |
 |  PHASE 2 (10M-100M users): Service Split                                |
-|  - Separate Post, Feed, Social Graph services                           |
-|  - Add Redis for feed caching                                           |
-|  - Add Kafka for async processing                                       |
-|  - Simple fan-out on write for all users                                |
+|  * Separate Post, Feed, Social Graph services                           |
+|  * Add Redis for feed caching                                           |
+|  * Add Kafka for async processing                                       |
+|  * Simple fan-out on write for all users                                |
 |                                                                         |
 |  PHASE 3 (100M-500M users): Scale Out                                   |
-|  - Database sharding                                                    |
-|  - Hybrid fan-out (celebrity optimization)                              |
-|  - ML-based feed ranking                                                |
-|  - Multi-region deployment                                              |
+|  * Database sharding                                                    |
+|  * Hybrid fan-out (celebrity optimization)                              |
+|  * ML-based feed ranking                                                |
+|  * Multi-region deployment                                              |
 |                                                                         |
 |  PHASE 4 (500M+ users): Optimization                                    |
-|  - Advanced ranking models (deep learning)                              |
-|  - Real-time feature store for ranking                                  |
-|  - Edge computing for feed delivery                                     |
-|  - Video/live streaming integration                                     |
-|  - Content recommendation engine                                        |
+|  * Advanced ranking models (deep learning)                              |
+|  * Real-time feature store for ranking                                  |
+|  * Edge computing for feed delivery                                     |
+|  * Video/live streaming integration                                     |
+|  * Content recommendation engine                                        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: QUICK REFERENCE SUMMARY
+## SECTION 15: QUICK REFERENCE SUMMARY
 
 ```
 +-------------------------------------------------------------------------+
@@ -1561,9 +1613,9 @@ activity, and likes from people, pages, and groups that a user follows.
 |  Fan-out completion: <5s for 99% of posts                               |
 |                                                                         |
 |  MAIN TRADEOFFS:                                                        |
-|  - Consistency vs latency (chose eventual consistency)                  |
-|  - Storage vs compute (chose pre-computation with caching)              |
-|  - Simplicity vs performance (chose hybrid complexity for scale)        |
+|  * Consistency vs latency (chose eventual consistency)                  |
+|  * Storage vs compute (chose pre-computation with caching)              |
+|  * Simplicity vs performance (chose hybrid complexity for scale)        |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

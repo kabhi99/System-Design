@@ -109,7 +109,65 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: SCALE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  NEWS FEED                                                              |
+|  A personalized, ranked stream of content from users and pages          |
+|  a person follows. The most complex component of a social media         |
+|  platform, requiring real-time updates and intelligent ranking.         |
+|                                                                         |
+|  FAN-OUT ON WRITE                                                       |
+|  Pre-computing feeds at post time by pushing the new post into          |
+|  every follower's timeline cache. Fast reads but expensive              |
+|  writes, especially for users with millions of followers.               |
+|                                                                         |
+|  FAN-OUT ON READ                                                        |
+|  Computing feeds at read time by pulling recent posts from all          |
+|  followed users. Avoids write amplification for celebrities but         |
+|  results in slower feed loads due to on-the-fly aggregation.            |
+|                                                                         |
+|  SOCIAL GRAPH                                                           |
+|  The network of follow/friend relationships between users,              |
+|  stored as a directed graph. Powers feed generation, friend             |
+|  suggestions, and privacy enforcement across the platform.              |
+|                                                                         |
+|  TIMELINE                                                               |
+|  Chronologically ordered list of a single user's own posts.             |
+|  Simpler than the news feed since it involves only one user's           |
+|  content, typically served from a user-partitioned store.               |
+|                                                                         |
+|  ENGAGEMENT (LIKE / COMMENT / SHARE)                                    |
+|  User interactions with content that serve as ranking signals.          |
+|  High engagement boosts a post's visibility in feeds. Counts            |
+|  must be tracked accurately at scale via async counters.                |
+|                                                                         |
+|  CELEBRITY / HOT KEY PROBLEM                                            |
+|  When a user with millions of followers posts, fan-out on write         |
+|  creates massive write amplification. Solved via hybrid: fan-out        |
+|  on write for normal users, fan-out on read for celebrities.            |
+|                                                                         |
+|  CONTENT RANKING                                                        |
+|  ML-based scoring of posts to determine feed order. Considers           |
+|  relevance, recency, engagement signals, and user affinity to           |
+|  surface the most interesting content over pure chronology.             |
+|                                                                         |
+|  TRENDING                                                               |
+|  Topics or hashtags experiencing a sudden spike in activity.            |
+|  Detected via sliding-window frequency analysis on recent posts         |
+|  and surfaced to users for content discovery.                           |
+|                                                                         |
+|  POST                                                                   |
+|  A piece of user-generated content (text, image, video) shared          |
+|  on the platform. The atomic unit of the feed system, stored            |
+|  with metadata like author, timestamp, and engagement counts.           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -180,7 +238,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -273,7 +331,7 @@ A COMPLETE CONCEPTUAL GUIDE
 ** Full-text search*
 ** Trending topics*
 
-## SECTION 5: DATA MODEL
+## SECTION 6: DATA MODEL
 
 ```
 +-------------------------------------------------------------------------+
@@ -403,7 +461,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: NEWS FEED - THE CORE CHALLENGE
+## SECTION 7: NEWS FEED - THE CORE CHALLENGE
 
 ```
 +-------------------------------------------------------------------------+
@@ -576,7 +634,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: FEED CACHE DESIGN
+## SECTION 8: FEED CACHE DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -654,7 +712,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: POST CREATION FLOW
+## SECTION 9: POST CREATION FLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -768,7 +826,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: FOLLOW/UNFOLLOW
+## SECTION 10: FOLLOW/UNFOLLOW
 
 ```
 +-------------------------------------------------------------------------+
@@ -831,7 +889,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 10: NOTIFICATIONS
+## SECTION 11: NOTIFICATIONS
 
 ```
 +-------------------------------------------------------------------------+
@@ -915,7 +973,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 11: MEDIA HANDLING
+## SECTION 12: MEDIA HANDLING
 
 ```
 +-------------------------------------------------------------------------+
@@ -980,7 +1038,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 12: SEARCH AND TRENDING
+## SECTION 13: SEARCH AND TRENDING
 
 ```
 +-------------------------------------------------------------------------+
@@ -1067,7 +1125,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 13: SCALING STRATEGIES
+## SECTION 14: SCALING STRATEGIES
 
 ```
 +-------------------------------------------------------------------------+
@@ -1162,7 +1220,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: INTERVIEW QUICK REFERENCE
+## SECTION 15: INTERVIEW QUICK REFERENCE
 
 ```
 +-------------------------------------------------------------------------+
@@ -1243,7 +1301,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## ADVANCED TOPICS & REAL-WORLD PROBLEMS
+## SECTION 16: ADVANCED TOPICS & REAL-WORLD PROBLEMS
 
 ```
 +-------------------------------------------------------------------------+

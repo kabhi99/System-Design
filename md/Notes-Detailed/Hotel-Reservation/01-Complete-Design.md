@@ -105,7 +105,59 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: BACK-OF-ENVELOPE ESTIMATION
+## SECTION 3: KEY TERMINOLOGY
+
+```
++-------------------------------------------------------------------------+
+||                                                                        |
+||  INVENTORY                                                             |
+||  The pool of available rooms per type per hotel per night.             |
+||  Tracked as (total, booked) for each (hotel, room_type, date).         |
+||                                                                        |
+||  OVERBOOKING                                                           |
+||  Selling more reservations than physical rooms, betting on             |
+||  no-shows. Airlines do ~15%; hotels generally avoid it.                |
+||                                                                        |
+||  RESERVATION                                                           |
+||  A confirmed booking tying a guest to a room type for a date           |
+||  range. States: HELD > CONFIRMED > CHECKED_IN > COMPLETED.             |
+||                                                                        |
+||  ROOM TYPE                                                             |
+||  A category of rooms (single, double, suite) with fungible             |
+||  inventory. Guests book a type, not a specific room number.            |
+||                                                                        |
+||  RATE PLAN                                                             |
+||  Pricing rules for a room type: per-night cost, discounts,             |
+||  minimum stay, and cancellation terms. Can vary dynamically.           |
+||                                                                        |
+||  CHECK-IN / CHECK-OUT                                                  |
+||  Start and end dates of a stay. Booking Dec 20-25 must                 |
+||  reserve inventory for each of the 5 individual nights.                |
+||                                                                        |
+||  BOOKING WINDOW                                                        |
+||  The time range during which a hotel accepts reservations.             |
+||  Typically 1-365 days ahead; pricing adjusts by lead time.             |
+||                                                                        |
+||  CANCELLATION POLICY                                                   |
+||  Rules governing refund amounts based on cancellation timing.          |
+||  Types: free, moderate, or non-refundable (discounted rate).           |
+||                                                                        |
+||  AVAILABILITY CALENDAR                                                 |
+||  A date-indexed view of remaining rooms per type per hotel.            |
+||  Checked in real-time at booking; approximate in search.               |
+||                                                                        |
+||  CONCURRENCY CONTROL                                                   |
+||  Mechanisms (pessimistic locking, optimistic locking, queues)          |
+||  to prevent double-booking when users compete for a room.              |
+||                                                                        |
+||  IDEMPOTENCY KEY                                                       |
+||  A client-generated unique token sent with each booking                |
+||  request. Prevents duplicate charges on retries or double-clicks.      |
+||                                                                        |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4: BACK-OF-ENVELOPE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -155,7 +207,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: HIGH-LEVEL ARCHITECTURE
+## SECTION 5: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -200,7 +252,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 5: HOTEL SEARCH - GEO + FULL-TEXT + RANKING
+## SECTION 6: HOTEL SEARCH - GEO + FULL-TEXT + RANKING
 
 ```
 +--------------------------------------------------------------------------+
@@ -297,7 +349,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 6: AVAILABILITY SYSTEM - THE HARD PART
+## SECTION 7: AVAILABILITY SYSTEM - THE HARD PART
 
 ```
 +--------------------------------------------------------------------------+
@@ -433,7 +485,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 7: BOOKING FLOW - HOLD > PAY > CONFIRM
+## SECTION 8: BOOKING FLOW - HOLD > PAY > CONFIRM
 
 ```
 +--------------------------------------------------------------------------+
@@ -559,7 +611,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 8: CONCURRENCY & DOUBLE-BOOKING PREVENTION
+## SECTION 9: CONCURRENCY & DOUBLE-BOOKING PREVENTION
 
 ```
 +--------------------------------------------------------------------------+
@@ -686,7 +738,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 9: CANCELLATION FLOW
+## SECTION 10: CANCELLATION FLOW
 
 ```
 +--------------------------------------------------------------------------+
@@ -773,7 +825,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: SCALING
+## SECTION 11: SCALING
 
 ```
 +--------------------------------------------------------------------------+
@@ -881,7 +933,7 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW Q&A
+## SECTION 12: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+
