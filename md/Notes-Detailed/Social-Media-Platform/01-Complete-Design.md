@@ -1630,6 +1630,125 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE: Post Lifecycle                                |
+||  ======================================================                 |
+||                                                                         |
+||  CREATED --> STORED --> FANOUT_QUEUED --> DISTRIBUTED --> (DELETED)      |
+||                                                                         |
+||  +----------+ INSERT   +----------+ Kafka    +-----------+              |
+||  | CREATED  | -------> | STORED   | -------> | FANOUT    |              |
+||  | (API req)|          | (Posts   |          | QUEUED    |              |
+||  +----------+          |  DB)     |          | (Kafka)   |              |
+||                        +----------+          +-----------+              |
+||                                                   |                     |
+||                          Fanout Service            |                     |
+||                          ZADD feed:{follower}      v                    |
+||                                              +-----------+              |
+||                                              |DISTRIBUTED|              |
+||                                              | (in feed  |              |
+||                                              |  caches)  |              |
+||                                              +-----------+              |
+||                                                   |                     |
+||                              user deletes post    v                     |
+||                                              +-----------+              |
+||                                              | DELETED   |              |
+||                                              | (soft del)|              |
+||                                              +-----------+              |
+||                                                                         |
+||  2. CRITICAL WRITE PATH: Post Creation + Fan-Out                        |
+||  ======================================================                 |
+||                                                                         |
+||  POST /v1/posts  { content, media_ids, reply_to_id }                    |
+||                                                                         |
+||  Step 1: Generate Snowflake ID                                          |
+||    post_id = (timestamp << 22) | (machine_id << 12) | sequence          |
+||                                                                         |
+||  Step 2: Write to Posts DB                                              |
+||    INSERT INTO posts (post_id, user_id, content, created_at,            |
+||                       reply_to_id, has_media)                            |
+||    VALUES (:post_id, :user_id, :content, NOW(),                         |
+||            :reply_to_id, :has_media);                                    |
+||                                                                         |
+||  Step 3: Write to post content cache                                    |
+||    SET post:{post_id} = {post JSON blob}  // Redis, TTL 48 hrs          |
+||                                                                         |
+||  Step 4: Publish to Kafka topic=post_created                            |
+||    key=user_id  value={post_id, user_id, created_at}                    |
+||                                                                         |
+||  Step 5: Fanout Service consumes event                                  |
+||    followers = GET followers:{user_id}  // from cache or DB             |
+||    IF follower_count < 10,000:       // PUSH model                      |
+||      for each follower_id in followers:                                 |
+||        ZADD feed:{follower_id} {timestamp} {post_id}                    |
+||        ZREMRANGEBYRANK feed:{follower_id} 0 -801  // trim to 800        |
+||    ELSE:                              // PULL model (celebrity)          |
+||      skip fanout; followers pull at read time                           |
+||                                                                         |
+||  Step 6 (async): Notification + Search Index                            |
+||    Notification Service: push to mentioned users, followers              |
+||    Search Indexer: index post in Elasticsearch                           |
+||                                                                         |
+||  3. READ PATH: Feed Generation (Hybrid Push+Pull)                       |
+||  ======================================================                 |
+||                                                                         |
+||  GET /v1/feed?user_id=A&cursor=...&limit=20                             |
+||                                                                         |
+||  Step 1: Read pre-computed feed from Redis                              |
+||    post_ids = ZREVRANGE feed:user_A {cursor} {cursor+19}                |
+||    // Already populated by Fanout Service (push model)                   |
+||                                                                         |
+||  Step 2: Merge celebrity posts (pull model)                             |
+||    celeb_ids = GET celebs_followed:{user_A}  // cached list             |
+||    for each celeb in celeb_ids:                                         |
+||      recent = ZREVRANGE posts_by_user:{celeb} 0 4                       |
+||    merge with post_ids, sort by timestamp                               |
+||                                                                         |
+||  Step 3: Hydrate post content                                           |
+||    MGET post:{id} for each post_id   // Redis pipeline                  |
+||    On cache miss: SELECT * FROM posts WHERE post_id = :id               |
+||    Backfill cache on DB hit                                             |
+||                                                                         |
+||  Step 4: Return hydrated feed page with next cursor                     |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||  ======================================================                 |
+||                                                                         |
+||  +---------------------+-------------------------------------------+    |
+||  | What Fails          | Impact & Recovery                         |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Redis feed cache    | Cold user: rebuild from pull model across |    |
+||  |  evicted / lost     | followed users. Expensive but rare.       |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Kafka fanout lag    | Feeds temporarily stale. Fanout service   |    |
+||  |                     | catches up from Kafka offset on recovery. |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Posts DB replica lag| Feed may miss very recent posts. Client   |    |
+||  |                     | retries; replica catches up in seconds.   |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Celebrity pull      | Feed shows only push-model posts. Timeout |    |
+||  |  timeout at read    | celeb merge; return partial feed.         |    |
+||  +---------------------+-------------------------------------------+    |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||  ======================================================                 |
+||                                                                         |
+||  * Feed cache: ZREMRANGEBYRANK trims each user's feed to 800            |
+||    entries on every ZADD. Inactive users' feeds expire via TTL.         |
+||  * Post content cache: TTL 48 hrs; hot posts refreshed on access.       |
+||  * Soft-delete: UPDATE posts SET is_deleted=true; async job removes     |
+||    post_id from all follower feeds via Kafka delete event.              |
+||  * Elasticsearch: delete event removes post from search index.          |
+||  * Media on CDN: orphaned media (no post reference) purged after        |
+||    7 days via lifecycle policy on object storage.                       |
+||                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## ARCHITECTURE DIAGRAM
 
 ```

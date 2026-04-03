@@ -1572,6 +1572,122 @@ item, and uses these predictions to suggest items the user is likely to engage w
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+||                                                                          |
+||  1. ENTITY STATE MACHINE: Recommendation Lifecycle                       |
+||  ======================================================                  |
+||                                                                          |
+||  CANDIDATE ---> SCORED ---> RE_RANKED ---> SERVED ---> ENGAGED           |
+||  (ANN search)  (ranking     (diversity,    (API        |    |            |
+||                  model)      freshness)     response)  clicked ignored    |
+||                                                         |    |           |
+||                                         log to Kafka <--+----+           |
+||                                              |                           |
+||                                              v                           |
+||                               +-----------------------------+            |
+||                               | Feedback loop: retrain      |            |
+||                               | model, recompute embeddings |            |
+||                               +-----------------------------+            |
+||                                                                          |
+||  2. CRITICAL WRITE PATH: Model Update & Candidate Generation             |
+||  ======================================================                  |
+||                                                                          |
+||  Step 1: Log user interaction to Kafka                                   |
+||    PRODUCE topic=interactions                                            |
+||      key   = user_id                                                     |
+||      value = {user_id, item_id, action, timestamp, context}              |
+||                                                                          |
+||  Step 2: Feature Store update (Feast / Tecton)                           |
+||    Flink consumer reads interaction events:                              |
+||      user_features[user_id].update(                                      |
+||        last_click_ts  = now(),                                           |
+||        click_count_7d = click_count_7d + 1,                              |
+||        genre_affinity = recompute(history)                               |
+||      )                                                                   |
+||    HSET user_features:{user_id} field value   // Redis cluster           |
+||                                                                          |
+||  Step 3: Batch model retraining (daily / weekly)                         |
+||    Training data = S3 interaction logs (30 TB+)                          |
+||    Distributed training: PyTorch DDP on GPU cluster                      |
+||    Two-Tower model produces new user & item embeddings (256-d)           |
+||    Model artifact -> model registry (MLflow / SageMaker)                 |
+||                                                                          |
+||  Step 4: Rebuild ANN index (FAISS / ScaNN)                               |
+||    Load new item embeddings (100M items x 256-d)                         |
+||    Build HNSW or IVF index                                               |
+||    Upload to index servers; atomic swap old -> new                        |
+||    Pre-compute candidate lists for top users (batch inference)            |
+||                                                                          |
+||  Step 5: Canary deploy new model via A/B experiment config               |
+||    Traffic Router hashes user_id to experiment variant                    |
+||    5% -> new model, 95% -> current model                                 |
+||    Monitor guardrail metrics (CTR, revenue, retention)                    |
+||                                                                          |
+||  3. READ PATH: Two-Stage Retrieval -> Ranking                            |
+||  ======================================================                  |
+||                                                                          |
+||  GET /recommendations?user_id=U&count=50                                 |
+||                                                                          |
+||  Stage 1 — Candidate Generation (< 10 ms)                                |
+||    user_emb = HGET user_features:{user_id} embedding  // Redis           |
+||    candidates = FAISS_index.search(user_emb, top_k=500)                  |
+||    Parallel sources:                                                     |
+||      ANN embedding search        -> 200 candidates                       |
+||      Popular-in-category          -> 100 candidates                      |
+||      Recently trending            -> 100 candidates                      |
+||      "More like" recent history   -> 100 candidates                      |
+||    Deduplicate + filter seen items -> ~400 candidates                     |
+||                                                                          |
+||  Stage 2 — Scoring / Ranking (< 30 ms)                                   |
+||    For each candidate, fetch features from Feature Store:                 |
+||      HMGET item_features:{item_id}   // Redis pipeline                   |
+||    Ranking model inference (GPU serving):                                 |
+||      score = model.predict(user_features, item_features, context)         |
+||    Sort candidates by score descending                                    |
+||                                                                          |
+||  Stage 3 — Re-Ranking (< 5 ms)                                           |
+||    Apply diversity rules (no 3 items from same category in a row)         |
+||    Apply business rules (boost sponsored, suppress reported)              |
+||    Return top 50 items to client                                          |
+||                                                                          |
+||  4. FAILURE SCENARIOS                                                     |
+||  ======================================================                  |
+||                                                                          |
+||  +----------------------+-------------------------------------------+     |
+||  | What Fails           | Impact & Recovery                         |     |
+||  +----------------------+-------------------------------------------+     |
+||  | Feature Store (Redis)| Fall back to batch-precomputed user       |     |
+||  |  unavailable         | features in local cache; slightly stale.  |     |
+||  +----------------------+-------------------------------------------+     |
+||  | ANN index server down| Replicas serve traffic. If all down,     |     |
+||  |                      | fall back to popularity-based recs.       |     |
+||  +----------------------+-------------------------------------------+     |
+||  | Ranking model timeout| Return candidates sorted by ANN score     |     |
+||  |                      | (embedding similarity) without re-rank.   |     |
+||  +----------------------+-------------------------------------------+     |
+||  | Kafka interaction    | Feature Store becomes stale; recs drift   |     |
+||  |  lag > 1 hr          | toward older preferences. Alert + fix.    |     |
+||  +----------------------+-------------------------------------------+     |
+||                                                                          |
+||  5. CLEANUP / EXPIRY                                                     |
+||  ======================================================                  |
+||                                                                          |
+||  * ANN index rebuilt on each model retrain (daily); old index             |
+||    decommissioned after traffic drains.                                   |
+||  * Feature Store keys: user_features TTL 30 days (inactive users          |
+||    auto-expire); item_features refreshed on catalog update.               |
+||  * Interaction logs in S3: partitioned by date, lifecycle policy           |
+||    archives to Glacier after 90 days, deletes after 2 years.              |
+||  * Pre-computed candidate lists: overwritten each batch cycle;            |
+||    stale lists serve as fallback until refresh.                            |
+||  * Experiment configs auto-expire after defined duration.                  |
+||                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 19: QUICK REFERENCE CARD
 
 ```

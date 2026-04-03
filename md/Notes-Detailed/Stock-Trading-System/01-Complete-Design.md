@@ -533,7 +533,166 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: INTERVIEW QUESTIONS
+## SECTION 11: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE (Order)                                        |
+||                                                                         |
+||  PENDING ──> OPEN ──> PARTIALLY_FILLED ──> FILLED                       |
+||    │           │            │                                            |
+||    │           │            └──> CANCELLED (user cancel remaining qty)   |
+||    │           │                                                        |
+||    │           └──> CANCELLED (user cancel before any fill)             |
+||    │           │                                                        |
+||    │           └──> EXPIRED (GTC timeout, end-of-day for day orders)    |
+||    │                                                                    |
+||    └──> REJECTED (failed pre-trade risk check)                          |
+||                                                                         |
+||  For stop orders:                                                       |
+||  PENDING_TRIGGER ──> TRIGGERED ──> OPEN ──> (same as above)             |
+||                                                                         |
+||  Transition rules:                                                      |
+||  * PENDING: validated by gateway, awaiting matching engine               |
+||  * OPEN: in the order book, eligible for matching                       |
+||  * PARTIALLY_FILLED: some qty matched, remainder still in book          |
+||  * FILLED: fully matched, terminal state                                |
+||  * Each fill generates a Trade record (immutable event)                 |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  2. CRITICAL WRITE PATH (Order Matching in the Order Book)              |
+||                                                                         |
+||  Client        API GW       Order Mgmt      Matching Engine             |
+||    |              |             |                  |                     |
+||    |-- place ---->|             |                  |                     |
+||    |  order       |-- validate->|                  |                     |
+||    |  (AAPL,      |             |                  |                     |
+||    |   BUY,       |  Pre-trade risk checks:        |                    |
+||    |   150.20,    |  * balance >= order_value       |                    |
+||    |   500 qty)   |  * position limits OK           |                   |
+||    |              |  * circuit breaker check         |                   |
+||    |              |  * rate limit per user           |                   |
+||    |              |             |                  |                     |
+||    |              |  WAL: log order before ACK      |                    |
+||    |              |             |                  |                     |
+||    |              |             |-- route to       |                     |
+||    |              |             |   AAPL engine -->|                     |
+||    |              |             |                  |                     |
+||    |              |  Matching engine (single-threaded, in-memory):       |
+||    |              |                                                      |
+||    |              |  // BUY $150.20 x 500 arrives                        |
+||    |              |  best_ask = asks.peek()  // $150.15 x 300            |
+||    |              |  if buy.price >= best_ask.price:                     |
+||    |              |    trade(300 @ $150.15)  // partial fill             |
+||    |              |    emit TradeExecuted event                          |
+||    |              |    remaining = 200                                   |
+||    |              |    next_ask = asks.peek()  // $150.20 x 700          |
+||    |              |    trade(200 @ $150.20)  // fill complete            |
+||    |              |    emit TradeExecuted event                          |
+||    |              |    order status = FILLED                             |
+||    |              |                                                      |
+||    |              |  Events written to WAL (append-only log):            |
+||    |              |    { type: TRADE, order_id, price, qty, ts }         |
+||    |              |                  |                                   |
+||    |              |  Kafka: emit events to downstream                    |
+||    |              |    -> Trade Execution Svc (update portfolio)         |
+||    |              |    -> Market Data Svc (update best bid/ask)          |
+||    |              |    -> Settlement Svc (T+1 queue)                     |
+||    |              |    -> Regulatory audit log                           |
+||    |              |                  |                                   |
+||    |<-- fills ----|<-- ack ---------|                                    |
+||                                                                         |
+||  Data structures in matching engine:                                    |
+||  * Red-black tree: price levels (O(log N) insert/remove)                |
+||  * FIFO queue per price level: time priority                            |
+||  * HashMap: order_id -> Order (O(1) cancel/lookup)                      |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  3. READ PATH                                                           |
+||                                                                         |
+||  ORDER BOOK (Level 2 market data):                                      |
+||    Matching Engine -> in-memory snapshot -> Market Data Svc              |
+||    -> WebSocket push to subscribers (batched every 100ms)               |
+||    * No DB read - purely in-memory from matching engine state            |
+||                                                                         |
+||  PORTFOLIO / HOLDINGS:                                                  |
+||    Client --> Portfolio Svc --> PostgreSQL/TimescaleDB                   |
+||    * Read replica for display queries                                   |
+||    * Updated async via Kafka TradeExecuted events                       |
+||                                                                         |
+||  TRADE HISTORY:                                                         |
+||    Client --> Trade Svc --> Hot: PostgreSQL (last 90 days)               |
+||                         --> Cold: S3 Parquet (via Athena)                |
+||    * Immutable event log, append-only                                   |
+||                                                                         |
+||  LAST PRICE / TICKER:                                                   |
+||    WebSocket -> Market Data Svc -> in-memory cache (latest)             |
+||    * Binary protobuf for 60% smaller payload than JSON                  |
+||    * Delta encoding: send only changed fields                           |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||                                                                         |
+||  +------------------------------+-----------------------------------+   |
+||  | What Fails                   | Impact & Recovery                 |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Matching engine crashes      | Standby engine promoted via       |   |
+||  |                              | ZooKeeper leader election.        |   |
+||  |                              | Replay WAL from last snapshot     |   |
+||  |                              | to rebuild order book state.      |   |
+||  |                              | Fencing token prevents split-     |   |
+||  |                              | brain (old primary rejected).     |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Order accepted by gateway    | Reconciliation job compares       |   |
+||  | but lost before matching     | gateway WAL vs engine WAL.        |   |
+||  | engine                       | Orphan orders resubmitted or      |   |
+||  |                              | cancelled with user notification. |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Trade executed but Kafka     | WAL contains all trades. Replay   |   |
+||  | event lost                   | from WAL offset on consumer       |   |
+||  |                              | restart. Idempotent consumers     |   |
+||  |                              | (unique trade_id) prevent dupes.  |   |
+||  +------------------------------+-----------------------------------+   |
+||  | WebSocket storm after outage | Jittered reconnect (0-30s) on     |   |
+||  | (1M clients reconnect)       | client. Rate-limit connections    |   |
+||  |                              | at LB. Serve cached market data   |   |
+||  |                              | while connections ramp up.        |   |
+||  +------------------------------+-----------------------------------+   |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||                                                                         |
+||  EXPIRED ORDERS:                                                        |
+||  * Day orders: cancelled at market close (4:00 PM ET)                   |
+||  * GTC orders: expire after 90 days if unfilled                         |
+||  * Matching engine sweep at end-of-day: remove all DAY orders           |
+||  * Emit OrderExpired events to Kafka for portfolio/balance release      |
+||                                                                         |
+||  WAL COMPACTION:                                                        |
+||  * Periodic snapshots of order book state to disk                       |
+||  * WAL entries before last snapshot can be truncated                    |
+||  * Snapshot frequency: every 10 minutes during market hours             |
+||                                                                         |
+||  TRADE DATA LIFECYCLE:                                                  |
+||  * Hot: last 90 days in PostgreSQL/TimescaleDB (SSD)                    |
+||  * Cold: >90 days archived to S3 in Parquet format                      |
+||  * Regulatory retention: 7 years minimum (SEC/FINRA)                    |
+||  * Queryable via Spark/Athena for compliance audits                     |
+||                                                                         |
+||  MARKET DATA CACHE:                                                     |
+||  * In-memory only for real-time feeds (no persistence needed)           |
+||  * OHLCV candles: computed by Market Data Svc, stored in                |
+||    TimescaleDB for historical charting queries                          |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 12: INTERVIEW QUESTIONS
 
 ```
 +--------------------------------------------------------------------------+

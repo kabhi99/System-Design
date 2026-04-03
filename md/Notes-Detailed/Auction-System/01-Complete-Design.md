@@ -863,7 +863,178 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW QUESTIONS AND ANSWERS
+## SECTION 12: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE (Auction)                                      |
+||                                                                         |
+||  CREATED ──> SCHEDULED ──> ACTIVE ──> ENDING_SOON ──> ENDED             |
+||    │                         │              │            │               |
+||    │                         │              │       +----+----+          |
+||    │                         │              │       │         │          |
+||    └──> CANCELLED            └──> CANCELLED │    reserve    no bids     |
+||         (no bids,                 (no bids  │    met?       or reserve  |
+||          pre-start)                only)    │    │          not met      |
+||                                             │    v          │           |
+||                              (auto-extend)--+  PAYMENT      v           |
+||                              (bid in last      PENDING   NO_SALE        |
+||                               N minutes)         │                      |
+||                                                  v                      |
+||                                              COMPLETED                  |
+||                                                                         |
+||  Transition rules:                                                      |
+||  * SCHEDULED -> ACTIVE: timer service fires at start_time               |
+||  * ACTIVE -> ENDING_SOON: remaining < 5 min threshold                   |
+||  * ENDING_SOON -> ENDED: timer expires AND no bid in ext. window        |
+||  * Bid in last N min: ENDING_SOON extends end_time (anti-snipe)         |
+||  * ENDED -> PAYMENT_PENDING: reserve met, winner notified               |
+||  * PAYMENT_PENDING -> COMPLETED: payment + delivery confirmed           |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  2. CRITICAL WRITE PATH (Bid Placement with Race Condition Handling)    |
+||                                                                         |
+||  Client        API GW       Bid Svc          Redis             PG       |
+||    |              |            |                |               |        |
+||    |-- place ---->|            |                |               |        |
+||    |  bid($150)   |            |                |               |        |
+||    |              |--validate->|                |               |        |
+||    |              |            |                |               |        |
+||    |              |  1. Check auction status (ACTIVE?)           |       |
+||    |              |  2. Verify bidder != seller                  |       |
+||    |              |  3. Rate limit check (max N bids/min)        |       |
+||    |              |            |                |               |        |
+||    |              |  Redis Lua script (atomic):  |               |        |
+||    |              |            |                |               |        |
+||    |              |  local key = "auction:{id}:bids"             |       |
+||    |              |  local top = redis.call(                     |       |
+||    |              |    'ZREVRANGE', key, 0, 0, 'WITHSCORES')    |       |
+||    |              |  local current_price = tonumber(top[2])      |       |
+||    |              |  local min_incr = get_increment(current_price)|      |
+||    |              |  if bid_amount >= current_price + min_incr then|     |
+||    |              |    redis.call('ZADD', key, bid_amount, bid_id)|      |
+||    |              |    return 1  -- accepted                     |       |
+||    |              |  end                                         |       |
+||    |              |  return 0  -- rejected (too low)             |       |
+||    |              |            |                |               |        |
+||    |              |  If accepted:                |               |        |
+||    |              |    UPDATE auctions SET current_price = :bid, |        |
+||    |              |      bid_count = bid_count + 1,              |        |
+||    |              |      highest_bidder_id = :user,              |        |
+||    |              |      version = version + 1                   |        |
+||    |              |      WHERE id = :auc AND version = :ver;     |        |
+||    |              |            |                |               |        |
+||    |              |    INSERT INTO bids                          |        |
+||    |              |      (id, auction_id, user_id, amount,       |        |
+||    |              |       bid_type, status, created_at)          |        |
+||    |              |      VALUES (..., 'manual', 'accepted', now());      |
+||    |              |            |                |               |        |
+||    |              |  Auto-extend check:          |               |        |
+||    |              |    IF end_time - now() < 5 min:              |        |
+||    |              |      new_end = now() + 5 min                 |        |
+||    |              |      ZADD timers XX new_end auction_id (Redis)|       |
+||    |              |      UPDATE auctions SET end_time = new_end; |        |
+||    |              |            |                |               |        |
+||    |              |  Trigger proxy bid evaluation:               |        |
+||    |              |    SELECT * FROM proxy_bids                  |        |
+||    |              |      WHERE auction_id = :auc AND active      |        |
+||    |              |        AND max_amount > :bid + min_incr;     |        |
+||    |              |    IF found: place auto-bid at :bid + incr   |        |
+||    |              |            |                |               |        |
+||    |              |  Kafka: emit BidPlaced event                 |        |
+||    |              |    -> fanout svc -> WebSocket servers         |       |
+||    |              |    -> notification svc (outbid alerts)        |       |
+||    |              |            |                |               |        |
+||    |<-- accepted--|            |                |               |        |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  3. READ PATH                                                           |
+||                                                                         |
+||  AUCTION DETAIL PAGE:                                                   |
+||    Client --> Redis (current_price, bid_count, time_remaining)           |
+||    * Redis is source of truth for live bid data during ACTIVE state      |
+||    * Auction metadata (title, images): Redis with 5-min TTL             |
+||    * Cache miss -> PostgreSQL -> populate Redis                         |
+||                                                                         |
+||  SEARCH / BROWSE:                                                       |
+||    Client --> Elasticsearch (full-text, category, price filters)         |
+||    * Eventually consistent (slight delay after auction updates)         |
+||    * CDN cache for category listing pages (30s TTL)                     |
+||                                                                         |
+||  BID HISTORY:                                                           |
+||    Client --> PostgreSQL (bids table, indexed on auction_id)             |
+||    SELECT * FROM bids WHERE auction_id = :id                            |
+||      ORDER BY amount DESC LIMIT 50;                                     |
+||                                                                         |
+||  REAL-TIME UPDATES:                                                     |
+||    Kafka BidPlaced event -> fanout svc -> Redis pub/sub                 |
+||    -> WebSocket servers -> connected clients                            |
+||    * Delta updates only (price, count, time changes)                    |
+||    * Batched: max 5 updates/sec per auction per client                  |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||                                                                         |
+||  +------------------------------+-----------------------------------+   |
+||  | What Fails                   | Impact & Recovery                 |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Redis down during active     | Fall back to PostgreSQL with      |   |
+||  | auction                      | optimistic locking (version col). |   |
+||  |                              | Higher latency but correct.       |   |
+||  |                              | Circuit breaker activates         |   |
+||  |                              | fallback within 3 failures.       |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Timer service misses auction | Sweep job every 5 min finds       |   |
+||  | end event                    | ACTIVE auctions past end_time.    |   |
+||  |                              | Idempotent end processing: safe   |   |
+||  |                              | to process same end twice.        |   |
+||  |                              | Max drift: 1-5 seconds.           |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Bid accepted in Redis but    | Async DB persist via Kafka.       |   |
+||  | DB write fails               | Kafka retains event; consumer     |   |
+||  |                              | retries. Redis state is correct,  |   |
+||  |                              | DB catches up on retry.           |   |
+||  +------------------------------+-----------------------------------+   |
+||  | Winner does not pay within   | After 48h deadline: offer to      |   |
+||  | 48 hours                     | second-highest bidder. Non-payer  |   |
+||  |                              | gets strike (3 = ban). Seller     |   |
+||  |                              | can relist.                       |   |
+||  +------------------------------+-----------------------------------+   |
+||                                                                         |
+||  ================================================================       |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||                                                                         |
+||  AUCTION END TIMER:                                                     |
+||  * Redis sorted set: score = end_timestamp, member = auction_id         |
+||  * Worker polls ZRANGEBYSCORE every 500ms for expired auctions          |
+||  * Distributed lock ensures only one worker processes each end          |
+||  * Auto-extension: ZADD XX updates the score atomically                 |
+||                                                                         |
+||  ENDED AUCTION DATA:                                                    |
+||  * Active auction data in Redis: purged 1 hour after ENDED              |
+||  * Bid sorted sets: purged after payment completed                      |
+||  * PostgreSQL bids/auctions: retained for disputes (90 days hot)        |
+||  * >90 days: archived to cold storage for compliance                    |
+||                                                                         |
+||  UNPAID AUCTIONS:                                                       |
+||  * PAYMENT_PENDING older than 48h: auto-transition to NO_SALE           |
+||  * Release escrow hold, notify seller, apply buyer strike               |
+||  * Sweep job runs every hour for stale PAYMENT_PENDING rows             |
+||                                                                         |
+||  STALE SEARCH INDEX:                                                    |
+||  * Kafka AuctionEnded events trigger ES removal from active index       |
+||  * Completed auctions moved to "sold items" index                       |
+||  * ES index for active auctions refreshed every 30s                     |
+||                                                                         |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 13: INTERVIEW QUESTIONS AND ANSWERS
 
 ### Q1: HOW DO YOU PREVENT AUCTION SNIPING?
 

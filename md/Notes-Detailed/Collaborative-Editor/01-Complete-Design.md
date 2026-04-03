@@ -1224,6 +1224,152 @@ and persist every version of the document - all with sub-100ms latency.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE: Operation Lifecycle                           |
+||  ======================================================                 |
+||                                                                         |
+||  LOCAL --> PENDING --> SENT --> TRANSFORMED --> ACKNOWLEDGED --> APPLIED  |
+||                                                                         |
+||  +----------+  apply   +----------+  send via +----------+              |
+||  | LOCAL    |  locally | PENDING  |  WebSocket| SENT     |              |
+||  | (user    |  (opti-  | (buffered|  -------> | (in-     |              |
+||  |  types)  |  mistic) |  queue)  |           |  flight) |              |
+||  +----------+ -------> +----------+           +----------+              |
+||                                                    |                    |
+||               server transforms against             |                   |
+||               concurrent ops since base version     v                   |
+||                                               +----------+              |
+||                                               |TRANSFORMED              |
+||                                               | (server   |             |
+||                                               |  applied) |             |
+||                                               +----------+              |
+||                                                    |                    |
+||                 ACK + version sent to sender        |                   |
+||                 broadcast to all other clients      v                   |
+||                                               +----------+              |
+||                                               |ACKNOWLEDGED             |
+||                                               | (client   |             |
+||                                               |  removes  |             |
+||                                               |  from buf)|             |
+||                                               +----------+              |
+||                                                    |                    |
+||                 all clients converge                v                   |
+||                                               +----------+              |
+||                                               | APPLIED  |              |
+||                                               | (consis- |              |
+||                                               |  tent)   |              |
+||                                               +----------+              |
+||                                                                         |
+||  2. CRITICAL WRITE PATH: OT Operation with Conflict Resolution          |
+||  ======================================================                 |
+||                                                                         |
+||  User A types "Hello" at position 5 in document doc_abc123:             |
+||                                                                         |
+||  Step 1: Client creates operation                                       |
+||    op = { type: "insert", text: "Hello", pos: 5,                        |
+||           userId: "A", baseVersion: 1042 }                              |
+||    Apply optimistically to local document state                         |
+||    Add to pending operations buffer                                     |
+||                                                                         |
+||  Step 2: Client sends op via WebSocket (if no op already in-flight)     |
+||    WS.send({ type: "operation", docId: "doc_abc123",                    |
+||              baseVersion: 1042, ops: [op] })                            |
+||    State transitions: SYNCHRONIZED -> AWAITING_ACK                      |
+||                                                                         |
+||  Step 3: Document Service receives op                                   |
+||    server_version = 1045  (3 ops happened since client's v1042)         |
+||    concurrent_ops = ops_log.getRange(1043, 1045)                        |
+||    transformed_op = OT.transform(op, concurrent_ops)                    |
+||    // e.g., if concurrent ops inserted 10 chars before pos 5,           |
+||    //       transformed_op.pos becomes 15                               |
+||                                                                         |
+||  Step 4: Persist to durable operations log                              |
+||    APPEND ops_log  // Kafka / DynamoDB / Cassandra                      |
+||      {docId, version: 1046, op: transformed_op, userId: "A"}           |
+||    *** durable write BEFORE broadcast ***                                |
+||                                                                         |
+||  Step 5: Apply to server canonical document state (in-memory)           |
+||    doc.apply(transformed_op)                                            |
+||    server_version = 1046                                                |
+||                                                                         |
+||  Step 6: Broadcast                                                      |
+||    TO sender A: ACK { version: 1046 }                                   |
+||      -> client removes op from pending buffer                           |
+||    TO all other clients (B, C, ...):                                    |
+||      { type: "operation", version: 1046, op: transformed_op }           |
+||      -> each client transforms against their own pending ops            |
+||                                                                         |
+||  3. READ PATH: Document Open (State Reconstruction)                     |
+||  ======================================================                 |
+||                                                                         |
+||  User opens document doc_abc123:                                        |
+||                                                                         |
+||  Step 1: Load document metadata                                         |
+||    SELECT * FROM documents WHERE doc_id = 'doc_abc123'                  |
+||    // PostgreSQL: owner, title, permissions, latest_snapshot_version     |
+||                                                                         |
+||  Step 2: Load latest snapshot                                           |
+||    snapshot = S3.get("snapshots/doc_abc123/v1500.bin")                   |
+||    // Full document state at version 1500                               |
+||                                                                         |
+||  Step 3: Replay operations since snapshot                               |
+||    ops = ops_log.getRange(1501, latest_version)                         |
+||    for op in ops:                                                       |
+||      snapshot.apply(op)                                                 |
+||    // Document now at version 1523 (current)                            |
+||                                                                         |
+||  Step 4: Establish real-time WebSocket connection                       |
+||    Join document "room" on WebSocket gateway                            |
+||    Receive real-time ops from other editors going forward               |
+||    Client state = SYNCHRONIZED at version 1523                          |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||  ======================================================                 |
+||                                                                         |
+||  +---------------------+-------------------------------------------+    |
+||  | What Fails          | Impact & Recovery                         |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Document Service    | Client detects via heartbeat timeout.     |    |
+||  |  node crashes       | Reconnects to new node; new node loads    |    |
+||  |                     | snapshot + ops log. Client re-sends all   |    |
+||  |                     | unACKed ops from its pending buffer.      |    |
+||  +---------------------+-------------------------------------------+    |
+||  | WebSocket disconnect| Client buffers ops locally. On reconnect, |    |
+||  |  (network blip)     | sends "last seen version" + buffered ops. |    |
+||  |                     | Server replays missed ops + transforms.   |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Ops log write fails | Op not persisted = not applied. Client    |    |
+||  |  (Kafka/DynamoDB)   | never receives ACK; retries. Server       |    |
+||  |                     | remains at previous version (safe).       |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Snapshot corruption | Fall back to previous snapshot + replay   |    |
+||  |  (S3 object)        | more ops. Alert fires; re-snapshot from   |    |
+||  |                     | current in-memory state.                  |    |
+||  +---------------------+-------------------------------------------+    |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||  ======================================================                 |
+||                                                                         |
+||  * Snapshot creation: every 1000 ops, or 5 min of inactivity,           |
+||    or when all editors leave. Prevents long replay chains.              |
+||  * Ops log compaction: ops before the oldest retained snapshot           |
+||    are archived to cold storage (S3 Glacier) then deleted from          |
+||    hot ops log. Tiered retention:                                       |
+||    - Last 24h: every 1000-op snapshot                                   |
+||    - Last 30d: hourly snapshots                                         |
+||    - Older:    daily snapshots                                          |
+||  * Active doc state: evicted from in-memory Document Service            |
+||    after all WebSocket connections close + 10 min grace period.         |
+||  * Deleted documents: soft-delete in metadata DB; hard-delete           |
+||    (ops log + snapshots + S3) after 30-day recycle bin period.          |
+||                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 12: INTERVIEW Q&A
 
 ```

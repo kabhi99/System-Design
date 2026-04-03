@@ -1307,6 +1307,168 @@
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Key-Value Pair Write Path)                   |
+|                                                                         |
+|    [CLIENT_WRITE]                                                      |
+|         |                                                               |
+|         v                                                               |
+|    [COORDINATOR] -- routes via consistent hashing to N replicas        |
+|         |                                                               |
+|         v (on each replica node)                                       |
+|    [WAL_APPENDED] --> [MEMTABLE_WRITTEN] --> [ACK_TO_COORDINATOR]      |
+|                            |                                            |
+|              (MemTable full, threshold reached)                        |
+|                            v                                            |
+|                     [FLUSHED_TO_SSTABLE] --> [COMPACTED]               |
+|                                                                         |
+|    For deletes, a tombstone marker is written (same path).             |
+|    The actual data is removed during compaction.                       |
+|                                                                         |
+|    Quorum state (coordinator perspective):                             |
+|    [WRITE_SENT] --> [W_ACKS_RECEIVED] --> [ACK_TO_CLIENT]             |
+|         |                                                               |
+|         +---> [HINTED_HANDOFF] (if replica node is down,              |
+|                hint stored on coordinator for later delivery)          |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (LSM-Tree: WAL -> MemTable -> SSTable)         |
+|                                                                         |
+|    Client: PUT /api/v1/kv/{key} { value, consistency: "QUORUM" }      |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Coordinator receives request                                |
+|      |     Hash(key) -> position on consistent hash ring               |
+|      |     Identify N=3 replica nodes (walk ring clockwise)            |
+|      |     Send write to all 3 replicas in parallel                    |
+|      v                                                                  |
+|    Step 2: On EACH replica node (the critical I/O path):               |
+|      |                                                                  |
+|      |  a) Append to Write-Ahead Log (WAL) -- sequential disk write    |
+|      |     WAL entry: [key_size|key|value_size|value|timestamp|CRC]    |
+|      |     fsync() to guarantee durability                             |
+|      |                                                                  |
+|      |  b) Insert into MemTable (in-memory sorted structure)           |
+|      |     MemTable is a skip list or red-black tree                   |
+|      |     Key -> { value, timestamp, tombstone_flag }                 |
+|      |                                                                  |
+|      |  c) Return ACK to coordinator                                   |
+|      v                                                                  |
+|    Step 3: Coordinator waits for W=2 ACKs (quorum)                     |
+|      |     If W acks received -> return success to client              |
+|      |     If replica down -> store hint for hinted handoff            |
+|      v                                                                  |
+|    Step 4: Background flush (when MemTable reaches threshold)          |
+|      |     Freeze current MemTable, create new one                     |
+|      |     Write frozen MemTable to disk as immutable SSTable:         |
+|      |       [Data Blocks (sorted KV)] + [Index Block] +               |
+|      |       [Bloom Filter Block] + [Footer]                           |
+|      |     Delete corresponding WAL segment                            |
+|      v                                                                  |
+|    Step 5: Background compaction (merge SSTables)                      |
+|      |     Leveled or size-tiered strategy                             |
+|      |     Merge overlapping SSTables, remove tombstones               |
+|      |     older than gc_grace_seconds                                 |
+|                                                                         |
+|    WRITE ORDER: WAL (disk) -> MemTable (memory) -> ACK                 |
+|    Durability: WAL survives crashes; MemTable rebuilt from WAL         |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  3. READ PATH (MemTable -> Bloom Filter -> SSTables)                   |
+|                                                                         |
+|    Client: GET /api/v1/kv/{key} ?consistency=QUORUM                    |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Coordinator routes to N=3 replicas                          |
+|      |     Send read request to all 3 in parallel                      |
+|      |     Wait for R=2 responses (quorum read)                        |
+|      v                                                                  |
+|    Step 2: On EACH replica (local read path):                          |
+|      |                                                                  |
+|      |  a) Check MemTable (current + frozen)                           |
+|      |     Found? -> return immediately (freshest data)                |
+|      |                                                                  |
+|      |  b) Check Bloom filter for each SSTable (newest first)          |
+|      |     Bloom says "definitely not here" -> skip SSTable            |
+|      |     Bloom says "maybe here" -> check SSTable                    |
+|      |                                                                  |
+|      |  c) Binary search SSTable index block -> read data block        |
+|      |     Return value with highest timestamp                         |
+|      v                                                                  |
+|    Step 3: Coordinator reconciles R=2 responses                        |
+|      |     Compare vector clocks / timestamps                          |
+|      |     Return value with latest version to client                  |
+|      v                                                                  |
+|    Step 4: Read repair (if versions differ)                            |
+|      |     Send latest version to stale replica (async)                |
+|      |     Stale replica writes the newer value via normal path        |
+|                                                                         |
+|    Read-repair keeps replicas converging without full anti-entropy.    |
+|    Merkle tree comparison runs periodically for bulk repair.           |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                  |
+|                                                                         |
+|  What Fails               | Impact & Recovery                          |
+|  -------------------------+--------------------------------------------+
+|  Single replica node down | Hinted handoff: coordinator stores hints.  |
+|                           | Reads/writes succeed via remaining quorum  |
+|                           | (W=2 of 3, R=2 of 3 still achievable).     |
+|                           | On node recovery, hints replayed.          |
+|  -------------------------+--------------------------------------------+
+|  MemTable lost (crash     | WAL replayed on restart to rebuild         |
+|  before flush)            | MemTable. No data loss because WAL is      |
+|                           | fsync'd before ACK. Recovery time is       |
+|                           | proportional to WAL size.                  |
+|  -------------------------+--------------------------------------------+
+|  Network partition         | AP system: both sides accept writes.       |
+|  (split-brain)            | After partition heals, read repair and     |
+|                           | anti-entropy (Merkle trees) reconcile.     |
+|                           | Conflicts resolved via vector clocks       |
+|                           | or last-write-wins (LWW).                  |
+|  -------------------------+--------------------------------------------+
+|  Compaction storm         | Too many SSTables -> reads slow down.      |
+|  (compaction falls behind)| Throttle writes if L0 SSTable count >      |
+|                           | threshold. Prioritize compaction threads.  |
+|                           | Monitor SSTable count as key metric.       |
+|  -------------------------+--------------------------------------------+
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                   |
+|                                                                         |
+|    Tombstone Garbage Collection:                                       |
+|      Deletes write a tombstone marker (not immediate removal)          |
+|      Tombstones kept for gc_grace_seconds (default: 10 days)          |
+|      During compaction, tombstones older than gc_grace are purged     |
+|      CRITICAL: all replicas must participate in compaction before      |
+|      gc_grace expires, or deleted data may resurrect                   |
+|                                                                         |
+|    TTL-Based Expiration:                                               |
+|      Keys with TTL get expiration timestamp in record                  |
+|      On read: if timestamp + TTL < now, treat as not found            |
+|      On compaction: expired keys are dropped (same as tombstone)      |
+|                                                                         |
+|    Anti-Entropy (Merkle Tree Repair):                                  |
+|      Periodic job (e.g., every 1 hour per token range)                |
+|      Compare Merkle tree roots between replica pairs                  |
+|      Differing subtrees trigger targeted data sync                    |
+|      Ensures eventual convergence even without read traffic           |
+|                                                                         |
+|    Hint Expiry:                                                        |
+|      Hinted handoff entries expire after max_hint_window (3 hours)    |
+|      If target node doesn't recover in time, rely on anti-entropy     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 22: INTERVIEW Q&A
 
 ### Q1: Why use consistent hashing instead of simple hash partitioning?

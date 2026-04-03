@@ -515,6 +515,168 @@ content aggregation, and data mining.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  1. ENTITY STATE MACHINE (URL Lifecycle)                                 |
+|                                                                          |
+|    [DISCOVERED] --> [QUEUED] --> [FETCHING] --> [FETCHED] --> [PARSED]    |
+|         |              |            |               |                    |
+|         |              |            +---> [FAILED] -+---> [RETRY]        |
+|         |              |                                    |            |
+|         |              +------------------------------------+            |
+|         |              (re-enqueue with backoff, max 3 retries)          |
+|         |                                                                |
+|         +---> [DUPLICATE] (Bloom filter says "already seen")             |
+|                                                                          |
+|    On re-crawl cycle:                                                    |
+|    [PARSED] --> [STALE] --> [QUEUED]  (freshness score triggers          |
+|                              re-crawl after adaptive interval)           |
+|                                                                          |
+|    DISCOVERED:  Link extractor found new URL in a crawled page           |
+|    QUEUED:      Normalized URL added to URL frontier                     |
+|    FETCHING:    Worker assigned, HTTP GET in progress                    |
+|    FETCHED:     HTTP 200 received, raw HTML in memory                    |
+|    PARSED:      Content extracted, links discovered, stored in S3        |
+|    FAILED:      DNS error, timeout, 5xx, robots.txt blocked             |
+|    DUPLICATE:   Bloom filter match -- skip (no DB/network hit)           |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  2. CRITICAL WRITE PATH (URL Discovery + Deduplication)                  |
+|                                                                          |
+|    Link Extractor finds new URL in a crawled page:                       |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Normalize URL                                                 |
+|      |     Lowercase host, remove fragment, sort query params,           |
+|      |     strip tracking params (utm_source, fbclid),                   |
+|      |     remove trailing slash, resolve relative to absolute           |
+|      v                                                                   |
+|    Step 2: Bloom filter check (in-memory, ~1.2 GB for 1B URLs)          |
+|      |     bloom.contains(normalized_url)                                |
+|      |     TRUE  -> SKIP (probably seen, accept 1% false positive)       |
+|      |     FALSE -> definitely new, continue                             |
+|      v                                                                   |
+|    Step 3: Add to Bloom filter                                           |
+|      |     bloom.add(normalized_url)                                     |
+|      |     (immediately prevents other workers from re-adding)           |
+|      v                                                                   |
+|    Step 4: Persist to seen-URL store (durable backup)                    |
+|      |     RocksDB: PUT url_hash -> { url, discovered_at, depth }        |
+|      |     (on-disk, survives restarts, Bloom filter rebuilt from it)    |
+|      v                                                                   |
+|    Step 5: Compute priority and assign to URL frontier                   |
+|      |     Priority = f(PageRank, domain_authority, depth, freshness)    |
+|      |     Kafka produce -> topic: url_frontier                          |
+|      |       Key: domain_hash (partition by domain for politeness)       |
+|      |       Value: { url, priority, depth, discovered_at }              |
+|      v                                                                   |
+|    Step 6: URL enters per-domain politeness queue                        |
+|      |     Each domain has its own sub-queue:                            |
+|      |       domain_queue:{cnn.com} = [url1, url2, url3]                 |
+|      |     Timer: next_allowed_fetch:{cnn.com} = timestamp               |
+|      |     Worker picks URL only if timer has expired                    |
+|                                                                          |
+|    WRITE ORDER: Bloom filter (memory) -> RocksDB (disk) -> Kafka         |
+|    If Bloom filter full: Expand or partition across workers              |
+|    If Kafka down: Buffer in local RocksDB, drain on recovery            |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  3. READ PATH (Politeness Check + Rate Limit Per Domain)                 |
+|                                                                          |
+|    Worker ready to fetch next URL:                                       |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Check robots.txt cache                                        |
+|      |     GET robots_cache:{domain}                                     |
+|      |     HIT  -> parse rules, check if path is allowed                |
+|      |     MISS -> fetch https://{domain}/robots.txt                     |
+|      |             parse and cache with TTL 24h                          |
+|      |     DISALLOWED -> skip URL, mark as FILTERED                      |
+|      v                                                                   |
+|    Step 2: Politeness rate limit check                                   |
+|      |     GET next_allowed_fetch:{domain}                               |
+|      |     If now < next_allowed_time -> wait (don't fetch yet)          |
+|      |     crawl-delay from robots.txt (default: 1 request/sec)          |
+|      v                                                                   |
+|    Step 3: DNS resolution (cached)                                       |
+|      |     Local DNS cache per worker: domain -> IP                      |
+|      |     Cache TTL: min(DNS TTL, 1 hour)                               |
+|      |     Cache miss -> resolve via DNS server, cache result            |
+|      v                                                                   |
+|    Step 4: HTTP fetch with timeouts                                      |
+|      |     Connect timeout: 5s, Read timeout: 30s                        |
+|      |     Follow redirects (max 5 hops)                                 |
+|      |     Capture: status, headers, body, response_time                 |
+|      |     Set next_allowed_fetch:{domain} = now + crawl_delay           |
+|      v                                                                   |
+|    Step 5: Content processing                                            |
+|      |     Parse HTML, extract links (-> new DISCOVERED URLs)            |
+|      |     Compute content fingerprint (SimHash for near-dedup)          |
+|      |     Store page content: S3 PUT s3://crawl-data/{url_hash}         |
+|      |     Store metadata: RocksDB { url, status_code, fetch_time,       |
+|      |       content_hash, last_crawled_at }                             |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                          |
+|  What Fails               | Impact & Recovery                            |
+|  -------------------------+----------------------------------------------+
+|  DNS resolution failure   | URL stays in QUEUED. Retry after 5 min.      |
+|                           | If persistent, mark domain as unreachable.   |
+|                           | Per-worker DNS cache reduces blast radius.   |
+|  -------------------------+----------------------------------------------+
+|  HTTP 5xx / timeout       | Retry with exponential backoff (1m, 5m, 30m).|
+|                           | After 3 retries, mark URL as FAILED.          |
+|                           | Don't penalize other URLs on same domain.    |
+|  -------------------------+----------------------------------------------+
+|  Worker crash mid-fetch   | Kafka offset not committed. URL is re-        |
+|                           | delivered to another worker. Bloom filter     |
+|                           | already has it (no duplicate storage). At     |
+|                           | worst, page fetched twice (idempotent).      |
+|  -------------------------+----------------------------------------------+
+|  Bloom filter OOM /       | Rebuild from RocksDB seen-URL store on        |
+|  corruption               | restart. During rebuild, temporary increase   |
+|                           | in duplicate fetches (acceptable). Partition  |
+|                           | Bloom filter across workers to limit size.   |
+|  -------------------------+----------------------------------------------+
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                          |
+|    URL Frontier Pruning:                                                 |
+|      URLs older than 30 days in queue without being fetched              |
+|      are dropped (low-priority URLs that never got processed)            |
+|                                                                          |
+|    Robots.txt Cache Refresh:                                             |
+|      Re-fetch robots.txt per domain every 24 hours                       |
+|      Stale entries auto-expire via TTL on cache keys                     |
+|                                                                          |
+|    DNS Cache Expiry:                                                     |
+|      Per-worker local cache, TTL = min(DNS record TTL, 1 hour)           |
+|      Evict on memory pressure (LRU)                                      |
+|                                                                          |
+|    Content Storage Lifecycle (S3/HDFS):                                   |
+|      Keep latest version of each page                                    |
+|      Archive older versions after 90 days to cold storage               |
+|      Delete pages for domains removed from crawl scope                   |
+|                                                                          |
+|    Re-Crawl Scheduling:                                                  |
+|      Adaptive re-crawl interval per URL based on change frequency        |
+|      News sites: re-crawl every 15 min                                   |
+|      Blogs: re-crawl every 7 days                                        |
+|      Static corporate pages: re-crawl every 30 days                      |
+|      If content_hash unchanged on re-crawl, extend interval              |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 12: INTERVIEW QUESTIONS
 
 ```

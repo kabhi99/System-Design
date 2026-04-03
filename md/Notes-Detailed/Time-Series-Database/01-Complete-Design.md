@@ -1700,6 +1700,151 @@ specifically for time-series patterns.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Time Series Data Point)                       |
+|                                                                         |
+|    RECEIVED --> WAL_ENTRY --> MEMTABLE --> BLOCK_FLUSHED                 |
+|       |            |            |              |                        |
+|       |            |            |              +--> COMPACTED           |
+|       |            |            |              |    (blocks merged)     |
+|       |            |            |              +--> DOWNSAMPLED         |
+|       |            |            |              |    (5m/1h rollups)     |
+|       |            |            |              +--> EXPIRED             |
+|       |            |            |                   (retention drop)    |
+|       |            |            +--> QUERYABLE (from HEAD block)        |
+|       |            +--> REPLAYED (crash recovery from WAL)              |
+|       +--> REJECTED (validation fail / cardinality limit)              |
+|                                                                         |
+|  Key identifiers:                                                       |
+|    TSID = hash(metric_name + sorted tags) -- uint64                    |
+|    Block = immutable file covering fixed time range (e.g., 2 hours)    |
+|    HEAD block = active in-memory MemTable + WAL for current window     |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (WAL --> MemTable --> Block Flush)              |
+|                                                                         |
+|  Step 1: Write Gateway receives batch of data points                    |
+|          Validates format, timestamps, resolves/creates TSID            |
+|  Step 2: Route to correct shard based on TSID hash                      |
+|  Step 3: Append to Write-Ahead Log (sequential, group commit)           |
+|          WAL entry: [CRC32 | length | TSID | timestamp | value]         |
+|          Batch fsync every ~10ms (trades latency for throughput)         |
+|  Step 4: Insert into active MemTable (in-memory, per-series buffers)    |
+|          MemTable: TSID --> [(t1,v1), (t2,v2), ...]                     |
+|  Step 5: When 2-hour block window closes:                               |
+|          a. Freeze current MemTable (becomes read-only)                 |
+|          b. Create new MemTable for incoming writes                     |
+|          c. Compress frozen data with Gorilla encoding:                 |
+|             - Timestamps: delta-of-delta (most = 1 bit)                 |
+|             - Values: XOR float encoding (~1.37 bytes/sample)           |
+|          d. Write immutable block to disk (index + chunks + meta)       |
+|          e. Truncate WAL up to flushed point                            |
+|  Step 6: Background compaction merges small blocks                      |
+|          2h + 2h + 2h --> 6h --> 12h --> 24h blocks                     |
+|                                                                         |
+|  Pseudocode (ingestion node):                                           |
+|                                                                         |
+|    func ingest(batch []DataPoint):                                      |
+|      for point in batch:                                                |
+|        tsid = resolve_or_create_tsid(point.name, point.tags)            |
+|        wal.append(tsid, point.timestamp, point.value)                   |
+|        head_block.memtable[tsid].append(point.ts, point.val)            |
+|                                                                         |
+|      if head_block.window_closed():                                     |
+|        frozen = head_block.freeze()                                     |
+|        head_block = new_memtable(next_window)                           |
+|        async { compress_and_flush(frozen) }                             |
+|        async { wal.truncate(frozen.max_offset) }                        |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  3. READ PATH (Query Execution)                                         |
+|                                                                         |
+|  Query: avg(cpu_usage{region="us-east"}) over last 1 hour              |
+|    |                                                                    |
+|    v                                                                    |
+|  Query Gateway: parse --> AST, identify time range [now-1h, now]       |
+|    |                                                                    |
+|    v                                                                    |
+|  Series resolution (inverted index):                                    |
+|    region="us-east" --> {TSID1, TSID2, ...}                            |
+|    intersect __name__="cpu_usage" --> final TSID set                   |
+|    |                                                                    |
+|    v                                                                    |
+|  Block selection: find blocks overlapping [now-1h, now]                |
+|    - HEAD block MemTable (in-memory, most recent data)                 |
+|    - On-disk immutable blocks (2h/6h/12h compacted)                    |
+|    - Skip blocks via min/max timestamp filtering                       |
+|    |                                                                    |
+|    v                                                                    |
+|  Data retrieval: decompress Gorilla-encoded chunks                     |
+|    - Apply time range trim, parallel scan across blocks                |
+|    - LRU cache for recently accessed compressed chunks                 |
+|    |                                                                    |
+|    v                                                                    |
+|  Aggregation: compute avg() per step interval (e.g., 1 point/min)     |
+|    Return time series of aggregated values to caller                   |
+|                                                                         |
+|  Optimization: pre-aggregated rollups (materialized views) for         |
+|  common queries. Query result caching for immutable time ranges.       |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                         |
+|  +---------------------------+-------------------------------------+   |
+|  | What Fails                | Impact & Recovery                   |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Ingestion node crashes    | On restart: replay WAL from last    |   |
+|  |                           | checkpoint. Unflushed MemTable data  |   |
+|  |                           | recovered from WAL entries.          |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Disk full on storage node | Block flush fails. Retention policy  |   |
+|  |                           | drops oldest blocks to free space.   |   |
+|  |                           | Alert fires on storage utilization.  |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Query timeout (expensive  | Query frontend splits large time     |   |
+|  | long-range query)         | range into sub-queries, caches       |   |
+|  |                           | immutable sub-results. Pre-computed  |   |
+|  |                           | recording rules avoid recalculation. |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Shard goes down (multi-   | Querier returns partial results with |   |
+|  | shard deployment)         | warning. Write Gateway re-routes to  |   |
+|  |                           | replica shard. Replication ensures   |   |
+|  |                           | no permanent data loss.              |   |
+|  +---------------------------+-------------------------------------+   |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                         |
+|  Retention-based deletion:                                               |
+|    Blocks are time-partitioned (2h/6h/12h/24h windows).                |
+|    Deleting old data = drop entire block directory (O(1)).             |
+|    No row-level DELETE -- instant, no write amplification.             |
+|                                                                         |
+|  Downsampling (Thanos Compactor or built-in):                           |
+|    Raw 15s --> 5-min avg after 7 days                                  |
+|    5-min --> 1-hour avg after 30 days                                  |
+|    Stored as separate block files alongside raw data.                  |
+|                                                                         |
+|  Compaction:                                                             |
+|    Merges small blocks: 2h+2h+2h --> 6h block                         |
+|    Drops deleted series (tombstones) during merge.                     |
+|    Improves read performance (fewer files to open per query).          |
+|                                                                         |
+|  WAL truncation:                                                         |
+|    Old WAL segments (128 MB each) deleted after successful flush.      |
+|    On crash: only replay WAL segments after last checkpoint.           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 22: SUMMARY
 
 ```

@@ -933,7 +933,149 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW Q&A
+## SECTION 12: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  1. ENTITY STATE MACHINE (Reservation)                                   |
+|                                                                          |
+|  PENDING ──> HELD ──> CONFIRMED ──> CHECKED_IN ──> CHECKED_OUT           |
+|    │           │          │                                              |
+|    │           │          └──> CANCELLED (by guest, refund triggered)     |
+|    │           │                                                         |
+|    │           └──> EXPIRED (TTL hit, inventory released)                 |
+|    │                                                                     |
+|    └──> PAYMENT_FAILED (inventory released)                              |
+|                                                                          |
+|  CANCELLED ──> REFUND_PROCESSING ──> REFUND_COMPLETED                    |
+|                                                                          |
+|  Transition rules:                                                       |
+|  * HELD has a 10-minute TTL; auto-transitions to EXPIRED                 |
+|  * Only CONFIRMED can transition to CHECKED_IN (at hotel)                |
+|  * CANCELLED only from CONFIRMED (within cancellation policy)            |
+|  * CHECKED_OUT is a terminal state                                       |
+|                                                                          |
+|  ==================================================================     |
+|                                                                          |
+|  2. CRITICAL WRITE PATH (Room Booking with Optimistic Locking)           |
+|                                                                          |
+|  Client                API GW        Avail Svc       Booking Svc         |
+|    |                     |               |               |               |
+|    |-- POST /hold ------>|               |               |               |
+|    |                     |-- reserve --->|               |               |
+|    |                     |               |               |               |
+|    |                     |  BEGIN;                                        |
+|    |                     |  UPDATE room_inventory                         |
+|    |                     |    SET booked = booked + 1                     |
+|    |                     |    WHERE hotel_id = 'h_123'                    |
+|    |                     |      AND room_type = 'double'                  |
+|    |                     |      AND date BETWEEN '2024-12-20'             |
+|    |                     |                  AND '2024-12-24'              |
+|    |                     |      AND booked < total;                       |
+|    |                     |  -- rows_updated = 5? all nights avail         |
+|    |                     |  -- rows_updated < 5? ROLLBACK                 |
+|    |                     |                                                |
+|    |                     |  INSERT INTO reservations                      |
+|    |                     |    (id, hotel_id, room_type, guest_id,         |
+|    |                     |     check_in, check_out, status,               |
+|    |                     |     idempotency_key, created_at)               |
+|    |                     |    VALUES (..., 'HELD', :idem_key, now());     |
+|    |                     |  COMMIT;                                       |
+|    |                     |               |               |               |
+|    |                     |  SET hold:{reservation_id} EX 600  (Redis TTL) |
+|    |                     |               |               |               |
+|    |<-- hold_id, TTL ----|               |               |               |
+|    |                     |               |               |               |
+|    |-- POST /book ------>|               |-- confirm --->|               |
+|    |   {hold_id, pay}    |               |               |               |
+|    |                     |               |  Payment Svc  |               |
+|    |                     |               |   charge()    |               |
+|    |                     |               |               |               |
+|    |                     |  UPDATE reservations SET status = 'CONFIRMED'  |
+|    |                     |    WHERE id = :hold_id AND status = 'HELD';    |
+|    |                     |               |               |               |
+|    |                     |  Kafka: emit BookingConfirmed event             |
+|    |                     |   -> Notification Svc (email + SMS)            |
+|    |                     |   -> ES index update (availability refresh)    |
+|    |                     |               |               |               |
+|    |<-- booking confirmed|               |               |               |
+|                                                                          |
+|  ==================================================================     |
+|                                                                          |
+|  3. READ PATH                                                            |
+|                                                                          |
+|  SEARCH (hotel list):                                                    |
+|    Client --> Redis (cache key: hash(location,dates,filters))            |
+|      HIT  --> return cached results (TTL 60s)                            |
+|      MISS --> Elasticsearch (geo + text + filter query)                   |
+|           --> populate Redis, return results                             |
+|                                                                          |
+|  AVAILABILITY CHECK (at booking time):                                   |
+|    Client --> Inventory DB (PostgreSQL, source of truth)                  |
+|    SELECT (total - booked) AS available                                  |
+|      FROM room_inventory                                                 |
+|      WHERE hotel_id = :h AND room_type = :rt                             |
+|        AND date BETWEEN :check_in AND :check_out;                        |
+|    * Always reads from primary (strong consistency)                      |
+|    * Search shows approximate; booking checks real-time                  |
+|                                                                          |
+|  BOOKING HISTORY (user's reservations):                                  |
+|    Client --> Booking DB read replica                                    |
+|    * Eventual consistency OK for display purposes                        |
+|                                                                          |
+|  ==================================================================     |
+|                                                                          |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                          |
+|  +-----------------------------+--------------------------------------+  |
+|  | What Fails                  | Impact & Recovery                    |  |
+|  +-----------------------------+--------------------------------------+  |
+|  | Payment succeeds, confirm   | Saga compensation: refund payment,  |  |
+|  | write fails                 | release inventory hold.              |  |
+|  |                             | Orchestrator retries on restart.     |  |
+|  +-----------------------------+--------------------------------------+  |
+|  | Redis hold key expires      | Background job scans HELD rows      |  |
+|  | before guest pays           | older than 10 min, sets EXPIRED,    |  |
+|  |                             | decrements booked count in          |  |
+|  |                             | room_inventory.                     |  |
+|  +-----------------------------+--------------------------------------+  |
+|  | Optimistic lock conflict    | Application retries the UPDATE;     |  |
+|  | (version mismatch)          | on re-read if booked = total,       |  |
+|  |                             | reject with "room unavailable."     |  |
+|  +-----------------------------+--------------------------------------+  |
+|  | Kafka event lost after      | Transactional outbox pattern:       |  |
+|  | booking confirmed           | write event to outbox table in      |  |
+|  |                             | same DB txn, relay to Kafka async.  |  |
+|  +-----------------------------+--------------------------------------+  |
+|                                                                          |
+|  ==================================================================     |
+|                                                                          |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                          |
+|  EXPIRED HOLDS:                                                          |
+|  * Redis key hold:{reservation_id} TTL 600s (10 min)                     |
+|  * On key expiry callback OR sweep job every 60s:                        |
+|    UPDATE room_inventory SET booked = booked - 1                         |
+|      WHERE hotel_id = :h AND room_type = :rt                             |
+|      AND date BETWEEN :ci AND :co;                                       |
+|    UPDATE reservations SET status = 'EXPIRED'                            |
+|      WHERE id = :id AND status = 'HELD';                                 |
+|                                                                          |
+|  STALE SEARCH CACHE:                                                     |
+|  * Redis search cache TTL: 60 seconds                                    |
+|  * Kafka BookingCreated / BookingCancelled events trigger                 |
+|    ES index refresh for affected hotel availability                      |
+|                                                                          |
+|  OLD BOOKING DATA:                                                       |
+|  * Bookings > 2 years: archived to cold storage (S3 + Athena)            |
+|  * room_inventory rows for past dates: purged monthly                    |
+|  * ES index: only future + 30-day past dates kept hot                    |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
+## SECTION 13: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+

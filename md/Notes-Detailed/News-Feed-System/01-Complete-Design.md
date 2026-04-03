@@ -1223,6 +1223,168 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Feed Item Lifecycle)                         |
+|                                                                         |
+|    [CREATED] --> [FANNING_OUT] --> [RANKED] --> [DELIVERED] --> [SEEN]  |
+|        |              |               |                                 |
+|        |              |               +---> [FILTERED]  (spam/blocked) |
+|        |              |                                                 |
+|        |              +---> (partial: some followers done, others not)  |
+|        |                                                                |
+|        +---> [DELETED]  (author deletes post)                          |
+|                                                                         |
+|    CREATED:     Post written to posts table, media URLs attached       |
+|    FANNING_OUT: Fan-out workers pushing post_id to follower caches     |
+|    RANKED:      Post scored by ranking algo for a specific user        |
+|    DELIVERED:   Post included in a user's feed API response            |
+|    SEEN:        User scrolled past the post (impression logged)        |
+|    FILTERED:    Post removed by spam filter or user block list         |
+|    DELETED:     is_deleted=true, async removal from all feed caches    |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Post Creation + Hybrid Fan-Out)               |
+|                                                                         |
+|    Author: POST /api/v1/posts { content, media_ids[], mentions[] }     |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Write post to PostgreSQL                                    |
+|      |                                                                  |
+|      |     INSERT INTO posts                                            |
+|      |       (post_id, author_id, content, media_urls,                  |
+|      |        media_type, like_count, comment_count,                    |
+|      |        share_count, is_deleted, created_at)                      |
+|      |     VALUES                                                       |
+|      |       (snowflake_id(), 12345, 'Hello world',                     |
+|      |        '["https://cdn/img1.jpg"]', 'IMAGE',                      |
+|      |        0, 0, 0, false, NOW());                                   |
+|      v                                                                  |
+|    Step 2: Write to author timeline cache                              |
+|      |     Redis: ZADD timeline:{author_id} <timestamp> <post_id>      |
+|      |     Redis: ZREMRANGEBYRANK timeline:{author_id} 0 -801          |
+|      |       (keep only latest 800 posts)                               |
+|      v                                                                  |
+|    Step 3: Cache post object                                           |
+|      |     Redis: SET post:{post_id} <post_json> EX 86400              |
+|      v                                                                  |
+|    Step 4: Publish to Kafka for fan-out                                |
+|      |     Topic: post_created                                          |
+|      |     Payload: { post_id, author_id, is_celebrity }               |
+|      v                                                                  |
+|    Step 5: Fan-out workers consume from Kafka                          |
+|      |                                                                  |
+|      |  IF author.is_celebrity = false (followers < 10K):               |
+|      |    SELECT follower_id FROM followers                             |
+|      |      WHERE followee_id = author_id;                              |
+|      |    For each follower:                                            |
+|      |      Redis: ZADD feed:{follower_id} <timestamp> <post_id>       |
+|      |      Redis: ZREMRANGEBYRANK feed:{follower_id} 0 -501           |
+|      |        (keep feed cache at 500 entries max)                      |
+|      |                                                                  |
+|      |  IF author.is_celebrity = true (followers >= 10K):               |
+|      |    Redis: ZADD celeb:{author_id} <timestamp> <post_id>          |
+|      |    (no fan-out; merged at read time)                             |
+|      v                                                                  |
+|    Return { post_id, created_at } to author                            |
+|                                                                         |
+|    WRITE ORDER: PostgreSQL -> Redis timeline -> Redis post cache       |
+|                 -> Kafka -> fan-out to Redis feed caches               |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  3. READ PATH (Feed Generation - Cache + Merge + Rank)                 |
+|                                                                         |
+|    User: GET /api/v1/feed?cursor={last_post_id}&limit=20              |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Fetch pre-computed feed from Redis                          |
+|      |     ZREVRANGEBYSCORE feed:{user_id} +inf <cursor> LIMIT 20      |
+|      |     Returns list of post_ids (pushed by fan-out workers)        |
+|      v                                                                  |
+|    Step 2: Fetch celebrity posts (fan-out-on-read portion)             |
+|      |     Get user's followed celebrities from social graph           |
+|      |     For each celebrity:                                          |
+|      |       ZREVRANGEBYSCORE celeb:{celeb_id} +inf <cursor> LIMIT 5   |
+|      |     Merge celebrity post_ids with Step 1 results                |
+|      v                                                                  |
+|    Step 3: Hydrate post objects                                        |
+|      |     For each post_id:                                            |
+|      |       Redis: GET post:{post_id}  (batch MGET for speed)         |
+|      |       Cache miss -> SELECT * FROM posts WHERE post_id = ?       |
+|      |       Then SET post:{post_id} <json> EX 86400                   |
+|      v                                                                  |
+|    Step 4: Rank posts (ML scoring)                                     |
+|      |     Score = f(affinity, recency, engagement, post_type)         |
+|      |     Filter out: blocked users, muted keywords, seen posts       |
+|      |     Sort by score DESC, take top 20                             |
+|      v                                                                  |
+|    Step 5: Return paginated response                                   |
+|            { posts: [...], next_cursor, has_more }                     |
+|                                                                         |
+|    CACHE MISS (cold user, no feed in Redis):                           |
+|      Fall back to full fan-out-on-read:                                |
+|      Get all followed user_ids -> fetch their recent posts ->          |
+|      merge, rank, return. Then populate feed:{user_id} in Redis.       |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                  |
+|                                                                         |
+|  What Fails               | Impact & Recovery                          |
+|  -------------------------+--------------------------------------------+
+|  Redis cluster down       | Feed reads fall back to DB fan-out-on-read |
+|                           | (slow but functional). Post writes still   |
+|                           | go to PostgreSQL. Fan-out queues in Kafka  |
+|                           | until Redis recovers and caches rebuild.   |
+|  -------------------------+--------------------------------------------+
+|  Kafka down               | New posts saved to DB but fan-out stalls.  |
+|                           | Existing feed caches serve stale feeds.    |
+|                           | On recovery, replay un-consumed events.    |
+|                           | Users may see delayed posts for minutes.   |
+|  -------------------------+--------------------------------------------+
+|  Fan-out worker crash     | Partial fan-out: some followers got the    |
+|                           | post, others didn't. Kafka consumer offset |
+|                           | not committed, so message is reprocessed.  |
+|                           | ZADD is idempotent (safe to re-execute).   |
+|  -------------------------+--------------------------------------------+
+|  Celebrity post storm     | 100M-follower user posts -> read-path      |
+|                           | merging adds latency. Mitigate: cache      |
+|                           | celeb:{id} aggressively, pre-compute       |
+|                           | celeb merge for active users.              |
+|  -------------------------+--------------------------------------------+
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                   |
+|                                                                         |
+|    Feed Cache Trimming (on every ZADD):                                |
+|      ZREMRANGEBYRANK feed:{user_id} 0 -501                            |
+|      Keeps feed cache at 500 post_ids max per user                    |
+|                                                                         |
+|    Post Deletion Propagation (async via Kafka):                        |
+|      Author deletes post -> UPDATE posts SET is_deleted=true           |
+|      Kafka event: post_deleted { post_id, author_id }                 |
+|      Workers: ZREM feed:{follower_id} <post_id> for all followers     |
+|      Redis: DEL post:{post_id}                                        |
+|                                                                         |
+|    Stale Cache Expiry:                                                 |
+|      post:{pid} keys: EX 86400 (24h TTL)                              |
+|      feed:{uid} keys: no TTL (maintained by trim + fan-out)           |
+|      Inactive user feed caches: evicted by Redis LRU policy           |
+|      celeb:{uid} keys: EX 3600 (1h, rebuilt from DB on miss)          |
+|                                                                         |
+|    Soft-Deleted Posts Cleanup (weekly batch job):                      |
+|      DELETE FROM posts WHERE is_deleted = true                         |
+|        AND created_at < NOW() - INTERVAL 30 DAY;                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 14: INTERVIEW Q&A
 
 ### QUESTION 1: WHY HYBRID FAN-OUT?

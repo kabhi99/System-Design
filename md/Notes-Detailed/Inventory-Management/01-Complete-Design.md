@@ -969,7 +969,209 @@
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW QUESTIONS AND ANSWERS
+## SECTION 13: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Stock)                                        |
+|                                                                         |
+|  AVAILABLE ──> RESERVED ──> COMMITTED ──> SHIPPED                       |
+|      │            │             │                                       |
+|      │            │             └──> RETURNED (back to inspection)       |
+|      │            │                      │                              |
+|      │            │                      ├──> AVAILABLE (sellable)       |
+|      │            │                      └──> DAMAGED (unsellable)       |
+|      │            │                                                     |
+|      │            └──> RELEASED (order cancelled, back to available)     |
+|      │                                                                  |
+|      └──> DAMAGED (defective, removed from saleable pool)               |
+|      └──> IN_TRANSIT (warehouse transfer initiated)                     |
+|                │                                                        |
+|                └──> AVAILABLE (at destination, transfer received)        |
+|                                                                         |
+|  Transition rules:                                                      |
+|  * AVAILABLE -> RESERVED: order placed (atomic decrement)               |
+|  * RESERVED -> COMMITTED: warehouse allocation + pick started           |
+|  * COMMITTED -> SHIPPED: package handed to carrier                      |
+|  * RESERVED -> RELEASED: order cancelled (back to available)            |
+|  * Every transition writes to inventory_ledger in same txn              |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Reserve with Warehouse Allocation)             |
+|                                                                         |
+|  Order Svc      Inventory Svc     PostgreSQL       Redis     Kafka      |
+|    |                 |               |               |         |        |
+|    |-- reserve ----->|               |               |         |        |
+|    | {sku, qty,      |               |               |         |        |
+|    |  order_id}      |               |               |         |        |
+|    |                 |               |               |         |        |
+|    |   FLASH SALE PATH (Redis is primary):           |         |        |
+|    |                 |               |               |         |        |
+|    |   Lua script (atomic check-and-decrement):      |         |        |
+|    |   local key = "stock:{sku}:{loc}"               |         |        |
+|    |   local current = tonumber(redis.call('GET',key))|        |        |
+|    |   if current >= quantity then                    |         |        |
+|    |     redis.call('DECRBY', key, quantity)          |         |        |
+|    |     return current - quantity                    |         |        |
+|    |   end                                           |         |        |
+|    |   return -1  -- insufficient stock              |         |        |
+|    |                 |               |               |         |        |
+|    |   NORMAL PATH (DB is primary):  |               |         |        |
+|    |                 |               |               |         |        |
+|    |   BEGIN TRANSACTION;            |               |         |        |
+|    |     SELECT available, reserved, version          |         |        |
+|    |       FROM inventory_records                     |         |        |
+|    |       WHERE sku_id = :sku AND location_id = :loc |         |        |
+|    |       FOR UPDATE;                                |         |        |
+|    |                 |               |               |         |        |
+|    |     IF available < :quantity THEN                |         |        |
+|    |       ROLLBACK; RETURN insufficient_stock        |         |        |
+|    |     END IF;                     |               |         |        |
+|    |                 |               |               |         |        |
+|    |     UPDATE inventory_records                     |         |        |
+|    |       SET available = available - :quantity,     |         |        |
+|    |           reserved = reserved + :quantity,       |         |        |
+|    |           version = version + 1,                |         |        |
+|    |           updated_at = now()                     |         |        |
+|    |       WHERE sku_id = :sku AND location_id = :loc;|        |        |
+|    |                 |               |               |         |        |
+|    |     INSERT INTO inventory_ledger                 |         |        |
+|    |       (sku_id, location_id, operation, quantity, |         |        |
+|    |        reference_type, reference_id,             |         |        |
+|    |        before_available, after_available,        |         |        |
+|    |        before_reserved, after_reserved,          |         |        |
+|    |        actor_id, created_at)                     |         |        |
+|    |       VALUES (:sku, :loc, 'reserve', :qty,      |         |        |
+|    |        'order', :order_id,                       |         |        |
+|    |        :old_avail, :new_avail,                   |         |        |
+|    |        :old_reserved, :new_reserved,             |         |        |
+|    |        :system_id, now());                       |         |        |
+|    |   COMMIT;                       |               |         |        |
+|    |                 |               |               |         |        |
+|    |   Invalidate/update Redis cache: |               |         |        |
+|    |     SET stock:{sku}:{loc} :new_avail             |         |        |
+|    |                 |               |               |         |        |
+|    |   Kafka: emit stock_changed event               |         |        |
+|    |     -> search-consumer (update product listing)  |         |        |
+|    |     -> alert-consumer (check safety_stock)       |         |        |
+|    |     -> analytics-consumer (ClickHouse time-series)|        |        |
+|    |     -> marketplace-sync-consumer (update feeds)  |         |        |
+|    |                 |               |               |         |        |
+|    |<-- reserved ----|               |               |         |        |
+|                                                                         |
+|  Warehouse allocation (after reserve):                                  |
+|  * Choose optimal warehouse: closest to customer with stock             |
+|  * Assign items to specific bins: SELECT from bin_inventory             |
+|    WHERE sku_id = :sku AND zone != 'DAMAGED'                            |
+|    ORDER BY receipt_date ASC (FIFO) LIMIT :qty                          |
+|  * Create pick_list with bin locations and quantities                   |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  3. READ PATH                                                           |
+|                                                                         |
+|  PRODUCT PAGE ("In Stock" / "Only 3 left!"):                            |
+|    Client --> Redis cache (stock:{sku}:total)                           |
+|    * Aggregate across all locations, cached                             |
+|    * TTL: 10 seconds (eventual consistency OK for display)              |
+|    MISS --> Read replica (PostgreSQL)                                    |
+|    SELECT SUM(available) FROM inventory_records                          |
+|      WHERE sku_id = :sku;                                               |
+|                                                                         |
+|  STOCK BY LOCATION (warehouse dashboard):                               |
+|    Internal --> PostgreSQL read replica                                  |
+|    SELECT * FROM inventory_records                                       |
+|      WHERE sku_id = :sku;                                               |
+|    * Returns all locations with their available/reserved/damaged         |
+|    * Read replica: < 100ms lag under normal conditions                  |
+|                                                                         |
+|  INVENTORY HISTORY (audit):                                             |
+|    Internal --> inventory_ledger table                                   |
+|    SELECT * FROM inventory_ledger                                        |
+|      WHERE sku_id = :sku AND location_id = :loc                         |
+|      AND created_at BETWEEN :start AND :end                             |
+|      ORDER BY created_at DESC;                                          |
+|    * Partitioned by month; partition pruning for date ranges             |
+|                                                                         |
+|  TIME-SERIES ANALYTICS:                                                 |
+|    Dashboard --> ClickHouse (columnar, fast aggregation)                 |
+|    * "Stock level for SKU X over last 30 days"                          |
+|    * Built from Kafka stock_changed events                              |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                   |
+|                                                                         |
+|  +------------------------------+------------------------------------+  |
+|  | What Fails                   | Impact & Recovery                  |  |
+|  +------------------------------+------------------------------------+  |
+|  | Redis down during flash sale | Circuit breaker after 3 failures.  |  |
+|  |                              | Fall back to PostgreSQL with       |  |
+|  |                              | pessimistic locking (FOR UPDATE).  |  |
+|  |                              | Higher latency but no overselling. |  |
+|  |                              | On recovery, warm cache from DB.   |  |
+|  +------------------------------+------------------------------------+  |
+|  | Redis and DB disagree on     | Reconciliation job every 60s:      |  |
+|  | stock count                  | compare stock:{sku}:{loc} vs DB    |  |
+|  |                              | available column. Small drift      |  |
+|  |                              | (<5%): auto-correct Redis from DB. |  |
+|  |                              | Large drift: alert ops, manual     |  |
+|  |                              | investigation. Ledger entry with   |  |
+|  |                              | operation = 'adjust'.              |  |
+|  +------------------------------+------------------------------------+  |
+|  | Order reserved stock but     | Saga compensation: inventory svc   |  |
+|  | payment failed               | releases the reservation.          |  |
+|  |                              | available += qty, reserved -= qty. |  |
+|  |                              | Ledger entry: 'release', ref =     |  |
+|  |                              | cancelled order_id.                |  |
+|  +------------------------------+------------------------------------+  |
+|  | POS offline (store internet  | Local-first: POS records sales     |  |
+|  | outage)                      | in SQLite. On reconnect, replays   |  |
+|  |                              | events. Physical sale wins over    |  |
+|  |                              | online reservation (cancel online  |  |
+|  |                              | order, notify customer).           |  |
+|  +------------------------------+------------------------------------+  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                    |
+|                                                                         |
+|  ABANDONED RESERVATIONS:                                                |
+|  * Sweep job every 5 min: find reserved stock where order is            |
+|    cancelled or expired (no payment within 10 min)                      |
+|  * Release: available += qty, reserved -= qty                           |
+|  * Ledger entry: operation = 'release', reason = 'timeout'              |
+|                                                                         |
+|  LEDGER PARTITIONING:                                                   |
+|  * inventory_ledger: partitioned by created_at (monthly)                |
+|  * Current + last 3 months: SSD, full indexes                           |
+|  * 3-24 months: HDD, minimal indexes                                    |
+|  * >24 months: archived to S3 + Athena for compliance queries           |
+|                                                                         |
+|  REDIS CACHE REFRESH:                                                   |
+|  * stock:{sku}:{loc}: no TTL during flash sale (write-through)          |
+|  * stock:{sku}:total: TTL 10 seconds (cache-aside pattern)              |
+|  * hot_skus SET: maintained by monitoring, TTL per entry = 1 hour       |
+|  * After flash sale: full reconciliation between Redis and DB           |
+|                                                                         |
+|  CYCLE COUNTING ADJUSTMENTS:                                            |
+|  * Physical count discrepancies create ledger entries:                   |
+|    operation = 'adjust', quantity = (physical - system)                  |
+|  * Requires supervisor approval for adjustments > threshold             |
+|  * Triggers shrinkage alert if cumulative adjustments are large         |
+|                                                                         |
+|  MARKETPLACE SYNC:                                                      |
+|  * marketplace-sync-consumer rate-limited per platform API              |
+|  * Stale feed: if sync fails, retry with backoff                        |
+|  * Automatic listing disable if stock reaches 0                         |
+|  * Re-enable listing when stock replenished above threshold             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 14: INTERVIEW QUESTIONS AND ANSWERS
 
 ### Q1: HOW DO YOU PREVENT OVERSELLING DURING A FLASH SALE?
 

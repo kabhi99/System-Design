@@ -1556,6 +1556,119 @@
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE: Query Suggestion Lifecycle                    |
+||  ======================================================                 |
+||                                                                         |
+||  RAW_QUERY ---> AGGREGATED ---> INDEXED_IN_TRIE ---> SERVED             |
+||      |          (Flink           (offline Trie        (top-K             |
+||      |           window)          rebuild + S3)        lookup)           |
+||      |                                                   |              |
+||      |  real-time spike                    freq drops    |              |
+||      +---> TRENDING_OVERLAY --+              +----------+               |
+||            (Flink sliding     |              |                           |
+||             window, 1 hr)     |              v                           |
+||                               |         DECAYED/PRUNED                  |
+||                               |         (dropped at next                |
+||                               |          Trie rebuild)                  |
+||                               |                                         |
+||                               +--> merged at query time with base Trie  |
+||                                                                         |
+||  2. CRITICAL WRITE PATH: Trie Update from Query Logs                    |
+||  ======================================================                 |
+||                                                                         |
+||  Step 1: Log raw query to Kafka                                         |
+||    PRODUCE topic=query_logs                                             |
+||      key   = query_string                                               |
+||      value = {query, user_id, timestamp, locale}                        |
+||                                                                         |
+||  Step 2: Flink tumbling window aggregates (every 2 hrs)                 |
+||    GROUP BY (query_string, locale)                                      |
+||    -> Map<(query, locale), frequency>                                   |
+||    -> write aggregation to HDFS / S3 staging area                       |
+||                                                                         |
+||  Step 3: Offline Trie build job (Spark / custom builder)                |
+||    trie = new Trie()                                                    |
+||    for (query, freq) in aggregated_counts:                              |
+||        node = trie.insert(query.toLowerCase())                          |
+||        node.frequency = freq                                            |
+||    for node in trie.BFS():                                              |
+||        node.top_k = heapSelect(descendants, K=10, by=freq)             |
+||    serialize(trie) -> S3  s3://tries/{locale}/{timestamp}.bin           |
+||                                                                         |
+||  Step 4: Atomic hot-swap on Trie servers                                |
+||    new_trie = deserialize(S3.download(latest_snapshot))                 |
+||    old = current_trie.getAndSet(new_trie)   // atomic pointer swap      |
+||    wait(in_flight_queries_drain)                                        |
+||    GC(old)                                                              |
+||                                                                         |
+||  Step 5 (parallel): Trending overlay via real-time Flink path           |
+||    Sliding window (1 hr, slide 5 min) detects frequency spikes          |
+||    Push trending queries -> Trie servers via gRPC                       |
+||    Servers insert into overlay Trie (merged at query time)              |
+||                                                                         |
+||  3. READ PATH: Prefix Search with Top-K Ranking                         |
+||  ======================================================                 |
+||                                                                         |
+||  GET /typeahead?q=wea&limit=10&locale=en-US                             |
+||                                                                         |
+||  L1 — CDN / Edge Cache                                                  |
+||      key = typeahead:{locale}:{normalized_prefix}                       |
+||      HIT  -> return cached suggestions (TTL 5-15 min)                   |
+||      MISS -> forward to application layer                               |
+||                                                                         |
+||  L2 — Application Cache (Redis / Memcached)                             |
+||      key = typeahead:en-US:wea                                          |
+||      HIT  -> return, backfill CDN cache                                 |
+||      MISS -> query in-memory Trie                                       |
+||                                                                         |
+||  L3 — In-Memory Trie Lookup                                             |
+||      node     = trie.traverse("wea")         // O(prefix_len)           |
+||      base     = node.top_k                   // pre-computed top 10     |
+||      trending = overlay.traverse("wea").top_k                           |
+||      merged   = merge(base, trending, user_context)                     |
+||      filter blocklist, apply personalization boost                      |
+||      return merged[:10]                                                 |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||  ======================================================                 |
+||                                                                         |
+||  +---------------------+--------------------------------------------+   |
+||  | What Fails          | Impact & Recovery                          |   |
+||  +---------------------+--------------------------------------------+   |
+||  | Kafka broker down   | Producers buffer to local disk; Flink      |   |
+||  |                     | resumes from checkpoint on recovery.       |   |
+||  +---------------------+--------------------------------------------+   |
+||  | Trie server crash   | LB routes to healthy replicas. New node    |   |
+||  |                     | loads latest S3 snapshot to recover.       |   |
+||  +---------------------+--------------------------------------------+   |
+||  | S3 snapshot corrupt | Servers keep serving previous Trie version.|   |
+||  |                     | Alert fires; next build cycle retries.     |   |
+||  +---------------------+--------------------------------------------+   |
+||  | Flink job fails     | Trending overlay goes stale; base Trie is  |   |
+||  |                     | unaffected. Restart from Flink savepoint.  |   |
+||  +---------------------+--------------------------------------------+   |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||  ======================================================                 |
+||                                                                         |
+||  * Trie rebuild (every 2 hrs) inherently prunes queries whose           |
+||    frequency fell below threshold — natural decay.                      |
+||  * Offensive / policy-violating queries filtered via blocklist          |
+||    checked at build Step 3.                                             |
+||  * CDN cache: TTL 5-15 min auto-evicts stale suggestions.               |
+||  * Redis cache: TTL 1-5 min; LRU eviction for tail prefixes.           |
+||  * S3 trie snapshots: retained 7 days for rollback, then               |
+||    lifecycle-deleted.                                                   |
+||  * Trending overlay entries auto-expire after sliding window closes.    |
+||                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 20: SUMMARY: KEY DESIGN DECISIONS
 
 ```

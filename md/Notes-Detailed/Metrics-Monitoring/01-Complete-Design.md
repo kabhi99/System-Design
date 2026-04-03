@@ -1406,6 +1406,136 @@ the health and behavior of a system over time.
   +----------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
+  +-----------------------------------------------------------------+
+  |                                                                 |
+  |  1. ENTITY STATE MACHINE (Metric Data Point)                    |
+  |                                                                 |
+  |    SCRAPED --> INGESTED --> STORED --> QUERIED                   |
+  |       |           |           |          |                      |
+  |       |           |           |          +--> AGGREGATED        |
+  |       |           |           |               (recording rule)  |
+  |       |           |           +--> COMPACTED (blocks merged)    |
+  |       |           |           +--> DOWNSAMPLED (5m/1h avg)      |
+  |       |           |           +--> EXPIRED (retention drop)     |
+  |       |           +--> WAL_ENTRY (durability before memtable)   |
+  |       +--> DROPPED (cardinality limit / validation failure)     |
+  |                                                                 |
+  |  Data lifecycle:                                                |
+  |    /metrics endpoint --> Prometheus scrape (every 15s)          |
+  |    --> WAL append --> MemTable --> 2h block flush --> compaction |
+  |    --> Thanos sidecar upload to S3/GCS --> downsampled          |
+  |                                                                 |
+  |  ---------------------------------------------------------------+
+  |                                                                 |
+  |  2. CRITICAL WRITE PATH (Metric Ingestion)                      |
+  |                                                                 |
+  |  Step 1: Prometheus scrapes GET /metrics from target (15s)      |
+  |  Step 2: Parse exposition format, resolve series IDs (TSID)     |
+  |          TSID = hash(metric_name + sorted label set)            |
+  |  Step 3: Append to Write-Ahead Log (WAL) -- sequential, fsync  |
+  |          WAL entry: [CRC32 | length | TSID | timestamp | value] |
+  |  Step 4: Insert into HEAD block MemTable (in-memory, per-series)|
+  |          MemTable: TSID --> [(t1,v1), (t2,v2), ...]             |
+  |  Step 5: Every 2 hours, freeze MemTable --> compress with       |
+  |          Gorilla encoding (delta-of-delta + XOR float)          |
+  |  Step 6: Flush as immutable TSDB block to disk                  |
+  |          Block contains: index + chunks/ + meta.json            |
+  |  Step 7: Truncate WAL up to flushed point                       |
+  |  Step 8: Background compaction merges small blocks              |
+  |                                                                 |
+  |  Pseudocode (scrape + ingest):                                  |
+  |                                                                 |
+  |    for target in service_discovery.get_targets():               |
+  |      resp = http_get(target.url + "/metrics", timeout=10s)      |
+  |      for sample in parse_exposition(resp.body):                 |
+  |        tsid = get_or_create_tsid(sample.name, sample.labels)    |
+  |        wal.append(tsid, sample.timestamp, sample.value)         |
+  |        head_block.memtable[tsid].append(sample.ts, sample.val)  |
+  |                                                                 |
+  |  ---------------------------------------------------------------+
+  |                                                                 |
+  |  3. READ PATH (Dashboard Query via PromQL)                      |
+  |                                                                 |
+  |  Query: rate(http_requests_total{service="api"}[5m])            |
+  |    |                                                            |
+  |    v                                                            |
+  |  Parse PromQL --> AST (function: rate, selector, range: 5m)     |
+  |    |                                                            |
+  |    v                                                            |
+  |  Series resolution via inverted index:                          |
+  |    __name__="http_requests_total" AND service="api"             |
+  |    --> intersect posting lists --> matched TSID set              |
+  |    |                                                            |
+  |    v                                                            |
+  |  Block selection: find blocks overlapping [now-5m, now]         |
+  |    - HEAD block (in-memory MemTable) for recent data            |
+  |    - On-disk 2h blocks for older data within range              |
+  |    |                                                            |
+  |    v                                                            |
+  |  Decompress Gorilla-encoded chunks for matched TSIDs            |
+  |  Apply time range filter, compute rate() per series             |
+  |    |                                                            |
+  |    v                                                            |
+  |  Return result to Grafana dashboard / API caller                |
+  |                                                                 |
+  |  For Thanos/Cortex (scaled reads):                              |
+  |    Querier fans out to sidecars (hot) + Store Gateway (cold)    |
+  |    Merges, deduplicates, returns unified result                 |
+  |                                                                 |
+  |  ---------------------------------------------------------------+
+  |                                                                 |
+  |  4. FAILURE SCENARIOS                                           |
+  |                                                                 |
+  |  +----------------------+-----------------------------------+   |
+  |  | What Fails           | Impact & Recovery                 |   |
+  |  +----------------------+-----------------------------------+   |
+  |  | Scrape target down   | Prometheus records "up=0" metric. |   |
+  |  |                      | Alerting rule fires immediately.  |   |
+  |  |                      | No data gap -- absence is signal. |   |
+  |  +----------------------+-----------------------------------+   |
+  |  | Prometheus crash     | On restart: replay WAL from last  |   |
+  |  |                      | checkpoint. HA pair (2 instances) |   |
+  |  |                      | ensures no scrape gaps. Thanos    |   |
+  |  |                      | deduplicates overlapping data.    |   |
+  |  +----------------------+-----------------------------------+   |
+  |  | Alertmanager down    | Watchdog alert stops arriving at  |   |
+  |  |                      | external deadman (Deadman's       |   |
+  |  |                      | Snitch). Clustered Alertmanager   |   |
+  |  |                      | (Raft) provides HA.               |   |
+  |  +----------------------+-----------------------------------+   |
+  |  | Cardinality explosion| Per-tenant series limit breached. |   |
+  |  | (bad label)          | New series rejected with error.   |   |
+  |  |                      | Relabeling rules drop/aggregate   |   |
+  |  |                      | noisy labels at ingestion.        |   |
+  |  +----------------------+-----------------------------------+   |
+  |                                                                 |
+  |  ---------------------------------------------------------------+
+  |                                                                 |
+  |  5. CLEANUP / EXPIRY                                            |
+  |                                                                 |
+  |  Retention-based deletion:                                      |
+  |    TSDB blocks are time-partitioned (2h windows).               |
+  |    Deleting old data = drop entire block directory (O(1)).      |
+  |    No row-level DELETE -- instant cleanup.                      |
+  |                                                                 |
+  |  Downsampling (Thanos Compactor):                               |
+  |    Raw 15s --> 5-minute avg after 7 days (20x reduction)        |
+  |    5-min --> 1-hour avg after 30 days (240x reduction)          |
+  |    Stored in S3/GCS alongside raw blocks.                       |
+  |                                                                 |
+  |  Compaction:                                                    |
+  |    Small 2h blocks merged into 6h, 12h, 24h blocks.            |
+  |    Tombstones (deleted series) cleaned during compaction.       |
+  |    Reduces file count, improves query performance.              |
+  |                                                                 |
+  |  WAL truncation: old WAL segments deleted after block flush.    |
+  |                                                                 |
+  +-----------------------------------------------------------------+
+```
+
 ## SECTION 13: SUMMARY
 
 ```

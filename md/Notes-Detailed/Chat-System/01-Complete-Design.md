@@ -1326,7 +1326,182 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: INTERVIEW Q&A
+## SECTION 14: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Message)                                      |
+|                                                                         |
+|  SENT ──> DELIVERED ──> READ                                            |
+|   │           │                                                         |
+|   │           └──> DELETED_FOR_ALL (soft-delete, within time window)     |
+|   │                                                                     |
+|   └──> PENDING (recipient offline, queued)                              |
+|            │                                                            |
+|            └──> DELIVERED (on reconnect, dequeued)                       |
+|                                                                         |
+|  For group messages, delivery status is per-member:                     |
+|  SENT ──> DELIVERED_TO:{user_ids} ──> READ_BY:{user_ids}               |
+|                                                                         |
+|  Transition rules:                                                      |
+|  * SENT: server stored message, ACK'd to sender                        |
+|  * DELIVERED: recipient device ACK'd receipt                            |
+|  * READ: recipient opened the conversation                             |
+|  * Each transition emits a status event back to sender via WS          |
+|  * Client-generated message_id ensures deduplication on retry          |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Message Send with Offline Queue)               |
+|                                                                         |
+|  Alice       WS Gateway    Chat Svc     Cassandra    Redis              |
+|    |             |             |            |           |                |
+|    |--msg------->|             |            |           |                |
+|    | {msg_id,    |--route----->|            |           |                |
+|    |  conv_id,   |             |            |           |                |
+|    |  content}   |             |            |           |                |
+|    |             |             |            |           |                |
+|    |             |  1. Assign sequence number:          |                |
+|    |             |     INCR conv_seq:{conv_id}  (Redis) |                |
+|    |             |             |            |           |                |
+|    |             |  2. Store message:        |           |                |
+|    |             |     INSERT INTO messages_by_conversation              |
+|    |             |       (conversation_id, message_id,                   |
+|    |             |        sender_id, content, content_type,              |
+|    |             |        created_at)                                    |
+|    |             |       VALUES (:conv, :msg_id, :alice,                 |
+|    |             |               :text, 'text', now());                  |
+|    |             |     -- Cassandra: LOCAL_QUORUM write                  |
+|    |             |             |            |           |                |
+|    |<--sent ACK--|<--ack-------|            |           |                |
+|    |             |             |            |           |                |
+|    |             |  3. Lookup Bob's connection:          |                |
+|    |             |     GET conn:bob:* (Redis)            |                |
+|    |             |             |            |           |                |
+|    |             |  CASE A: Bob is ONLINE                |                |
+|    |             |     Forward msg to Bob's WS server     |               |
+|    |             |     Bob's device sends delivery ACK     |              |
+|    |             |     Status -> DELIVERED                 |              |
+|    |             |     Push status update to Alice via WS  |              |
+|    |             |             |            |           |                |
+|    |             |  CASE B: Bob is OFFLINE                |                |
+|    |             |     ZADD offline:{bob} {timestamp} {msg_id}           |
+|    |             |     Send push notification (FCM/APNs):                |
+|    |             |       { title: "Alice", body: preview_text }          |
+|    |             |     When Bob reconnects:                              |
+|    |             |       ZRANGEBYSCORE offline:{bob} last_sync +inf      |
+|    |             |       Deliver all pending, collect ACKs               |
+|    |             |       ZREM offline:{bob} {delivered_msg_ids}           |
+|    |             |             |            |           |                |
+|    |             |  4. Kafka: emit to "messages" topic (async):          |
+|    |             |     -> Update unread counter                          |
+|    |             |     -> Search indexing (if no E2E encryption)         |
+|    |             |     -> Analytics / audit log                          |
+|    |             |             |            |           |                |
+|                                                                         |
+|  Read receipt flow:                                                     |
+|  Bob opens conversation -> client sends read ACK for latest msg_id      |
+|  -> Chat Svc updates conversation read cursor                          |
+|  -> Push "read" status to Alice via WS                                 |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  3. READ PATH                                                           |
+|                                                                         |
+|  CONVERSATION LIST (most frequent query):                               |
+|    Client --> Redis (top 50 conversations cached per user)              |
+|    key: user_convos:{user_id}                                           |
+|    * Sorted by last_message_at DESC                                     |
+|    * Each entry: conv_id, name, preview, unread_count (~200B)           |
+|    HIT  --> return cached list                                          |
+|    MISS --> Cassandra user_conversations table                          |
+|         --> populate Redis, return                                      |
+|                                                                         |
+|  MESSAGE HISTORY (load conversation):                                   |
+|    Client --> Cassandra messages_by_conversation                        |
+|    SELECT * FROM messages_by_conversation                               |
+|      WHERE conversation_id = :conv_id                                   |
+|      LIMIT 50;  -- latest 50 (DESC clustering order)                   |
+|    * Cursor-based pagination with message_id for older messages         |
+|    * No cache: Cassandra reads are fast for this access pattern         |
+|                                                                         |
+|  PRESENCE (online/offline/last seen):                                   |
+|    Client --> Redis (presence:{user_id})                                |
+|    * Heartbeat every 30s refreshes TTL (60s)                            |
+|    * Key expires = user considered offline                              |
+|    * Eventual consistency OK (presence is best-effort)                  |
+|                                                                         |
+|  OFFLINE MESSAGE SYNC (on reconnect):                                   |
+|    Client sends last_sync_timestamp                                     |
+|    Server: ZRANGEBYSCORE offline:{user_id} last_sync +inf              |
+|    Deliver messages in order, client ACKs each batch                    |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                   |
+|                                                                         |
+|  +------------------------------+------------------------------------+  |
+|  | What Fails                   | Impact & Recovery                  |  |
+|  +------------------------------+------------------------------------+  |
+|  | WS server crashes (500K      | Clients detect via missed          |  |
+|  | connections lost)             | heartbeat, reconnect with jitter   |  |
+|  |                              | to different server. New server    |  |
+|  |                              | pulls pending msgs from offline    |  |
+|  |                              | queue + Cassandra.                 |  |
+|  +------------------------------+------------------------------------+  |
+|  | Cassandra write fails        | Message goes to Kafka DLQ.         |  |
+|  |                              | CRITICAL: auto-retry every 30s.    |  |
+|  |                              | Message in Kafka log, not lost.    |  |
+|  |                              | Page on-call if retries fail.      |  |
+|  +------------------------------+------------------------------------+  |
+|  | Redis offline queue lost     | Cassandra is source of truth.      |  |
+|  |                              | On reconnect, client sends         |  |
+|  |                              | last_sync_timestamp. Server        |  |
+|  |                              | queries Cassandra for messages     |  |
+|  |                              | after that timestamp.              |  |
+|  +------------------------------+------------------------------------+  |
+|  | Push notification failure    | 3 retries with backoff -> DLQ.     |  |
+|  | (APNs/FCM)                   | Check device token validity.       |  |
+|  |                              | Non-critical: message persists     |  |
+|  |                              | in store, delivered on reconnect.  |  |
+|  +------------------------------+------------------------------------+  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                    |
+|                                                                         |
+|  OFFLINE QUEUE:                                                         |
+|  * Redis sorted set: offline:{user_id}                                  |
+|  * Max 10,000 messages per user                                         |
+|  * TTL: 30 days (older messages still in Cassandra)                     |
+|  * Purged per-message after delivery ACK: ZREM                          |
+|                                                                         |
+|  PRESENCE:                                                              |
+|  * Redis key presence:{user_id} with 60s TTL                            |
+|  * Refreshed by heartbeat every 30s                                     |
+|  * Auto-expires if client disconnects without cleanup                   |
+|                                                                         |
+|  CONNECTION REGISTRY:                                                   |
+|  * Redis key conn:{user_id}:{device}                                    |
+|  * TTL: 120s, refreshed by heartbeat                                    |
+|  * Stale entries auto-expire if WS server crashes                       |
+|                                                                         |
+|  MESSAGE STORAGE TIERS:                                                 |
+|  * Hot (last 30 days): SSD-backed Cassandra                             |
+|  * Warm (30 days - 1 year): HDD-backed Cassandra                        |
+|  * Cold (>1 year): compressed in S3 / archival storage                  |
+|  * Tiered storage managed by Cassandra TTL + compaction                 |
+|                                                                         |
+|  DELETED MESSAGES:                                                      |
+|  * "Delete for everyone": is_deleted = true (soft delete)               |
+|  * Actual content purged after 30 days (for abuse reports)              |
+|  * Tombstones cleaned during Cassandra compaction                       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 15: INTERVIEW Q&A
 
 ### QUESTION 1: WHY WEBSOCKETS OVER LONG POLLING?
 

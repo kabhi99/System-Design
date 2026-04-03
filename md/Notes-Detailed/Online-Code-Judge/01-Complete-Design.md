@@ -903,6 +903,205 @@
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  1. ENTITY STATE MACHINE (Submission Lifecycle)                          |
+|                                                                          |
+|    [SUBMITTED] --> [QUEUED] --> [COMPILING] --> [RUNNING] --> [JUDGED]    |
+|         |              |            |              |              |       |
+|         |              |            |              |        +-----+----+  |
+|         |              |            |              |        |     |    |  |
+|         |              |            v              v        v     v    v  |
+|         |              |          [CE]          [TLE]     [AC] [WA] [RE] |
+|         |              |        (compile       [MLE]                     |
+|         |              |         error)      (resource                   |
+|         |              |                      limits)                    |
+|         |              |                                                 |
+|         |              +---> (contest queue has higher priority           |
+|         |                     than practice queue)                        |
+|         |                                                                |
+|         +---> [REJECTED] (rate limit: max 10/min, or invalid lang)      |
+|                                                                          |
+|    SUBMITTED:  User sends code via API, validated and stored             |
+|    QUEUED:     Message published to Kafka judge queue                    |
+|    COMPILING:  Worker compiles code in sandbox (Docker + seccomp)        |
+|    RUNNING:    Executing against test cases with resource limits         |
+|    JUDGED:     Final verdict computed (AC/WA/TLE/MLE/RE/CE)              |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  2. CRITICAL WRITE PATH (Submission Processing Pipeline)                 |
+|                                                                          |
+|    User: POST /api/v1/submissions                                        |
+|      { problem_id, language, code }                                      |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Validate submission                                           |
+|      |     Check auth, rate limit (max 10 submissions/min per user)      |
+|      |     Validate language supported for this problem                  |
+|      |     Check code size < 50 KB                                       |
+|      v                                                                   |
+|    Step 2: Store submission in PostgreSQL                                 |
+|      |                                                                   |
+|      |     INSERT INTO submissions                                       |
+|      |       (submission_id, user_id, problem_id, language,              |
+|      |        code, status, created_at)                                  |
+|      |     VALUES                                                        |
+|      |       (uuid(), 12345, 42, 'python',                               |
+|      |        '...code...', 'QUEUED', NOW());                            |
+|      v                                                                   |
+|    Step 3: Enqueue to Kafka judge queue                                  |
+|      |     Topic: judge_requests (contest: judge_requests_priority)      |
+|      |     Key: submission_id                                            |
+|      |     Payload: { submission_id, problem_id, language, code_ref }    |
+|      v                                                                   |
+|    Step 4: Return { submission_id, status: "QUEUED" } to user            |
+|      |     Client opens WebSocket for real-time status updates           |
+|      v                                                                   |
+|    Step 5: Judge worker picks up from Kafka                              |
+|      |     Fetch test cases:                                             |
+|      |       Check local SSD cache (top 100 popular problems cached)    |
+|      |       Miss -> S3 GET s3://test-cases/{problem_id}/v{version}     |
+|      |     Create sandbox: Docker container with language runtime        |
+|      |       --network=none --read-only --memory=256m --cpus=1          |
+|      |       seccomp-bpf profile + cgroups v2 limits                    |
+|      v                                                                   |
+|    Step 6: Compile code inside sandbox                                   |
+|      |     e.g., g++ -O2 -std=c++17 solution.cpp -o solution            |
+|      |     If compilation fails:                                        |
+|      |       UPDATE submissions SET status='CE',                        |
+|      |         error='{compiler_output}' WHERE submission_id=?;         |
+|      |       Push verdict via WebSocket -> DONE                         |
+|      v                                                                   |
+|    Step 7: Execute against each test case                                |
+|      |     for test_case in problem.test_cases:                         |
+|      |       write input to sandbox stdin                               |
+|      |       run with limits: time=2s, mem=256MB, pids=1                |
+|      |       capture stdout, stderr, exit_code                          |
+|      |       measure actual_time, actual_memory                         |
+|      |                                                                   |
+|      |       if exit_code != 0:           verdict = RE                   |
+|      |       if actual_time > time_limit: verdict = TLE                  |
+|      |       if actual_mem > mem_limit:   verdict = MLE                  |
+|      |       if stdout != expected:       verdict = WA                   |
+|      |       else:                        verdict = AC (this case)       |
+|      |                                                                   |
+|      |     overall: if ALL test cases AC -> AC                           |
+|      |              else -> first failing verdict                        |
+|      v                                                                   |
+|    Step 8: Update submission and notify                                  |
+|      |     UPDATE submissions SET status = 'AC',                        |
+|      |       runtime_ms = 42, memory_kb = 15360,                        |
+|      |       judged_at = NOW()                                          |
+|      |       WHERE submission_id = ?;                                   |
+|      |     UPDATE problems SET acceptance_count = acceptance_count + 1   |
+|      |       WHERE problem_id = ?;  (if AC)                             |
+|      |     UPDATE user_stats SET problems_solved = problems_solved + 1   |
+|      |       WHERE user_id = ? AND problem_id NOT IN (already_solved);  |
+|      |     If contest: ZADD leaderboard:{contest_id} <score> user_id   |
+|      |     WebSocket push: { verdict, runtime_ms, memory_kb }           |
+|      v                                                                   |
+|    Step 9: Destroy sandbox container                                     |
+|                                                                          |
+|    WRITE ORDER: PostgreSQL (submission) -> Kafka -> Sandbox exec         |
+|                 -> PostgreSQL (verdict) -> Redis (leaderboard)            |
+|                 -> WebSocket (real-time push to client)                   |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  3. READ PATH (Verdict Retrieval + Real-Time Status)                     |
+|                                                                          |
+|    POLLING: GET /api/v1/submissions/{submission_id}                      |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Redis cache check                                             |
+|      |     GET submission:{submission_id}                                |
+|      |     HIT (terminal verdict) -> return immediately                  |
+|      |     MISS -> Step 2                                                |
+|      v                                                                   |
+|    Step 2: PostgreSQL query                                              |
+|      |     SELECT status, runtime_ms, memory_kb, error                  |
+|      |       FROM submissions WHERE submission_id = ?;                  |
+|      v                                                                   |
+|    Step 3: Cache if terminal                                             |
+|      |     If status IN ('AC','WA','TLE','MLE','RE','CE'):              |
+|      |       SET submission:{id} <json> EX 3600                         |
+|      |     Return { submission_id, status, runtime, memory, verdict }   |
+|                                                                          |
+|    REAL-TIME (preferred): WebSocket subscription                         |
+|      Client connects: ws://judge/submissions/{submission_id}             |
+|      Server pushes status transitions as they happen:                    |
+|        { status: "COMPILING" }                                           |
+|        { status: "RUNNING", test_case: 3, total: 20 }                   |
+|        { status: "AC", runtime_ms: 42, memory_kb: 15360 }               |
+|                                                                          |
+|    LEADERBOARD READ:                                                     |
+|      Redis: ZREVRANGE leaderboard:{contest_id} 0 49 WITHSCORES          |
+|      Returns top-50 with scores in O(log N + 50) time                   |
+|      Individual rank: ZREVRANK leaderboard:{contest_id} user_id         |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                          |
+|  What Fails               | Impact & Recovery                            |
+|  -------------------------+----------------------------------------------+
+|  Judge worker crash       | Kafka offset not committed. Submission       |
+|  mid-execution            | redelivered to another worker. Check         |
+|                           | submission status before re-judging (if      |
+|                           | already JUDGED, skip). Sandbox destroyed     |
+|                           | automatically by Docker container lifecycle. |
+|  -------------------------+----------------------------------------------+
+|  Kafka judge queue down   | Submissions stored in DB with status QUEUED.  |
+|                           | Recovery sweeper: SELECT * FROM submissions   |
+|                           | WHERE status='QUEUED' AND created_at < 5min; |
+|                           | Re-enqueue to Kafka on recovery.             |
+|  -------------------------+----------------------------------------------+
+|  Sandbox escape attempt   | Defense in depth: seccomp blocks dangerous    |
+|                           | syscalls, cgroups limit resources, no         |
+|                           | network, read-only FS. Container destroyed   |
+|                           | after each run. If breach detected, kill      |
+|                           | container, alert security, ban user.         |
+|  -------------------------+----------------------------------------------+
+|  Contest traffic spike     | Pre-scale workers before contest start.      |
+|  (10K simultaneous submits)| Kafka buffers burst. Rate limit per user     |
+|                           | (1 submit/10s). Contest queue gets dedicated  |
+|                           | workers. Users see "judging..." with ETA.    |
+|  -------------------------+----------------------------------------------+
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                          |
+|    Sandbox Container Cleanup:                                            |
+|      Containers destroyed immediately after execution completes          |
+|      Watchdog: kill containers running longer than 2x time limit        |
+|      Orphan container sweep every 5 minutes                              |
+|                                                                          |
+|    Submission Data Retention:                                            |
+|      Code blobs: kept indefinitely (users access submission history)    |
+|      Partition submissions table by created_at (monthly partitions)      |
+|      Archive partitions older than 2 years to cold storage              |
+|                                                                          |
+|    Test Case Cache on Workers:                                           |
+|      Local SSD cache for top 100 popular problems                       |
+|      Invalidate on test case version update (publish event via Kafka)   |
+|      LRU eviction when SSD cache exceeds 50 GB per worker               |
+|                                                                          |
+|    Redis Cache TTL:                                                      |
+|      submission:{id}: EX 3600 (1h, terminal verdicts only)              |
+|      leaderboard:{contest_id}: no TTL during contest, EX 86400 after   |
+|                                                                          |
+|    Stale QUEUED Submission Recovery:                                     |
+|      Cron job every 5 min: find submissions stuck in QUEUED > 5 min    |
+|      Re-enqueue to Kafka or mark as system error if older than 30 min  |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 12: INTERVIEW Q&A
 
 ### QUESTION 1

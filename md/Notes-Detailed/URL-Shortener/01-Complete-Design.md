@@ -1088,6 +1088,152 @@ A COMPLETE CONCEPTUAL GUIDE - NO CODE, PURE THEORY
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Short URL Lifecycle)                         |
+|                                                                         |
+|    [CREATED] -----> [ACTIVE] -----> [EXPIRED] -----> [DELETED]         |
+|        |                |                |                              |
+|        |                |                +---> (background cleanup job) |
+|        |                |                                               |
+|        |                +---> [DELETED] (user calls DELETE /api/{code}) |
+|        |                                                                |
+|        +---> (validation failed: reject, no DB record created)         |
+|                                                                         |
+|    CREATED:  Short code generated, DB row inserted with click_count=0  |
+|    ACTIVE:   Redirect works, analytics tracking, expires_at in future  |
+|    EXPIRED:  expires_at < NOW(), redirect returns 410 Gone             |
+|    DELETED:  Row removed or soft-deleted, cache key evicted            |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (URL Creation)                                 |
+|                                                                         |
+|    Client: POST /api/shorten { long_url, custom_alias?, ttl? }        |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Validate URL format (reject malformed URLs)                 |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 2: Rate limit check (Redis)                                    |
+|      |     INCR rate_limit:user:{user_id}  (key TTL 60s)               |
+|      |     If count > threshold -> return 429 Too Many Requests        |
+|      v                                                                  |
+|    Step 3: Generate short code via Key Generation Service              |
+|      |     Server picks next counter from its pre-allocated range      |
+|      |     short_code = base62_encode(scramble(counter_value))         |
+|      v                                                                  |
+|    Step 4: Insert into PostgreSQL (the critical transaction)           |
+|      |                                                                  |
+|      |     BEGIN;                                                       |
+|      |       INSERT INTO url_mappings                                   |
+|      |         (short_code, long_url, user_id,                          |
+|      |          created_at, expires_at, click_count)                    |
+|      |       VALUES                                                     |
+|      |         ('xY7kLm', 'https://example.com/...',                    |
+|      |          12345, NOW(),                                           |
+|      |          NOW() + INTERVAL ttl_seconds SECOND, 0);               |
+|      |     COMMIT;                                                      |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 5: Warm Redis cache                                            |
+|      |     SET url:xY7kLm "https://example.com/..." EX 86400           |
+|      v                                                                  |
+|    Step 6: Return { short_url: "https://bit.ly/xY7kLm" }             |
+|                                                                         |
+|    WRITE ORDER: KGS counter -> PostgreSQL -> Redis cache               |
+|    If DB fails:  Counter gap (acceptable, codes are cheap)             |
+|    If cache SET fails: First redirect is a cache miss (self-healing)   |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  3. READ PATH (URL Redirect - Cache-Aside Pattern)                     |
+|                                                                         |
+|    Client: GET /xY7kLm                                                 |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Redis lookup                                                |
+|      |     GET url:xY7kLm                                              |
+|      |     HIT  -> jump to Step 4  (fast path, < 1ms)                  |
+|      |     MISS -> continue to Step 2                                  |
+|      v                                                                  |
+|    Step 2: Database query                                              |
+|      |     SELECT long_url, expires_at FROM url_mappings               |
+|      |       WHERE short_code = 'xY7kLm';                              |
+|      |     NOT FOUND -> return 404 Not Found                           |
+|      v                                                                  |
+|    Step 3: Populate cache (cache-aside write)                          |
+|      |     SET url:xY7kLm <long_url> EX 86400                         |
+|      v                                                                  |
+|    Step 4: Check expiry                                                |
+|      |     If expires_at IS NOT NULL AND expires_at < NOW()            |
+|      |       -> return 410 Gone                                        |
+|      v                                                                  |
+|    Step 5: Async analytics (fire-and-forget, non-blocking)             |
+|      |     Kafka produce -> click_events topic:                        |
+|      |       { short_code, timestamp, ip, user_agent, referrer }       |
+|      |     Redis: INCR click_count:xY7kLm  (real-time counter)        |
+|      v                                                                  |
+|    Step 6: Return 302 Found                                            |
+|            Header: Location: https://example.com/...                   |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                  |
+|                                                                         |
+|  What Fails               | Impact & Recovery                          |
+|  -------------------------+--------------------------------------------+
+|  Redis cache down         | All reads fall through to DB. Latency      |
+|                           | rises from <1ms to ~5ms. DB handles load   |
+|                           | short-term. Cache self-heals on restart    |
+|                           | via cache-aside pattern.                   |
+|  -------------------------+--------------------------------------------+
+|  KGS (Key Gen Svc) down  | Servers use remaining local counter range. |
+|                           | If exhausted, fall back to random string   |
+|                           | generation + DB uniqueness check. Reads    |
+|                           | are completely unaffected.                 |
+|  -------------------------+--------------------------------------------+
+|  DB primary down          | Writes fail (no new short URLs). Reads     |
+|                           | served from Redis cache + read replicas.   |
+|                           | Promote replica to primary via failover.   |
+|  -------------------------+--------------------------------------------+
+|  Kafka analytics down     | Redirects continue unaffected (async).     |
+|                           | Click events lost until Kafka recovers.    |
+|                           | Redis INCR counters still work. Backfill   |
+|                           | detailed analytics from Kafka replay.      |
+|  -------------------------+--------------------------------------------+
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                   |
+|                                                                         |
+|    Expired URL Cleanup (background cron, runs hourly):                 |
+|                                                                         |
+|      SELECT short_code FROM url_mappings                               |
+|        WHERE expires_at < NOW()                                        |
+|          AND expires_at IS NOT NULL                                    |
+|        LIMIT 10000;                                                    |
+|                                                                         |
+|      For each batch:                                                   |
+|        DELETE FROM url_mappings WHERE short_code IN (...);             |
+|        Redis: DEL url:xY7kLm  (evict stale cache entries)             |
+|                                                                         |
+|    Redis Cache TTL:                                                    |
+|      All url:{code} keys set with EX 86400 (24 hours)                 |
+|      LRU eviction drops cold URLs when memory is full                  |
+|      80/20 rule: hot URLs stay cached, long tail expires               |
+|                                                                         |
+|    Analytics Data Retention:                                           |
+|      Raw click events in Data Lake: 90 day retention                   |
+|      Aggregated stats (daily/monthly): kept indefinitely               |
+|      Real-time Redis counters (click_count:{code}): TTL 7 days        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 15: INTERVIEW QUICK REFERENCE
 
 ```

@@ -1626,6 +1626,186 @@
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  1. ENTITY STATE MACHINE (Task Lifecycle)                                |
+|                                                                          |
+|                         +----------+                                     |
+|                         | PENDING  |<----------------------------+       |
+|                         +----+-----+                             |       |
+|                              |                                   |       |
+|                (execute_at <= now)                                |       |
+|                              v                                   |       |
+|                         +----+-----+                             |       |
+|                         |  QUEUED  |                             |       |
+|                         +----+-----+                             |       |
+|                              |                                   |       |
+|               (worker picks up + distributed lock)               |       |
+|                              v                                   |       |
+|                         +----+-----+                             |       |
+|                         | RUNNING  |                             |       |
+|                         +----+-----+                      (with backoff) |
+|                         /    |     \                             |       |
+|                        v     v      v                            |       |
+|              +-------+ +----+---+ +-+--------+                   |       |
+|              |SUCCESS| | FAILED | |TIMED_OUT |                   |       |
+|              +-------+ +---+----+ +----+-----+                   |       |
+|                            |           |                         |       |
+|                            +-----+-----+                         |       |
+|                                  |                               |       |
+|                         (retries left?)                          |       |
+|                          yes  /   \  no                          |       |
+|                              v     v                             |       |
+|                    [RETRYING]    [DEAD_LETTER]                   |       |
+|                         |                                        |       |
+|                         +----------------------------------------+       |
+|                                                                          |
+|  Any state except SUCCESS -> CANCELLED (via cancel API)                  |
+|  RUNNING -> PENDING (worker heartbeat lost, watchdog requeues)           |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  2. CRITICAL WRITE PATH (Task Pickup with Distributed Locking)           |
+|                                                                          |
+|    Scheduler Process (runs every 100ms):                                 |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Find due tasks                                                |
+|      |     Redis ZRANGEBYSCORE due_tasks 0 <now_epoch> LIMIT 100         |
+|      |     (sorted set scored by execute_at timestamp)                   |
+|      |     Fallback: SELECT id, task_type, priority FROM tasks           |
+|      |       WHERE status = 'PENDING' AND execute_at <= NOW()            |
+|      |       ORDER BY priority ASC, execute_at ASC LIMIT 100;            |
+|      v                                                                   |
+|    Step 2: Enqueue to Kafka (topic per priority)                         |
+|      |     Topic: tasks.priority.{0..4}                                  |
+|      |     Key: task_id (ensures ordering per task)                      |
+|      |     Atomically update status:                                     |
+|      |       UPDATE tasks SET status = 'QUEUED'                          |
+|      |         WHERE id = ? AND status = 'PENDING';                      |
+|      |       (CAS prevents double-enqueue)                               |
+|      v                                                                   |
+|    Step 3: Worker consumes from Kafka                                    |
+|      |     Acquire distributed lock on task:                             |
+|      |       Redis: SET lock:task:{task_id} {worker_id} NX EX 300       |
+|      |     If lock acquired:                                             |
+|      |       UPDATE tasks SET status = 'RUNNING',                        |
+|      |         worker_id = '{worker_id}', started_at = NOW()             |
+|      |         WHERE id = ? AND status = 'QUEUED';                       |
+|      v                                                                   |
+|    Step 4: Execute task handler                                          |
+|      |     Worker sends heartbeat every 30s:                             |
+|      |       Redis: EXPIRE lock:task:{task_id} 300                       |
+|      |       UPDATE tasks SET started_at = NOW()                         |
+|      |         WHERE id = ? AND status = 'RUNNING';                      |
+|      v                                                                   |
+|    Step 5: On completion                                                 |
+|      |     UPDATE tasks SET status = 'COMPLETED',                        |
+|      |       completed_at = NOW(), result = '{...}'                      |
+|      |       WHERE id = ? AND status = 'RUNNING';                        |
+|      |     Redis: DEL lock:task:{task_id}                                |
+|      |     If callback_url: POST result to webhook                       |
+|      v                                                                   |
+|    Step 6: On failure                                                    |
+|      |     If attempt < max_retries:                                     |
+|      |       UPDATE tasks SET status = 'PENDING',                        |
+|      |         attempt = attempt + 1,                                    |
+|      |         execute_at = NOW() + backoff(attempt)                     |
+|      |         WHERE id = ?;                                             |
+|      |       Redis: ZADD due_tasks <new_execute_at> task_id              |
+|      |     Else:                                                         |
+|      |       INSERT INTO dead_letter_queue (...);                        |
+|      |       UPDATE tasks SET status = 'DEAD_LETTER' WHERE id = ?;       |
+|                                                                          |
+|    WRITE ORDER: Redis sorted set -> Kafka -> PostgreSQL (CAS)            |
+|                 -> Redis lock -> Execute -> PostgreSQL (result)           |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  3. READ PATH (Task Status & Result Retrieval)                           |
+|                                                                          |
+|    Client: GET /api/v1/tasks/{task_id}                                   |
+|      |                                                                   |
+|      v                                                                   |
+|    Step 1: Redis cache check                                             |
+|      |     GET task_status:{task_id}                                     |
+|      |     HIT -> return cached status + result (fast path)              |
+|      |     MISS -> Step 2                                                |
+|      v                                                                   |
+|    Step 2: Database query                                                |
+|      |     SELECT status, result, error, attempt, started_at,            |
+|      |       completed_at FROM tasks WHERE id = ?;                       |
+|      v                                                                   |
+|    Step 3: Cache result if terminal state                                |
+|      |     If status IN ('COMPLETED','DEAD_LETTER','CANCELLED'):         |
+|      |       Redis: SET task_status:{task_id} <json> EX 86400            |
+|      |     (non-terminal states not cached -- they change)               |
+|      v                                                                   |
+|    Return { task_id, status, result, attempt, timestamps }               |
+|                                                                          |
+|    Webhook Callback (async):                                             |
+|      On COMPLETED/FAILED: POST callback_url with result payload          |
+|      Retry webhook delivery 3 times with exponential backoff             |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                          |
+|  What Fails               | Impact & Recovery                            |
+|  -------------------------+----------------------------------------------+
+|  Worker crash mid-task    | Heartbeat stops. Watchdog detects after      |
+|                           | lock TTL expires (300s). Task status reset   |
+|                           | to PENDING. Another worker picks it up.      |
+|                           | Task handler must be idempotent.             |
+|  -------------------------+----------------------------------------------+
+|  Scheduler node down      | Partitioned active-active: other scheduler   |
+|                           | partitions continue. Affected partition       |
+|                           | tasks delayed until failover (~30s). Redis   |
+|                           | sorted set is durable across restarts.       |
+|  -------------------------+----------------------------------------------+
+|  Kafka down               | New tasks stay in DB with status PENDING.     |
+|                           | DB polling fallback kicks in (slower, every   |
+|                           | 5s). Tasks still execute but with higher      |
+|                           | latency. Recovery: drain DB backlog to Kafka. |
+|  -------------------------+----------------------------------------------+
+|  DB down                  | Task submission fails (return 503). Running   |
+|                           | tasks continue (state in Redis lock). Status  |
+|                           | updates buffer in worker memory. On DB        |
+|                           | recovery, flush buffered updates.             |
+|  -------------------------+----------------------------------------------+
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                          |
+|    Completed Task Archival (daily batch job):                            |
+|      INSERT INTO tasks_archive SELECT * FROM tasks                       |
+|        WHERE status IN ('COMPLETED','CANCELLED')                         |
+|        AND completed_at < NOW() - INTERVAL 30 DAY;                       |
+|      DELETE FROM tasks WHERE id IN (archived_ids);                       |
+|                                                                          |
+|    Dead Letter Queue Review:                                             |
+|      DLQ dashboard for ops team to inspect/replay                        |
+|      Auto-purge: DELETE FROM dead_letter_queue                           |
+|        WHERE created_at < NOW() - INTERVAL 90 DAY                        |
+|        AND replayed_at IS NULL;                                          |
+|                                                                          |
+|    Redis Cleanup:                                                        |
+|      lock:task:{id} keys: auto-expire via EX 300 (5 min TTL)            |
+|      due_tasks sorted set: entries removed on task pickup                |
+|      task_status:{id} cache: EX 86400 (terminal states only)            |
+|                                                                          |
+|    Stale Running Task Recovery (watchdog, every 60s):                    |
+|      SELECT id FROM tasks WHERE status = 'RUNNING'                       |
+|        AND started_at < NOW() - INTERVAL timeout_seconds SECOND;         |
+|      For each: reset status to PENDING, increment attempt                |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 20: INTERVIEW Q&A
 
 ### Q1: How do you ensure a task is not executed twice?

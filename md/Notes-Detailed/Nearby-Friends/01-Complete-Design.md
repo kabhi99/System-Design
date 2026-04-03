@@ -1189,6 +1189,140 @@ privacy guarantees, and minimal battery drain.
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+||                                                                          |
+||  1. ENTITY STATE MACHINE: Location Update Lifecycle                      |
+||  ======================================================                  |
+||                                                                          |
+||  RECEIVED --> VALIDATED --> CACHED --> BROADCAST --> EXPIRED              |
+||                                                                          |
+||  +----------+  bounds   +----------+  HMSET     +----------+             |
+||  | RECEIVED |  check,   | VALIDATED|  loc:{uid} | CACHED   |             |
+||  | (GPS via |  ts fresh | (clean   |  EX 600    | (Redis   |             |
+||  |  WebSock) | -------> |  payload)|  --------> |  hash)   |             |
+||  +----------+           +----------+            +----------+             |
+||                                                      |                   |
+||                          PUBLISH location:{user_id}  |                   |
+||                          + geohash set update        v                   |
+||                                                 +----------+             |
+||                                                 | BROADCAST|             |
+||                                                 | (fan-out |             |
+||                                                 |  to subs)|             |
+||                                                 +----------+             |
+||                                                      |                   |
+||                             TTL 600s expires OR       |                   |
+||                             user stops sharing        v                   |
+||                                                 +----------+             |
+||                                                 | EXPIRED  |             |
+||                                                 | (key     |             |
+||                                                 |  deleted)|             |
+||                                                 +----------+             |
+||                                                                          |
+||  2. CRITICAL WRITE PATH: Location Update + Pub/Sub Fan-Out               |
+||  ======================================================                  |
+||                                                                          |
+||  WebSocket frame arrives with GPS payload:                               |
+||  {user_id, lat, lng, accuracy, speed, timestamp, source}                 |
+||                                                                          |
+||  Step 1: Validate payload                                                |
+||    assert -90 <= lat <= 90 AND -180 <= lng <= 180                        |
+||    assert timestamp > loc:{user_id}.timestamp   // reject stale          |
+||    assert sharing:{user_id}.active == true       // still sharing?       |
+||                                                                          |
+||  Step 2: Compute geohash                                                 |
+||    new_geohash = geohash_encode(lat, lng, precision=6)                   |
+||    old_geohash = HGET loc:{user_id} geohash                             |
+||                                                                          |
+||  Step 3: Update Location Cache (Redis)                                   |
+||    HMSET loc:{user_id}                                                   |
+||      lat {lat} lng {lng} geohash {new_geohash}                           |
+||      timestamp {ts} accuracy {acc} speed {spd}                           |
+||    EXPIRE loc:{user_id} 600                                              |
+||                                                                          |
+||  Step 4: Update Geohash Index (if cell changed)                          |
+||    IF new_geohash != old_geohash:                                        |
+||      SREM geo:{old_geohash} {user_id}                                    |
+||      SADD geo:{new_geohash} {user_id}                                    |
+||      EXPIRE geo:{new_geohash} 300                                        |
+||                                                                          |
+||  Step 5: Publish to user's Pub/Sub channel                               |
+||    PUBLISH location:{user_id}                                            |
+||      {lat, lng, timestamp, speed, accuracy}                              |
+||    -> All subscribed friends receive via WebSocket gateway                |
+||    -> Fan-out: ~20 friends avg -> ~6.6M deliveries/sec                   |
+||                                                                          |
+||  3. READ PATH: Nearby Friends Query (Cold Start)                         |
+||  ======================================================                  |
+||                                                                          |
+||  User opens Nearby Friends screen (initial load):                        |
+||                                                                          |
+||  Step 1: Fetch friend list                                               |
+||    friend_ids = SMEMBERS friends:{user_id}  // Redis, TTL 1 hr           |
+||    MISS -> query Friend Service, cache result                            |
+||                                                                          |
+||  Step 2: Filter to actively sharing friends                              |
+||    sharing_friends = []                                                   |
+||    for fid in friend_ids:       // Redis pipeline                        |
+||      if EXISTS sharing:{fid}: sharing_friends.append(fid)                |
+||                                                                          |
+||  Step 3: Batch-fetch locations (pipelined Redis)                         |
+||    for fid in sharing_friends:                                           |
+||      HGETALL loc:{fid}          // ~2 ms for 400 lookups pipelined       |
+||                                                                          |
+||  Step 4: Compute distances, filter by radius                             |
+||    for each friend location:                                             |
+||      dist = haversine(user.lat, user.lng, friend.lat, friend.lng)        |
+||      if dist <= user.radius_km: add to nearby_list                       |
+||    sort nearby_list by distance ASC                                      |
+||                                                                          |
+||  Step 5: Subscribe for real-time updates                                 |
+||    for fid in sharing_friends:                                           |
+||      SUBSCRIBE location:{fid}   // via WebSocket gateway                 |
+||    Subsequent updates arrive in real-time; no more polling.              |
+||                                                                          |
+||  4. FAILURE SCENARIOS                                                    |
+||  ======================================================                  |
+||                                                                          |
+||  +---------------------+--------------------------------------------+    |
+||  | What Fails          | Impact & Recovery                          |    |
+||  +---------------------+--------------------------------------------+    |
+||  | Redis Pub/Sub node  | Subscribers lose real-time stream. Gateway |    |
+||  |  crashes             | reconnects to failover node; clients re-  |    |
+||  |                     | subscribe. Next GPS fix restores state.    |    |
+||  +---------------------+--------------------------------------------+    |
+||  | WebSocket gateway   | Clients detect via heartbeat timeout,      |    |
+||  |  down               | reconnect to another gateway via LB. Re-  |    |
+||  |                     | subscribe to all friend channels.          |    |
+||  +---------------------+--------------------------------------------+    |
+||  | GPS signal lost     | Client falls back to cell tower / WiFi.    |    |
+||  |  (tunnel, indoors)  | Lower accuracy; server accepts it. TTL     |    |
+||  |                     | expires if no update within 10 min.        |    |
+||  +---------------------+--------------------------------------------+    |
+||  | Cross-region network| Friends in other regions see stale locs.   |    |
+||  |  partition           | Each region operates independently; heals |    |
+||  |                     | on reconnect (latest timestamp wins).      |    |
+||  +---------------------+--------------------------------------------+    |
+||                                                                          |
+||  5. CLEANUP / EXPIRY                                                     |
+||  ======================================================                  |
+||                                                                          |
+||  * loc:{user_id}: TTL 600s — auto-expires if no GPS update.              |
+||    Each update resets the TTL. No manual cleanup needed.                  |
+||  * sharing:{user_id}: TTL matches sharing duration (15 min to            |
+||    8 hrs). On expiry, channel is torn down, subscribers notified.         |
+||  * geo:{geohash}: TTL 300s — refreshed on each user location             |
+||    update. Stale cells auto-evict.                                       |
+||  * friends:{user_id}: TTL 1 hr — invalidated on friend                   |
+||    add/remove events from Friend Service.                                |
+||  * No permanent location storage by design. GDPR-compliant:              |
+||    all location data is ephemeral and self-expiring.                      |
+||                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 13: INTERVIEW Q&A
 
 ```

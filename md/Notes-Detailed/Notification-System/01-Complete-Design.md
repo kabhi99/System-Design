@@ -1245,6 +1245,180 @@ A COMPLETE CONCEPTUAL GUIDE
 
 *+-------------------------------------------------------------------------+*
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Notification Lifecycle)                      |
+|                                                                         |
+|    [CREATED] --> [QUEUED] --> [SENDING] --> [DELIVERED]                 |
+|        |            |            |              |                       |
+|        |            |            |              +---> [OPENED/CLICKED] |
+|        |            |            |                                      |
+|        |            |            +---> [FAILED] ---> [RETRYING]        |
+|        |            |                                    |              |
+|        |            |                   +----------------+              |
+|        |            |                   |                               |
+|        |            |                   v                               |
+|        |            |              [DEAD_LETTER]                       |
+|        |            |                                                   |
+|        |            +---> [DROPPED]  (rate limit, user opted out,      |
+|        |                              quiet hours)                     |
+|        +---> [DROPPED]  (preference check failed at API layer)        |
+|                                                                         |
+|    CREATED:    Notification API receives request, validates input      |
+|    QUEUED:     Written to Kafka topic (partitioned by priority)        |
+|    SENDING:    Channel worker picked up, calling provider (APNs/FCM)  |
+|    DELIVERED:  Provider confirmed delivery (or best-effort sent)      |
+|    FAILED:     Provider returned error (token invalid, rate limit)    |
+|    RETRYING:   Re-enqueued with exponential backoff                   |
+|    DEAD_LETTER: Max retries exceeded, moved to DLQ for inspection     |
+|    DROPPED:    Filtered by preferences, rate limit, or quiet hours    |
+|    OPENED:     User tapped push / opened email (tracking pixel)       |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Notification Dispatch)                        |
+|                                                                         |
+|    Internal Service: POST /api/v1/notifications                        |
+|      { user_id, template_id, channel, data, priority }                |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Validate request and render template                        |
+|      |     SELECT * FROM notification_templates                        |
+|      |       WHERE template_id = 'order_shipped';                      |
+|      |     Render title/body with {{order_id}} placeholders            |
+|      v                                                                  |
+|    Step 2: Check user preferences (cached in Redis)                    |
+|      |     GET user_prefs:{user_id}                                    |
+|      |     Cache miss -> SELECT * FROM user_preferences                |
+|      |       WHERE user_id = ?;                                        |
+|      |     Check: channel enabled? category opted in?                  |
+|      |     Check: quiet_start/quiet_end in user's timezone             |
+|      |     If quiet hours -> schedule for after quiet_end               |
+|      |     If opted out -> DROP, return { status: "filtered" }         |
+|      v                                                                  |
+|    Step 3: Rate limit check                                            |
+|      |     Redis: INCR notif_rate:{user_id}:{channel} EX 3600         |
+|      |     If count > per_user_limit -> DROP                           |
+|      v                                                                  |
+|    Step 4: Persist notification record                                 |
+|      |     INSERT INTO notifications                                    |
+|      |       (notification_id, user_id, channel, template_id,          |
+|      |        title, body, status, priority, created_at,               |
+|      |        retry_count, metadata)                                    |
+|      |     VALUES (uuid(), ?, 'PUSH', 'order_shipped',                 |
+|      |        'Order Shipped', 'Your order...', 'QUEUED',              |
+|      |        'HIGH', NOW(), 0, '{}');                                  |
+|      v                                                                  |
+|    Step 5: Enqueue to Kafka (priority-based topic)                     |
+|      |     Topic: push.high  (channel.priority)                        |
+|      |     Key: user_id (partition by user for ordering)               |
+|      |     Payload: { notification_id, user_id, channel, title,        |
+|      |               body, device_tokens, priority }                   |
+|      v                                                                  |
+|    Step 6: Channel worker consumes from Kafka                          |
+|      |     Fetch device tokens:                                        |
+|      |       SELECT token, platform FROM device_tokens                 |
+|      |         WHERE user_id = ? AND is_valid = true;                  |
+|      |     Call provider: APNs (iOS) or FCM (Android)                  |
+|      |     Batch up to 500 notifications per FCM request               |
+|      v                                                                  |
+|    Step 7: Update status on provider response                          |
+|      |     UPDATE notifications SET status = 'DELIVERED',              |
+|      |       sent_at = NOW(), delivered_at = NOW()                     |
+|      |       WHERE notification_id = ?;                                |
+|      |     If provider error:                                          |
+|      |       If token_invalid -> UPDATE device_tokens SET              |
+|      |         is_valid = false WHERE token = ?;                       |
+|      |       If transient -> re-enqueue with backoff                   |
+|      |       If max retries -> move to DLQ                             |
+|                                                                         |
+|    WRITE ORDER: PostgreSQL (notifications) -> Kafka -> Provider        |
+|                 -> PostgreSQL (status update)                          |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  3. READ PATH (Notification Inbox - Paginated)                         |
+|                                                                         |
+|    User: GET /api/v1/notifications?cursor=...&limit=20                 |
+|      |                                                                  |
+|      v                                                                  |
+|    Step 1: Redis check for in-app notifications                        |
+|      |     ZREVRANGEBYSCORE in_app:{user_id} +inf <cursor> LIMIT 20   |
+|      |     HIT -> return from cache                                    |
+|      |     MISS -> Step 2                                              |
+|      v                                                                  |
+|    Step 2: Query Cassandra (optimized for this access pattern)         |
+|      |     SELECT * FROM in_app_notifications                          |
+|      |       WHERE user_id = ? ORDER BY created_at DESC LIMIT 20;     |
+|      v                                                                  |
+|    Step 3: Return paginated list                                       |
+|            Unread count: Redis GET unread_count:{user_id}              |
+|                                                                         |
+|    Mark as Read:                                                       |
+|      POST /api/v1/notifications/{id}/read                              |
+|      UPDATE in_app_notifications SET is_read = true                    |
+|        WHERE user_id = ? AND notification_id = ?;                      |
+|      Redis: DECR unread_count:{user_id}                               |
+|                                                                         |
+|    Real-Time Delivery:                                                 |
+|      In-app worker writes to Redis sorted set + publishes              |
+|      via WebSocket to connected clients immediately                   |
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                  |
+|                                                                         |
+|  What Fails               | Impact & Recovery                          |
+|  -------------------------+--------------------------------------------+
+|  APNs/FCM provider down   | Push notifications queue in Kafka. Workers |
+|                           | retry with exponential backoff. Switch to  |
+|                           | backup channel (email) for critical notifs.|
+|                           | Kafka retains messages until provider up.  |
+|  -------------------------+--------------------------------------------+
+|  Kafka down               | API cannot enqueue. Return 503 to callers. |
+|                           | Notifications persisted in DB with status  |
+|                           | QUEUED. Recovery sweeper picks them up     |
+|                           | when Kafka recovers (DB as fallback queue).|
+|  -------------------------+--------------------------------------------+
+|  Worker crash mid-send    | Kafka offset not committed. Message is     |
+|                           | redelivered to another worker. Dedup via   |
+|                           | notification_id check (idempotent update). |
+|  -------------------------+--------------------------------------------+
+|  SMS provider throttled   | Twilio returns 429. Worker backs off.      |
+|                           | Fall back to secondary provider (Nexmo).   |
+|                           | Critical SMS (OTP) gets priority retry.    |
+|  -------------------------+--------------------------------------------+
+|                                                                         |
+|  ====================================================================  |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                   |
+|                                                                         |
+|    In-App Notification Expiry:                                         |
+|      in_app_notifications.expires_at checked on read                   |
+|      Background job: DELETE FROM in_app_notifications                  |
+|        WHERE expires_at < NOW();  (daily, batch of 50K)               |
+|      Redis: ZREMRANGEBYSCORE in_app:{user_id} -inf <30_days_ago>     |
+|                                                                         |
+|    Dead Letter Queue Cleanup:                                          |
+|      DLQ entries reviewed by ops team weekly                          |
+|      Auto-purge after 30 days if not replayed                         |
+|                                                                         |
+|    Stale Device Token Removal:                                        |
+|      Tokens marked is_valid=false by provider feedback                |
+|      Weekly job: DELETE FROM device_tokens                            |
+|        WHERE is_valid = false AND last_used_at < NOW()-INTERVAL 90d;  |
+|                                                                         |
+|    Redis Cache TTL:                                                    |
+|      user_prefs:{user_id}: EX 3600 (1h, refreshed on update)         |
+|      unread_count:{user_id}: no TTL (maintained by INCR/DECR)        |
+|      notif_rate:{user_id}:{channel}: EX 3600 (auto-expire window)    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 14: INTERVIEW QUICK REFERENCE
 ```
 +-------------------------------------------------------------------------+

@@ -1087,7 +1087,176 @@
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 14: INTERVIEW Q&A
+## SECTION 14: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Transaction)                                  |
+|                                                                         |
+|  INITIATED ──> PROCESSING ──> COMPLETED                                 |
+|      │              │                                                   |
+|      │              └──> FAILED (insufficient balance, fraud block)      |
+|      │                      │                                           |
+|      │                      └──> (no retry; new txn needed)             |
+|      │                                                                  |
+|      └──> DUPLICATE (idempotency_key already exists)                    |
+|                                                                         |
+|  COMPLETED ──> REVERSAL_INITIATED ──> REVERSED                          |
+|                     │                                                   |
+|                     └──> REVERSAL_FAILED (retry with backoff)           |
+|                                                                         |
+|  For add-money (bank callback):                                         |
+|  PENDING ──> PENDING_VERIFICATION ──> COMPLETED                         |
+|                      │                                                  |
+|                      └──> FAILED (bank confirms failure)                |
+|                                                                         |
+|  Transition rules:                                                      |
+|  * INITIATED is created atomically with idempotency check               |
+|  * PROCESSING holds the row lock on sender's wallet                     |
+|  * Only COMPLETED can be REVERSED (within dispute window)               |
+|  * FAILED is terminal; client must create a new transaction             |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (P2P Transfer with Double-Entry)                |
+|                                                                         |
+|  Client            API GW        Txn Svc        Wallet Svc              |
+|    |                  |              |               |                   |
+|    |-- POST /transfer |              |               |                   |
+|    |   {receiver,     |              |               |                   |
+|    |    amount:50000,  |              |               |                   |
+|    |    idem_key}      |              |               |                   |
+|    |                  |              |               |                   |
+|    |                  |-check idem-->|               |                   |
+|    |                  | Redis GET    |               |                   |
+|    |                  | idempotency_key:{key}        |                   |
+|    |                  | HIT? return cached result     |                  |
+|    |                  |              |               |                   |
+|    |                  |--fraud svc-->| score < 90?   |                   |
+|    |                  |              |               |                   |
+|    |                  |              |--atomic txn-->|                   |
+|    |                  |              |               |                   |
+|    |                  |  BEGIN TRANSACTION (SERIALIZABLE);               |
+|    |                  |    SELECT balance, version FROM user_wallet      |
+|    |                  |      WHERE wallet_id = :A FOR UPDATE;            |
+|    |                  |    -- verify balance >= 50000                    |
+|    |                  |                                                  |
+|    |                  |    UPDATE user_wallet                            |
+|    |                  |      SET balance = balance - 50000,              |
+|    |                  |          version = version + 1                   |
+|    |                  |      WHERE wallet_id = :A;                       |
+|    |                  |                                                  |
+|    |                  |    UPDATE user_wallet                            |
+|    |                  |      SET balance = balance + 50000,              |
+|    |                  |          version = version + 1                   |
+|    |                  |      WHERE wallet_id = :B;                       |
+|    |                  |                                                  |
+|    |                  |    INSERT INTO ledger_entry                      |
+|    |                  |      (entry_id, transaction_id, wallet_id,       |
+|    |                  |       entry_type, amount, balance_after)         |
+|    |                  |      VALUES (:id1, :txn, :A, 'DEBIT',           |
+|    |                  |              50000, :new_bal_A);                 |
+|    |                  |                                                  |
+|    |                  |    INSERT INTO ledger_entry                      |
+|    |                  |      (entry_id, transaction_id, wallet_id,       |
+|    |                  |       entry_type, amount, balance_after)         |
+|    |                  |      VALUES (:id2, :txn, :B, 'CREDIT',          |
+|    |                  |              50000, :new_bal_B);                 |
+|    |                  |  COMMIT;                                         |
+|    |                  |                                                  |
+|    |                  |  Redis SET idempotency_key:{key} EX 86400        |
+|    |                  |              |               |                   |
+|    |                  |  Kafka: emit TransactionCompleted event           |
+|    |                  |    -> notification svc (push + SMS)              |
+|    |                  |    -> cashback engine (async eval)               |
+|    |                  |    -> analytics / audit log                      |
+|    |                  |              |               |                   |
+|    |<-- txn_id, OK ---|              |               |                   |
+|                                                                         |
+|  ORDERING: lock wallets in deterministic order (lower wallet_id         |
+|  first) to prevent deadlocks in cross-shard P2P transfers.              |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  3. READ PATH                                                           |
+|                                                                         |
+|  BALANCE CHECK:                                                         |
+|    Client --> wallet service --> user_wallet primary (strong)            |
+|    SELECT balance FROM user_wallet WHERE wallet_id = :id;               |
+|    * Always reads from DB primary (no stale balance)                    |
+|    * Redis cache for repeated reads within same session:                |
+|      key: wallet_bal:{wallet_id}, TTL: 5 seconds                       |
+|                                                                         |
+|  TRANSACTION HISTORY:                                                   |
+|    Client --> txn service --> ledger_entry read replica                  |
+|    SELECT * FROM ledger_entry                                           |
+|      WHERE wallet_id = :id                                              |
+|      ORDER BY created_at DESC LIMIT 20;                                 |
+|    * Eventual consistency OK (read replica, < 2s lag)                   |
+|    * Paginated by cursor (created_at of last entry)                     |
+|                                                                         |
+|  IDEMPOTENCY LOOKUP:                                                    |
+|    1. Redis GET idempotency_key:{key} -> HIT? return cached result      |
+|    2. MISS -> DB check UNIQUE(idempotency_key) on transaction table     |
+|    3. Both miss -> proceed with new transaction                         |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                   |
+|                                                                         |
+|  +------------------------------+------------------------------------+  |
+|  | What Fails                   | Impact & Recovery                  |  |
+|  +------------------------------+------------------------------------+  |
+|  | DB commit fails mid-txn      | ACID rollback; both wallets and   |  |
+|  | (crash after debit, before   | ledger entries are untouched.     |  |
+|  |  credit)                     | Client retries with same idem_key.|  |
+|  +------------------------------+------------------------------------+  |
+|  | Cross-shard P2P: sender      | Saga compensation: credit back    |  |
+|  | debited, receiver shard down | sender's wallet, mark txn FAILED. |  |
+|  |                              | Saga state persisted for restart. |  |
+|  +------------------------------+------------------------------------+  |
+|  | Bank callback lost           | Txn stays PENDING_VERIFICATION.   |  |
+|  | (add-money flow)             | Reconciliation job queries bank   |  |
+|  |                              | status API every 15 min. Daily    |  |
+|  |                              | bank statement as final safety.   |  |
+|  +------------------------------+------------------------------------+  |
+|  | Kafka event lost after       | Transactional outbox: write event |  |
+|  | COMPLETED                    | to outbox table in same DB txn.   |  |
+|  |                              | Relay service polls outbox,       |  |
+|  |                              | publishes to Kafka, marks sent.   |  |
+|  +------------------------------+------------------------------------+  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                    |
+|                                                                         |
+|  IDEMPOTENCY KEYS:                                                      |
+|  * Redis TTL: 24 hours for fast dedup                                   |
+|  * DB UNIQUE constraint as durable backup                               |
+|  * DB keys older than 90 days archived                                  |
+|                                                                         |
+|  PENDING TRANSACTIONS:                                                  |
+|  * Sweep job every 15 min: find txns in PENDING_VERIFICATION            |
+|    older than 5 minutes, query bank status API                          |
+|  * Txns stuck > 72 hours: escalate to ops team                          |
+|                                                                         |
+|  LEDGER PARTITIONING:                                                   |
+|  * ledger_entry: range-partitioned by created_at (monthly)              |
+|  * Current month: SSD, full indexes                                     |
+|  * 3-12 months: HDD, partial indexes                                    |
+|  * >12 months: archived to S3/Glacier, queryable via Athena             |
+|                                                                         |
+|  BALANCE RECONCILIATION:                                                |
+|  * Hourly job: for each wallet, compare stored balance vs               |
+|    SUM(CREDIT) - SUM(DEBIT) from ledger_entry                          |
+|  * Mismatch triggers P0 alert to finance team                           |
+|  * Daily bank statement reconciliation (T+1 settlement check)           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 15: INTERVIEW Q&A
 
 ### QUESTION 1
 

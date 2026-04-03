@@ -1225,6 +1225,136 @@ a massively read-heavy workload across the globe.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+||                                                                         |
+||  1. ENTITY STATE MACHINE: Place / PoI Lifecycle                         |
+||  ======================================================                 |
+||                                                                         |
+||  SUBMITTED --> VALIDATED --> INDEXED --> ACTIVE --> (UPDATED/REMOVED)    |
+||                                                                         |
+||  +----------+  schema   +----------+  geohash   +----------+            |
+||  | SUBMITTED|  check,   | VALIDATED|  compute,  | INDEXED  |            |
+||  | (owner   |  geocode  | (clean   |  DB insert | (in geo  |            |
+||  |  API req)| --------> |  record) | ---------> |  index)  |            |
+||  +----------+           +----------+            +----------+            |
+||                                                      |                  |
+||                              cache warm + event      |                  |
+||                                                      v                  |
+||                                                 +----------+            |
+||                                                 | ACTIVE   |            |
+||                                                 | (serving |            |
+||                                                 |  queries)|            |
+||                                                 +----------+            |
+||                                                  |        |             |
+||                            owner edits address   |        | owner or    |
+||                            -> UPDATED (re-index) |        | admin       |
+||                                                  |        v             |
+||                                                  |   +----------+       |
+||                                                  |   | REMOVED  |       |
+||                                                  |   | is_active|       |
+||                                                  |   | = false  |       |
+||                                                  |   +----------+       |
+||                                                  v                      |
+||                                    publish business_updated event       |
+||                                    -> invalidate caches + re-index      |
+||                                                                         |
+||  2. CRITICAL WRITE PATH: PoI Creation + Geospatial Index Update         |
+||  ======================================================                 |
+||                                                                         |
+||  POST /v1/businesses { name, lat, lng, category, hours, ... }           |
+||                                                                         |
+||  Step 1: Validate and geocode                                           |
+||    assert valid lat/lng, required fields present                        |
+||    geohash = geohash_encode(lat, lng, precision=6)  // e.g. "9q8yyk"   |
+||                                                                         |
+||  Step 2: Insert into PostgreSQL (PostGIS)                               |
+||    INSERT INTO businesses                                               |
+||      (id, name, lat, lng, geohash, category, avg_rating,               |
+||       review_count, price_range, hours, is_active, created_at)          |
+||    VALUES (gen_uuid(), :name, :lat, :lng, :geohash,                     |
+||            :category, 0.0, 0, :price_range, :hours, true, NOW());       |
+||    -- B-tree index on (geohash, category) handles prefix queries        |
+||    -- GiST index on geography(lat, lng) for PostGIS ST_DWithin          |
+||                                                                         |
+||  Step 3: Publish event for async consumers                              |
+||    PRODUCE topic=business_events                                        |
+||      key=business_id  value={id, lat, lng, geohash, category, "created"}|
+||                                                                         |
+||  Step 4: Cache warm (async, via event consumer)                         |
+||    SADD geo:{geohash_prefix}:{category} {business_id}                   |
+||    SET  biz:{business_id} {JSON blob}  TTL 15 min                       |
+||                                                                         |
+||  Step 5: Search index update (async, via event consumer)                |
+||    Elasticsearch: index document with geo_point field                   |
+||                                                                         |
+||  3. READ PATH: Radius Search via Geohash                                |
+||  ======================================================                 |
+||                                                                         |
+||  GET /v1/nearby?lat=37.77&lng=-122.41&radius=5000&category=restaurant   |
+||                                                                         |
+||  Step 1: Compute geohash neighborhood                                   |
+||    user_geohash = geohash_encode(37.77, -122.41, precision=5)           |
+||    cells = [user_geohash] + 8_neighbors(user_geohash)  // 9 cells      |
+||                                                                         |
+||  Step 2: Check Redis cache for each cell                                |
+||    for cell in cells:                                                   |
+||      key = geo:{cell}:restaurant                                        |
+||      HIT  -> collect cached business IDs                                |
+||      MISS -> query PostgreSQL:                                          |
+||        SELECT id, name, lat, lng, avg_rating, review_count              |
+||        FROM businesses                                                  |
+||        WHERE geohash LIKE '{cell}%' AND category = 'restaurant'         |
+||          AND is_active = true                                           |
+||        cache result with TTL 15 min                                     |
+||                                                                         |
+||  Step 3: Exact distance filter (Haversine)                              |
+||    for each candidate:                                                  |
+||      dist = haversine(user_lat, user_lng, biz.lat, biz.lng)            |
+||      discard if dist > 5000 m                                          |
+||                                                                         |
+||  Step 4: Rank and paginate                                              |
+||    score = w1*(1/dist) + w2*avg_rating + w3*review_count               |
+||    sort by score DESC, return top 20 with cursor                       |
+||                                                                         |
+||  4. FAILURE SCENARIOS                                                   |
+||  ======================================================                 |
+||                                                                         |
+||  +---------------------+-------------------------------------------+    |
+||  | What Fails          | Impact & Recovery                         |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Redis cache miss    | Query falls through to read replica.      |    |
+||  |  (cold cell)        | Slightly higher latency (~50 ms vs ~5 ms).|    |
+||  +---------------------+-------------------------------------------+    |
+||  | PostgreSQL primary  | Replica promoted; writes blocked briefly. |    |
+||  |  down               | Reads continue on surviving replicas.     |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Cache stampede on   | Use request coalescing (singleflight) or  |    |
+||  |  popular geohash    | probabilistic early expiry to prevent     |    |
+||  |                     | thundering herd on cache miss.            |    |
+||  +---------------------+-------------------------------------------+    |
+||  | Elasticsearch index | Geo search still works via PostGIS.       |    |
+||  |  stale / down       | Full-text business search is degraded     |    |
+||  |                     | until ES re-indexes from event log.       |    |
+||  +---------------------+-------------------------------------------+    |
+||                                                                         |
+||  5. CLEANUP / EXPIRY                                                    |
+||  ======================================================                 |
+||                                                                         |
+||  * Redis geo cache: TTL 15 min per cell key. Event-driven               |
+||    invalidation on business_updated events for critical changes.        |
+||  * biz:{id} cache: TTL 15 min; invalidated on update event.            |
+||  * Soft-deleted businesses (is_active=false) excluded from search       |
+||    queries. Hard-delete batch job runs monthly for businesses           |
+||    inactive > 1 year.                                                   |
+||  * Stale Elasticsearch documents reconciled via nightly full            |
+||    re-index job comparing ES state with PostgreSQL source of truth.     |
+||                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 11: INTERVIEW Q&A
 
 ```

@@ -469,6 +469,141 @@ the most influential designs.
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Block / Chunk)                                |
+|                                                                         |
+|    ALLOCATED --> WRITING --> COMMITTED --> REPLICATED                    |
+|       |            |            |              |                        |
+|       |            |            |              +--> UNDER_REPLICATED    |
+|       |            |            |              |    (node died)         |
+|       |            |            |              |        |               |
+|       |            |            |              |    RE_REPLICATED       |
+|       |            |            |              |    (repair done)       |
+|       |            |            |              |                        |
+|       |            |            |              +--> CORRUPT (CRC fail)  |
+|       |            |            |                       |               |
+|       |            |            |                   REPAIRED            |
+|       |            |            +--> DELETED (file deleted)             |
+|       |            +--> FAILED (write error, client retries)           |
+|       +--> LEASE_EXPIRED (primary lease timed out)                     |
+|                                                                         |
+|  State tracked by:                                                      |
+|    Master/NameNode: namespace + file-to-chunk map (in memory)          |
+|    ChunkServer/DataNode: block reports + heartbeats every 3-10s        |
+|    Persistence: operation log + periodic checkpoints on master         |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Block Write Pipeline)                          |
+|                                                                         |
+|  Step 1: Client asks Master for chunk allocation                        |
+|          Master returns: chunk_id, primary + 2 secondary servers        |
+|          Master grants lease to primary (60s, renewable)                |
+|  Step 2: Client pushes data through pipeline (nearest first):           |
+|          Client --> ChunkServer1 --> ChunkServer2 --> ChunkServer3      |
+|          (pipelined: each node forwards as it receives)                 |
+|  Step 3: Client sends write request to primary (lease holder)           |
+|  Step 4: Primary assigns serial number, applies write locally           |
+|  Step 5: Primary forwards mutation order to secondaries                 |
+|  Step 6: Secondaries apply write at same offset, ack to primary         |
+|  Step 7: Primary acks to client after all replicas confirm              |
+|                                                                         |
+|  Critical sequence (chunk server write):                                |
+|                                                                         |
+|    -- Primary receives write request                                    |
+|    serial_num = next_serial_number++                                    |
+|    write_to_local_disk(chunk_id, offset, data)                          |
+|    verify_crc32(data)  -- checksum per 64 KB block                      |
+|                                                                         |
+|    -- Forward to secondaries                                            |
+|    for replica in secondaries:                                          |
+|      replica.apply_mutation(chunk_id, serial_num, offset, data)         |
+|                                                                         |
+|    -- Wait for all acks                                                 |
+|    ack_count = wait_for_acks(secondaries, timeout=30s)                  |
+|    if ack_count == len(secondaries):                                    |
+|      return SUCCESS to client                                           |
+|    else:                                                                |
+|      return ERROR  -- client retries with new chunk allocation          |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  3. READ PATH (Block Read)                                              |
+|                                                                         |
+|  Step 1: Client asks Master: "chunks for /data/file.log at offset?"    |
+|  Step 2: Master returns chunk_id + list of servers holding replicas    |
+|  Step 3: Client caches chunk locations (avoids repeated master calls)  |
+|  Step 4: Client contacts nearest chunk server directly                  |
+|  Step 5: Chunk server reads from local disk, verifies CRC32            |
+|  Step 6: If checksum mismatch: report to master, try next replica      |
+|  Step 7: Return data to client                                          |
+|                                                                         |
+|  Client --> Master: (file, byte_offset)                                 |
+|  Client <-- Master: (chunk_id, [CS1, CS2, CS3])                         |
+|  Client --> CS1: (chunk_id, chunk_offset)                               |
+|  Client <-- CS1: (data)  -- verified CRC32 per 64 KB block              |
+|                                                                         |
+|  Optimization: client reads from any replica (load balanced).          |
+|  Sequential reads prefetch next chunk locations from master.           |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                         |
+|  +---------------------------+-------------------------------------+   |
+|  | What Fails                | Impact & Recovery                   |   |
+|  +---------------------------+-------------------------------------+   |
+|  | ChunkServer dies          | Master detects via missed heartbeat |   |
+|  |                           | (30s timeout). Chunks become under- |   |
+|  |                           | replicated. Master schedules re-    |   |
+|  |                           | replication to healthy servers.     |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Master/NameNode down      | Standby takes over from replicated  |   |
+|  |                           | operation log (HDFS: ZooKeeper      |   |
+|  |                           | failover). Reads with cached chunk  |   |
+|  |                           | locations continue uninterrupted.   |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Data corruption (bit rot) | CRC32 per 64KB block detects on     |   |
+|  |                           | read. Client falls back to another  |   |
+|  |                           | replica. Master re-replicates       |   |
+|  |                           | corrupted chunk.                    |   |
+|  +---------------------------+-------------------------------------+   |
+|  | Network partition          | Chunk leases expire, preventing     |   |
+|  | (master <-> chunk server) | split-brain writes. Master waits    |   |
+|  |                           | grace period (10 min) before re-    |   |
+|  |                           | replication to avoid thrash.        |   |
+|  +---------------------------+-------------------------------------+   |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                         |
+|  Chunk garbage collection:                                               |
+|    When a file is deleted, master removes metadata immediately.         |
+|    Chunk servers discover orphaned chunks via block reports.            |
+|    Orphan chunks deleted lazily during next heartbeat cycle.            |
+|                                                                         |
+|  Re-replication throttling:                                              |
+|    Bandwidth-limited (HDFS balancer) to avoid saturating network.       |
+|    Priority: chunks with fewest replicas re-replicated first.          |
+|                                                                         |
+|  Operation log compaction:                                               |
+|    Periodic checkpoints snapshot master metadata.                       |
+|    Old operation log segments deleted after checkpoint.                 |
+|    On restart: load checkpoint + replay recent log entries.            |
+|                                                                         |
+|  Decommissioning nodes:                                                  |
+|    Mark node "draining" --> no new writes.                              |
+|    Repair scanner treats all chunks as "missing" and re-replicates.    |
+|    Node removed from cluster map once fully drained.                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 11: INTERVIEW QUESTIONS
 
 ```

@@ -1003,6 +1003,136 @@ square tiles. At zoom level z, there are 4^z tiles.
 +------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++------------------------------------------------------------------------+
+|                                                                        |
+|  1. ENTITY STATE MACHINE: Route Lifecycle                              |
+|  ======================================================                |
+|                                                                        |
+|  REQUESTED --> GRAPH_LOADED --> COMPUTED --> NAVIGATING --> COMPLETED   |
+|                                                  |                     |
+|  +-----------+ load shard +-----------+  CH     +----------+           |
+|  | REQUESTED | ---------> | GRAPH     | query   | COMPUTED |           |
+|  | (API call)|            | LOADED    | ------> | (route + |           |
+|  +-----------+            | (adj list)|         |  ETA)    |           |
+|                           +-----------+         +----------+           |
+|                                                      |                 |
+|                            user starts driving       v                 |
+|                                                 +----------+           |
+|                                                 |NAVIGATING|           |
+|                                                 |(turn-by- |           |
+|                                                 | turn)    |           |
+|                                                 +----------+           |
+|                                                  |        |            |
+|                          traffic / road closure   |        | arrive     |
+|                          -> REROUTED (re-query)   |        v            |
+|                                                   |   +----------+     |
+|                                                   |   |COMPLETED |     |
+|                                                   |   +----------+     |
+|                                                   v                    |
+|                                              +----------+              |
+|                                              | REROUTED |              |
+|                                              | (new CH  |              |
+|                                              |  query)  |              |
+|                                              +----------+              |
+|                                                                        |
+|  2. CRITICAL WRITE PATH: Traffic Update + Graph Refresh                |
+|  ======================================================                |
+|                                                                        |
+|  GPS probes arrive from millions of devices every second:              |
+|                                                                        |
+|  Step 1: Ingest GPS probe into Kafka                                   |
+|    PRODUCE topic=gps_probes partition_key=geohash(lat,lng)             |
+|      value={device_id, lat, lng, speed, bearing, timestamp}            |
+|                                                                        |
+|  Step 2: Flink Stream Processor                                        |
+|    a) Map-matching via HMM:                                            |
+|       raw (lat,lng) -> matched segment_id                              |
+|    b) Windowed speed aggregation (30-60 sec tumbling window):          |
+|       GROUP BY segment_id                                              |
+|       AVG(speed) -> live_speed_kmh for that segment                    |
+|                                                                        |
+|  Step 3: Write to Traffic Speed DB (time-series, sharded by seg_id)    |
+|    UPSERT traffic_speeds                                               |
+|      SET segment_id=:seg, live_speed_kmh=:speed, updated_at=NOW()      |
+|                                                                        |
+|  Step 4: Incident detection (Flink CEP)                                |
+|    IF speed drops >70% across adjacent segments for >2 min:            |
+|      flag as incident; mark affected edges weight=INF                  |
+|      trigger rerouting for active navigation sessions                  |
+|                                                                        |
+|  Step 5: Tile pipeline (separate cadence)                              |
+|    Base tiles: re-render from source data weekly/daily                  |
+|    Traffic overlay tiles: refresh every 30-60 sec from speed DB        |
+|    CDN invalidation for affected tile keys                             |
+|                                                                        |
+|  Step 6: CH rebuild (periodic, hours)                                  |
+|    On significant graph changes (new roads, closures):                 |
+|    Re-contract road graph -> new shortcut edges                        |
+|    Swap old CH -> new CH atomically on routing servers                  |
+|                                                                        |
+|  3. READ PATH: Route Computation + Tile Serving                        |
+|  ======================================================                |
+|                                                                        |
+|  GET /v1/route?origin=A&dest=B&mode=driving                           |
+|                                                                        |
+|  Routing:                                                              |
+|    1. Identify graph shard(s) covering origin and destination          |
+|    2. Bidirectional CH query on augmented graph (< 1 ms)               |
+|       Forward: relax edges to higher-importance nodes from origin      |
+|       Backward: relax edges to higher-importance nodes from dest       |
+|       Meet at highest-importance node on shortest path                 |
+|    3. Unpack shortcut edges to recover full road-segment path          |
+|    4. Overlay live traffic weights from Speed DB / Redis cache         |
+|       live_weight = segment.length_m / (live_speed_kmh / 3.6)         |
+|    5. ETA ML model: features = {segments, speeds, time_of_day,         |
+|       weather, turns} -> predicted trip time + confidence              |
+|    6. Generate turn-by-turn instructions from segment metadata         |
+|    7. Return polyline + ETA + instructions                             |
+|                                                                        |
+|  Tile Serving:                                                         |
+|    GET /tiles/{z}/{x}/{y}.pbf  (vector tile)                           |
+|    CDN edge cache -> HIT: return (TTL long for base, short overlay)    |
+|    MISS -> tile server renders from vector data -> cache + return      |
+|                                                                        |
+|  4. FAILURE SCENARIOS                                                  |
+|  ======================================================                |
+|                                                                        |
+|  +----------------------+-----------------------------------------+    |
+|  | What Fails           | Impact & Recovery                       |    |
+|  +----------------------+-----------------------------------------+    |
+|  | Traffic data stale   | Routing uses historical speed profiles  |    |
+|  |  (Flink/Kafka lag)   | instead of live. ETA less accurate.     |    |
+|  +----------------------+-----------------------------------------+    |
+|  | CH shortcuts invalid | Fallback to A* with live weights for    |    |
+|  |  (road closure)      | affected routes. Edges marked INF until |    |
+|  |                      | CH rebuild completes.                   |    |
+|  +----------------------+-----------------------------------------+    |
+|  | Graph shard unavail. | Replica serves reads. Cross-shard route |    |
+|  |                      | degrades to coarser path until recovery. |    |
+|  +----------------------+-----------------------------------------+    |
+|  | Tile CDN miss storm  | Origin tile servers absorb load. Auto-  |    |
+|  |                      | scale tile rendering fleet. Pre-warm     |    |
+|  |                      | cache for popular zoom levels.          |    |
+|  +----------------------+-----------------------------------------+    |
+|                                                                        |
+|  5. CLEANUP / EXPIRY                                                   |
+|  ======================================================                |
+|                                                                        |
+|  * Traffic speed DB: overwritten every 30-60 sec per segment.          |
+|    Historical speeds aged to time-series archive after 90 days.        |
+|  * Traffic overlay tiles: CDN TTL 30-60 sec; auto-replaced.            |
+|  * Base map tiles: CDN TTL days-weeks; invalidation signal on          |
+|    source data change purges affected tiles.                           |
+|  * CH index: old version retained for rollback; deleted after          |
+|    new CH is verified stable (24 hrs).                                 |
+|  * Incident flags: auto-clear when speeds recover above threshold.     |
+|                                                                        |
++------------------------------------------------------------------------+
+```
+
 ## SECTION 14: INTERVIEW Q&A
 
 ```

@@ -884,7 +884,171 @@ to ensure accurate advertiser billing and campaign performance measurement.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 13: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Click Event)                                  |
+|                                                                         |
+|  RAW ──> DEDUPLICATED ──> AGGREGATED ──> SETTLED (billed)               |
+|   │           │                │                                        |
+|   │           │                └──> FRAUD_FLAGGED (excluded from bill)   |
+|   │           │                          │                              |
+|   │           │                          └──> FRAUD_CONFIRMED           |
+|   │           │                          └──> FRAUD_CLEARED             |
+|   │           │                                    │                    |
+|   │           │                                    └──> AGGREGATED      |
+|   │           │                                                         |
+|   │           └──> DUPLICATE (discarded, logged for audit)              |
+|   │                                                                     |
+|   └──> INVALID (malformed event, missing fields)                        |
+|                                                                         |
+|  Transition rules:                                                      |
+|  * RAW: event arrives at click tracker endpoint                         |
+|  * DEDUPLICATED: passed click_id uniqueness check                       |
+|  * AGGREGATED: included in a Flink tumbling window flush                |
+|  * SETTLED: aggregation used in billing invoice                         |
+|  * FRAUD_FLAGGED can be cleared retroactively (added back to bill)      |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Click Dedup + Aggregation Window Flush)        |
+|                                                                         |
+|  User        Click Tracker      Redis/Bloom      Kafka                  |
+|    |              |                  |              |                    |
+|    |-- click ---->|                  |              |                    |
+|    |  (ad_12345)  |                  |              |                    |
+|    |              |                  |              |                    |
+|    |              |  1. Validate event (required fields present)         |
+|    |              |  2. Enrich: geo lookup from IP, device parse         |
+|    |              |                  |              |                    |
+|    |              |  3. Dedup check:  |              |                    |
+|    |              |  SETNX click_id:{uuid} 1 EX 300  |                  |
+|    |              |    key exists? -> DUPLICATE, drop |                  |
+|    |              |    key new?    -> accept, continue|                  |
+|    |              |                  |              |                    |
+|    |              |  4. Produce to Kafka:            |                    |
+|    |              |     topic: ad-clicks             |                    |
+|    |              |     key: hash(ad_id) (partition)  |                   |
+|    |              |     value: full click event JSON  |                   |
+|    |              |                  |              |                    |
+|    |<-- 302 redirect to landing page |              |                    |
+|                                      |              |                    |
+|                                      |         Flink Consumers          |
+|                                      |              |                    |
+|    Flink Stream Processor:                          |                    |
+|                                                     |                    |
+|    // Tumbling window: 1 minute                     |                    |
+|    events                                                               |
+|      .keyBy(e -> (e.ad_id, e.campaign_id, e.geo, e.device))            |
+|      .window(TumblingEventTimeWindows.of(Time.minutes(1)))             |
+|      .allowedLateness(Time.minutes(2))                                  |
+|      .aggregate(new ClickCounter())                                     |
+|      .addSink(clickHouseSink)  // idempotent UPSERT                    |
+|                                                                         |
+|    Sink (idempotent):                                                   |
+|    INSERT INTO ad_click_aggregations                                    |
+|      (ad_id, campaign_id, advertiser_id, geo, device,                   |
+|       event_minute, click_count, impression_count)                      |
+|    VALUES (...)                                                         |
+|    ON CONFLICT (ad_id, campaign_id, geo, device, event_minute)          |
+|    DO UPDATE SET click_count = EXCLUDED.click_count;                    |
+|    -- UPSERT: re-execution produces same result                        |
+|                                                                         |
+|    Flink checkpointing:                                                 |
+|    * Snapshot state + Kafka offset to S3 every 30 seconds               |
+|    * On failure: restore checkpoint, replay from offset                 |
+|    * End-to-end exactly-once for billing pipeline                       |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  3. READ PATH                                                           |
+|                                                                         |
+|  REAL-TIME DASHBOARD (last 48h):                                        |
+|    Advertiser UI --> Query Service --> Redis (popular query cache)       |
+|      HIT  --> return cached rollup (TTL 60s)                            |
+|      MISS --> ClickHouse (hot storage, sub-second)                      |
+|    SELECT SUM(click_count), SUM(impression_count)                       |
+|      FROM ad_click_aggregations                                         |
+|      WHERE campaign_id = :c AND event_date = today()                    |
+|      GROUP BY ad_id;                                                    |
+|                                                                         |
+|  HISTORICAL QUERIES (7-90 days):                                        |
+|    Query Router --> ClickHouse warm storage (SSD/HDD)                   |
+|    * Hour-level aggregations, queries in seconds                        |
+|    * Pre-computed materialized views for campaign/advertiser rollups     |
+|                                                                         |
+|  LONG-TERM ANALYTICS (>90 days):                                        |
+|    Query Router --> S3 Parquet (via Spark/Presto/Athena)                |
+|    * Day-level aggregations, queries in minutes                         |
+|    * Used for monthly invoices, annual trend analysis                   |
+|                                                                         |
+|  BILLING FEED:                                                          |
+|    Billing Service --> ClickHouse (verified counts)                      |
+|    * Reads fraud-filtered aggregations                                  |
+|    * Nightly reconciliation: stream count vs raw event count            |
+|    * Discrepancies flagged before invoice generation                    |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                   |
+|                                                                         |
+|  +------------------------------+------------------------------------+  |
+|  | What Fails                   | Impact & Recovery                  |  |
+|  +------------------------------+------------------------------------+  |
+|  | Flink task crashes mid-      | Restore from last checkpoint       |  |
+|  | window                       | (S3, every 30s). Re-consume from   |  |
+|  |                              | saved Kafka offset. Window state   |  |
+|  |                              | restored; no double-count due to   |  |
+|  |                              | idempotent UPSERT sink.            |  |
+|  +------------------------------+------------------------------------+  |
+|  | Redis dedup cache down       | Fall back to Bloom filter          |  |
+|  |                              | (in-memory, 0.1% false positive).  |  |
+|  |                              | Or accept potential duplicates     |  |
+|  |                              | for analytics (billing pipeline    |  |
+|  |                              | deduplicates at Flink layer).      |  |
+|  +------------------------------+------------------------------------+  |
+|  | ClickHouse shard down        | Replica takes over reads. Flink    |  |
+|  |                              | buffers writes in Kafka (retained  |  |
+|  |                              | 7 days). Replay after recovery.    |  |
+|  +------------------------------+------------------------------------+  |
+|  | Hot ad overwhelms single     | Sub-partition: use (ad_id, salt)   |  |
+|  | Kafka partition              | as key. Flink second-pass merges   |  |
+|  |                              | sub-partitions. Or pre-aggregate   |  |
+|  |                              | in tracker (batch 100 -> 1 msg).   |  |
+|  +------------------------------+------------------------------------+  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                    |
+|                                                                         |
+|  DEDUP CACHE:                                                           |
+|  * Redis SETNX keys: TTL 300 seconds (5 minutes)                        |
+|  * Bloom filter: rotated every 5 minutes (new filter created,           |
+|    old one kept for 5 more minutes, then discarded)                     |
+|                                                                         |
+|  AGGREGATION ROLLUPS:                                                   |
+|  * Minute-level: kept 7 days in ClickHouse hot tier                     |
+|  * Hour-level: rolled up nightly, kept 90 days in warm tier             |
+|  * Day-level: rolled up weekly, kept indefinitely in cold tier          |
+|  * ClickHouse TTL policy auto-drops old minute partitions               |
+|                                                                         |
+|  RAW EVENT ARCHIVE:                                                     |
+|  * Kafka retention: 7 days (for replay on reprocessing)                 |
+|  * Raw events flushed to S3 Parquet hourly by a Kafka Connect sink      |
+|  * S3 lifecycle: Standard -> Glacier after 1 year                       |
+|  * Retained 3+ years for billing disputes and compliance audits         |
+|                                                                         |
+|  FRAUD FLAG RECONCILIATION:                                             |
+|  * Batch ML pipeline runs nightly, flags retroactive fraud              |
+|  * Flagged clicks deducted from next billing cycle                      |
+|  * Flagged events never deleted -- stored for audit                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 14: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+

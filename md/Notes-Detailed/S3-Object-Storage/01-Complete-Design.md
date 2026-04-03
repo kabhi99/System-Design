@@ -1126,6 +1126,138 @@ block storage.
 +-----------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-----------------------------------------------------------------------+
+|                                                                       |
+|  1. ENTITY STATE MACHINE (Object)                                     |
+|                                                                       |
+|    UPLOADING --> STORED --> REPLICATED --> DELETED                     |
+|       |            |           |              |                       |
+|       |            |           |              +--> DELETE_MARKER       |
+|       |            |           |                   (versioning on)    |
+|       |            |           +--> DEGRADED (chunk lost)             |
+|       |            |                    |                             |
+|       |            |                    +--> REPAIRED (scanner)       |
+|       |            +--> TIERED (lifecycle: Standard-->IA-->Glacier)   |
+|       +--> ABORTED (multipart abort, orphaned chunks)                |
+|                                                                       |
+|  Metadata record: (bucket, key, version_id) in sharded DB (Raft)     |
+|  Data: erasure-coded chunks on data nodes (volumes)                   |
+|  State transitions tracked via metadata service commits               |
+|                                                                       |
+|  -----------------------------------------------------------------   |
+|                                                                       |
+|  2. CRITICAL WRITE PATH (Multipart Upload)                            |
+|                                                                       |
+|  Step 1: POST /bucket/key?uploads --> API Gateway authenticates       |
+|          Returns uploadId = "abc"                                     |
+|  Step 2: Placement Service selects target data nodes                  |
+|          (rack/AZ-aware, capacity-balanced)                           |
+|  Step 3: Client uploads parts in parallel:                            |
+|          PUT /bucket/key?partNumber=N&uploadId=abc                    |
+|          Each part: split into k data chunks, compute m parity        |
+|          (Reed-Solomon e.g. RS 6+3), stream to assigned nodes         |
+|  Step 4: Data nodes append chunks to local volumes                    |
+|          Return checksum (CRC-32C) + ack per chunk                    |
+|  Step 5: POST /bucket/key?uploadId=abc (Complete)                     |
+|          Validates all parts present, assembles metadata              |
+|                                                                       |
+|  Critical transaction (metadata commit):                              |
+|                                                                       |
+|    BEGIN RAFT_QUORUM_WRITE:                                           |
+|      INSERT INTO object_metadata (                                    |
+|        bucket, key, version_id, size, etag,                           |
+|        storage_class, created_at, chunk_locations                     |
+|      ) VALUES (                                                       |
+|        'my-photos', 'vacation.jpg', 'v3nX8kL2',                      |
+|        24000000, 'a1b2c3d4...', 'STANDARD', NOW(),                    |
+|        '[{chunk:0, node:DN-42, vol:7, offset:83886080},              |
+|          {chunk:1, node:DN-17, vol:3, offset:12582912}, ...]'         |
+|      );                                                               |
+|      UPDATE prefix_index SET latest_version = 'v3nX8kL2'             |
+|        WHERE bucket = 'my-photos' AND key = 'vacation.jpg';          |
+|    COMMIT;  -- quorum ack from Raft replicas                          |
+|                                                                       |
+|  PUT returns 200 + ETag ONLY after metadata committed.                |
+|  This guarantees strong read-after-write consistency.                  |
+|                                                                       |
+|  -----------------------------------------------------------------   |
+|                                                                       |
+|  3. READ PATH (Object Retrieval)                                      |
+|                                                                       |
+|  GET /bucket/key                                                      |
+|    |                                                                  |
+|    v                                                                  |
+|  API Gateway --> authenticate (IAM policy + bucket policy)            |
+|    |                                                                  |
+|    v                                                                  |
+|  Metadata Service --> lookup (bucket, key) in sharded DB              |
+|    Returns: chunk_locations [{node, vol, offset, len} x (k+m)]       |
+|    |                                                                  |
+|    v                                                                  |
+|  Data Service --> read k chunks from nearest/fastest data nodes       |
+|    - Verify CRC-32C checksum per chunk                                |
+|    - If chunk corrupt/unavailable: read parity chunk instead,         |
+|      reconstruct via Reed-Solomon erasure decoding                    |
+|    |                                                                  |
+|    v                                                                  |
+|  Reassemble k data chunks in order --> stream to client               |
+|                                                                       |
+|  Caching layers:                                                      |
+|    1. CDN edge cache (for public / pre-signed objects)                |
+|    2. Read cache (in-memory/SSD, keyed by chunk_id, LRU/LFU)         |
+|    3. Client-side: ETag / If-None-Match --> 304 Not Modified          |
+|                                                                       |
+|  -----------------------------------------------------------------   |
+|                                                                       |
+|  4. FAILURE SCENARIOS                                                  |
+|                                                                       |
+|  +---------------------------+-------------------------------------+  |
+|  | What Fails                | Impact & Recovery                   |  |
+|  +---------------------------+-------------------------------------+  |
+|  | Data node dies            | RS(6,3): reads use remaining 8     |  |
+|  |                           | healthy chunks (need any 6 of 9).  |  |
+|  |                           | Repair scanner reconstructs lost   |  |
+|  |                           | chunks on healthy nodes.           |  |
+|  +---------------------------+-------------------------------------+  |
+|  | Metadata shard leader     | Raft elects new leader in seconds. |  |
+|  | crashes                   | Writes block briefly; reads from   |  |
+|  |                           | followers continue.                |  |
+|  +---------------------------+-------------------------------------+  |
+|  | Multipart upload fails    | Client retries individual parts.   |  |
+|  | midway                    | Uncommitted parts orphaned; GC     |  |
+|  |                           | reclaims after 7-day grace period. |  |
+|  +---------------------------+-------------------------------------+  |
+|  | Bit rot / silent          | CRC-32C mismatch on read triggers  |  |
+|  | corruption                | re-read from another chunk. Repair |  |
+|  |                           | scanner detects in background.     |  |
+|  +---------------------------+-------------------------------------+  |
+|                                                                       |
+|  -----------------------------------------------------------------   |
+|                                                                       |
+|  5. CLEANUP / EXPIRY                                                   |
+|                                                                       |
+|  Garbage Collection (continuous background job):                       |
+|    Mark phase: scan metadata for deleted objects, expired versions,   |
+|      aborted multipart uploads > 7 days old.                          |
+|    Reference check: verify no other metadata points to chunks.        |
+|    Sweep phase: delete commands to data nodes, free volume space.     |
+|    Compact volumes when fragmentation > 30%.                          |
+|                                                                       |
+|  Lifecycle policies:                                                   |
+|    Day 30 --> Infrequent Access, Day 90 --> Glacier,                  |
+|    Day 365 --> Deep Archive, Day 2555 --> permanent delete.           |
+|    Background job scans metadata, rewrites with denser EC,            |
+|    updates storage_class field.                                        |
+|                                                                       |
+|  Grace period: 24 hours before chunk deletion (protects in-flight     |
+|  reads that may still reference old chunk locations).                  |
+|                                                                       |
++-----------------------------------------------------------------------+
+```
+
 ## SECTION 14: INTERVIEW Q&A
 
 ```

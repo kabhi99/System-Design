@@ -550,6 +550,129 @@ latency and offloading origin servers.
 +-------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Cached Content)                               |
+|                                                                         |
+|    MISS --> FETCHED --> CACHED --> STALE --> REVALIDATED                 |
+|      |                    |          |            |                      |
+|      |                    |          |            +--> CACHED (new TTL)  |
+|      |                    |          +--> PURGED (purge API)             |
+|      |                    +--> EVICTED (LRU/LFU, disk pressure)         |
+|      +--> COALESCED (waiting on single origin fetch)                    |
+|                                                                         |
+|  State stored in: Varnish/Nginx cache entries (RAM + SSD per PoP)      |
+|  Cache key: normalize(host + path + sorted_query + Vary headers)       |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Cache Population on Miss)                      |
+|                                                                         |
+|  Step 1: Request arrives at edge PoP (Anycast IP / GeoDNS routing)     |
+|  Step 2: TLS 1.3/QUIC termination + WAF/DDoS filter at edge            |
+|  Step 3: Build cache key = normalize(host + path + sorted_query)        |
+|  Step 4: Lookup in Varnish/Nginx local cache --> MISS                   |
+|  Step 5: Acquire coalesce lock for this cache key                       |
+|  Step 6: Fetch from shield/mid-tier cache (regional PoP)               |
+|  Step 7: Shield MISS --> single origin fetch (HTTPS)                    |
+|  Step 8: Origin returns response + Cache-Control headers                |
+|  Step 9: Parse s-maxage/max-age --> store at edge + shield with TTL     |
+|  Step 10: Release coalesce lock, serve all waiting clients              |
+|                                                                         |
+|  Pseudocode (edge cache population):                                    |
+|                                                                         |
+|    cache_key = normalize(host + path + sorted_query + vary)             |
+|    entry = local_cache.get(cache_key)                                   |
+|                                                                         |
+|    if entry == NULL or entry.ttl_expired():                              |
+|      if entry and headers.stale_while_revalidate > 0:                   |
+|        serve_stale(entry)   -- immediate response                       |
+|        async { refresh_from_origin(cache_key) }                         |
+|      else:                                                               |
+|        lock = coalesce_lock.try_acquire(cache_key, 5s)                  |
+|        if lock.held:                                                     |
+|          resp = shield.fetch(origin_url)                                |
+|          if resp is MISS: resp = origin.fetch(url, headers)             |
+|          ttl = parse_s_maxage(resp) or parse_max_age(resp)              |
+|          local_cache.put(cache_key, resp.body, ttl)                     |
+|          lock.release_and_notify_waiters(resp)                          |
+|        else:                                                             |
+|          resp = lock.wait_for_result(timeout=5s)                        |
+|    return resp  -- X-Cache: HIT | MISS | STALE                         |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  3. READ PATH (Request Routing + Cache Lookup)                          |
+|                                                                         |
+|  User --> DNS (CNAME to cdn-provider.net)                               |
+|       --> Anycast/GeoDNS returns nearest PoP IP                         |
+|       --> Edge PoP pipeline:                                            |
+|                                                                         |
+|    [TLS 1.3 / QUIC] --> [WAF Rules] --> [Cache Lookup]                  |
+|                                              |                          |
+|                                         HIT? |                          |
+|                                        YES/  \NO                        |
+|                                         /     \                         |
+|                                   Serve    Shield / Mid-Tier            |
+|                                   cached    --> Origin fetch             |
+|                                  (< 50ms)    (100-500ms)                |
+|                                                                         |
+|  Cache layers checked in order:                                         |
+|    1. Edge RAM cache (Varnish hot objects, ~10 GB per PoP)              |
+|    2. Edge SSD cache (Nginx disk cache, ~500 GB per PoP)               |
+|    3. Shield/mid-tier cache (regional, collapses origin requests)       |
+|    4. Origin server (your app / S3 bucket -- only on full miss)         |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                         |
+|  +------------------------+------------------------------------+        |
+|  | What Fails             | Impact & Recovery                  |        |
+|  +------------------------+------------------------------------+        |
+|  | Origin server down     | Serve stale via stale-while-       |        |
+|  |                        | revalidate. Circuit breaker returns|        |
+|  |                        | custom error page if no stale.     |        |
+|  +------------------------+------------------------------------+        |
+|  | Edge PoP goes offline  | Anycast BGP re-routes traffic to   |        |
+|  |                        | next nearest PoP within seconds.   |        |
+|  |                        | No data loss (cache is ephemeral). |        |
+|  +------------------------+------------------------------------+        |
+|  | Cache stampede (TTL    | Request coalescing limits origin   |        |
+|  | expiry on hot object)  | to 1 fetch per PoP. stale-while-   |        |
+|  |                        | revalidate serves old content.     |        |
+|  +------------------------+------------------------------------+        |
+|  | TLS certificate expiry | Auto-renewal via Let's Encrypt /   |        |
+|  |                        | ACME protocol. Monitor and alert   |        |
+|  |                        | 30 days before expiry.             |        |
+|  +------------------------+------------------------------------+        |
+|                                                                         |
+|  -------------------------------------------------------------------   |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                         |
+|  TTL-based expiry:                                                       |
+|    Cache-Control s-maxage / max-age dictates entry lifetime.            |
+|    Expired entries served stale only if stale-while-revalidate set.     |
+|                                                                         |
+|  Active purge:                                                           |
+|    POST /purge {"urls": [...]} --> fanout to all 300+ PoPs              |
+|    Propagation latency: 1-30 seconds via internal message bus.          |
+|                                                                         |
+|  Eviction (disk pressure):                                               |
+|    LRU/LFU eviction with admission policy (skip one-hit objects).       |
+|    Tiered: SSD for hot, HDD for warm. Monitor eviction rate.           |
+|                                                                         |
+|  Versioned URLs (/app.abc123.js):                                        |
+|    Old URLs never re-requested after deploy, evicted by LRU.           |
+|    No explicit cleanup needed -- immutable content, new hash = new URL. |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 12: INTERVIEW QUESTIONS
 
 ```

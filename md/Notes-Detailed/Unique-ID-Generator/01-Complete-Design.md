@@ -967,6 +967,126 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   +----------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
+  +----------------------------------------------------------------+
+  |                                                                |
+  |  1. ENTITY STATE MACHINE: ID Generation Request                |
+  |  ====================================================          |
+  |                                                                |
+  |  RECEIVED --> CLOCK_READ --> VALIDATED --> GENERATED --> RETURNED
+  |                                                                |
+  |  +----------+ read ms  +----------+ skew?  +----------+       |
+  |  | RECEIVED | -------> | CLOCK    | -----> | VALIDATED|       |
+  |  | (caller  |          | READ     | check  | (clock   |       |
+  |  |  invokes)|          | (epoch   |        |  is OK)  |       |
+  |  +----------+          |  millis) |        +----------+       |
+  |                        +----------+             |              |
+  |                          |                      v              |
+  |                          | clock moved   +----------+          |
+  |                          | backward!     | GENERATED|          |
+  |                          v               | (64-bit  |          |
+  |                     +----------+         |  composed)|         |
+  |                     | REJECTED |         +----------+          |
+  |                     | (throw   |              |                |
+  |                     |  error)  |              v                |
+  |                     +----------+         +----------+          |
+  |                                          | RETURNED |          |
+  |                                          | (to      |          |
+  |                                          |  caller) |          |
+  |                                          +----------+          |
+  |                                                                |
+  |  2. CRITICAL WRITE PATH: Snowflake ID Generation               |
+  |  ====================================================          |
+  |                                                                |
+  |  ID generation IS the critical path (pure computation,         |
+  |  no I/O, no network). Pseudocode:                              |
+  |                                                                |
+  |  function generateId():                                        |
+  |    current_ms = System.currentTimeMillis() - CUSTOM_EPOCH      |
+  |                                                                |
+  |    // Step 1: Clock skew detection                             |
+  |    if current_ms < last_timestamp:                             |
+  |      throw ClockMovedBackwardException(                        |
+  |        "Clock moved back by " + (last_timestamp - current_ms)) |
+  |                                                                |
+  |    // Step 2: Same-millisecond sequence increment              |
+  |    if current_ms == last_timestamp:                            |
+  |      sequence = (sequence + 1) & 0xFFF   // 12-bit mask       |
+  |      if sequence == 0:                                         |
+  |        current_ms = waitNextMillis(last_timestamp)             |
+  |    else:                                                       |
+  |      sequence = 0                                              |
+  |                                                                |
+  |    // Step 3: Update state                                     |
+  |    last_timestamp = current_ms                                 |
+  |                                                                |
+  |    // Step 4: Compose 64-bit ID                                |
+  |    return (current_ms << 22)                                   |
+  |         | (machine_id << 12)                                   |
+  |         | sequence                                             |
+  |                                                                |
+  |  Throughput: 4,096 IDs/ms/machine = 4,096,000 IDs/sec          |
+  |  Latency: < 1 microsecond (bit-shift + OR, no I/O)             |
+  |                                                                |
+  |  3. READ PATH: N/A — Generation IS the Read                    |
+  |  ====================================================          |
+  |                                                                |
+  |  There is no separate read path. Callers invoke generateId()   |
+  |  which returns a new unique ID immediately. The ID encodes:    |
+  |                                                                |
+  |  Extracting timestamp from an existing ID:                     |
+  |    timestamp_ms = (id >> 22) + CUSTOM_EPOCH                    |
+  |                                                                |
+  |  Extracting machine_id:                                        |
+  |    machine_id = (id >> 12) & 0x3FF   // 10-bit mask            |
+  |                                                                |
+  |  Extracting sequence:                                          |
+  |    sequence = id & 0xFFF             // 12-bit mask            |
+  |                                                                |
+  |  4. FAILURE SCENARIOS                                          |
+  |  ====================================================          |
+  |                                                                |
+  |  +---------------------+----------------------------------+    |
+  |  | What Fails          | Impact & Recovery                |    |
+  |  +---------------------+----------------------------------+    |
+  |  | Clock skew (NTP     | Generator REFUSES to issue IDs   |    |
+  |  |  jump backward)     | until clock catches up. Alert    |    |
+  |  |                     | fires; NTP daemon investigated.  |    |
+  |  +---------------------+----------------------------------+    |
+  |  | ZooKeeper down      | Existing generators unaffected   |    |
+  |  |  (machine_id reg.)  | (already have their machine_id). |    |
+  |  |                     | New generators can't start until |    |
+  |  |                     | ZK recovers. Use DB lease as     |    |
+  |  |                     | fallback registration.           |    |
+  |  +---------------------+----------------------------------+    |
+  |  | Sequence overflow   | Spin-wait until next millisecond |    |
+  |  |  (>4096 IDs in 1ms) | (sub-ms delay). In practice,     |    |
+  |  |                     | 4M IDs/sec is rarely exceeded.   |    |
+  |  +---------------------+----------------------------------+    |
+  |  | Machine_id collision| Duplicate IDs possible! Prevent  |    |
+  |  |  (config error)     | via ZK ephemeral nodes or DB     |    |
+  |  |                     | lease with UNIQUE constraint.    |    |
+  |  +---------------------+----------------------------------+    |
+  |                                                                |
+  |  5. CLEANUP / EXPIRY                                           |
+  |  ====================================================          |
+  |                                                                |
+  |  * ZooKeeper ephemeral nodes: auto-deleted when generator      |
+  |    process disconnects (heartbeat timeout). Machine_id          |
+  |    becomes available for new generators.                       |
+  |  * DB lease table: lease TTL (e.g., 5 min), renewed by         |
+  |    heartbeat. Expired leases reclaimed by new workers.         |
+  |  * IDs themselves are immutable and never expire — they        |
+  |    live as long as the entities they identify.                 |
+  |  * NTP monitoring: daemon continuously adjusts clock;          |
+  |    large jumps (>5ms) trigger alerts. Generator logs           |
+  |    last_timestamp to detect drift across restarts.             |
+  |                                                                |
+  +----------------------------------------------------------------+
+```
+
 ## SECTION 11: SUMMARY
 
 ```

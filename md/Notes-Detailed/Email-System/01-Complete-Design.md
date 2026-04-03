@@ -1184,7 +1184,194 @@ guaranteeing that no legitimate email is ever lost.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 13: INTERVIEW Q&A
+## SECTION 13: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  1. ENTITY STATE MACHINE (Email - Outbound)                             |
+|                                                                         |
+|  QUEUED ──> SENDING ──> DELIVERED                                       |
+|    │           │                                                        |
+|    │           └──> DEFERRED (soft bounce, temp unavailable)             |
+|    │                   │                                                |
+|    │                   └──> SENDING (retry with backoff)                 |
+|    │                   └──> BOUNCED (max retries exhausted, 72h)         |
+|    │                                                                    |
+|    └──> CANCELLED (undo send, within delay window)                      |
+|                                                                         |
+|  SENDING ──> FAILED (hard bounce: invalid address, domain gone)         |
+|                                                                         |
+|  For inbound:                                                           |
+|  RECEIVED ──> SPAM_CHECK ──> DELIVERED_TO_INBOX                         |
+|                   │                                                     |
+|                   └──> QUARANTINED (virus detected)                      |
+|                   └──> SPAM_FOLDER (spam score above threshold)          |
+|                                                                         |
+|  Transition rules:                                                      |
+|  * QUEUED: email in durable outbound queue after user clicks Send       |
+|  * SENDING: SMTP handshake in progress with recipient server            |
+|  * DELIVERED: recipient server returned 250 OK                          |
+|  * DEFERRED: 4xx response (temp failure), will retry                    |
+|  * BOUNCED: all retries exhausted, bounce email sent to sender          |
+|  * FAILED: 5xx permanent rejection (hard bounce), no retry              |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  2. CRITICAL WRITE PATH (Email Send via SMTP with Retry + Bounce)       |
+|                                                                         |
+|  User        API GW       Outbound SMTP     Queue         Recipient     |
+|    |            |              |               |              |          |
+|    |-- Send --->|              |               |              |          |
+|    |  (to, cc,  |              |               |              |          |
+|    |   body,    |              |               |              |          |
+|    |   attach)  |              |               |              |          |
+|    |            |                                                       |
+|    |  1. Validate: recipients exist, size < 25MB, rate limit            |
+|    |  2. Store email body in Blob Storage (GCS/S3)                      |
+|    |     * SHA-256 hash for attachment deduplication                     |
+|    |     * body_ref = "blob://body/{email_id}"                          |
+|    |  3. Save to Sent folder (Bigtable/Cassandra)                       |
+|    |  4. Enqueue to outbound queue (Kafka/Pulsar)                       |
+|    |     * Durable write = delivery guarantee                           |
+|    |            |              |               |              |          |
+|    |<-- ACK ---|              |               |              |          |
+|    |  "sending" |              |               |              |          |
+|    |            |              |               |              |          |
+|    |            |  Outbound SMTP picks up from queue:        |          |
+|    |            |              |               |              |          |
+|    |            |  5. DNS MX lookup for recipient domain      |          |
+|    |            |     dig MX example.com -> mail.example.com  |          |
+|    |            |              |               |              |          |
+|    |            |  6. SMTP conversation:       |              |          |
+|    |            |     EHLO sender.com          |              |          |
+|    |            |     MAIL FROM:<user@our.com> |              |          |
+|    |            |     RCPT TO:<b@example.com>  |              |          |
+|    |            |     DATA                     |              |          |
+|    |            |     (email content + DKIM signature)        |          |
+|    |            |     .                        |              |          |
+|    |            |              |               |              |          |
+|    |            |  Response from recipient server:            |          |
+|    |            |    250 OK          -> mark DELIVERED        |          |
+|    |            |    4xx temp fail   -> mark DEFERRED, requeue|          |
+|    |            |    5xx perm fail   -> mark FAILED, bounce   |          |
+|    |            |              |               |              |          |
+|    |            |  Retry schedule (exponential backoff):      |          |
+|    |            |    Attempt 1: immediate                     |          |
+|    |            |    Attempt 2: 1 min                         |          |
+|    |            |    Attempt 3: 5 min                         |          |
+|    |            |    Attempt 4: 30 min                        |          |
+|    |            |    Attempt 5: 2 hours                       |          |
+|    |            |    Attempt 6: 8 hours                       |          |
+|    |            |    Attempt 7: 24 hours                      |          |
+|    |            |    After 72 hours: generate bounce email    |          |
+|    |            |              |               |              |          |
+|                                                                         |
+|  Inbound pipeline (for received emails):                                |
+|  External SMTP -> Inbound SMTP Server                                   |
+|    -> SPF/DKIM/DMARC check                                              |
+|    -> Spam Filter (ML model, score 0-100)                               |
+|    -> Virus Scan (attachments)                                          |
+|    -> Rule Engine (user filters, auto-label)                            |
+|    -> Store in Mailbox (Bigtable, per-user partition)                   |
+|    -> Queue: Search Indexer (Kafka -> Lucene/ES)                        |
+|    -> Push Notification (FCM/APNs)                                      |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  3. READ PATH                                                           |
+|                                                                         |
+|  INBOX LOAD:                                                            |
+|    Client --> Mailbox Service --> Bigtable/Cassandra                     |
+|    Row key: {user_id}:{label}:{reverse_timestamp}                       |
+|    * Reads metadata only (from, subject, preview, flags)                |
+|    * Body fetched on-demand when email opened                           |
+|    * Sorted by timestamp DESC, paginated by cursor                     |
+|    * Per-user data locality: single shard read                          |
+|                                                                         |
+|  EMAIL BODY + ATTACHMENTS:                                              |
+|    Client --> Mailbox Service --> Blob Storage (body_ref)               |
+|    * Attachments served via CDN for frequently accessed files           |
+|    * Lazy loading: preview renders before attachment downloads          |
+|                                                                         |
+|  SEARCH:                                                                |
+|    Client --> Search Service --> Per-user Lucene/ES shard               |
+|    * Query: "from:alice report Q3 has:attachment"                       |
+|    * Hits only ONE shard (user's shard) - no scatter-gather             |
+|    * Ranked by relevance + recency                                      |
+|    * Index updated within 5-30 seconds of email arrival                 |
+|                                                                         |
+|  IMAP ACCESS (desktop clients):                                         |
+|    Client --> IMAP Server --> Mailbox Storage                            |
+|    * Partial fetch: headers only (saves bandwidth)                     |
+|    * IDLE command: server pushes new mail notifications                  |
+|    * Flags (\Seen, \Flagged) synced across all devices                  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  4. FAILURE SCENARIOS                                                   |
+|                                                                         |
+|  +------------------------------+------------------------------------+  |
+|  | What Fails                   | Impact & Recovery                  |  |
+|  +------------------------------+------------------------------------+  |
+|  | Outbound SMTP server crash   | Email is in durable queue (Kafka). |  |
+|  | mid-send                     | Another SMTP worker picks up.      |  |
+|  |                              | Recipient may receive duplicate;   |  |
+|  |                              | deduped by Message-ID header.      |  |
+|  +------------------------------+------------------------------------+  |
+|  | Inbound SMTP crash before    | SMTP protocol: no 250 OK sent.    |  |
+|  | storing to mailbox           | Sender's server retries delivery.  |  |
+|  |                              | At-least-once: dup detected by     |  |
+|  |                              | Message-ID at mailbox level.       |  |
+|  +------------------------------+------------------------------------+  |
+|  | Spam filter service down     | Queue buffers emails (Kafka).      |  |
+|  |                              | Emails wait, not lost. Deliver     |  |
+|  |                              | without spam scoring if outage     |  |
+|  |                              | exceeds 5 min (graceful degrade).  |  |
+|  +------------------------------+------------------------------------+  |
+|  | Region-wide outage           | MX records list multiple servers.  |  |
+|  |                              | External senders auto-try next MX. |  |
+|  |                              | User access: DNS failover to       |  |
+|  |                              | secondary region (RPO < 1 min).    |  |
+|  +------------------------------+------------------------------------+  |
+|                                                                         |
+|  ================================================================      |
+|                                                                         |
+|  5. CLEANUP / EXPIRY                                                    |
+|                                                                         |
+|  OUTBOUND RETRY QUEUE:                                                  |
+|  * DEFERRED emails retried up to 72 hours total                         |
+|  * After 72h: generate bounce notification to sender                    |
+|  * Bounce email sent from MAILER-DAEMON@our-domain.com                  |
+|  * Persistent non-delivery addresses added to suppress list             |
+|                                                                         |
+|  TRASH / DELETED EMAILS:                                                |
+|  * Emails in Trash: auto-purged after 30 days                           |
+|  * Spam folder: auto-purged after 30 days                               |
+|  * Purge = remove metadata row + decrement storage quota                |
+|  * Blob data: reference-counted, deleted when no email references it    |
+|                                                                         |
+|  ATTACHMENT DEDUPLICATION:                                              |
+|  * SHA-256 hash -> blob lookup; only unique blobs stored                |
+|  * Reference count per blob; GC when count reaches zero                 |
+|  * Orphan blob sweep: weekly job finds blobs with zero refs             |
+|                                                                         |
+|  SEARCH INDEX:                                                          |
+|  * Incrementally updated on email arrival (near-real-time)              |
+|  * Deleted email: remove from index on purge                            |
+|  * Full rebuild from mailbox if index corrupts (per-user)               |
+|  * Lucene segment compaction: merge small segments periodically         |
+|                                                                         |
+|  STORAGE TIERS:                                                         |
+|  * Attachments < 30 days: SSD (hot)                                     |
+|  * 30 days - 1 year: HDD (warm)                                         |
+|  * >1 year: archive (cold), restored on-demand                          |
+|  * Email body: similar tiering based on last access time                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 14: INTERVIEW Q&A
 
 ```
 +-------------------------------------------------------------------------+

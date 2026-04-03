@@ -1147,6 +1147,179 @@ instances (typically N=5) to achieve stronger safety guarantees.
 +--------------------------------------------------------------------------+
 ```
 
+### DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+
+```
++--------------------------------------------------------------------------+
+|                                                                          |
+|  1. ENTITY STATE MACHINE (Lock Lifecycle)                                |
+|                                                                          |
+|    [FREE] --------> [ACQUIRED] --------> [RELEASED] -----> [FREE]       |
+|       ^                  |                                    ^          |
+|       |                  |  (TTL expires                      |          |
+|       |                  |   before release)                  |          |
+|       |                  v                                    |          |
+|       |             [EXPIRED] --------------------------------+          |
+|       |                  |                                               |
+|       |                  +---> (stale holder may still think it holds)   |
+|       |                        (fencing token rejects stale writes)      |
+|       |                                                                  |
+|       |   [ACQUIRED] ---> [RENEWED] ---> [ACQUIRED]                      |
+|       |                   (heartbeat extends TTL, same holder)           |
+|       |                                                                  |
+|       +--- [ACQUIRED by Client B] (after expiry of Client A's lock)     |
+|            New fencing token issued (token = 34 > 33)                    |
+|                                                                          |
+|    FREE:      Resource unlocked, any client can acquire                  |
+|    ACQUIRED:  Client holds lock with TTL and fencing token               |
+|    RENEWED:   Same holder extends TTL via heartbeat                      |
+|    RELEASED:  Client explicitly releases (DEL key)                       |
+|    EXPIRED:   TTL elapsed, lock auto-released by Redis/ZK/etcd          |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  2. CRITICAL WRITE PATH (Lock Acquisition with Fencing Token)            |
+|                                                                          |
+|    Client: acquire_lock(resource_name, ttl=30s)                          |
+|      |                                                                   |
+|      v                                                                   |
+|    APPROACH A: Simple Redis Lock (single instance)                       |
+|      |                                                                   |
+|      |  Step 1: Generate unique owner ID                                 |
+|      |    owner_id = uuid()                                              |
+|      |                                                                   |
+|      |  Step 2: Atomic acquire                                           |
+|      |    SET resource_name owner_id NX EX 30                            |
+|      |    NX = only if not exists (atomic check-and-set)                 |
+|      |    EX 30 = auto-expire in 30 seconds                              |
+|      |    Returns OK -> lock acquired                                    |
+|      |    Returns nil -> lock held by another client                     |
+|      |                                                                   |
+|      |  Step 3: Obtain fencing token                                     |
+|      |    INCR fence_token:{resource_name}                               |
+|      |    Client stores token for all protected writes                   |
+|      v                                                                   |
+|    APPROACH B: Redlock (5 independent Redis instances)                    |
+|      |                                                                   |
+|      |  Step 1: Record T1 = current_time_ms()                            |
+|      |  Step 2: Try SET resource owner NX EX 30 on ALL 5 instances       |
+|      |    +--------+ +--------+ +--------+ +--------+ +--------+         |
+|      |    |Redis 1 | |Redis 2 | |Redis 3 | |Redis 4 | |Redis 5 |        |
+|      |    |  OK    | |  OK    | | FAIL   | |  OK    | |  OK    |         |
+|      |    +--------+ +--------+ +--------+ +--------+ +--------+         |
+|      |  Step 3: Record T2 = current_time_ms()                            |
+|      |  Step 4: Lock acquired IF:                                        |
+|      |    Successes >= 3 (majority) AND (T2-T1) < TTL                    |
+|      |    Effective TTL = 30s - (T2-T1)                                   |
+|      |  Step 5: If FAILED, release on ALL instances                      |
+|      v                                                                   |
+|    APPROACH C: ZooKeeper (consensus-based, strongest safety)             |
+|      |                                                                   |
+|      |  Step 1: Create ephemeral sequential node                         |
+|      |    create("/locks/resource/lock-", EPHEMERAL|SEQUENTIAL)           |
+|      |    -> creates "/locks/resource/lock-0000000034"                    |
+|      |                                                                   |
+|      |  Step 2: Get children, sort by sequence number                    |
+|      |    If my node is the lowest -> lock acquired                      |
+|      |    Fencing token = sequence number (34)                            |
+|      |                                                                   |
+|      |  Step 3: If not lowest, watch the node just before mine           |
+|      |    (FIFO fairness: each waiter watches one predecessor)            |
+|      |                                                                   |
+|      |  Step 4: On predecessor deletion -> re-check, acquire             |
+|                                                                          |
+|    RELEASE (Redis, Lua for atomicity):                                   |
+|      if redis.call("GET", KEYS[1]) == ARGV[1] then                      |
+|          return redis.call("DEL", KEYS[1])                               |
+|      else return 0 end                                                   |
+|      (Only the holder can release; prevents deleting another's lock)     |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  3. READ PATH (Lock Status Check & Renewal)                              |
+|                                                                          |
+|    Lock Status Check:                                                    |
+|      GET resource_name                                                   |
+|      Returns owner_id if held, nil if free                               |
+|      TTL resource_name -> remaining seconds                              |
+|                                                                          |
+|    Lock Renewal (heartbeat, extends TTL while working):                  |
+|      Client runs renewal loop every TTL/3 (e.g., every 10s):            |
+|                                                                          |
+|      Lua script (atomic check-and-extend):                               |
+|        if redis.call("GET", KEYS[1]) == ARGV[1] then                    |
+|            return redis.call("PEXPIRE", KEYS[1], ARGV[2])               |
+|        else return 0 end                                                 |
+|                                                                          |
+|      If renewal returns 0 -> lock was lost (expired or stolen)           |
+|      Client must STOP protected work immediately                         |
+|                                                                          |
+|    ZooKeeper: No explicit renewal needed (ephemeral node lives           |
+|      as long as session is alive; session heartbeat is automatic)        |
+|                                                                          |
+|    etcd: Lease keepalive (gRPC stream sends heartbeats)                  |
+|      If keepalive fails, lease expires, lock is released                 |
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  4. FAILURE SCENARIOS                                                    |
+|                                                                          |
+|  What Fails               | Impact & Recovery                            |
+|  -------------------------+----------------------------------------------+
+|  Lock holder crashes      | Lock auto-expires via TTL (Redis) or         |
+|  (no explicit release)    | ephemeral node deletion (ZK session timeout). |
+|                           | Next client acquires after TTL. Set TTL       |
+|                           | appropriately (not too long, not too short).  |
+|  -------------------------+----------------------------------------------+
+|  GC pause / network delay | Client A's lock expires while paused.         |
+|  on lock holder           | Client B acquires with new fencing token.     |
+|                           | Client A resumes, tries to write -> storage   |
+|                           | rejects stale fencing token. DATA SAFE.       |
+|  -------------------------+----------------------------------------------+
+|  Redis master failover    | Lock may be lost if not yet replicated.       |
+|  (single-instance lock)   | Client B acquires same lock -> TWO HOLDERS.   |
+|                           | Mitigation: use Redlock (5 instances) or      |
+|                           | ZooKeeper/etcd for correctness-critical locks.|
+|  -------------------------+----------------------------------------------+
+|  Clock skew (Redlock)     | If clocks drift, TTLs become inaccurate.      |
+|                           | Lock may expire early or late. Mitigation:    |
+|                           | use NTP, keep clock drift << TTL. For safety- |
+|                           | critical: prefer ZK/etcd (no clock reliance). |
+|  -------------------------+----------------------------------------------+
+|                                                                          |
+|  ======================================================================  |
+|                                                                          |
+|  5. CLEANUP / EXPIRY                                                     |
+|                                                                          |
+|    Redis Lock Expiry:                                                    |
+|      All locks set with EX (TTL in seconds)                              |
+|      Redis auto-deletes expired keys (lazy + periodic eviction)          |
+|      No manual cleanup needed for lock keys                              |
+|                                                                          |
+|    Fencing Token Counter:                                                |
+|      fence_token:{resource} persists indefinitely (monotonic)            |
+|      Safe to keep: value is a small integer, memory negligible           |
+|      Optional: reset when resource is decommissioned                     |
+|                                                                          |
+|    ZooKeeper Ephemeral Nodes:                                            |
+|      Automatically deleted when client session ends                      |
+|      Session timeout: configurable (default 30s)                         |
+|      /locks/ parent path: persistent, created once                       |
+|      Stale watchers cleaned up by ZK session expiry                      |
+|                                                                          |
+|    etcd Leases:                                                          |
+|      Keys associated with lease auto-deleted on lease expiry             |
+|      Lease TTL: configurable, renewed by keepalive stream                |
+|      If client disconnects, lease expires, key is deleted                |
+|                                                                          |
+|    Lock Contention Monitoring:                                           |
+|      Track: avg wait time, lock hold duration, timeout rate              |
+|      Alert if lock wait time > threshold (possible deadlock)             |
+|      Alert if fencing token rejection spikes (something is slow)         |
+|                                                                          |
++--------------------------------------------------------------------------+
+```
+
 ## SECTION 18: INTERVIEW Q&A
 
 ### Q1: What happens if a lock holder crashes without releasing the lock?
