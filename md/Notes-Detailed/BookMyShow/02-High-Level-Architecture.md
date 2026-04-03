@@ -511,6 +511,110 @@ explaining each component, its responsibilities, and how they interact.
 +-------------------------------------------------------------------------+
 ```
 
+### DATA PERSISTENCE STRATEGY
+
+```
++------------------------------------------------------------------------+
+|                                                                        |
+|  DUAL-WRITE PATTERN: REDIS FIRST, THEN POSTGRESQL                      |
+|                                                                        |
+|  The system uses Redis as the fast real-time layer and PostgreSQL      |
+|  as the durable source of truth. Writes happen in a specific order     |
+|  depending on the operation type.                                      |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
+|  OPERATION 1: SEAT RESERVATION (WRITE PATH)                            |
+|                                                                        |
+|  Step 1 -> Redis FIRST (lock seats atomically via Lua script)          |
+|         -> SET seat:{showId}:{seatId} {reservationId} NX EX 600        |
+|         -> This is the fast gate: reject duplicates in <1ms            |
+|                                                                        |
+|  Step 2 -> PostgreSQL SECOND (persist reservation record)              |
+|         -> INSERT INTO reservations (id, show_id, seats, status,       |
+|            user_id, expires_at)                                        |
+|         -> This is the durable record for auditing and recovery        |
+|                                                                        |
+|  WHY REDIS FIRST?                                                      |
+|  * Redis SET NX is O(1) and sub-millisecond                            |
+|  * Rejects concurrent attempts instantly without DB round-trip         |
+|  * If Redis lock fails -> stop immediately, no DB write needed         |
+|  * If Redis succeeds but DB write fails -> Redis key auto-expires      |
+|    (TTL = 600s), self-heals without manual cleanup                     |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
+|  OPERATION 2: BOOKING CONFIRMATION (WRITE PATH)                        |
+|                                                                        |
+|  Step 1 -> PostgreSQL TRANSACTION (single atomic commit):              |
+|         -> Verify reservation is valid (status = PENDING,              |
+|            expires_at > NOW())                                         |
+|         -> UPDATE reservations SET status = 'CONFIRMED'                |
+|         -> INSERT INTO bookings (...)                                  |
+|         -> UPDATE show_seats SET status = 'BOOKED'                     |
+|         -> INSERT INTO payments (...)                                  |
+|         -> COMMIT                                                      |
+|                                                                        |
+|  Step 2 -> Redis cleanup (async, best-effort):                         |
+|         -> DEL seat:{showId}:{seatId}                                  |
+|         -> Safe to skip if Redis is down (keys expire via TTL)         |
+|                                                                        |
+|  Step 3 -> Kafka event (async):                                        |
+|         -> Publish booking.confirmed for notifications, analytics      |
+|                                                                        |
+|  WHY DB-FIRST HERE?                                                    |
+|  * Booking is permanent. PostgreSQL ACID transaction ensures           |
+|    reservation + booking + payment are all-or-nothing.                 |
+|  * Redis is just a performance optimization (locks), not the           |
+|    source of truth. If Redis dies, DB state is still correct.          |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
+|  OPERATION 3: SEAT AVAILABILITY (READ PATH)                            |
+|                                                                        |
+|  READ from Redis (bitmap) -> cache hit = return instantly              |
+|  On cache miss -> READ from PostgreSQL (show_seats table)              |
+|               -> Populate Redis bitmap                                 |
+|               -> Return to client                                      |
+|                                                                        |
+|  CACHE INVALIDATION:                                                   |
+|  * On reservation: flip bitmap bit in Redis (real-time)                |
+|  * On booking confirmation: bitmap already reflects locked state       |
+|  * On expiry: Redis key auto-deletes, bitmap bit resets                |
+|  * Fallback: scheduled job reconciles Redis bitmap with DB             |
+|    every 5 minutes (catches any drift)                                 |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
+|  FAILURE SCENARIOS AND RECOVERY                                        |
+|                                                                        |
+|  +----------------------------------------------------------------+    |
+|  | Failure                      | Impact & Recovery               |    |
+|  +----------------------------------------------------------------+    |
+|  | Redis lock succeeds,         | Redis TTL auto-expires the      |    |
+|  | DB insert fails              | lock. No manual cleanup needed. |    |
+|  +----------------------------------------------------------------+    |
+|  | DB confirms booking,         | No impact. TTL will expire.     |    |
+|  | Redis DEL fails              | Seat shows "locked" briefly     |    |
+|  |                              | instead of "booked" in UI.      |    |
+|  +----------------------------------------------------------------+    |
+|  | Redis goes down entirely     | Fall back to pessimistic DB     |    |
+|  |                              | locking (SELECT FOR UPDATE).    |    |
+|  |                              | Slower but still correct.       |    |
+|  +----------------------------------------------------------------+    |
+|  | DB goes down                 | System cannot accept bookings.  |    |
+|  |                              | Return 503. Redis locks expire  |    |
+|  |                              | naturally. No inconsistency.    |    |
+|  +----------------------------------------------------------------+    |
+|                                                                        |
+|  KEY PRINCIPLE:                                                        |
+|  Redis is the PERFORMANCE layer (fast locks, real-time reads).         |
+|  PostgreSQL is the TRUTH layer (durable bookings, ACID).               |
+|  If they ever disagree, PostgreSQL wins. Redis self-heals via TTL.     |
+|                                                                        |
++------------------------------------------------------------------------+
+```
+
 ## SECTION 2.4: TECHNOLOGY CHOICES
 
 ```
