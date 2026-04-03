@@ -511,6 +511,162 @@ explaining each component, its responsibilities, and how they interact.
 +-------------------------------------------------------------------------+
 ```
 
+### REAL-TIME SEAT AVAILABILITY (WEBSOCKET + REDIS PUB/SUB)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROBLEM                                                                |
+|                                                                         |
+|  200 users are viewing the same show's seat map simultaneously.         |
+|  User A locks seat A5. The other 199 users still see A5 as              |
+|  "available" until they refresh. They click A5, get an error.           |
+|  Terrible UX. We need all viewers to see changes in real time.          |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  SOLUTION: WEBSOCKET + REDIS PUB/SUB                                    |
+|                                                                         |
+|  1. Client opens the seat map page                                      |
+|  2. Client establishes a WebSocket connection to the server             |
+|  3. Server subscribes the connection to a Redis Pub/Sub channel:        |
+|     channel = "show:{showId}:seat_updates"                              |
+|  4. When any seat status changes, server publishes to that channel      |
+|  5. All connected clients receive the update and re-render the seat     |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  DATA FLOW WHEN USER A LOCKS SEAT A5                                    |
+|                                                                         |
+|  User A clicks "Reserve A5, A6"                                         |
+|    |                                                                    |
+|    v                                                                    |
+|  Booking Service                                                        |
+|    |                                                                    |
+|    |--> 1. Lock in Redis (Lua script, SET NX)                           |
+|    |                                                                    |
+|    |--> 2. Update Redis bitmap: SETBIT show:123:seats 4 1               |
+|    |        (bit index 4 = seat A5, set to 1 = taken)                   |
+|    |                                                                    |
+|    |--> 3. PUBLISH to Redis Pub/Sub channel:                            |
+|    |        PUBLISH show:123:seat_updates                               |
+|    |        '{"seats":["A5","A6"],"status":"locked"}'                   |
+|    |                                                                    |
+|    v                                                                    |
+|  WebSocket Server (subscribed to show:123:seat_updates)                 |
+|    |                                                                    |
+|    |--> 4. Receives the published message                               |
+|    |                                                                    |
+|    |--> 5. Broadcasts to ALL WebSocket connections viewing show 123     |
+|    |                                                                    |
+|    v                                                                    |
+|  User B, User C, ... User N (all on seat map page)                      |
+|    |                                                                    |
+|    |--> 6. Client JS receives WebSocket message                         |
+|    |--> 7. Updates seat A5 and A6 from green to grey (locked)           |
+|    |--> 8. Disables click on those seats                                |
+|                                                                         |
+|  Total latency: ~50-100ms (Redis publish + WebSocket push)              |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  WHY REDIS PUB/SUB (NOT KAFKA)?                                         |
+|                                                                         |
+|  * Seat updates are ephemeral: no need to persist or replay them.       |
+|    If a client misses one, the next update or a full refresh fixes it.  |
+|  * Ultra-low latency: Redis Pub/Sub delivers in <1ms.                   |
+|    Kafka adds 5-50ms and is designed for durable event streaming.       |
+|  * Fan-out to many subscribers per show is Pub/Sub's sweet spot.        |
+|  * Fire-and-forget: if no one is listening, the message is dropped.     |
+|    This is fine -- no viewers means no one to update.                   |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  SCALING WEBSOCKET CONNECTIONS                                          |
+|                                                                         |
+|  Problem: A popular show has 50K concurrent viewers. One WebSocket      |
+|  server can handle ~10K-50K connections. How to scale?                  |
+|                                                                         |
+|  +----------------------------------------------------------------+     |
+|  |                                                                |     |
+|  |  Users viewing show 123                                        |     |
+|  |    |          |          |                                     |     |
+|  |    v          v          v                                     |     |
+|  |  WS Server  WS Server  WS Server                               |     |
+|  |  (10K conn) (10K conn) (10K conn)                               |    |
+|  |    |          |          |                                     |     |
+|  |    +--------- +----------+                                     |     |
+|  |               |                                                |     |
+|  |     All subscribe to Redis channel:                            |     |
+|  |     show:123:seat_updates                                      |     |
+|  |               |                                                |     |
+|  |               v                                                |     |
+|  |         Redis Pub/Sub                                          |     |
+|  |                                                                |     |
+|  +----------------------------------------------------------------+     |
+|                                                                         |
+|  Each WS server subscribes to the same Redis channel. When a seat       |
+|  update is published, ALL WS servers receive it and broadcast to        |
+|  their local connections. Redis handles the fan-out across servers.     |
+|                                                                         |
+|  STICKY SESSIONS:                                                       |
+|  Load balancer uses sticky sessions (cookie or IP hash) so a            |
+|  client's HTTP requests and WebSocket go to the same server.            |
+|  Not strictly required (any server can serve any client), but           |
+|  reduces reconnection overhead.                                         |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  MESSAGE FORMAT (WebSocket payload)                                     |
+|                                                                         |
+|  {                                                                      |
+|    "type": "SEAT_UPDATE",                                               |
+|    "showId": 123,                                                       |
+|    "changes": [                                                         |
+|      { "seatId": "A5", "status": "locked" },                            |
+|      { "seatId": "A6", "status": "locked" }                             |
+|    ],                                                                   |
+|    "timestamp": 1705312500000                                           |
+|  }                                                                      |
+|                                                                         |
+|  Client uses the timestamp to ignore stale messages                     |
+|  (e.g., if messages arrive out of order).                               |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  FALLBACK: POLLING FOR NON-WEBSOCKET CLIENTS                            |
+|                                                                         |
+|  Some environments block WebSocket (corporate proxies, old browsers).   |
+|                                                                         |
+|  Fallback: client polls GET /shows/123/seats every 5 seconds.           |
+|  Server returns only changed seats since last poll (delta):             |
+|  GET /shows/123/seats?since=1705312500000                               |
+|                                                                         |
+|  Trade-off:                                                             |
+|  * 5s polling = up to 5 seconds stale (acceptable for most users)       |
+|  * Much higher server load than WebSocket (request per client per 5s)   |
+|  * Use WebSocket where possible, polling as last resort                 |
+|                                                                         |
+|  ====================================================================   |
+|                                                                         |
+|  CONNECTION LIFECYCLE                                                   |
+|                                                                         |
+|  1. User opens seat map -> client opens WebSocket                       |
+|  2. Server registers connection under show:123 channel                  |
+|  3. User receives real-time updates while viewing                       |
+|  4. User navigates away -> client closes WebSocket                      |
+|  5. Server unsubscribes connection from the channel                     |
+|  6. If last connection for that show -> server unsubscribes             |
+|     from Redis channel (no unnecessary traffic)                         |
+|                                                                         |
+|  HEARTBEAT:                                                             |
+|  * Server pings every 30 seconds                                        |
+|  * If client doesn't respond (pong) within 10 seconds -> close          |
+|  * Prevents zombie connections from accumulating                        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ### DATA PERSISTENCE STRATEGY
 
 ```
