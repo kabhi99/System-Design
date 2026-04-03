@@ -538,35 +538,50 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                         |
 |  DATA FLOW WHEN USER A LOCKS SEAT A5                                    |
 |                                                                         |
-|  User A clicks "Reserve A5, A6"                                         |
-|    |                                                                    |
-|    v                                                                    |
-|  Booking Service                                                        |
-|    |                                                                    |
-|    |--> 1. Lock in Redis (Lua script, SET NX)                           |
-|    |                                                                    |
-|    |--> 2. Update Redis bitmap: SETBIT show:123:seats 4 1               |
-|    |        (bit index 4 = seat A5, set to 1 = taken)                   |
-|    |                                                                    |
-|    |--> 3. PUBLISH to Redis Pub/Sub channel:                            |
-|    |        PUBLISH show:123:seat_updates                               |
-|    |        '{"seats":["A5","A6"],"status":"locked"}'                   |
-|    |                                                                    |
-|    v                                                                    |
-|  WebSocket Server (subscribed to show:123:seat_updates)                 |
-|    |                                                                    |
-|    |--> 4. Receives the published message                               |
-|    |                                                                    |
-|    |--> 5. Broadcasts to ALL WebSocket connections viewing show 123     |
-|    |                                                                    |
-|    v                                                                    |
-|  User B, User C, ... User N (all on seat map page)                      |
-|    |                                                                    |
-|    |--> 6. Client JS receives WebSocket message                         |
-|    |--> 7. Updates seat A5 and A6 from green to grey (locked)           |
-|    |--> 8. Disables click on those seats                                |
+|  User A      Booking     Redis         Redis      WS Servers  User B    |
+|  (Client)    Service     (Lock+Bitmap) (Pub/Sub)  (per show)  (Client)  |
+|    |            |            |            |            |          |     |
+|    | POST /reservations      |            |            |          |     |
+|    | {seats:[A5,A6]}         |            |            |          |     |
+|    |----------->|            |            |            |          |     |
+|    |            |            |            |            |          |     |
+|    |            | Lua script:|            |            |          |     |
+|    |            | SET NX + SETBIT         |            |          |     |
+|    |            |----------->|            |            |          |     |
+|    |            |   OK (locked)           |            |          |     |
+|    |            |<-----------|            |            |          |     |
+|    |            |            |            |            |          |     |
+|    |            | PUBLISH show:123:seat_updates        |          |     |
+|    |            |------------------------>|            |          |     |
+|    |            |            |            |            |          |     |
+|    |            |            |  Message delivered      |          |     |
+|    |            |            |            |----------->|          |     |
+|    |            |            |            |            |          |     |
+|    |            |            |            | Broadcast  |          |     |
+|    |            |            |            | to all     |          |     |
+|    |            |            |            | clients    |          |     |
+|    |            |            |            |            |--------->|     |
+|    |            |            |            |            | WS msg:  |     |
+|    |            |            |            |            | A5,A6    |     |
+|    |            |            |            |            | locked   |     |
+|    |            |            |            |            |          |     |
+|    |            | INSERT reservation      |            |  Client  |     |
+|    |            |---> PostgreSQL          |            |  updates |     |
+|    |            |<--- OK     |            |            |  seat    |     |
+|    |            |            |            |            |  map UI  |     |
+|    |  200 OK    |            |            |            |          |     |
+|    |  {reservationId,        |            |            |          |     |
+|    |   expiresAt}            |            |            |          |     |
+|    |<-----------|            |            |            |          |     |
+|    |            |            |            |            |          |     |
 |                                                                         |
-|  Total latency: ~50-100ms (Redis publish + WebSocket push)              |
+|  TIMING:                                                                |
+|  Steps 1-2 (Redis lock + publish):  ~1-2ms                              |
+|  Step 3-4  (Pub/Sub + WS broadcast): ~5-10ms                            |
+|  Step 5    (DB insert, parallel):    ~5-10ms                            |
+|  Step 6    (UI update at User B):    ~50ms (includes network)           |
+|                                                                         |
+|  User B sees A5 turn grey within ~50-100ms of User A clicking.          |
 |                                                                         |
 |  ====================================================================   |
 |                                                                         |
