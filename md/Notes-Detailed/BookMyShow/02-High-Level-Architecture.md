@@ -680,53 +680,174 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                        |
 |  ====================================================================  |
 |                                                                        |
+|  SEAT STATUS STATE MACHINE                                             |
+|                                                                        |
+|  A seat goes through exactly these states:                             |
+|                                                                        |
+|  AVAILABLE --[reserve]--> LOCKED --[pay+confirm]--> BOOKED             |
+|       ^                     |                                          |
+|       |                     | (TTL expires or                          |
+|       +-----[expire]--------+  payment fails)                          |
+|                                                                        |
+|  WHERE EACH STATE LIVES:                                               |
+|  +--------------------------------------------------------------+      |
+|  | State     | Redis                    | PostgreSQL             |     |
+|  +--------------------------------------------------------------+      |
+|  | AVAILABLE | bitmap bit = 0           | show_seats.status =    |     |
+|  |           | no lock key exists       | 'AVAILABLE'            |     |
+|  +--------------------------------------------------------------+      |
+|  | LOCKED    | bitmap bit = 1           | show_seats.status =    |     |
+|  |           | lock key exists with TTL | 'LOCKED'               |     |
+|  |           |                          | reservations.status =  |     |
+|  |           |                          | 'PENDING'              |     |
+|  +--------------------------------------------------------------+      |
+|  | BOOKED    | bitmap bit = 1           | show_seats.status =    |     |
+|  |           | lock key deleted (or TTL)| 'BOOKED'               |     |
+|  |           |                          | reservations.status =  |     |
+|  |           |                          | 'CONFIRMED'            |     |
+|  |           |                          | bookings row exists    |     |
+|  +--------------------------------------------------------------+      |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
 |  OPERATION 1: SEAT RESERVATION (WRITE PATH)                            |
 |                                                                        |
-|  Step 1 -> Redis FIRST (lock seats atomically via Lua script)          |
-|         -> SET seat:{showId}:{seatId} {reservationId} NX EX 600        |
-|         -> This is the fast gate: reject duplicates in <1ms            |
+|  This is NOT one transaction. It is two independent steps.             |
+|  Redis and PostgreSQL cannot share a transaction (different systems).  |
 |                                                                        |
-|  Step 2 -> PostgreSQL SECOND (persist reservation record)              |
-|         -> INSERT INTO reservations (id, show_id, seats, status,       |
-|            user_id, expires_at)                                        |
-|         -> This is the durable record for auditing and recovery        |
+|  STEP 1 -> Redis (fast gate, sub-millisecond)                          |
+|  -------                                                               |
+|  Lua script runs atomically inside Redis:                              |
+|    a) SET seat:123:A5 res_abc NX EX 600 (lock key, 10min TTL)          |
+|    b) SET seat:123:A6 res_abc NX EX 600                                |
+|    c) SETBIT show:123:seats 4 1         (flip bitmap: A5 taken)        |
+|    d) SETBIT show:123:seats 5 1         (flip bitmap: A6 taken)        |
+|    e) PUBLISH show:123:seat_updates     (notify WS clients)            |
 |                                                                        |
-|  WHY REDIS FIRST?                                                      |
-|  * Redis SET NX is O(1) and sub-millisecond                            |
-|  * Rejects concurrent attempts instantly without DB round-trip         |
-|  * If Redis lock fails -> stop immediately, no DB write needed         |
-|  * If Redis succeeds but DB write fails -> Redis key auto-expires      |
-|    (TTL = 600s), self-heals without manual cleanup                     |
+|  If NX fails (key already exists) -> return error immediately.         |
+|  No DB call happens. User sees "seat already taken".                   |
+|                                                                        |
+|  STEP 2 -> PostgreSQL (durable record, ~5-10ms)                        |
+|  -------                                                               |
+|  Only runs if Step 1 succeeded:                                        |
+|                                                                        |
+|  BEGIN;                                                                |
+|    INSERT INTO reservations                                            |
+|      (id, show_id, user_id, status, expires_at, created_at)            |
+|    VALUES                                                              |
+|      ('res_abc', 123, 'user_A', 'PENDING',                             |
+|       NOW() + INTERVAL '10 min', NOW());                               |
+|                                                                        |
+|    INSERT INTO reservation_seats (reservation_id, seat_id)             |
+|    VALUES ('res_abc', 'A5'), ('res_abc', 'A6');                        |
+|                                                                        |
+|    UPDATE show_seats                                                   |
+|    SET status = 'LOCKED', locked_by = 'res_abc',                       |
+|        locked_at = NOW()                                               |
+|    WHERE show_id = 123 AND seat_id IN ('A5', 'A6')                     |
+|      AND status = 'AVAILABLE';                                         |
+|  COMMIT;                                                               |
+|                                                                        |
+|  IF DB FAILS AFTER REDIS SUCCEEDED:                                    |
+|  * Redis lock keys expire in 10 min automatically (TTL)                |
+|  * Bitmap bits get reset by reconciliation job                         |
+|  * No manual intervention needed -- system self-heals                  |
+|  * User sees an error and can retry                                    |
 |                                                                        |
 |  ====================================================================  |
 |                                                                        |
 |  OPERATION 2: BOOKING CONFIRMATION (WRITE PATH)                        |
 |                                                                        |
-|  Step 1 -> PostgreSQL TRANSACTION (single atomic commit):              |
-|         -> Verify reservation is valid (status = PENDING,              |
-|            expires_at > NOW())                                         |
-|         -> UPDATE reservations SET status = 'CONFIRMED'                |
-|         -> INSERT INTO bookings (...)                                  |
-|         -> UPDATE show_seats SET status = 'BOOKED'                     |
-|         -> INSERT INTO payments (...)                                  |
-|         -> COMMIT                                                      |
+|  Triggered when payment gateway sends success webhook.                 |
+|  This IS a single PostgreSQL transaction -- all 5 writes               |
+|  succeed together or all 5 roll back. Nothing half-committed.          |
 |                                                                        |
-|  Step 2 -> Redis cleanup (async, best-effort):                         |
-|         -> DEL seat:{showId}:{seatId}                                  |
-|         -> Safe to skip if Redis is down (keys expire via TTL)         |
+|  BEGIN;                                                                |
 |                                                                        |
-|  Step 3 -> Kafka event (async):                                        |
-|         -> Publish booking.confirmed for notifications, analytics      |
+|    -- 1. VERIFY: Is the reservation still valid?                       |
+|    SELECT * FROM reservations                                          |
+|    WHERE id = 'res_abc'                                                |
+|      AND status = 'PENDING'                                            |
+|      AND expires_at > NOW()                                            |
+|    FOR UPDATE;            -- locks row to prevent races                |
 |                                                                        |
-|  WHY DB-FIRST HERE?                                                    |
-|  * Booking is permanent. PostgreSQL ACID transaction ensures           |
-|    reservation + booking + payment are all-or-nothing.                 |
-|  * Redis is just a performance optimization (locks), not the           |
-|    source of truth. If Redis dies, DB state is still correct.          |
+|    -- If no row: expired or already confirmed.                         |
+|    -- ROLLBACK, initiate refund, return error.                         |
+|                                                                        |
+|    -- 2. FLIP reservation: PENDING -> CONFIRMED                        |
+|    UPDATE reservations                                                 |
+|    SET status = 'CONFIRMED', confirmed_at = NOW()                      |
+|    WHERE id = 'res_abc';                                               |
+|                                                                        |
+|    -- 3. CREATE the booking (the permanent record)                     |
+|    INSERT INTO bookings                                                |
+|      (id, reservation_id, user_id, show_id,                            |
+|       total_amount, status, created_at)                                |
+|    VALUES                                                              |
+|      ('book_xyz', 'res_abc', 'user_A', 123,                            |
+|       600, 'CONFIRMED', NOW());                                        |
+|                                                                        |
+|    INSERT INTO booking_seats (booking_id, seat_id, price)              |
+|    VALUES ('book_xyz', 'A5', 300), ('book_xyz', 'A6', 300);            |
+|                                                                        |
+|    -- 4. FLIP seat status: LOCKED -> BOOKED (permanent)                |
+|    UPDATE show_seats                                                   |
+|    SET status = 'BOOKED', booking_id = 'book_xyz'                      |
+|    WHERE show_id = 123 AND seat_id IN ('A5', 'A6');                    |
+|                                                                        |
+|    -- 5. RECORD the payment                                            |
+|    INSERT INTO payments                                                |
+|      (id, booking_id, amount, method, gateway_ref, status)             |
+|    VALUES                                                              |
+|      ('pay_001', 'book_xyz', 600, 'UPI', 'gw_ref_123',                 |
+|       'SUCCESS');                                                      |
+|                                                                        |
+|  COMMIT;   -- ALL 5 writes commit atomically, or none do               |
+|                                                                        |
+|  AFTER COMMIT (async, outside the transaction):                        |
+|                                                                        |
+|  a) Redis cleanup:                                                     |
+|     DEL seat:123:A5 seat:123:A6   (remove lock keys)                   |
+|     PUBLISH show:123:seat_updates  (notify: now "booked")              |
+|     * If Redis is down: TTL expires the keys anyway.                   |
+|     * Bitmap bit stays 1 (correct -- seat IS taken).                   |
+|                                                                        |
+|  b) Kafka event:                                                       |
+|     PRODUCE booking.confirmed {bookingId, showId, seats}               |
+|     * Notification Service -> sends email/SMS/e-ticket                 |
+|     * Analytics Service -> updates dashboards                          |
 |                                                                        |
 |  ====================================================================  |
 |                                                                        |
-|  OPERATION 3: SEAT AVAILABILITY (READ PATH)                            |
+|  OPERATION 3: EXPIRY (AUTOMATIC CLEANUP)                               |
+|                                                                        |
+|  When user abandons payment and the 10-minute timer expires:           |
+|                                                                        |
+|  REDIS (automatic):                                                    |
+|  * Lock keys expire via TTL -> deleted by Redis                        |
+|  * Bitmap bits need explicit reset (see reconciliation)                |
+|                                                                        |
+|  POSTGRESQL (scheduled job, runs every 60 seconds):                    |
+|                                                                        |
+|  UPDATE reservations                                                   |
+|  SET status = 'EXPIRED'                                                |
+|  WHERE status = 'PENDING' AND expires_at < NOW();                      |
+|                                                                        |
+|  UPDATE show_seats                                                     |
+|  SET status = 'AVAILABLE', locked_by = NULL                            |
+|  WHERE status = 'LOCKED'                                               |
+|    AND locked_by IN (                                                  |
+|      SELECT id FROM reservations WHERE status = 'EXPIRED'              |
+|    );                                                                  |
+|                                                                        |
+|  REDIS BITMAP RECONCILIATION (every 5 minutes):                        |
+|  * Read show_seats from DB for active shows                            |
+|  * Rebuild bitmap: AVAILABLE = 0, LOCKED/BOOKED = 1                    |
+|  * Overwrite Redis bitmap -> corrects any drift                        |
+|                                                                        |
+|  ====================================================================  |
+|                                                                        |
+|  OPERATION 4: SEAT AVAILABILITY (READ PATH)                            |
 |                                                                        |
 |  READ from Redis (bitmap) -> cache hit = return instantly              |
 |  On cache miss -> READ from PostgreSQL (show_seats table)              |
@@ -735,12 +856,10 @@ explaining each component, its responsibilities, and how they interact.
 |                                                                        |
 |  CACHE INVALIDATION:                                                   |
 |  * On reservation: flip bitmap bit in Redis (real-time)                |
-|  * On booking confirmation: bitmap already reflects locked state       |
-|  * On expiry: Redis key auto-deletes, bitmap bit resets                |
-|  * Fallback: scheduled job reconciles Redis bitmap with DB             |
-|    every 5 minutes (catches any drift)                                 |
+|  * On booking: bitmap already reflects locked state                    |
+|  * On expiry: bitmap bit resets via reconciliation job                 |
+|  * Fallback: recon job rebuilds bitmap from DB every 5 min             |
 |                                                                        |
-|  ====================================================================  |
 |                                                                        |
 |  FAILURE SCENARIOS AND RECOVERY                                        |
 |                                                                        |
