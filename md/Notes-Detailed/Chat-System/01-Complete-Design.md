@@ -1007,6 +1007,158 @@ group conversations, and deliver messages reliably even when recipients are offl
 +-------------------------------------------------------------------------+
 ```
 
+### PRESENCE FAN-OUT VIA REDIS PUB/SUB
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THE FAN-OUT PROBLEM:                                                   |
+|                                                                         |
+|  Alice comes online. She has 500 friends.                               |
+|  Each friend is connected to a DIFFERENT WebSocket server.              |
+|  How does the presence update reach all 500 WS connections?             |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  NAIVE APPROACH (Connection Registry Lookup):                           |
+|                                                                         |
+|  Alice online -> fetch 500 friends -> 500 Redis GETs for                |
+|  connection registry -> group by server -> N internal RPCs              |
+|                                                                         |
+|  PROBLEM: 500+ Redis lookups + N network calls PER event.               |
+|  At 100M online/offline events/day this is brutally expensive.          |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  SOLUTION: Redis Pub/Sub (Publisher does 1 command, Redis fans out)     |
+|                                                                         |
+|  Instead of the publisher finding every recipient, each WS server       |
+|  SUBSCRIBES to channels for its connected users' friends.               |
+|                                                                         |
+|  CHANNEL STRUCTURE (per-user channel):                                  |
+|                                                                         |
+|    Channel: presence:{user_id}                                          |
+|                                                                         |
+|    When Bob connects to ws-server-7:                                    |
+|      Bob's friends = [Alice, Carol, Dave]                               |
+|      ws-server-7 runs:                                                  |
+|        SUBSCRIBE presence:alice                                         |
+|        SUBSCRIBE presence:carol                                         |
+|        SUBSCRIBE presence:dave                                          |
+|                                                                         |
+|  WHEN ALICE COMES ONLINE:                                               |
+|                                                                         |
+|    Alice's WS server does ONE command:                                  |
+|      PUBLISH presence:alice "online"                                    |
+|                                                                         |
+|    Redis Pub/Sub internally broadcasts to ALL subscribed servers.       |
+|    Each WS server pushes to its local in-memory WS sockets.             |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  FULL SEQUENCE DIAGRAM:                                                 |
+|                                                                         |
+|  Alice opens app                                                        |
+|       |                                                                 |
+|       v                                                                 |
+|  WS Server #3                                                           |
+|       |                                                                 |
+|       +-- SET presence:alice = "online" (Redis Hash)                    |
+|       |                                                                 |
+|       +-- PUBLISH presence:alice "online" (Redis Pub/Sub)               |
+|                      |                                                  |
+|           Redis fans out to all subscribers:                            |
+|                      |                                                  |
+|         +------------+------------+                                     |
+|         v            v            v                                     |
+|    ws-server-7  ws-server-42  ws-server-19                              |
+|    (subscribed   (subscribed   (subscribed                              |
+|     for Bob)    Carol + Eve)   for Frank)                               |
+|         |            |            |                                     |
+|         v            v            v                                     |
+|    push to Bob  push to      push to                                    |
+|    via local    Carol + Eve  Frank via                                  |
+|    WS socket    via local    local WS                                   |
+|                 WS sockets                                              |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  WHY PUB/SUB OVER DIRECT LOOKUP:                                        |
+|                                                                         |
+|  +---------------------------+------------------+-------------------+   |
+|  | Aspect                    | Direct Lookup    | Redis Pub/Sub     |   |
+|  +---------------------------+------------------+-------------------+   |
+|  | Publisher work per event  | 500 GETs + RPCs  | 1 PUBLISH         |   |
+|  | Who does fan-out          | Chat service     | Redis internally  |   |
+|  | Latency                   | Sequential       | Single broadcast  |   |
+|  | Coupling                  | Publisher knows  | Fully decoupled   |   |
+|  |                           | all recipients   |                   |   |
+|  +---------------------------+------------------+-------------------+   |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  SUBSCRIPTION LIFECYCLE:                                                |
+|                                                                         |
+|  ON CONNECT (Bob joins ws-server-7):                                    |
+|    1. Fetch Bob's friend list from cache/DB                             |
+|    2. SUBSCRIBE presence:{friend_id} for each friend                    |
+|    3. GET presence:{friend_id} for each friend (initial state)          |
+|    4. Push current friend statuses to Bob's WS socket                   |
+|                                                                         |
+|  ON DISCONNECT (Bob leaves ws-server-7):                                |
+|    1. UNSUBSCRIBE presence:{friend_id} for each friend                  |
+|    2. If no other user on ws-server-7 needs that channel,               |
+|       subscription is fully removed (no wasted messages)                |
+|                                                                         |
+|  ON FRIEND LIST CHANGE (Bob adds new friend Eve):                       |
+|    1. SUBSCRIBE presence:eve on Bob's WS server                         |
+|    2. GET presence:eve for current status                               |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  SCALING CONSIDERATIONS:                                                |
+|                                                                         |
+|  * Redis Pub/Sub is fire-and-forget (no persistence). If a WS           |
+|    server is temporarily disconnected, it misses updates.               |
+|    Acceptable for presence (eventual consistency is fine).              |
+|                                                                         |
+|  * With 50M online users x 200 avg friends = 10B subscriptions.         |
+|    Single Redis instance cannot handle this.                            |
+|    Solution: shard Pub/Sub across Redis Cluster by user_id hash.        |
+|                                                                         |
+|  * WS servers with many users share subscriptions. If both Bob          |
+|    and Carol are on ws-server-7 and both friends with Alice,            |
+|    ws-server-7 subscribes to presence:alice ONCE (not twice).           |
+|    Server-side reference counting manages this.                         |
+|                                                                         |
+|  * Direct lookup (connection registry) is still used for 1:1            |
+|    message delivery where you route to exactly one recipient.           |
+|    Pub/Sub is for fan-out scenarios (presence, group messages).         |
+|                                                                         |
+|  ==================================================================     |
+|                                                                         |
+|  FAN-OUT STRATEGY BY SCALE:                                             |
+|                                                                         |
+|  +----------------+------------------+-----------------------------+    |
+|  | Group Size     | Strategy         | How                         |    |
+|  +----------------+------------------+-----------------------------+    |
+|  | Small (<100)   | Direct fan-out   | Lookup each friend's WS     |    |
+|  |                |                  | server via connection        |   |
+|  |                |                  | registry, send directly      |   |
+|  +----------------+------------------+-----------------------------+    |
+|  | Medium         | Async via Kafka  | Publish event to Kafka       |   |
+|  | (100-1000)     |                  | topic, fan-out workers       |   |
+|  |                |                  | process in parallel          |   |
+|  +----------------+------------------+-----------------------------+    |
+|  | Huge (1000+)   | Redis Pub/Sub    | WS servers subscribe to      |   |
+|  |                |                  | channel. One PUBLISH, all    |   |
+|  |                |                  | subscribed servers receive   |   |
+|  |                |                  | and push to local sockets    |   |
+|  +----------------+------------------+-----------------------------+    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ### TYPING INDICATORS
 
 ```
@@ -1335,77 +1487,77 @@ group conversations, and deliver messages reliably even when recipients are offl
 |                                                                         |
 |  SENT ──> DELIVERED ──> READ                                            |
 |   │           │                                                         |
-|   │           └──> DELETED_FOR_ALL (soft-delete, within time window)     |
+|   │           └──> DELETED_FOR_ALL (soft-delete, within time window)    |
 |   │                                                                     |
 |   └──> PENDING (recipient offline, queued)                              |
 |            │                                                            |
-|            └──> DELIVERED (on reconnect, dequeued)                       |
+|            └──> DELIVERED (on reconnect, dequeued)                      |
 |                                                                         |
 |  For group messages, delivery status is per-member:                     |
-|  SENT ──> DELIVERED_TO:{user_ids} ──> READ_BY:{user_ids}               |
+|  SENT ──> DELIVERED_TO:{user_ids} ──> READ_BY:{user_ids}                |
 |                                                                         |
 |  Transition rules:                                                      |
-|  * SENT: server stored message, ACK'd to sender                        |
+|  * SENT: server stored message, ACK'd to sender                         |
 |  * DELIVERED: recipient device ACK'd receipt                            |
-|  * READ: recipient opened the conversation                             |
-|  * Each transition emits a status event back to sender via WS          |
-|  * Client-generated message_id ensures deduplication on retry          |
+|  * READ: recipient opened the conversation                              |
+|  * Each transition emits a status event back to sender via WS           |
+|  * Client-generated message_id ensures deduplication on retry           |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Message Send with Offline Queue)               |
 |                                                                         |
 |  Alice       WS Gateway    Chat Svc     Cassandra    Redis              |
-|    |             |             |            |           |                |
-|    |--msg------->|             |            |           |                |
-|    | {msg_id,    |--route----->|            |           |                |
-|    |  conv_id,   |             |            |           |                |
-|    |  content}   |             |            |           |                |
-|    |             |             |            |           |                |
-|    |             |  1. Assign sequence number:          |                |
-|    |             |     INCR conv_seq:{conv_id}  (Redis) |                |
-|    |             |             |            |           |                |
-|    |             |  2. Store message:        |           |                |
-|    |             |     INSERT INTO messages_by_conversation              |
-|    |             |       (conversation_id, message_id,                   |
-|    |             |        sender_id, content, content_type,              |
-|    |             |        created_at)                                    |
-|    |             |       VALUES (:conv, :msg_id, :alice,                 |
-|    |             |               :text, 'text', now());                  |
-|    |             |     -- Cassandra: LOCAL_QUORUM write                  |
-|    |             |             |            |           |                |
-|    |<--sent ACK--|<--ack-------|            |           |                |
-|    |             |             |            |           |                |
-|    |             |  3. Lookup Bob's connection:          |                |
-|    |             |     GET conn:bob:* (Redis)            |                |
-|    |             |             |            |           |                |
-|    |             |  CASE A: Bob is ONLINE                |                |
-|    |             |     Forward msg to Bob's WS server     |               |
-|    |             |     Bob's device sends delivery ACK     |              |
-|    |             |     Status -> DELIVERED                 |              |
-|    |             |     Push status update to Alice via WS  |              |
-|    |             |             |            |           |                |
-|    |             |  CASE B: Bob is OFFLINE                |                |
-|    |             |     ZADD offline:{bob} {timestamp} {msg_id}           |
-|    |             |     Send push notification (FCM/APNs):                |
-|    |             |       { title: "Alice", body: preview_text }          |
-|    |             |     When Bob reconnects:                              |
-|    |             |       ZRANGEBYSCORE offline:{bob} last_sync +inf      |
-|    |             |       Deliver all pending, collect ACKs               |
-|    |             |       ZREM offline:{bob} {delivered_msg_ids}           |
-|    |             |             |            |           |                |
-|    |             |  4. Kafka: emit to "messages" topic (async):          |
-|    |             |     -> Update unread counter                          |
-|    |             |     -> Search indexing (if no E2E encryption)         |
-|    |             |     -> Analytics / audit log                          |
-|    |             |             |            |           |                |
+|    |             |             |            |           |               |
+|    |--msg------->|             |            |           |               |
+|    | {msg_id,    |--route----->|            |           |               |
+|    |  conv_id,   |             |            |           |               |
+|    |  content}   |             |            |           |               |
+|    |             |             |            |           |               |
+|    |             |  1. Assign sequence number:          |               |
+|    |             |     INCR conv_seq:{conv_id}  (Redis) |               |
+|    |             |             |            |           |               |
+|    |             |  2. Store message:        |           |              |
+|    |             |     INSERT INTO messages_by_conversation             |
+|    |             |       (conversation_id, message_id,                  |
+|    |             |        sender_id, content, content_type,             |
+|    |             |        created_at)                                   |
+|    |             |       VALUES (:conv, :msg_id, :alice,                |
+|    |             |               :text, 'text', now());                 |
+|    |             |     -- Cassandra: LOCAL_QUORUM write                 |
+|    |             |             |            |           |               |
+|    |<--sent ACK--|<--ack-------|            |           |               |
+|    |             |             |            |           |               |
+|    |             |  3. Lookup Bob's connection:          |              |
+|    |             |     GET conn:bob:* (Redis)            |              |
+|    |             |             |            |           |               |
+|    |             |  CASE A: Bob is ONLINE                |              |
+|    |             |     Forward msg to Bob's WS server     |             |
+|    |             |     Bob's device sends delivery ACK     |            |
+|    |             |     Status -> DELIVERED                 |            |
+|    |             |     Push status update to Alice via WS  |            |
+|    |             |             |            |           |               |
+|    |             |  CASE B: Bob is OFFLINE                |             |
+|    |             |     ZADD offline:{bob} {timestamp} {msg_id}          |
+|    |             |     Send push notification (FCM/APNs):               |
+|    |             |       { title: "Alice", body: preview_text }         |
+|    |             |     When Bob reconnects:                             |
+|    |             |       ZRANGEBYSCORE offline:{bob} last_sync +inf     |
+|    |             |       Deliver all pending, collect ACKs              |
+|    |             |       ZREM offline:{bob} {delivered_msg_ids}         |
+|    |             |             |            |           |               |
+|    |             |  4. Kafka: emit to "messages" topic (async):         |
+|    |             |     -> Update unread counter                         |
+|    |             |     -> Search indexing (if no E2E encryption)        |
+|    |             |     -> Analytics / audit log                         |
+|    |             |             |            |           |               |
 |                                                                         |
 |  Read receipt flow:                                                     |
 |  Bob opens conversation -> client sends read ACK for latest msg_id      |
-|  -> Chat Svc updates conversation read cursor                          |
-|  -> Push "read" status to Alice via WS                                 |
+|  -> Chat Svc updates conversation read cursor                           |
+|  -> Push "read" status to Alice via WS                                  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  3. READ PATH                                                           |
 |                                                                         |
@@ -1422,7 +1574,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 |    Client --> Cassandra messages_by_conversation                        |
 |    SELECT * FROM messages_by_conversation                               |
 |      WHERE conversation_id = :conv_id                                   |
-|      LIMIT 50;  -- latest 50 (DESC clustering order)                   |
+|      LIMIT 50;  -- latest 50 (DESC clustering order)                    |
 |    * Cursor-based pagination with message_id for older messages         |
 |    * No cache: Cassandra reads are fast for this access pattern         |
 |                                                                         |
@@ -1434,10 +1586,10 @@ group conversations, and deliver messages reliably even when recipients are offl
 |                                                                         |
 |  OFFLINE MESSAGE SYNC (on reconnect):                                   |
 |    Client sends last_sync_timestamp                                     |
-|    Server: ZRANGEBYSCORE offline:{user_id} last_sync +inf              |
+|    Server: ZRANGEBYSCORE offline:{user_id} last_sync +inf               |
 |    Deliver messages in order, client ACKs each batch                    |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
@@ -1445,7 +1597,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  | What Fails                   | Impact & Recovery                  |  |
 |  +------------------------------+------------------------------------+  |
 |  | WS server crashes (500K      | Clients detect via missed          |  |
-|  | connections lost)             | heartbeat, reconnect with jitter   |  |
+|  | connections lost)             | heartbeat, reconnect with jitter   | |
 |  |                              | to different server. New server    |  |
 |  |                              | pulls pending msgs from offline    |  |
 |  |                              | queue + Cassandra.                 |  |
@@ -1467,7 +1619,7 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  |                              | in store, delivered on reconnect.  |  |
 |  +------------------------------+------------------------------------+  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
