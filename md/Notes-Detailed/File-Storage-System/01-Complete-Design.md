@@ -1,6 +1,75 @@
 # FILE STORAGE SYSTEM DESIGN (GOOGLE DRIVE / DROPBOX)
 
 A COMPLETE CONCEPTUAL GUIDE
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. BLOCK-LEVEL CHUNKING: files split into 4MB blocks. Only changed     |
+|     blocks are uploaded (delta sync). Saves 90%+ bandwidth.             |
+|  2. CONTENT-ADDRESSABLE STORAGE: block hash as key. Identical blocks    |
+|     stored once (deduplication across all users).                       |
+|  3. METADATA DB (SQL) + BLOCK STORE (S3). Metadata tracks file          |
+|     structure and block references. Blocks are immutable.               |
+|  4. LONG POLLING / WEBSOCKET for sync notifications. Client polls       |
+|     for changes from other devices.                                     |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * BLOCK SIZE: Smaller blocks = finer delta sync but more metadata.     |
+|    Larger blocks = less metadata but more re-upload on small edits.     |
+|    4MB is the sweet spot for most file types.                           |
+|  * CONFLICT RESOLUTION: Last-write-wins is simple but loses data.       |
+|    We keep both versions and let the user choose.
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a cloud file storage like Google Drive /   |
+|    Dropbox? Files synced across devices?                                |
+|                                                                         |
+|  INTERVIEWER: Yes. Focus on file sync, upload/download, conflict        |
+|    resolution when two users edit the same file offline.                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 500M users, 10M DAU, average 200 files per user.          |
+|    Files range from KB (docs) to GB (videos).                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle real-time collaboration or just sync?       |
+|                                                                         |
+|  INTERVIEWER: Focus on file sync. Real-time editing is covered in       |
+|    the Collaborative Editor design.                                     |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Cloud file storage with cross-device sync (Dropbox/Drive style)      |
+|  * 500M users, 10M DAU, 200 files/user avg                              |
+|  * Upload, download, sync, sharing, conflict resolution                 |
+|  * Deep dive: block-level sync + deduplication                          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 SECTION 1: UNDERSTANDING THE PROBLEM
 ## +-------------------------------------------------------------------------+
 *|                                                                         |*
@@ -1227,7 +1296,7 @@ SECTION 12: ADDITIONAL FEATURES
 |                                                                         |
 |  1. ENTITY STATE MACHINE (File)                                         |
 |                                                                         |
-|    UPLOADING --> CHUNKED --> STORED --> SYNCED --> DELETED               |
+|    UPLOADING --> CHUNKED --> STORED --> SYNCED --> DELETED              |
 |       |            |           |          |          |                  |
 |       |            |           |          |          +--> TRASH         |
 |       |            |           |          |               (30-day hold) |
@@ -1235,53 +1304,53 @@ SECTION 12: ADDITIONAL FEATURES
 |       |            |           |               edits from 2 devices)    |
 |       |            |           +--> VERSIONED (new version created)     |
 |       |            +--> DEDUPLICATED (block hash already exists)        |
-|       +--> FAILED (network error, quota exceeded)                      |
+|       +--> FAILED (network error, quota exceeded)                       |
 |                                                                         |
 |  State tracked in:                                                      |
-|    PostgreSQL: files, file_versions, blocks, file_blocks tables        |
-|    S3/GCS: actual 4 MB block data (content-addressed by SHA256)        |
-|    Redis Pub/Sub: sync notifications to connected devices              |
+|    PostgreSQL: files, file_versions, blocks, file_blocks tables         |
+|    S3/GCS: actual 4 MB block data (content-addressed by SHA256)         |
+|    Redis Pub/Sub: sync notifications to connected devices               |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (File Upload)                                   |
 |                                                                         |
-|  Step 1: Client splits file into 4 MB blocks                           |
+|  Step 1: Client splits file into 4 MB blocks                            |
 |          Computes SHA256 hash per block + overall file checksum         |
-|  Step 2: POST /api/files/upload { filename, size, blocks: [{hash}] }   |
-|  Step 3: Server checks blocks table for existing hashes (dedup)        |
-|          Returns: blocks_needed (only missing ones) + presigned URLs   |
-|  Step 4: Client uploads needed blocks directly to S3/GCS               |
+|  Step 2: POST /api/files/upload { filename, size, blocks: [{hash}] }    |
+|  Step 3: Server checks blocks table for existing hashes (dedup)         |
+|          Returns: blocks_needed (only missing ones) + presigned URLs    |
+|  Step 4: Client uploads needed blocks directly to S3/GCS                |
 |          (parallel uploads via presigned URLs, skip existing blocks)    |
-|  Step 5: POST /api/files/upload/complete { file_id, block_hashes }     |
+|  Step 5: POST /api/files/upload/complete { file_id, block_hashes }      |
 |                                                                         |
 |  Critical transaction (metadata commit):                                |
 |                                                                         |
 |    BEGIN TRANSACTION;                                                   |
-|      INSERT INTO file_versions (file_id, version_number, size,         |
+|      INSERT INTO file_versions (file_id, version_number, size,          |
 |        checksum, created_at)                                            |
-|      VALUES ('f123', 4, 10485760, 'sha256:abc...', NOW());             |
+|      VALUES ('f123', 4, 10485760, 'sha256:abc...', NOW());              |
 |                                                                         |
-|      INSERT INTO file_blocks (file_version_id, block_hash, block_order)|
-|      VALUES (v_id, 'abc123', 0), (v_id, 'def456', 1),                  |
+|      INSERT INTO file_blocks (file_version_id, block_hash, block_order) |
+|      VALUES (v_id, 'abc123', 0), (v_id, 'def456', 1),                   |
 |             (v_id, 'ghi789', 2);                                        |
 |                                                                         |
-|      INSERT INTO blocks (block_hash, size, reference_count,            |
+|      INSERT INTO blocks (block_hash, size, reference_count,             |
 |        storage_location)                                                |
-|      VALUES ('abc123', 4194304, 1, 's3://blocks/abc123')               |
+|      VALUES ('abc123', 4194304, 1, 's3://blocks/abc123')                |
 |      ON CONFLICT (block_hash) DO UPDATE                                 |
 |        SET reference_count = reference_count + 1;                       |
 |                                                                         |
 |      UPDATE files SET latest_version = 4, modified_at = NOW()           |
 |        WHERE file_id = 'f123';                                          |
-|      UPDATE users SET storage_used = storage_used + delta              |
+|      UPDATE users SET storage_used = storage_used + delta               |
 |        WHERE user_id = 'u789';                                          |
 |    COMMIT;                                                              |
 |                                                                         |
-|  Step 6: Notify other devices via WebSocket / Redis Pub/Sub            |
-|          { type: "file_changed", file_id: "f123", version: 4 }         |
+|  Step 6: Notify other devices via WebSocket / Redis Pub/Sub             |
+|          { type: "file_changed", file_id: "f123", version: 4 }          |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  3. READ PATH (File Download)                                           |
 |                                                                         |
@@ -1289,11 +1358,11 @@ SECTION 12: ADDITIONAL FEATURES
 |    |                                                                    |
 |    v                                                                    |
 |  Metadata Service (PostgreSQL):                                         |
-|    SELECT fv.*, fb.block_hash, fb.block_order, b.storage_location      |
+|    SELECT fv.*, fb.block_hash, fb.block_order, b.storage_location       |
 |    FROM file_versions fv                                                |
 |    JOIN file_blocks fb ON fv.version_id = fb.file_version_id            |
 |    JOIN blocks b ON fb.block_hash = b.block_hash                        |
-|    WHERE fv.file_id = 'f123' AND fv.version_number = latest            |
+|    WHERE fv.file_id = 'f123' AND fv.version_number = latest             |
 |    ORDER BY fb.block_order;                                             |
 |    |                                                                    |
 |    v                                                                    |
@@ -1301,61 +1370,61 @@ SECTION 12: ADDITIONAL FEATURES
 |    { blocks: [ {order:0, url:"https://s3.../abc123"}, ... ] }           |
 |    |                                                                    |
 |    v                                                                    |
-|  Client downloads blocks in parallel from S3/GCS (via CDN)             |
-|  Reassembles blocks in order, verifies overall checksum                |
+|  Client downloads blocks in parallel from S3/GCS (via CDN)              |
+|  Reassembles blocks in order, verifies overall checksum                 |
 |                                                                         |
 |  Sync path (incremental):                                               |
-|    Client sends local file version --> server returns diff             |
-|    Only changed blocks downloaded (not entire file)                    |
+|    Client sends local file version --> server returns diff              |
+|    Only changed blocks downloaded (not entire file)                     |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  4. FAILURE SCENARIOS                                                    |
+|  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
-|  +---------------------------+-------------------------------------+   |
-|  | What Fails                | Impact & Recovery                   |   |
-|  +---------------------------+-------------------------------------+   |
-|  | Upload interrupted        | Resumable: client retries only the  |   |
+|  +---------------------------+-------------------------------------+    |
+|  | What Fails                | Impact & Recovery                   |    |
+|  +---------------------------+-------------------------------------+    |
+|  | Upload interrupted        | Resumable: client retries only the  |    |
 |  | (network drop)            | missing blocks (server tracks which  |   |
 |  |                           | blocks received). No restart needed. |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | Concurrent edits from     | Conflict detection on sync. Create   |   |
 |  | two devices               | "conflicting copy" file (like        |   |
 |  |                           | Dropbox). User resolves manually.    |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | PostgreSQL primary down   | Read replicas serve reads. Promote   |   |
 |  |                           | replica to primary. Writes pause     |   |
 |  |                           | briefly during failover.             |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | S3 block corrupted or     | SHA256 hash mismatch detected on     |   |
 |  | missing                   | download. Re-upload from any device  |   |
 |  |                           | that has the block. Cross-region     |   |
 |  |                           | replication provides redundancy.     |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  5. CLEANUP / EXPIRY                                                     |
+|  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
-|  Block garbage collection (reference counting):                          |
+|  Block garbage collection (reference counting):                         |
 |    blocks.reference_count decremented on file version delete.           |
-|    When reference_count = 0, block is orphaned.                        |
+|    When reference_count = 0, block is orphaned.                         |
 |    Nightly GC job: DELETE FROM blocks WHERE reference_count = 0         |
-|    AND updated_at < NOW() - INTERVAL '24 hours';                       |
+|    AND updated_at < NOW() - INTERVAL '24 hours';                        |
 |    Corresponding S3 objects deleted in batch.                           |
 |                                                                         |
-|  Trash / soft delete:                                                    |
-|    Deleted files moved to trash, kept 30 days.                         |
+|  Trash / soft delete:                                                   |
+|    Deleted files moved to trash, kept 30 days.                          |
 |    Nightly job permanently deletes expired trash items.                 |
-|    Protects against accidental deletion and ransomware.                |
+|    Protects against accidental deletion and ransomware.                 |
 |                                                                         |
-|  Old version cleanup:                                                    |
-|    Keep last N versions (e.g., 100) or versions within 60 days.        |
-|    Purge older versions, decrement block reference_count.              |
+|  Old version cleanup:                                                   |
+|    Keep last N versions (e.g., 100) or versions within 60 days.         |
+|    Purge older versions, decrement block reference_count.               |
 |                                                                         |
-|  Cold storage tiering:                                                   |
-|    Files not accessed in 90 days --> S3 Infrequent Access.             |
-|    > 365 days --> Glacier. Nightly job based on last_accessed_at.      |
+|  Cold storage tiering:                                                  |
+|    Files not accessed in 90 days --> S3 Infrequent Access.              |
+|    > 365 days --> Glacier. Nightly job based on last_accessed_at.       |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

@@ -2,6 +2,41 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a metrics collection + alerting system     |
+|    like Prometheus/Datadog, or a logging system like ELK?               |
+|                                                                         |
+|  INTERVIEWER: Metrics monitoring and alerting. Collect numeric          |
+|    time-series data (CPU, latency, error rates), visualize on           |
+|    dashboards, and trigger alerts on threshold breaches.                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 10M time series, 1M data points ingested per second.      |
+|    Dashboard queries must return in under 500ms. 30-day hot retention.  |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Metrics collection, storage, querying, dashboards, alerting          |
+|  * 10M time series, 1M data points/sec ingestion                        |
+|  * Pull-based (Prometheus) vs push-based (StatsD) collection            |
+|  * Time-series DB for storage (write-optimized)                         |
+|  * Deep dive: time-series storage engine + downsampling                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 Modern distributed systems consist of hundreds or thousands of microservices
@@ -1534,6 +1569,36 @@ the health and behavior of a system over time.
   |  WAL truncation: old WAL segments deleted after block flush.    |
   |                                                                 |
   +-----------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. PULL-BASED COLLECTION (Prometheus model) for service metrics.       |
+|     Push-based for short-lived jobs. Pull gives the monitoring          |
+|     system control over scrape frequency.                               |
+|  2. TIME-SERIES DB (custom or InfluxDB/TimescaleDB) optimized for       |
+|     append-heavy workloads with time-range queries.                     |
+|  3. DOWNSAMPLING: Raw data (1s resolution) kept 7 days. 1-min           |
+|     aggregates kept 30 days. 1-hour aggregates kept 1 year.             |
+|  4. ALERTING via rules engine. Evaluate rules every 15-60s. Multi-      |
+|     level: warning -> critical -> page. Dedup + grouping.               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * PULL vs PUSH: Pull is simpler (monitoring controls pace) but         |
+|    can't handle short-lived jobs. Push handles ephemeral sources.       |
+|  * RESOLUTION vs STORAGE COST: 1s resolution is precise but expensive.  |
+|    Downsampling reduces cost 100x at the expense of granularity         |
+|    for older data.
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 13: SUMMARY

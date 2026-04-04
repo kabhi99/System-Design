@@ -6,6 +6,47 @@ web pages for indexing, analysis, or archiving. It is the backbone of
 search engines like Google, Bing, and also used for price monitoring,
 content aggregation, and data mining.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a general web crawler for a search         |
+|    engine, or a focused crawler for a specific use case?                |
+|                                                                         |
+|  INTERVIEWER: General-purpose web crawler for a search engine.          |
+|    Discover and download web pages to build a search index.             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many pages per day?                         |
+|                                                                         |
+|  INTERVIEWER: 1 billion pages per day. Must be polite (respect          |
+|    robots.txt, rate limits per domain).                                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle dedup (don't crawl same page twice)?        |
+|                                                                         |
+|  INTERVIEWER: Yes. URL dedup and content dedup are both important.      |
+|    Discuss Bloom filters and URL frontier design.                       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * General web crawler for search engine indexing                       |
+|  * 1B pages/day, polite crawling (robots.txt, rate limits)              |
+|  * URL frontier design + prioritization                                 |
+|  * Deduplication (URL + content level)                                  |
+|  * Deep dive: URL frontier + politeness + dedup strategies              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: REQUIREMENTS
 
 ```
@@ -522,7 +563,7 @@ content aggregation, and data mining.
 |                                                                          |
 |  1. ENTITY STATE MACHINE (URL Lifecycle)                                 |
 |                                                                          |
-|    [DISCOVERED] --> [QUEUED] --> [FETCHING] --> [FETCHED] --> [PARSED]    |
+|    [DISCOVERED] --> [QUEUED] --> [FETCHING] --> [FETCHED] --> [PARSED]   |
 |         |              |            |               |                    |
 |         |              |            +---> [FAILED] -+---> [RETRY]        |
 |         |              |                                    |            |
@@ -540,7 +581,7 @@ content aggregation, and data mining.
 |    FETCHING:    Worker assigned, HTTP GET in progress                    |
 |    FETCHED:     HTTP 200 received, raw HTML in memory                    |
 |    PARSED:      Content extracted, links discovered, stored in S3        |
-|    FAILED:      DNS error, timeout, 5xx, robots.txt blocked             |
+|    FAILED:      DNS error, timeout, 5xx, robots.txt blocked              |
 |    DUPLICATE:   Bloom filter match -- skip (no DB/network hit)           |
 |                                                                          |
 |  ======================================================================  |
@@ -555,7 +596,7 @@ content aggregation, and data mining.
 |      |     strip tracking params (utm_source, fbclid),                   |
 |      |     remove trailing slash, resolve relative to absolute           |
 |      v                                                                   |
-|    Step 2: Bloom filter check (in-memory, ~1.2 GB for 1B URLs)          |
+|    Step 2: Bloom filter check (in-memory, ~1.2 GB for 1B URLs)           |
 |      |     bloom.contains(normalized_url)                                |
 |      |     TRUE  -> SKIP (probably seen, accept 1% false positive)       |
 |      |     FALSE -> definitely new, continue                             |
@@ -582,7 +623,7 @@ content aggregation, and data mining.
 |                                                                          |
 |    WRITE ORDER: Bloom filter (memory) -> RocksDB (disk) -> Kafka         |
 |    If Bloom filter full: Expand or partition across workers              |
-|    If Kafka down: Buffer in local RocksDB, drain on recovery            |
+|    If Kafka down: Buffer in local RocksDB, drain on recovery             |
 |                                                                          |
 |  ======================================================================  |
 |                                                                          |
@@ -593,7 +634,7 @@ content aggregation, and data mining.
 |      v                                                                   |
 |    Step 1: Check robots.txt cache                                        |
 |      |     GET robots_cache:{domain}                                     |
-|      |     HIT  -> parse rules, check if path is allowed                |
+|      |     HIT  -> parse rules, check if path is allowed                 |
 |      |     MISS -> fetch https://{domain}/robots.txt                     |
 |      |             parse and cache with TTL 24h                          |
 |      |     DISALLOWED -> skip URL, mark as FILTERED                      |
@@ -632,17 +673,17 @@ content aggregation, and data mining.
 |                           | Per-worker DNS cache reduces blast radius.   |
 |  -------------------------+----------------------------------------------+
 |  HTTP 5xx / timeout       | Retry with exponential backoff (1m, 5m, 30m).|
-|                           | After 3 retries, mark URL as FAILED.          |
+|                           | After 3 retries, mark URL as FAILED.         |
 |                           | Don't penalize other URLs on same domain.    |
 |  -------------------------+----------------------------------------------+
-|  Worker crash mid-fetch   | Kafka offset not committed. URL is re-        |
-|                           | delivered to another worker. Bloom filter     |
-|                           | already has it (no duplicate storage). At     |
+|  Worker crash mid-fetch   | Kafka offset not committed. URL is re-       |
+|                           | delivered to another worker. Bloom filter    |
+|                           | already has it (no duplicate storage). At    |
 |                           | worst, page fetched twice (idempotent).      |
 |  -------------------------+----------------------------------------------+
-|  Bloom filter OOM /       | Rebuild from RocksDB seen-URL store on        |
-|  corruption               | restart. During rebuild, temporary increase   |
-|                           | in duplicate fetches (acceptable). Partition  |
+|  Bloom filter OOM /       | Rebuild from RocksDB seen-URL store on       |
+|  corruption               | restart. During rebuild, temporary increase  |
+|                           | in duplicate fetches (acceptable). Partition |
 |                           | Bloom filter across workers to limit size.   |
 |  -------------------------+----------------------------------------------+
 |                                                                          |
@@ -662,9 +703,9 @@ content aggregation, and data mining.
 |      Per-worker local cache, TTL = min(DNS record TTL, 1 hour)           |
 |      Evict on memory pressure (LRU)                                      |
 |                                                                          |
-|    Content Storage Lifecycle (S3/HDFS):                                   |
+|    Content Storage Lifecycle (S3/HDFS):                                  |
 |      Keep latest version of each page                                    |
-|      Archive older versions after 90 days to cold storage               |
+|      Archive older versions after 90 days to cold storage                |
 |      Delete pages for domains removed from crawl scope                   |
 |                                                                          |
 |    Re-Crawl Scheduling:                                                  |
@@ -675,6 +716,37 @@ content aggregation, and data mining.
 |      If content_hash unchanged on re-crawl, extend interval              |
 |                                                                          |
 +--------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. URL FRONTIER with priority queue + politeness queue. Priority       |
+|     determines WHAT to crawl next; politeness ensures we don't          |
+|     overwhelm any single domain.                                        |
+|  2. BLOOM FILTER for URL dedup. 1B URLs with 1% false positive =        |
+|     ~1.2 GB memory. Prevents re-crawling already-visited URLs.          |
+|  3. CONSISTENT HASHING to assign domains to crawler workers.            |
+|     One worker per domain ensures rate limit compliance.                |
+|  4. DNS CACHE: DNS resolution is slow (~50ms). Cache DNS locally        |
+|     to avoid millions of lookups per day.                               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * BFS vs DFS CRAWL ORDER: BFS finds more unique pages faster.          |
+|    DFS goes deep into one site. BFS with priority scoring (page         |
+|    rank, freshness) is the standard approach.                           |
+|  * BLOOM FILTER FALSE POSITIVES: 1% false positive means ~10M           |
+|    pages/day are skipped unnecessarily. Acceptable trade-off vs         |
+|    storing 1B exact URLs (too much memory).
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 12: INTERVIEW QUESTIONS

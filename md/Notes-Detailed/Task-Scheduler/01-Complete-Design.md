@@ -2,6 +2,40 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: How is this different from the Distributed Job Scheduler?   |
+|                                                                         |
+|  INTERVIEWER: Focus on delayed/scheduled task execution (e.g.,          |
+|    "send this email in 30 minutes," "expire this coupon at midnight").  |
+|    Emphasis on timer accuracy and high throughput of scheduled tasks.   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 100M scheduled tasks per day, 10K tasks firing per        |
+|    second at peak. Sub-second accuracy on fire time.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Delayed/scheduled task execution system                              |
+|  * 100M tasks/day, 10K fires/sec peak, sub-second accuracy              |
+|  * Timer wheel vs priority queue comparison                             |
+|  * At-least-once execution guarantee                                    |
+|  * Deep dive: timer data structures + distributed coordination          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: TABLE OF CONTENTS
 
 1. Requirements
@@ -1637,7 +1671,7 @@
 |                         | PENDING  |<----------------------------+       |
 |                         +----+-----+                             |       |
 |                              |                                   |       |
-|                (execute_at <= now)                                |       |
+|                (execute_at <= now)                                |      |
 |                              v                                   |       |
 |                         +----+-----+                             |       |
 |                         |  QUEUED  |                             |       |
@@ -1690,7 +1724,7 @@
 |      v                                                                   |
 |    Step 3: Worker consumes from Kafka                                    |
 |      |     Acquire distributed lock on task:                             |
-|      |       Redis: SET lock:task:{task_id} {worker_id} NX EX 300       |
+|      |       Redis: SET lock:task:{task_id} {worker_id} NX EX 300        |
 |      |     If lock acquired:                                             |
 |      |       UPDATE tasks SET status = 'RUNNING',                        |
 |      |         worker_id = '{worker_id}', started_at = NOW()             |
@@ -1721,7 +1755,7 @@
 |      |       UPDATE tasks SET status = 'DEAD_LETTER' WHERE id = ?;       |
 |                                                                          |
 |    WRITE ORDER: Redis sorted set -> Kafka -> PostgreSQL (CAS)            |
-|                 -> Redis lock -> Execute -> PostgreSQL (result)           |
+|                 -> Redis lock -> Execute -> PostgreSQL (result)          |
 |                                                                          |
 |  ======================================================================  |
 |                                                                          |
@@ -1762,19 +1796,19 @@
 |                           | Task handler must be idempotent.             |
 |  -------------------------+----------------------------------------------+
 |  Scheduler node down      | Partitioned active-active: other scheduler   |
-|                           | partitions continue. Affected partition       |
+|                           | partitions continue. Affected partition      |
 |                           | tasks delayed until failover (~30s). Redis   |
 |                           | sorted set is durable across restarts.       |
 |  -------------------------+----------------------------------------------+
-|  Kafka down               | New tasks stay in DB with status PENDING.     |
-|                           | DB polling fallback kicks in (slower, every   |
-|                           | 5s). Tasks still execute but with higher      |
-|                           | latency. Recovery: drain DB backlog to Kafka. |
+|  Kafka down               | New tasks stay in DB with status PENDING.    |
+|                           | DB polling fallback kicks in (slower, every  |
+|                           | 5s). Tasks still execute but with higher     |
+|                           | latency. Recovery: drain DB backlog to Kafka.|
 |  -------------------------+----------------------------------------------+
-|  DB down                  | Task submission fails (return 503). Running   |
-|                           | tasks continue (state in Redis lock). Status  |
-|                           | updates buffer in worker memory. On DB        |
-|                           | recovery, flush buffered updates.             |
+|  DB down                  | Task submission fails (return 503). Running  |
+|                           | tasks continue (state in Redis lock). Status |
+|                           | updates buffer in worker memory. On DB       |
+|                           | recovery, flush buffered updates.            |
 |  -------------------------+----------------------------------------------+
 |                                                                          |
 |  ======================================================================  |
@@ -1794,9 +1828,9 @@
 |        AND replayed_at IS NULL;                                          |
 |                                                                          |
 |    Redis Cleanup:                                                        |
-|      lock:task:{id} keys: auto-expire via EX 300 (5 min TTL)            |
+|      lock:task:{id} keys: auto-expire via EX 300 (5 min TTL)             |
 |      due_tasks sorted set: entries removed on task pickup                |
-|      task_status:{id} cache: EX 86400 (terminal states only)            |
+|      task_status:{id} cache: EX 86400 (terminal states only)             |
 |                                                                          |
 |    Stale Running Task Recovery (watchdog, every 60s):                    |
 |      SELECT id FROM tasks WHERE status = 'RUNNING'                       |
@@ -2155,6 +2189,35 @@
 |  * Full audit log (every state transition logged with timestamp)        |
 |  * Distributed tracing (trace_id from submission to completion)         |
 |  * Anomaly detection: alert if task count drops unexpectedly            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. HIERARCHICAL TIMER WHEEL for efficient timer management.            |
+|     O(1) insert and fire. Buckets at second granularity.                |
+|  2. DB-BACKED PERSISTENCE: all scheduled tasks written to DB before     |
+|     acknowledgment. Timer wheel is populated from DB on startup.        |
+|  3. PARTITIONED BY TIME RANGE: each scheduler instance owns a time      |
+|     window. Prevents duplicate firing across instances.                 |
+|  4. DEAD-LETTER QUEUE for failed task executions with retry.            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * TIMER WHEEL vs MIN-HEAP: Timer wheel is O(1) insert/fire but         |
+|    uses more memory (empty slots). Min-heap is O(log N) but memory-     |
+|    efficient. Timer wheel wins at high throughput.                      |
+|  * IN-MEMORY vs DB-POLLED: In-memory timers are fast but lost on        |
+|    crash. DB polling is durable but higher latency. We combine:         |
+|    in-memory timer wheel + DB as recovery source.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

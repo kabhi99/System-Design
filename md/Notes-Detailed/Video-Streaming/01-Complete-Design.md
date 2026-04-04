@@ -5,6 +5,40 @@ A video streaming platform handles upload, transcoding, storage, and
 adaptive delivery of video content to millions of concurrent viewers
 across varying network conditions and devices.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing the upload + transcoding pipeline, the     |
+|    streaming/playback delivery, or both?                                |
+|                                                                         |
+|  INTERVIEWER: Both. Cover upload, transcoding to multiple formats/      |
+|    resolutions, storage, and adaptive bitrate streaming to clients.     |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 1B DAU, 500 hours of video uploaded per minute,           |
+|    1M concurrent viewers. Think YouTube.                                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Video platform: upload, transcode, store, stream (YouTube style)     |
+|  * 1B DAU, 500 hours uploaded/min, 1M concurrent viewers                |
+|  * Adaptive bitrate streaming (HLS/DASH)                                |
+|  * CDN-based delivery                                                   |
+|  * Deep dive: transcoding pipeline + adaptive streaming                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: REQUIREMENTS
 
 ```
@@ -676,6 +710,36 @@ across varying network conditions and devices.
 |    OR pre-warm CDN in top regions for popular channels                  |
 |  * Accept slight delay (30-60 seconds) for global availability          |
 |  * Creator sees "Publishing to all regions..." status                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. DAG-BASED TRANSCODING PIPELINE: upload -> split into segments ->    |
+|     parallel encode to multiple resolutions/codecs -> package -> CDN.   |
+|  2. ADAPTIVE BITRATE STREAMING (HLS/DASH): client selects segment       |
+|     quality based on bandwidth. Smooth quality transitions.             |
+|  3. CDN for delivery. Pre-push popular content to edge. Origin          |
+|     pull for long-tail content.                                         |
+|  4. OBJECT STORAGE (S3) for video segments. Cheap, durable, scalable.   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * PRE-TRANSCODE ALL vs ON-DEMAND: Pre-transcoding all resolutions      |
+|    wastes storage for rarely-watched content. On-demand saves storage   |
+|    but adds latency on first view. Hybrid: popular = pre-transcode,     |
+|    long-tail = on-demand.                                               |
+|  * CODEC CHOICE: H.264 is universal but less efficient. H.265/AV1       |
+|    are 30-50% more efficient but slower to encode and not all devices   |
+|    support them. Encode both; serve best the client supports.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

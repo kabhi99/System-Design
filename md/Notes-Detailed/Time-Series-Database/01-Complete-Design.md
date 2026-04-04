@@ -2,6 +2,42 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a general-purpose time-series database     |
+|    like InfluxDB, or a metrics-specific storage?                        |
+|                                                                         |
+|  INTERVIEWER: A general-purpose TSDB. Cover the storage engine,         |
+|    write path (high ingestion rate), query path (time-range             |
+|    aggregations), and retention/downsampling.                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 10M time series, 5M data points ingested per second.      |
+|    Queries over 30-day windows must return in under 500ms.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * General-purpose time-series database                                 |
+|  * 10M series, 5M points/sec ingestion                                  |
+|  * Write-optimized storage engine (LSM-tree based)                      |
+|  * Time-range queries with aggregation                                  |
+|  * Downsampling + retention policies                                    |
+|  * Deep dive: storage engine internals + compression                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: TABLE OF CONTENTS
 
 1. [Introduction](#introduction)
@@ -1707,7 +1743,7 @@ specifically for time-series patterns.
 |                                                                         |
 |  1. ENTITY STATE MACHINE (Time Series Data Point)                       |
 |                                                                         |
-|    RECEIVED --> WAL_ENTRY --> MEMTABLE --> BLOCK_FLUSHED                 |
+|    RECEIVED --> WAL_ENTRY --> MEMTABLE --> BLOCK_FLUSHED                |
 |       |            |            |              |                        |
 |       |            |            |              +--> COMPACTED           |
 |       |            |            |              |    (blocks merged)     |
@@ -1717,14 +1753,14 @@ specifically for time-series patterns.
 |       |            |            |                   (retention drop)    |
 |       |            |            +--> QUERYABLE (from HEAD block)        |
 |       |            +--> REPLAYED (crash recovery from WAL)              |
-|       +--> REJECTED (validation fail / cardinality limit)              |
+|       +--> REJECTED (validation fail / cardinality limit)               |
 |                                                                         |
 |  Key identifiers:                                                       |
-|    TSID = hash(metric_name + sorted tags) -- uint64                    |
-|    Block = immutable file covering fixed time range (e.g., 2 hours)    |
-|    HEAD block = active in-memory MemTable + WAL for current window     |
+|    TSID = hash(metric_name + sorted tags) -- uint64                     |
+|    Block = immutable file covering fixed time range (e.g., 2 hours)     |
+|    HEAD block = active in-memory MemTable + WAL for current window      |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (WAL --> MemTable --> Block Flush)              |
 |                                                                         |
@@ -1733,15 +1769,15 @@ specifically for time-series patterns.
 |  Step 2: Route to correct shard based on TSID hash                      |
 |  Step 3: Append to Write-Ahead Log (sequential, group commit)           |
 |          WAL entry: [CRC32 | length | TSID | timestamp | value]         |
-|          Batch fsync every ~10ms (trades latency for throughput)         |
+|          Batch fsync every ~10ms (trades latency for throughput)        |
 |  Step 4: Insert into active MemTable (in-memory, per-series buffers)    |
 |          MemTable: TSID --> [(t1,v1), (t2,v2), ...]                     |
 |  Step 5: When 2-hour block window closes:                               |
 |          a. Freeze current MemTable (becomes read-only)                 |
 |          b. Create new MemTable for incoming writes                     |
 |          c. Compress frozen data with Gorilla encoding:                 |
-|             - Timestamps: delta-of-delta (most = 1 bit)                 |
-|             - Values: XOR float encoding (~1.37 bytes/sample)           |
+|             * Timestamps: delta-of-delta (most = 1 bit)                 |
+|             * Values: XOR float encoding (~1.37 bytes/sample)           |
 |          d. Write immutable block to disk (index + chunks + meta)       |
 |          e. Truncate WAL up to flushed point                            |
 |  Step 6: Background compaction merges small blocks                      |
@@ -1761,86 +1797,116 @@ specifically for time-series patterns.
 |        async { compress_and_flush(frozen) }                             |
 |        async { wal.truncate(frozen.max_offset) }                        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  3. READ PATH (Query Execution)                                         |
 |                                                                         |
-|  Query: avg(cpu_usage{region="us-east"}) over last 1 hour              |
+|  Query: avg(cpu_usage{region="us-east"}) over last 1 hour               |
 |    |                                                                    |
 |    v                                                                    |
-|  Query Gateway: parse --> AST, identify time range [now-1h, now]       |
+|  Query Gateway: parse --> AST, identify time range [now-1h, now]        |
 |    |                                                                    |
 |    v                                                                    |
 |  Series resolution (inverted index):                                    |
-|    region="us-east" --> {TSID1, TSID2, ...}                            |
-|    intersect __name__="cpu_usage" --> final TSID set                   |
+|    region="us-east" --> {TSID1, TSID2, ...}                             |
+|    intersect __name__="cpu_usage" --> final TSID set                    |
 |    |                                                                    |
 |    v                                                                    |
-|  Block selection: find blocks overlapping [now-1h, now]                |
-|    - HEAD block MemTable (in-memory, most recent data)                 |
-|    - On-disk immutable blocks (2h/6h/12h compacted)                    |
-|    - Skip blocks via min/max timestamp filtering                       |
+|  Block selection: find blocks overlapping [now-1h, now]                 |
+|    * HEAD block MemTable (in-memory, most recent data)                  |
+|    * On-disk immutable blocks (2h/6h/12h compacted)                     |
+|    * Skip blocks via min/max timestamp filtering                        |
 |    |                                                                    |
 |    v                                                                    |
-|  Data retrieval: decompress Gorilla-encoded chunks                     |
-|    - Apply time range trim, parallel scan across blocks                |
-|    - LRU cache for recently accessed compressed chunks                 |
+|  Data retrieval: decompress Gorilla-encoded chunks                      |
+|    * Apply time range trim, parallel scan across blocks                 |
+|    * LRU cache for recently accessed compressed chunks                  |
 |    |                                                                    |
 |    v                                                                    |
-|  Aggregation: compute avg() per step interval (e.g., 1 point/min)     |
-|    Return time series of aggregated values to caller                   |
+|  Aggregation: compute avg() per step interval (e.g., 1 point/min)       |
+|    Return time series of aggregated values to caller                    |
 |                                                                         |
-|  Optimization: pre-aggregated rollups (materialized views) for         |
-|  common queries. Query result caching for immutable time ranges.       |
+|  Optimization: pre-aggregated rollups (materialized views) for          |
+|  common queries. Query result caching for immutable time ranges.        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  4. FAILURE SCENARIOS                                                    |
+|  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
-|  +---------------------------+-------------------------------------+   |
-|  | What Fails                | Impact & Recovery                   |   |
-|  +---------------------------+-------------------------------------+   |
-|  | Ingestion node crashes    | On restart: replay WAL from last    |   |
+|  +---------------------------+-------------------------------------+    |
+|  | What Fails                | Impact & Recovery                   |    |
+|  +---------------------------+-------------------------------------+    |
+|  | Ingestion node crashes    | On restart: replay WAL from last    |    |
 |  |                           | checkpoint. Unflushed MemTable data  |   |
 |  |                           | recovered from WAL entries.          |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | Disk full on storage node | Block flush fails. Retention policy  |   |
 |  |                           | drops oldest blocks to free space.   |   |
 |  |                           | Alert fires on storage utilization.  |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | Query timeout (expensive  | Query frontend splits large time     |   |
 |  | long-range query)         | range into sub-queries, caches       |   |
 |  |                           | immutable sub-results. Pre-computed  |   |
 |  |                           | recording rules avoid recalculation. |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |  | Shard goes down (multi-   | Querier returns partial results with |   |
 |  | shard deployment)         | warning. Write Gateway re-routes to  |   |
 |  |                           | replica shard. Replication ensures   |   |
 |  |                           | no permanent data loss.              |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  5. CLEANUP / EXPIRY                                                     |
+|  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
-|  Retention-based deletion:                                               |
-|    Blocks are time-partitioned (2h/6h/12h/24h windows).                |
-|    Deleting old data = drop entire block directory (O(1)).             |
-|    No row-level DELETE -- instant, no write amplification.             |
+|  Retention-based deletion:                                              |
+|    Blocks are time-partitioned (2h/6h/12h/24h windows).                 |
+|    Deleting old data = drop entire block directory (O(1)).              |
+|    No row-level DELETE -- instant, no write amplification.              |
 |                                                                         |
 |  Downsampling (Thanos Compactor or built-in):                           |
-|    Raw 15s --> 5-min avg after 7 days                                  |
-|    5-min --> 1-hour avg after 30 days                                  |
-|    Stored as separate block files alongside raw data.                  |
+|    Raw 15s --> 5-min avg after 7 days                                   |
+|    5-min --> 1-hour avg after 30 days                                   |
+|    Stored as separate block files alongside raw data.                   |
 |                                                                         |
-|  Compaction:                                                             |
-|    Merges small blocks: 2h+2h+2h --> 6h block                         |
-|    Drops deleted series (tombstones) during merge.                     |
-|    Improves read performance (fewer files to open per query).          |
+|  Compaction:                                                            |
+|    Merges small blocks: 2h+2h+2h --> 6h block                           |
+|    Drops deleted series (tombstones) during merge.                      |
+|    Improves read performance (fewer files to open per query).           |
 |                                                                         |
-|  WAL truncation:                                                         |
-|    Old WAL segments (128 MB each) deleted after successful flush.      |
-|    On crash: only replay WAL segments after last checkpoint.           |
+|  WAL truncation:                                                        |
+|    Old WAL segments (128 MB each) deleted after successful flush.       |
+|    On crash: only replay WAL segments after last checkpoint.            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. LSM-TREE BASED STORAGE: append-only writes for high ingestion       |
+|     throughput. Compaction merges SSTables in background.               |
+|  2. TIME-BASED PARTITIONING: each partition covers a time window        |
+|     (e.g., 2 hours). Queries skip irrelevant partitions.                |
+|  3. COLUMNAR COMPRESSION: delta-of-delta for timestamps, XOR for        |
+|     floating-point values. 10-15x compression ratio.                    |
+|  4. DOWNSAMPLING PIPELINE: raw -> 1min -> 1hour -> 1day aggregates.     |
+|     Configurable retention per tier.                                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * LSM-TREE vs B-TREE: LSM gives better write throughput (sequential    |
+|    I/O) but reads may check multiple levels. B-tree is better for       |
+|    random reads but slower writes. TSDB workload is write-heavy.        |
+|  * COMPRESSION vs QUERY SPEED: Aggressive compression saves storage     |
+|    but adds decompression cost at query time. Block-level compression   |
+|    lets us decompress only relevant blocks.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

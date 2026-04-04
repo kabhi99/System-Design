@@ -8,7 +8,84 @@ their live location with friends. The core challenge is computing proximity
 over millions of simultaneously moving entities with low latency, strong
 privacy guarantees, and minimal battery drain.
 
-## SECTION 1: UNDERSTANDING THE PROBLEM
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: How geographically close is considered "nearby"?            |
+|                                                                         |
+|  INTERVIEWER: 5 miles. This number should be configurable.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Can I assume the distance is calculated as straight-line    |
+|    distance between two users? In real life, there could be a river     |
+|    in between, resulting in a longer travel distance.                   |
+|                                                                         |
+|  INTERVIEWER: Yes, straight-line distance is a reasonable assumption.   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: How many users does the app have? Can I assume 1 billion    |
+|    users and 10% of them use the nearby friends feature?                |
+|                                                                         |
+|  INTERVIEWER: Yes, that's a reasonable assumption. So 100 million       |
+|    DAU for this feature, 10 million concurrent at peak.                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Do we need to store location history?                       |
+|                                                                         |
+|  INTERVIEWER: Yes, location history can be valuable for ML and          |
+|    analytics purposes. But the core feature only cares about the        |
+|    current location.                                                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: If a friend is inactive for more than 10 minutes,           |
+|    should they disappear from the nearby friend list, or should         |
+|    we display the last known location?                                  |
+|                                                                         |
+|  INTERVIEWER: Inactive friends should disappear. Don't show stale       |
+|    locations.                                                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Do we need to worry about privacy and data laws such        |
+|    as GDPR or CCPA?                                                     |
+|                                                                         |
+|  INTERVIEWER: Good question. For simplicity, don't worry about it       |
+|    for now. But the design should support opt-in/opt-out and            |
+|    configurable sharing permissions.                                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What's the expected location update frequency?              |
+|                                                                         |
+|  INTERVIEWER: Every 30 seconds on average. Human walking speed          |
+|    is slow (3-4 mph), so 30s intervals are sufficient. The              |
+|    client can adapt based on movement speed and battery level.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Nearby = within 5 miles (configurable)                               |
+|  * 100M DAU, 10M concurrent, 400 avg friends per user                   |
+|  * Location update every 30s => ~333K updates/sec                       |
+|  * Inactive >10 min => disappear from list                              |
+|  * Store location history (but not core to real-time feature)           |
+|  * Privacy: opt-in, configurable per-friend sharing                     |
+|  * Deep dive: pub/sub fan-out at scale, battery optimization            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS NEARBY FRIENDS?
 
@@ -1197,7 +1274,7 @@ privacy guarantees, and minimal battery drain.
 ||  1. ENTITY STATE MACHINE: Location Update Lifecycle                      |
 ||  ======================================================                  |
 ||                                                                          |
-||  RECEIVED --> VALIDATED --> CACHED --> BROADCAST --> EXPIRED              |
+||  RECEIVED --> VALIDATED --> CACHED --> BROADCAST --> EXPIRED             |
 ||                                                                          |
 ||  +----------+  bounds   +----------+  HMSET     +----------+             |
 ||  | RECEIVED |  check,   | VALIDATED|  loc:{uid} | CACHED   |             |
@@ -1213,8 +1290,8 @@ privacy guarantees, and minimal battery drain.
 ||                                                 |  to subs)|             |
 ||                                                 +----------+             |
 ||                                                      |                   |
-||                             TTL 600s expires OR       |                   |
-||                             user stops sharing        v                   |
+||                             TTL 600s expires OR       |                  |
+||                             user stops sharing        v                  |
 ||                                                 +----------+             |
 ||                                                 | EXPIRED  |             |
 ||                                                 | (key     |             |
@@ -1234,7 +1311,7 @@ privacy guarantees, and minimal battery drain.
 ||                                                                          |
 ||  Step 2: Compute geohash                                                 |
 ||    new_geohash = geohash_encode(lat, lng, precision=6)                   |
-||    old_geohash = HGET loc:{user_id} geohash                             |
+||    old_geohash = HGET loc:{user_id} geohash                              |
 ||                                                                          |
 ||  Step 3: Update Location Cache (Redis)                                   |
 ||    HMSET loc:{user_id}                                                   |
@@ -1251,7 +1328,7 @@ privacy guarantees, and minimal battery drain.
 ||  Step 5: Publish to user's Pub/Sub channel                               |
 ||    PUBLISH location:{user_id}                                            |
 ||      {lat, lng, timestamp, speed, accuracy}                              |
-||    -> All subscribed friends receive via WebSocket gateway                |
+||    -> All subscribed friends receive via WebSocket gateway               |
 ||    -> Fan-out: ~20 friends avg -> ~6.6M deliveries/sec                   |
 ||                                                                          |
 ||  3. READ PATH: Nearby Friends Query (Cold Start)                         |
@@ -1264,7 +1341,7 @@ privacy guarantees, and minimal battery drain.
 ||    MISS -> query Friend Service, cache result                            |
 ||                                                                          |
 ||  Step 2: Filter to actively sharing friends                              |
-||    sharing_friends = []                                                   |
+||    sharing_friends = []                                                  |
 ||    for fid in friend_ids:       // Redis pipeline                        |
 ||      if EXISTS sharing:{fid}: sharing_friends.append(fid)                |
 ||                                                                          |
@@ -1294,7 +1371,7 @@ privacy guarantees, and minimal battery drain.
 ||  |                     | subscribe. Next GPS fix restores state.    |    |
 ||  +---------------------+--------------------------------------------+    |
 ||  | WebSocket gateway   | Clients detect via heartbeat timeout,      |    |
-||  |  down               | reconnect to another gateway via LB. Re-  |    |
+||  |  down               | reconnect to another gateway via LB. Re-  |     |
 ||  |                     | subscribe to all friend channels.          |    |
 ||  +---------------------+--------------------------------------------+    |
 ||  | GPS signal lost     | Client falls back to cell tower / WiFi.    |    |
@@ -1310,15 +1387,15 @@ privacy guarantees, and minimal battery drain.
 ||  ======================================================                  |
 ||                                                                          |
 ||  * loc:{user_id}: TTL 600s — auto-expires if no GPS update.              |
-||    Each update resets the TTL. No manual cleanup needed.                  |
+||    Each update resets the TTL. No manual cleanup needed.                 |
 ||  * sharing:{user_id}: TTL matches sharing duration (15 min to            |
-||    8 hrs). On expiry, channel is torn down, subscribers notified.         |
+||    8 hrs). On expiry, channel is torn down, subscribers notified.        |
 ||  * geo:{geohash}: TTL 300s — refreshed on each user location             |
 ||    update. Stale cells auto-evict.                                       |
 ||  * friends:{user_id}: TTL 1 hr — invalidated on friend                   |
 ||    add/remove events from Friend Service.                                |
 ||  * No permanent location storage by design. GDPR-compliant:              |
-||    all location data is ephemeral and self-expiring.                      |
+||    all location data is ephemeral and self-expiring.                     |
 ||                                                                          |
 +--------------------------------------------------------------------------+
 ```
@@ -1427,4 +1504,65 @@ privacy guarantees, and minimal battery drain.
 +--------------------------------------------------------------------------+
 ```
 
-*End of Nearby Friends System Design*
+## SECTION 14: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. WEBSOCKET FOR BIDIRECTIONAL REAL-TIME COMMUNICATION                 |
+|     Single persistent connection per user for both uploading GPS        |
+|     fixes and receiving friend location updates. Low per-message        |
+|     overhead (~6 bytes framing vs ~500 bytes HTTP headers).             |
+|                                                                         |
+|  2. REDIS PUB/SUB AS LIGHTWEIGHT ROUTING LAYER                          |
+|     One channel per active user. Friends subscribe to each other's      |
+|     channels. Channels are extremely cheap to create (hash table +      |
+|     linked list). CPU is the bottleneck, not memory. Distributed        |
+|     across ~140 Redis servers via consistent hashing.                   |
+|                                                                         |
+|  3. LOCATION CACHE WITH TTL-BASED EXPIRY                                |
+|     Redis stores only the LATEST location per active user. TTL          |
+|     auto-purges inactive users (no cleanup jobs). 10M users *           |
+|     64 bytes = 640 MB (fits in a single Redis instance, sharded         |
+|     for throughput).                                                    |
+|                                                                         |
+|  4. ADAPTIVE GPS POLLING FOR BATTERY OPTIMIZATION                       |
+|     Update frequency adapts to movement speed: walking (10s),           |
+|     driving (5s), stationary (60s), low battery (120s). Uses            |
+|     accelerometer to detect motion without GPS drain.                   |
+|                                                                         |
+|  5. PROXIMITY COMPUTED AT SUBSCRIBER, NOT PUBLISHER                     |
+|     Each subscriber's WebSocket handler receives the raw location       |
+|     update and computes distance locally. If > search radius,           |
+|     update is dropped (not forwarded to client). This avoids            |
+|     the publisher needing to know every subscriber's location.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * FAN-OUT COST: 333K updates/sec * 40 nearby friends each =            |
+|    ~14M deliveries/sec. This is the most expensive operation.           |
+|    Redis pub/sub distributes across 100+ servers. Alternative:          |
+|    Erlang processes (more efficient but niche hiring pool).             |
+|                                                                         |
+|  * PRESENCE ACCURACY vs BATTERY: More frequent GPS updates =            |
+|    more accurate but faster battery drain. 30s interval is the          |
+|    sweet spot: position changes are small at walking speed, and         |
+|    battery impact is < 5% per hour.                                     |
+|                                                                         |
+|  * SUBSCRIBE TO ALL FRIENDS vs ONLY ACTIVE: Subscribing to all          |
+|    friends (including inactive) wastes memory but simplifies the        |
+|    design (no subscribe/unsubscribe on friend activity changes).        |
+|    Inactive channels use zero CPU. Memory trade-off is worthwhile       |
+|    for architectural simplicity.                                        |
+|                                                                         |
+|  * STATEFUL WEBSOCKET vs STATELESS HTTP: WebSocket is stateful          |
+|    (harder to load-balance, drain on deploys) but necessary for         |
+|    real-time push. HTTP long-polling would add latency and              |
+|    connection overhead. WebSocket is the clear choice here.             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

@@ -7,6 +7,47 @@ store petabytes of data, provide sub-second search across years of mail, filter
 spam with near-perfect accuracy, and support massive attachments - all while
 guaranteeing that no legitimate email is ever lost.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing the full email system (send + receive +    |
+|    store + search) or just one part?                                    |
+|                                                                         |
+|  INTERVIEWER: The full system. Cover sending (SMTP), receiving,         |
+|    storage, and inbox search. Think Gmail architecture.                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale?                                                 |
+|                                                                         |
+|  INTERVIEWER: 1 billion users, 100 billion emails sent/received per     |
+|    day. Average email size 50KB including attachments.                  |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle spam filtering?                             |
+|                                                                         |
+|  INTERVIEWER: Yes, briefly. It's a critical component. Mention          |
+|    the pipeline but don't deep-dive into ML models.                     |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Full email system: send, receive, store, search                      |
+|  * 1B users, 100B emails/day                                            |
+|  * SMTP send/receive, IMAP for client access                            |
+|  * Spam filtering pipeline (brief)                                      |
+|  * Deep dive: email storage + search indexing at scale                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS AN EMAIL SYSTEM?
@@ -1193,10 +1234,10 @@ guaranteeing that no legitimate email is ever lost.
 |                                                                         |
 |  QUEUED ──> SENDING ──> DELIVERED                                       |
 |    │           │                                                        |
-|    │           └──> DEFERRED (soft bounce, temp unavailable)             |
+|    │           └──> DEFERRED (soft bounce, temp unavailable)            |
 |    │                   │                                                |
-|    │                   └──> SENDING (retry with backoff)                 |
-|    │                   └──> BOUNCED (max retries exhausted, 72h)         |
+|    │                   └──> SENDING (retry with backoff)                |
+|    │                   └──> BOUNCED (max retries exhausted, 72h)        |
 |    │                                                                    |
 |    └──> CANCELLED (undo send, within delay window)                      |
 |                                                                         |
@@ -1205,8 +1246,8 @@ guaranteeing that no legitimate email is ever lost.
 |  For inbound:                                                           |
 |  RECEIVED ──> SPAM_CHECK ──> DELIVERED_TO_INBOX                         |
 |                   │                                                     |
-|                   └──> QUARANTINED (virus detected)                      |
-|                   └──> SPAM_FOLDER (spam score above threshold)          |
+|                   └──> QUARANTINED (virus detected)                     |
+|                   └──> SPAM_FOLDER (spam score above threshold)         |
 |                                                                         |
 |  Transition rules:                                                      |
 |  * QUEUED: email in durable outbound queue after user clicks Send       |
@@ -1216,56 +1257,56 @@ guaranteeing that no legitimate email is ever lost.
 |  * BOUNCED: all retries exhausted, bounce email sent to sender          |
 |  * FAILED: 5xx permanent rejection (hard bounce), no retry              |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Email Send via SMTP with Retry + Bounce)       |
 |                                                                         |
 |  User        API GW       Outbound SMTP     Queue         Recipient     |
-|    |            |              |               |              |          |
-|    |-- Send --->|              |               |              |          |
-|    |  (to, cc,  |              |               |              |          |
-|    |   body,    |              |               |              |          |
-|    |   attach)  |              |               |              |          |
+|    |            |              |               |              |         |
+|    |-- Send --->|              |               |              |         |
+|    |  (to, cc,  |              |               |              |         |
+|    |   body,    |              |               |              |         |
+|    |   attach)  |              |               |              |         |
 |    |            |                                                       |
 |    |  1. Validate: recipients exist, size < 25MB, rate limit            |
 |    |  2. Store email body in Blob Storage (GCS/S3)                      |
-|    |     * SHA-256 hash for attachment deduplication                     |
+|    |     * SHA-256 hash for attachment deduplication                    |
 |    |     * body_ref = "blob://body/{email_id}"                          |
 |    |  3. Save to Sent folder (Bigtable/Cassandra)                       |
 |    |  4. Enqueue to outbound queue (Kafka/Pulsar)                       |
 |    |     * Durable write = delivery guarantee                           |
-|    |            |              |               |              |          |
+|    |            |              |               |              |         |
 |    |<-- ACK ---|              |               |              |          |
-|    |  "sending" |              |               |              |          |
-|    |            |              |               |              |          |
+|    |  "sending" |              |               |              |         |
+|    |            |              |               |              |         |
 |    |            |  Outbound SMTP picks up from queue:        |          |
-|    |            |              |               |              |          |
-|    |            |  5. DNS MX lookup for recipient domain      |          |
-|    |            |     dig MX example.com -> mail.example.com  |          |
-|    |            |              |               |              |          |
-|    |            |  6. SMTP conversation:       |              |          |
-|    |            |     EHLO sender.com          |              |          |
-|    |            |     MAIL FROM:<user@our.com> |              |          |
-|    |            |     RCPT TO:<b@example.com>  |              |          |
-|    |            |     DATA                     |              |          |
-|    |            |     (email content + DKIM signature)        |          |
-|    |            |     .                        |              |          |
-|    |            |              |               |              |          |
-|    |            |  Response from recipient server:            |          |
-|    |            |    250 OK          -> mark DELIVERED        |          |
-|    |            |    4xx temp fail   -> mark DEFERRED, requeue|          |
-|    |            |    5xx perm fail   -> mark FAILED, bounce   |          |
-|    |            |              |               |              |          |
-|    |            |  Retry schedule (exponential backoff):      |          |
-|    |            |    Attempt 1: immediate                     |          |
-|    |            |    Attempt 2: 1 min                         |          |
-|    |            |    Attempt 3: 5 min                         |          |
-|    |            |    Attempt 4: 30 min                        |          |
-|    |            |    Attempt 5: 2 hours                       |          |
-|    |            |    Attempt 6: 8 hours                       |          |
-|    |            |    Attempt 7: 24 hours                      |          |
-|    |            |    After 72 hours: generate bounce email    |          |
-|    |            |              |               |              |          |
+|    |            |              |               |              |         |
+|    |            |  5. DNS MX lookup for recipient domain      |         |
+|    |            |     dig MX example.com -> mail.example.com  |         |
+|    |            |              |               |              |         |
+|    |            |  6. SMTP conversation:       |              |         |
+|    |            |     EHLO sender.com          |              |         |
+|    |            |     MAIL FROM:<user@our.com> |              |         |
+|    |            |     RCPT TO:<b@example.com>  |              |         |
+|    |            |     DATA                     |              |         |
+|    |            |     (email content + DKIM signature)        |         |
+|    |            |     .                        |              |         |
+|    |            |              |               |              |         |
+|    |            |  Response from recipient server:            |         |
+|    |            |    250 OK          -> mark DELIVERED        |         |
+|    |            |    4xx temp fail   -> mark DEFERRED, requeue|         |
+|    |            |    5xx perm fail   -> mark FAILED, bounce   |         |
+|    |            |              |               |              |         |
+|    |            |  Retry schedule (exponential backoff):      |         |
+|    |            |    Attempt 1: immediate                     |         |
+|    |            |    Attempt 2: 1 min                         |         |
+|    |            |    Attempt 3: 5 min                         |         |
+|    |            |    Attempt 4: 30 min                        |         |
+|    |            |    Attempt 5: 2 hours                       |         |
+|    |            |    Attempt 6: 8 hours                       |         |
+|    |            |    Attempt 7: 24 hours                      |         |
+|    |            |    After 72 hours: generate bounce email    |         |
+|    |            |              |               |              |         |
 |                                                                         |
 |  Inbound pipeline (for received emails):                                |
 |  External SMTP -> Inbound SMTP Server                                   |
@@ -1277,16 +1318,16 @@ guaranteeing that no legitimate email is ever lost.
 |    -> Queue: Search Indexer (Kafka -> Lucene/ES)                        |
 |    -> Push Notification (FCM/APNs)                                      |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  3. READ PATH                                                           |
 |                                                                         |
 |  INBOX LOAD:                                                            |
-|    Client --> Mailbox Service --> Bigtable/Cassandra                     |
+|    Client --> Mailbox Service --> Bigtable/Cassandra                    |
 |    Row key: {user_id}:{label}:{reverse_timestamp}                       |
 |    * Reads metadata only (from, subject, preview, flags)                |
 |    * Body fetched on-demand when email opened                           |
-|    * Sorted by timestamp DESC, paginated by cursor                     |
+|    * Sorted by timestamp DESC, paginated by cursor                      |
 |    * Per-user data locality: single shard read                          |
 |                                                                         |
 |  EMAIL BODY + ATTACHMENTS:                                              |
@@ -1302,12 +1343,12 @@ guaranteeing that no legitimate email is ever lost.
 |    * Index updated within 5-30 seconds of email arrival                 |
 |                                                                         |
 |  IMAP ACCESS (desktop clients):                                         |
-|    Client --> IMAP Server --> Mailbox Storage                            |
-|    * Partial fetch: headers only (saves bandwidth)                     |
-|    * IDLE command: server pushes new mail notifications                  |
+|    Client --> IMAP Server --> Mailbox Storage                           |
+|    * Partial fetch: headers only (saves bandwidth)                      |
+|    * IDLE command: server pushes new mail notifications                 |
 |    * Flags (\Seen, \Flagged) synced across all devices                  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
@@ -1319,7 +1360,7 @@ guaranteeing that no legitimate email is ever lost.
 |  |                              | Recipient may receive duplicate;   |  |
 |  |                              | deduped by Message-ID header.      |  |
 |  +------------------------------+------------------------------------+  |
-|  | Inbound SMTP crash before    | SMTP protocol: no 250 OK sent.    |  |
+|  | Inbound SMTP crash before    | SMTP protocol: no 250 OK sent.    |   |
 |  | storing to mailbox           | Sender's server retries delivery.  |  |
 |  |                              | At-least-once: dup detected by     |  |
 |  |                              | Message-ID at mailbox level.       |  |
@@ -1335,7 +1376,7 @@ guaranteeing that no legitimate email is ever lost.
 |  |                              | secondary region (RPO < 1 min).    |  |
 |  +------------------------------+------------------------------------+  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
@@ -1367,6 +1408,33 @@ guaranteeing that no legitimate email is ever lost.
 |  * 30 days - 1 year: HDD (warm)                                         |
 |  * >1 year: archive (cold), restored on-demand                          |
 |  * Email body: similar tiering based on last access time                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. SMTP for sending/receiving between servers. IMAP for client access. |
+|  2. BLOB STORAGE (S3) for email bodies + attachments. Metadata in DB.   |
+|  3. ELASTICSEARCH for full-text inbox search. Indexed async.            |
+|  4. MULTI-STAGE SPAM PIPELINE: IP reputation -> content ML model ->     |
+|     user feedback loop. Runs before delivery to inbox.                  |
+|  5. PUSH NOTIFICATIONS via IMAP IDLE or proprietary push for mobile.    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * SEARCH LATENCY vs INDEX COST: Indexing every email is expensive      |
+|    but enables fast search. Only index recent emails (6 months);        |
+|    older emails searched on-demand from cold storage.                   |
+|  * SPAM AGGRESSIVENESS: Too aggressive = false positives (legit email   |
+|    in spam). Too lenient = inbox flooded. Feedback loop improves.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

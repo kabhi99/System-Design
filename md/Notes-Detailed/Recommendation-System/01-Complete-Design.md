@@ -2,6 +2,49 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: What type of recommendations? Product recommendations       |
+|    (Amazon), content recommendations (Netflix), or social (Twitter)?    |
+|                                                                         |
+|  INTERVIEWER: Product recommendations for e-commerce. "Customers        |
+|    who bought X also bought Y" and personalized homepage.               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I cover the ML models in depth or focus on the       |
+|    system architecture (serving, feature store, training pipeline)?     |
+|                                                                         |
+|  INTERVIEWER: Focus on the system architecture. Mention collaborative   |
+|    filtering vs content-based vs hybrid at a high level. Deep dive      |
+|    into serving latency, feature store, and A/B testing infra.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many users and items?                       |
+|                                                                         |
+|  INTERVIEWER: 100M users, 10M products, 1B interactions/day.            |
+|    Recommendations must be generated in under 200ms.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Product recommendation system (Amazon style)                         |
+|  * 100M users, 10M products, 1B interactions/day                        |
+|  * Collaborative filtering + content-based (high-level)                 |
+|  * Serving architecture, feature store, A/B testing                     |
+|  * Deep dive: two-stage retrieval + ranking pipeline                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: TABLE OF CONTENTS
 
 1. Introduction & Motivation
@@ -1582,7 +1625,7 @@ item, and uses these predictions to suggest items the user is likely to engage w
 ||                                                                          |
 ||  CANDIDATE ---> SCORED ---> RE_RANKED ---> SERVED ---> ENGAGED           |
 ||  (ANN search)  (ranking     (diversity,    (API        |    |            |
-||                  model)      freshness)     response)  clicked ignored    |
+||                  model)      freshness)     response)  clicked ignored   |
 ||                                                         |    |           |
 ||                                         log to Kafka <--+----+           |
 ||                                              |                           |
@@ -1618,13 +1661,13 @@ item, and uses these predictions to suggest items the user is likely to engage w
 ||  Step 4: Rebuild ANN index (FAISS / ScaNN)                               |
 ||    Load new item embeddings (100M items x 256-d)                         |
 ||    Build HNSW or IVF index                                               |
-||    Upload to index servers; atomic swap old -> new                        |
-||    Pre-compute candidate lists for top users (batch inference)            |
+||    Upload to index servers; atomic swap old -> new                       |
+||    Pre-compute candidate lists for top users (batch inference)           |
 ||                                                                          |
 ||  Step 5: Canary deploy new model via A/B experiment config               |
-||    Traffic Router hashes user_id to experiment variant                    |
+||    Traffic Router hashes user_id to experiment variant                   |
 ||    5% -> new model, 95% -> current model                                 |
-||    Monitor guardrail metrics (CTR, revenue, retention)                    |
+||    Monitor guardrail metrics (CTR, revenue, retention)                   |
 ||                                                                          |
 ||  3. READ PATH: Two-Stage Retrieval -> Ranking                            |
 ||  ======================================================                  |
@@ -1639,53 +1682,83 @@ item, and uses these predictions to suggest items the user is likely to engage w
 ||      Popular-in-category          -> 100 candidates                      |
 ||      Recently trending            -> 100 candidates                      |
 ||      "More like" recent history   -> 100 candidates                      |
-||    Deduplicate + filter seen items -> ~400 candidates                     |
+||    Deduplicate + filter seen items -> ~400 candidates                    |
 ||                                                                          |
 ||  Stage 2 — Scoring / Ranking (< 30 ms)                                   |
-||    For each candidate, fetch features from Feature Store:                 |
+||    For each candidate, fetch features from Feature Store:                |
 ||      HMGET item_features:{item_id}   // Redis pipeline                   |
-||    Ranking model inference (GPU serving):                                 |
-||      score = model.predict(user_features, item_features, context)         |
-||    Sort candidates by score descending                                    |
+||    Ranking model inference (GPU serving):                                |
+||      score = model.predict(user_features, item_features, context)        |
+||    Sort candidates by score descending                                   |
 ||                                                                          |
 ||  Stage 3 — Re-Ranking (< 5 ms)                                           |
-||    Apply diversity rules (no 3 items from same category in a row)         |
-||    Apply business rules (boost sponsored, suppress reported)              |
-||    Return top 50 items to client                                          |
+||    Apply diversity rules (no 3 items from same category in a row)        |
+||    Apply business rules (boost sponsored, suppress reported)             |
+||    Return top 50 items to client                                         |
 ||                                                                          |
-||  4. FAILURE SCENARIOS                                                     |
+||  4. FAILURE SCENARIOS                                                    |
 ||  ======================================================                  |
 ||                                                                          |
-||  +----------------------+-------------------------------------------+     |
-||  | What Fails           | Impact & Recovery                         |     |
-||  +----------------------+-------------------------------------------+     |
-||  | Feature Store (Redis)| Fall back to batch-precomputed user       |     |
-||  |  unavailable         | features in local cache; slightly stale.  |     |
-||  +----------------------+-------------------------------------------+     |
+||  +----------------------+-------------------------------------------+    |
+||  | What Fails           | Impact & Recovery                         |    |
+||  +----------------------+-------------------------------------------+    |
+||  | Feature Store (Redis)| Fall back to batch-precomputed user       |    |
+||  |  unavailable         | features in local cache; slightly stale.  |    |
+||  +----------------------+-------------------------------------------+    |
 ||  | ANN index server down| Replicas serve traffic. If all down,     |     |
-||  |                      | fall back to popularity-based recs.       |     |
-||  +----------------------+-------------------------------------------+     |
-||  | Ranking model timeout| Return candidates sorted by ANN score     |     |
-||  |                      | (embedding similarity) without re-rank.   |     |
-||  +----------------------+-------------------------------------------+     |
-||  | Kafka interaction    | Feature Store becomes stale; recs drift   |     |
-||  |  lag > 1 hr          | toward older preferences. Alert + fix.    |     |
-||  +----------------------+-------------------------------------------+     |
+||  |                      | fall back to popularity-based recs.       |    |
+||  +----------------------+-------------------------------------------+    |
+||  | Ranking model timeout| Return candidates sorted by ANN score     |    |
+||  |                      | (embedding similarity) without re-rank.   |    |
+||  +----------------------+-------------------------------------------+    |
+||  | Kafka interaction    | Feature Store becomes stale; recs drift   |    |
+||  |  lag > 1 hr          | toward older preferences. Alert + fix.    |    |
+||  +----------------------+-------------------------------------------+    |
 ||                                                                          |
 ||  5. CLEANUP / EXPIRY                                                     |
 ||  ======================================================                  |
 ||                                                                          |
-||  * ANN index rebuilt on each model retrain (daily); old index             |
-||    decommissioned after traffic drains.                                   |
-||  * Feature Store keys: user_features TTL 30 days (inactive users          |
-||    auto-expire); item_features refreshed on catalog update.               |
-||  * Interaction logs in S3: partitioned by date, lifecycle policy           |
-||    archives to Glacier after 90 days, deletes after 2 years.              |
-||  * Pre-computed candidate lists: overwritten each batch cycle;            |
-||    stale lists serve as fallback until refresh.                            |
-||  * Experiment configs auto-expire after defined duration.                  |
+||  * ANN index rebuilt on each model retrain (daily); old index            |
+||    decommissioned after traffic drains.                                  |
+||  * Feature Store keys: user_features TTL 30 days (inactive users         |
+||    auto-expire); item_features refreshed on catalog update.              |
+||  * Interaction logs in S3: partitioned by date, lifecycle policy         |
+||    archives to Glacier after 90 days, deletes after 2 years.             |
+||  * Pre-computed candidate lists: overwritten each batch cycle;           |
+||    stale lists serve as fallback until refresh.                          |
+||  * Experiment configs auto-expire after defined duration.                |
 ||                                                                          |
 +--------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. TWO-STAGE PIPELINE: Candidate retrieval (fast, ~1000 items from     |
+|     millions) -> Ranking (ML model scores ~1000 items, picks top 20).   |
+|  2. FEATURE STORE: pre-computed user/item features served from Redis.   |
+|     Updated hourly by batch pipeline + real-time event stream.          |
+|  3. OFFLINE TRAINING + ONLINE SERVING: Model trained on batch data      |
+|     (Spark), deployed to serving infra (TensorFlow Serving).            |
+|  4. A/B TESTING: traffic split at user level. Measure CTR, conversion,  |
+|     revenue per recommendation variant.                                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * COLLABORATIVE vs CONTENT-BASED: Collaborative captures user taste    |
+|    but suffers cold-start (new users/items). Content-based works for    |
+|    new items but misses serendipity. Hybrid combines strengths.         |
+|  * PRE-COMPUTED vs REAL-TIME: Pre-computed recs are fast to serve but   |
+|    stale. Real-time scoring is fresh but adds latency. We pre-compute   |
+|    candidates and rank in real-time for the best balance.
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 19: QUICK REFERENCE CARD

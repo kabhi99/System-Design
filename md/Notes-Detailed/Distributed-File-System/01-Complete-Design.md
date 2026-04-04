@@ -6,6 +6,42 @@ fault tolerance, high throughput, and scalability for petabyte-scale data.
 Google File System (GFS) and Hadoop Distributed File System (HDFS) are
 the most influential designs.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing something like GFS/HDFS for big data,      |
+|    or a user-facing file system like Google Drive?                      |
+|                                                                         |
+|  INTERVIEWER: GFS/HDFS style. Large files (100MB-GB), append-heavy      |
+|    workloads, optimized for batch processing (MapReduce). Not           |
+|    user-facing cloud storage.                                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale and reliability requirements?                    |
+|                                                                         |
+|  INTERVIEWER: Petabytes of storage across thousands of commodity        |
+|    machines. Hardware failures are the norm, not the exception.         |
+|    3x replication for durability.                                       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * GFS/HDFS-style distributed file system                               |
+|  * Large files, append-heavy, batch-optimized                           |
+|  * Petabyte scale, commodity hardware, 3x replication                   |
+|  * Single master (NameNode) + many data nodes                           |
+|  * Deep dive: chunk placement, replication, master failover             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: REQUIREMENTS
 
 ```
@@ -476,7 +512,7 @@ the most influential designs.
 |                                                                         |
 |  1. ENTITY STATE MACHINE (Block / Chunk)                                |
 |                                                                         |
-|    ALLOCATED --> WRITING --> COMMITTED --> REPLICATED                    |
+|    ALLOCATED --> WRITING --> COMMITTED --> REPLICATED                   |
 |       |            |            |              |                        |
 |       |            |            |              +--> UNDER_REPLICATED    |
 |       |            |            |              |    (node died)         |
@@ -488,15 +524,15 @@ the most influential designs.
 |       |            |            |                       |               |
 |       |            |            |                   REPAIRED            |
 |       |            |            +--> DELETED (file deleted)             |
-|       |            +--> FAILED (write error, client retries)           |
-|       +--> LEASE_EXPIRED (primary lease timed out)                     |
+|       |            +--> FAILED (write error, client retries)            |
+|       +--> LEASE_EXPIRED (primary lease timed out)                      |
 |                                                                         |
 |  State tracked by:                                                      |
-|    Master/NameNode: namespace + file-to-chunk map (in memory)          |
-|    ChunkServer/DataNode: block reports + heartbeats every 3-10s        |
-|    Persistence: operation log + periodic checkpoints on master         |
+|    Master/NameNode: namespace + file-to-chunk map (in memory)           |
+|    ChunkServer/DataNode: block reports + heartbeats every 3-10s         |
+|    Persistence: operation log + periodic checkpoints on master          |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Block Write Pipeline)                          |
 |                                                                         |
@@ -530,16 +566,16 @@ the most influential designs.
 |    else:                                                                |
 |      return ERROR  -- client retries with new chunk allocation          |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  3. READ PATH (Block Read)                                              |
 |                                                                         |
-|  Step 1: Client asks Master: "chunks for /data/file.log at offset?"    |
-|  Step 2: Master returns chunk_id + list of servers holding replicas    |
-|  Step 3: Client caches chunk locations (avoids repeated master calls)  |
+|  Step 1: Client asks Master: "chunks for /data/file.log at offset?"     |
+|  Step 2: Master returns chunk_id + list of servers holding replicas     |
+|  Step 3: Client caches chunk locations (avoids repeated master calls)   |
 |  Step 4: Client contacts nearest chunk server directly                  |
-|  Step 5: Chunk server reads from local disk, verifies CRC32            |
-|  Step 6: If checksum mismatch: report to master, try next replica      |
+|  Step 5: Chunk server reads from local disk, verifies CRC32             |
+|  Step 6: If checksum mismatch: report to master, try next replica       |
 |  Step 7: Return data to client                                          |
 |                                                                         |
 |  Client --> Master: (file, byte_offset)                                 |
@@ -547,59 +583,86 @@ the most influential designs.
 |  Client --> CS1: (chunk_id, chunk_offset)                               |
 |  Client <-- CS1: (data)  -- verified CRC32 per 64 KB block              |
 |                                                                         |
-|  Optimization: client reads from any replica (load balanced).          |
-|  Sequential reads prefetch next chunk locations from master.           |
+|  Optimization: client reads from any replica (load balanced).           |
+|  Sequential reads prefetch next chunk locations from master.            |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  4. FAILURE SCENARIOS                                                    |
+|  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
-|  +---------------------------+-------------------------------------+   |
-|  | What Fails                | Impact & Recovery                   |   |
-|  +---------------------------+-------------------------------------+   |
-|  | ChunkServer dies          | Master detects via missed heartbeat |   |
-|  |                           | (30s timeout). Chunks become under- |   |
-|  |                           | replicated. Master schedules re-    |   |
-|  |                           | replication to healthy servers.     |   |
-|  +---------------------------+-------------------------------------+   |
-|  | Master/NameNode down      | Standby takes over from replicated  |   |
-|  |                           | operation log (HDFS: ZooKeeper      |   |
-|  |                           | failover). Reads with cached chunk  |   |
-|  |                           | locations continue uninterrupted.   |   |
-|  +---------------------------+-------------------------------------+   |
-|  | Data corruption (bit rot) | CRC32 per 64KB block detects on     |   |
-|  |                           | read. Client falls back to another  |   |
-|  |                           | replica. Master re-replicates       |   |
-|  |                           | corrupted chunk.                    |   |
-|  +---------------------------+-------------------------------------+   |
+|  +---------------------------+-------------------------------------+    |
+|  | What Fails                | Impact & Recovery                   |    |
+|  +---------------------------+-------------------------------------+    |
+|  | ChunkServer dies          | Master detects via missed heartbeat |    |
+|  |                           | (30s timeout). Chunks become under- |    |
+|  |                           | replicated. Master schedules re-    |    |
+|  |                           | replication to healthy servers.     |    |
+|  +---------------------------+-------------------------------------+    |
+|  | Master/NameNode down      | Standby takes over from replicated  |    |
+|  |                           | operation log (HDFS: ZooKeeper      |    |
+|  |                           | failover). Reads with cached chunk  |    |
+|  |                           | locations continue uninterrupted.   |    |
+|  +---------------------------+-------------------------------------+    |
+|  | Data corruption (bit rot) | CRC32 per 64KB block detects on     |    |
+|  |                           | read. Client falls back to another  |    |
+|  |                           | replica. Master re-replicates       |    |
+|  |                           | corrupted chunk.                    |    |
+|  +---------------------------+-------------------------------------+    |
 |  | Network partition          | Chunk leases expire, preventing     |   |
-|  | (master <-> chunk server) | split-brain writes. Master waits    |   |
-|  |                           | grace period (10 min) before re-    |   |
-|  |                           | replication to avoid thrash.        |   |
-|  +---------------------------+-------------------------------------+   |
+|  | (master <-> chunk server) | split-brain writes. Master waits    |    |
+|  |                           | grace period (10 min) before re-    |    |
+|  |                           | replication to avoid thrash.        |    |
+|  +---------------------------+-------------------------------------+    |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  5. CLEANUP / EXPIRY                                                     |
+|  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
-|  Chunk garbage collection:                                               |
+|  Chunk garbage collection:                                              |
 |    When a file is deleted, master removes metadata immediately.         |
 |    Chunk servers discover orphaned chunks via block reports.            |
 |    Orphan chunks deleted lazily during next heartbeat cycle.            |
 |                                                                         |
-|  Re-replication throttling:                                              |
+|  Re-replication throttling:                                             |
 |    Bandwidth-limited (HDFS balancer) to avoid saturating network.       |
-|    Priority: chunks with fewest replicas re-replicated first.          |
+|    Priority: chunks with fewest replicas re-replicated first.           |
 |                                                                         |
-|  Operation log compaction:                                               |
+|  Operation log compaction:                                              |
 |    Periodic checkpoints snapshot master metadata.                       |
 |    Old operation log segments deleted after checkpoint.                 |
-|    On restart: load checkpoint + replay recent log entries.            |
+|    On restart: load checkpoint + replay recent log entries.             |
 |                                                                         |
-|  Decommissioning nodes:                                                  |
+|  Decommissioning nodes:                                                 |
 |    Mark node "draining" --> no new writes.                              |
-|    Repair scanner treats all chunks as "missing" and re-replicates.    |
-|    Node removed from cluster map once fully drained.                   |
+|    Repair scanner treats all chunks as "missing" and re-replicates.     |
+|    Node removed from cluster map once fully drained.                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. SINGLE MASTER (NameNode) for metadata. Simple, consistent.          |
+|     Trade-off: single point of failure mitigated by standby + WAL.      |
+|  2. 64MB CHUNKS with 3x replication across racks for durability.        |
+|  3. APPEND-ONLY writes. No random writes. Simplifies consistency.       |
+|  4. DATA LOCALITY: schedule compute where data lives (MapReduce).       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * SINGLE MASTER vs DISTRIBUTED METADATA: Single master is simpler      |
+|    but limits metadata scalability (~100M files). Federation or         |
+|    distributed namespace (HDFS Federation) scales further.              |
+|  * REPLICATION FACTOR: 3x is standard (survives 2 failures). Higher     |
+|    replication wastes storage. Erasure coding saves 50% storage         |
+|    but adds CPU cost for encoding/decoding.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

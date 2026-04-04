@@ -5,7 +5,84 @@ A real-time chat system enables users to exchange messages instantly. At scale,
 it must handle billions of messages per day, maintain message ordering, support
 group conversations, and deliver messages reliably even when recipients are offline.
 
-## SECTION 1: UNDERSTANDING THE PROBLEM
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a 1:1 chat app like WhatsApp, a            |
+|    team collaboration tool like Slack, or both?                         |
+|                                                                         |
+|  INTERVIEWER: Focus on a WhatsApp-style messenger. 1:1 and              |
+|    group chats, but not channels or threads like Slack.                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What message types should we support? Just text,            |
+|    or also media (images, videos, voice notes)?                         |
+|                                                                         |
+|  INTERVIEWER: Text is the core. Support media as attachments            |
+|    but don't deep-dive into video transcoding.                          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale are we targeting? How many users and             |
+|    messages per day?                                                    |
+|                                                                         |
+|  INTERVIEWER: 500M DAU, 50M concurrent connections, and                 |
+|    around 100 billion messages per day. Think WhatsApp scale.           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should messages be end-to-end encrypted?                    |
+|                                                                         |
+|  INTERVIEWER: Yes, cover E2E encryption at a high level.                |
+|    Focus the deep dive on message delivery and ordering.                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What delivery guarantees do we need? Is it OK               |
+|    to occasionally lose a message, or must every message be             |
+|    durably stored and delivered?                                        |
+|                                                                         |
+|  INTERVIEWER: Zero message loss. If the recipient is offline,           |
+|    queue the message and deliver when they reconnect. This is           |
+|    a core reliability requirement.                                      |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: For group chats, what's the maximum group size?             |
+|                                                                         |
+|  INTERVIEWER: Up to 1024 members per group. Most groups are             |
+|    small (5-20), but we must handle the upper bound.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Do we need read receipts and online/typing                  |
+|    indicators?                                                          |
+|                                                                         |
+|  INTERVIEWER: Yes. Delivery receipts (delivered, read) and              |
+|    typing indicators are expected features.                             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * WhatsApp-style 1:1 and group chat (up to 1024 members)               |
+|  * Text messages + media attachments                                    |
+|  * 500M DAU, 50M concurrent, 100B messages/day                          |
+|  * Zero message loss, at-least-once delivery                            |
+|  * E2E encryption (high-level coverage)                                 |
+|  * Read receipts, delivery status, typing indicators                    |
+|  * Deep dive: message ordering + WebSocket scaling                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS A CHAT SYSTEM?
 
@@ -1291,6 +1368,57 @@ group conversations, and deliver messages reliably even when recipients are offl
 |  +------------------+-------------+--------------------------------+    |
 |  Primary key: (user_id, last_message_at DESC)                           |
 |                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  SAMPLE DATA:                                                           |
+|                                                                         |
+|  users:                                                                 |
+|  +----------+----------------+-----------+                              |
+|  | user_id  | phone_number   | name      |                              |
+|  +----------+----------------+-----------+                              |
+|  | 10001    | +1-555-0101    | Alice     |                              |
+|  | 10002    | +1-555-0102    | Bob       |                              |
+|  | 10003    | +91-98765-4321 | Priya     |                              |
+|  +----------+----------------+-----------+                              |
+|                                                                         |
+|  conversations:                                                         |
+|  +--------------+---------+-----------+----------+                      |
+|  | conv_id      | type    | name      | created  |                      |
+|  +--------------+---------+-----------+----------+                      |
+|  | conv_aaa     | DIRECT  | NULL      | 10001    |                      |
+|  | conv_bbb     | GROUP   | "Team"    | 10001    |                      |
+|  +--------------+---------+-----------+----------+                      |
+|                                                                         |
+|  conversation_members:                                                  |
+|  +-----------+----------+--------+------------------+                   |
+|  | conv_id   | user_id  | role   | last_read_msg_id |                   |
+|  +-----------+----------+--------+------------------+                   |
+|  | conv_aaa  | 10001    | MEMBER | msg_ts_50        |                   |
+|  | conv_aaa  | 10002    | MEMBER | msg_ts_48        |                   |
+|  | conv_bbb  | 10001    | OWNER  | msg_ts_120       |                   |
+|  | conv_bbb  | 10002    | ADMIN  | msg_ts_119       |                   |
+|  | conv_bbb  | 10003    | MEMBER | msg_ts_115       |                   |
+|  +-----------+----------+--------+------------------+                   |
+|                                                                         |
+|  messages (Cassandra):                                                  |
+|  +-----------+----------+--------+---------+----------+                 |
+|  | conv_id   | msg_id   | sender | content | seq_num  |                 |
+|  +-----------+----------+--------+---------+----------+                 |
+|  | conv_aaa  | ts_48    | 10002  | "Hey!"  | 48       |                 |
+|  | conv_aaa  | ts_49    | 10001  | "Hi Bob" | 49      |                 |
+|  | conv_aaa  | ts_50    | 10002  | "Lunch?" | 50      |                 |
+|  | conv_bbb  | ts_119   | 10003  | "Done"  | 119      |                 |
+|  | conv_bbb  | ts_120   | 10001  | "Great" | 120      |                 |
+|  +-----------+----------+--------+---------+----------+                 |
+|                                                                         |
+|  WHY THESE INDEXES?                                                     |
+|  * (user_id) on conversation_members: powers "list my chats" -          |
+|    find all conversations a user belongs to.                            |
+|  * (user_id, last_message_at DESC) on user_conversations:               |
+|    inbox sorted by most recent message, cursor-paginated.               |
+|  * Cassandra partition key (conversation_id): all messages for          |
+|    one chat on the same partition for fast sequential reads.            |
+|                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
@@ -2036,7 +2164,65 @@ group conversations, and deliver messages reliably even when recipients are offl
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 15: QUICK REFERENCE SUMMARY
+## SECTION 15: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. WEBSOCKET FOR REAL-TIME DELIVERY                                    |
+|     Persistent bidirectional connections give sub-100ms delivery.       |
+|     Stateful connections require connection registry (Redis) and        |
+|     L4 load balancing. Trade-off vs HTTP polling: complexity for        |
+|     latency.                                                            |
+|                                                                         |
+|  2. CASSANDRA FOR MESSAGE STORAGE                                       |
+|     Write-optimized, time-series natural fit. Partition by              |
+|     conversation_id so all messages in one chat are co-located.         |
+|     AP system (availability over consistency) - acceptable because      |
+|     message ordering uses application-level sequence numbers.           |
+|                                                                         |
+|  3. PER-CONVERSATION SEQUENCE NUMBERS                                   |
+|     Atomic counter per conversation ensures total ordering within       |
+|     a chat. Avoids distributed clock issues. Redis INCR provides        |
+|     fast, atomic sequence generation.                                   |
+|                                                                         |
+|  4. E2E ENCRYPTION VIA SIGNAL PROTOCOL                                  |
+|     Server never sees plaintext. Double Ratchet provides forward        |
+|     secrecy. Trade-off: server-side search is impossible.               |
+|                                                                         |
+|  5. KAFKA FOR GROUP MESSAGE FAN-OUT                                     |
+|     Group messages are published to Kafka partitioned by group_id.      |
+|     Consumer fleet fans out to members' WebSocket connections.          |
+|     Decouples message ingestion from delivery.                          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * STATEFUL WEBSOCKET vs STATELESS HTTP: Chose WebSocket for            |
+|    latency (<100ms vs seconds with polling). Cost: connection           |
+|    state management, sticky sessions, reconnection logic.               |
+|                                                                         |
+|  * CASSANDRA (AP) vs MYSQL (CP) FOR MESSAGES: Chose Cassandra           |
+|    for write throughput (1.2M writes/sec) and time-series fit.          |
+|    Trade-off: no multi-row transactions, eventual consistency.          |
+|    Ordering enforced at application level (sequence numbers).           |
+|                                                                         |
+|  * PRESENCE ACCURACY vs COST: Heartbeats every 30s give ~30s            |
+|    staleness. More frequent = more accurate but 50M connections         |
+|    * 1 heartbeat/5s = 10M events/sec just for presence.                 |
+|                                                                         |
+|  * E2E ENCRYPTION vs SERVER FEATURES: E2E means server cannot           |
+|    index or search messages. Products like Slack choose server-         |
+|    side encryption for searchability; WhatsApp chooses E2E for          |
+|    privacy.                                                             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 16: QUICK REFERENCE SUMMARY
 
 ```
 +-------------------------------------------------------------------------+

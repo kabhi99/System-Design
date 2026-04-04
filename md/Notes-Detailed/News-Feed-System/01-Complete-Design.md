@@ -5,7 +5,78 @@ A news feed is the constantly updating list of stories in the middle of a
 user's home page. It includes status updates, photos, videos, links, app
 activity, and likes from people, pages, and groups that a user follows.
 
-## SECTION 1: UNDERSTANDING THE PROBLEM
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Is this a social media news feed like Facebook/Twitter,     |
+|    or a content aggregator like Google News or Reddit?                  |
+|                                                                         |
+|  INTERVIEWER: Social media feed. Users see posts from people and        |
+|    pages they follow. Think Facebook or Twitter home timeline.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What content types should the feed support? Just text,      |
+|    or also images, videos, and links?                                   |
+|                                                                         |
+|  INTERVIEWER: All of them - text, images, videos, and shared links.     |
+|    But focus the design on feed generation and delivery, not media      |
+|    transcoding.                                                         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should the feed be ranked (by relevance) or purely          |
+|    chronological (most recent first)?                                   |
+|                                                                         |
+|  INTERVIEWER: Ranked by relevance with recency as a strong signal.      |
+|    This is a key differentiator - the ranking pipeline is worth         |
+|    discussing in detail.                                                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale are we targeting? How many users, how many       |
+|    posts per day?                                                       |
+|                                                                         |
+|  INTERVIEWER: 500M DAU, average 1000 friends/followees. About           |
+|    10M new posts per day. Each user checks their feed ~10 times/day.    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: How should we handle celebrities with millions of           |
+|    followers? A celebrity posting triggers massive fan-out.             |
+|                                                                         |
+|  INTERVIEWER: Great question. The "celebrity problem" is the core       |
+|    challenge here. Propose an approach and we'll discuss trade-offs.    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle push notifications for new feed items,      |
+|    or just the feed generation/retrieval?                               |
+|                                                                         |
+|  INTERVIEWER: Focus on feed generation and retrieval. Mention           |
+|    notifications briefly but don't deep-dive.                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Social media news feed (Facebook/Twitter style)                      |
+|  * Text, images, videos, links as content types                         |
+|  * Relevance-ranked with recency signal                                 |
+|  * 500M DAU, 1000 avg friends, 10M posts/day, 5B feed reads/day         |
+|  * Celebrity problem: users with millions of followers                  |
+|  * Deep dive: fan-out strategy + ranking pipeline                       |
+|  * Notifications mentioned briefly, not deep-dived                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS A NEWS FEED?
 
@@ -1227,17 +1298,17 @@ activity, and likes from people, pages, and groups that a user follows.
 
 ```
 +-------------------------------------------------------------------------+
-|                                                                         |
+|                                                                        |
 |  1. ENTITY STATE MACHINE (Feed Item Lifecycle)                         |
-|                                                                         |
-|    [CREATED] --> [FANNING_OUT] --> [RANKED] --> [DELIVERED] --> [SEEN]  |
-|        |              |               |                                 |
+|                                                                        |
+|    [CREATED] --> [FANNING_OUT] --> [RANKED] --> [DELIVERED] --> [SEEN] |
+|        |              |               |                                |
 |        |              |               +---> [FILTERED]  (spam/blocked) |
-|        |              |                                                 |
-|        |              +---> (partial: some followers done, others not)  |
-|        |                                                                |
+|        |              |                                                |
+|        |              +---> (partial: some followers done, others not) |
+|        |                                                               |
 |        +---> [DELETED]  (author deletes post)                          |
-|                                                                         |
+|                                                                        |
 |    CREATED:     Post written to posts table, media URLs attached       |
 |    FANNING_OUT: Fan-out workers pushing post_id to follower caches     |
 |    RANKED:      Post scored by ranking algo for a specific user        |
@@ -1245,96 +1316,96 @@ activity, and likes from people, pages, and groups that a user follows.
 |    SEEN:        User scrolled past the post (impression logged)        |
 |    FILTERED:    Post removed by spam filter or user block list         |
 |    DELETED:     is_deleted=true, async removal from all feed caches    |
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  2. CRITICAL WRITE PATH (Post Creation + Hybrid Fan-Out)               |
-|                                                                         |
+|                                                                        |
 |    Author: POST /api/v1/posts { content, media_ids[], mentions[] }     |
-|      |                                                                  |
-|      v                                                                  |
+|      |                                                                 |
+|      v                                                                 |
 |    Step 1: Write post to PostgreSQL                                    |
-|      |                                                                  |
-|      |     INSERT INTO posts                                            |
-|      |       (post_id, author_id, content, media_urls,                  |
-|      |        media_type, like_count, comment_count,                    |
-|      |        share_count, is_deleted, created_at)                      |
-|      |     VALUES                                                       |
-|      |       (snowflake_id(), 12345, 'Hello world',                     |
-|      |        '["https://cdn/img1.jpg"]', 'IMAGE',                      |
-|      |        0, 0, 0, false, NOW());                                   |
-|      v                                                                  |
+|      |                                                                 |
+|      |     INSERT INTO posts                                           |
+|      |       (post_id, author_id, content, media_urls,                 |
+|      |        media_type, like_count, comment_count,                   |
+|      |        share_count, is_deleted, created_at)                     |
+|      |     VALUES                                                      |
+|      |       (snowflake_id(), 12345, 'Hello world',                    |
+|      |        '["https://cdn/img1.jpg"]', 'IMAGE',                     |
+|      |        0, 0, 0, false, NOW());                                  |
+|      v                                                                 |
 |    Step 2: Write to author timeline cache                              |
 |      |     Redis: ZADD timeline:{author_id} <timestamp> <post_id>      |
 |      |     Redis: ZREMRANGEBYRANK timeline:{author_id} 0 -801          |
-|      |       (keep only latest 800 posts)                               |
-|      v                                                                  |
+|      |       (keep only latest 800 posts)                              |
+|      v                                                                 |
 |    Step 3: Cache post object                                           |
 |      |     Redis: SET post:{post_id} <post_json> EX 86400              |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 4: Publish to Kafka for fan-out                                |
-|      |     Topic: post_created                                          |
+|      |     Topic: post_created                                         |
 |      |     Payload: { post_id, author_id, is_celebrity }               |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 5: Fan-out workers consume from Kafka                          |
-|      |                                                                  |
-|      |  IF author.is_celebrity = false (followers < 10K):               |
-|      |    SELECT follower_id FROM followers                             |
-|      |      WHERE followee_id = author_id;                              |
-|      |    For each follower:                                            |
+|      |                                                                 |
+|      |  IF author.is_celebrity = false (followers < 10K):              |
+|      |    SELECT follower_id FROM followers                            |
+|      |      WHERE followee_id = author_id;                             |
+|      |    For each follower:                                           |
 |      |      Redis: ZADD feed:{follower_id} <timestamp> <post_id>       |
 |      |      Redis: ZREMRANGEBYRANK feed:{follower_id} 0 -501           |
-|      |        (keep feed cache at 500 entries max)                      |
-|      |                                                                  |
-|      |  IF author.is_celebrity = true (followers >= 10K):               |
+|      |        (keep feed cache at 500 entries max)                     |
+|      |                                                                 |
+|      |  IF author.is_celebrity = true (followers >= 10K):              |
 |      |    Redis: ZADD celeb:{author_id} <timestamp> <post_id>          |
-|      |    (no fan-out; merged at read time)                             |
-|      v                                                                  |
+|      |    (no fan-out; merged at read time)                            |
+|      v                                                                 |
 |    Return { post_id, created_at } to author                            |
-|                                                                         |
+|                                                                        |
 |    WRITE ORDER: PostgreSQL -> Redis timeline -> Redis post cache       |
 |                 -> Kafka -> fan-out to Redis feed caches               |
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  3. READ PATH (Feed Generation - Cache + Merge + Rank)                 |
-|                                                                         |
-|    User: GET /api/v1/feed?cursor={last_post_id}&limit=20              |
-|      |                                                                  |
-|      v                                                                  |
+|                                                                        |
+|    User: GET /api/v1/feed?cursor={last_post_id}&limit=20               |
+|      |                                                                 |
+|      v                                                                 |
 |    Step 1: Fetch pre-computed feed from Redis                          |
 |      |     ZREVRANGEBYSCORE feed:{user_id} +inf <cursor> LIMIT 20      |
 |      |     Returns list of post_ids (pushed by fan-out workers)        |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 2: Fetch celebrity posts (fan-out-on-read portion)             |
 |      |     Get user's followed celebrities from social graph           |
-|      |     For each celebrity:                                          |
+|      |     For each celebrity:                                         |
 |      |       ZREVRANGEBYSCORE celeb:{celeb_id} +inf <cursor> LIMIT 5   |
 |      |     Merge celebrity post_ids with Step 1 results                |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 3: Hydrate post objects                                        |
-|      |     For each post_id:                                            |
+|      |     For each post_id:                                           |
 |      |       Redis: GET post:{post_id}  (batch MGET for speed)         |
 |      |       Cache miss -> SELECT * FROM posts WHERE post_id = ?       |
 |      |       Then SET post:{post_id} <json> EX 86400                   |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 4: Rank posts (ML scoring)                                     |
 |      |     Score = f(affinity, recency, engagement, post_type)         |
 |      |     Filter out: blocked users, muted keywords, seen posts       |
 |      |     Sort by score DESC, take top 20                             |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 5: Return paginated response                                   |
 |            { posts: [...], next_cursor, has_more }                     |
-|                                                                         |
+|                                                                        |
 |    CACHE MISS (cold user, no feed in Redis):                           |
 |      Fall back to full fan-out-on-read:                                |
 |      Get all followed user_ids -> fetch their recent posts ->          |
 |      merge, rank, return. Then populate feed:{user_id} in Redis.       |
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  4. FAILURE SCENARIOS                                                  |
-|                                                                         |
+|                                                                        |
 |  What Fails               | Impact & Recovery                          |
 |  -------------------------+--------------------------------------------+
 |  Redis cluster down       | Feed reads fall back to DB fan-out-on-read |
@@ -1357,31 +1428,31 @@ activity, and likes from people, pages, and groups that a user follows.
 |                           | celeb:{id} aggressively, pre-compute       |
 |                           | celeb merge for active users.              |
 |  -------------------------+--------------------------------------------+
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  5. CLEANUP / EXPIRY                                                   |
-|                                                                         |
+|                                                                        |
 |    Feed Cache Trimming (on every ZADD):                                |
-|      ZREMRANGEBYRANK feed:{user_id} 0 -501                            |
-|      Keeps feed cache at 500 post_ids max per user                    |
-|                                                                         |
+|      ZREMRANGEBYRANK feed:{user_id} 0 -501                             |
+|      Keeps feed cache at 500 post_ids max per user                     |
+|                                                                        |
 |    Post Deletion Propagation (async via Kafka):                        |
 |      Author deletes post -> UPDATE posts SET is_deleted=true           |
-|      Kafka event: post_deleted { post_id, author_id }                 |
-|      Workers: ZREM feed:{follower_id} <post_id> for all followers     |
-|      Redis: DEL post:{post_id}                                        |
-|                                                                         |
+|      Kafka event: post_deleted { post_id, author_id }                  |
+|      Workers: ZREM feed:{follower_id} <post_id> for all followers      |
+|      Redis: DEL post:{post_id}                                         |
+|                                                                        |
 |    Stale Cache Expiry:                                                 |
-|      post:{pid} keys: EX 86400 (24h TTL)                              |
-|      feed:{uid} keys: no TTL (maintained by trim + fan-out)           |
-|      Inactive user feed caches: evicted by Redis LRU policy           |
-|      celeb:{uid} keys: EX 3600 (1h, rebuilt from DB on miss)          |
-|                                                                         |
+|      post:{pid} keys: EX 86400 (24h TTL)                               |
+|      feed:{uid} keys: no TTL (maintained by trim + fan-out)            |
+|      Inactive user feed caches: evicted by Redis LRU policy            |
+|      celeb:{uid} keys: EX 3600 (1h, rebuilt from DB on miss)           |
+|                                                                        |
 |    Soft-Deleted Posts Cleanup (weekly batch job):                      |
 |      DELETE FROM posts WHERE is_deleted = true                         |
-|        AND created_at < NOW() - INTERVAL 30 DAY;                      |
-|                                                                         |
+|        AND created_at < NOW() - INTERVAL 30 DAY;                       |
+|                                                                        |
 +-------------------------------------------------------------------------+
 ```
 
@@ -1750,7 +1821,69 @@ activity, and likes from people, pages, and groups that a user follows.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 15: QUICK REFERENCE SUMMARY
+## SECTION 15: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. HYBRID FAN-OUT STRATEGY                                             |
+|     Fan-out on write for normal users (pre-compute feed at post         |
+|     time). Fan-out on read for celebrities (fetch at read time).        |
+|     Threshold: users with >10K followers use fan-out on read.           |
+|     This avoids the thundering herd problem for celebrity posts.        |
+|                                                                         |
+|  2. MULTI-STAGE RANKING PIPELINE                                        |
+|     Candidate generation (retrieve from pre-computed feed cache)        |
+|     -> first-pass scoring (lightweight ML model, ~50ms) -> deep         |
+|     ranking (full model, ~100ms) -> diversity injection (~20ms).        |
+|     Total budget: ~200ms to rank a feed page.                           |
+|                                                                         |
+|  3. FEED CACHE AS PRIMARY READ PATH                                     |
+|     Pre-computed feed stored in Redis sorted sets. Feed reads           |
+|     hit cache directly (sub-10ms). Cache miss falls through to          |
+|     fan-out-on-read path. Cache invalidation on new posts/unfollows.    |
+|                                                                         |
+|  4. ASYNC POST PROCESSING PIPELINE                                      |
+|     Post creation is synchronous (write to DB, return ID). Fan-out,     |
+|     media processing, notification, and search indexing happen          |
+|     asynchronously via Kafka. Decouples post latency from fan-out       |
+|     cost.                                                               |
+|                                                                         |
+|  5. GRAPH-BASED SOCIAL LAYER                                            |
+|     Follow/friend relationships stored in graph DB or adjacency         |
+|     list. Powers fan-out target resolution and "mutual friends"         |
+|     features. Cached in Redis for hot-path lookups.                     |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * FAN-OUT ON WRITE vs READ: Write gives instant feed reads but         |
+|    wastes work for inactive users and is expensive for celebrities.     |
+|    Read saves write cost but adds read latency. Hybrid balances         |
+|    both at the cost of two code paths and merge logic.                  |
+|                                                                         |
+|  * RANKED vs CHRONOLOGICAL: Ranking boosts engagement but adds          |
+|    latency (~200ms) and complexity (ML models, feature stores).         |
+|    Chronological is simple but lower engagement. We chose ranked        |
+|    with chronological as a fallback if ranking is slow.                 |
+|                                                                         |
+|  * FEED FRESHNESS vs CACHE HIT RATE: Longer cache TTL = higher          |
+|    hit rate but staler feed. Shorter TTL = fresher but more cache       |
+|    misses and fan-out-on-read fallbacks. We use 60s TTL with            |
+|    event-driven invalidation on new posts from close friends.           |
+|                                                                         |
+|  * CONSISTENCY vs AVAILABILITY: Feed reads are eventually consistent    |
+|    (a new post may take seconds to appear in all followers' feeds).     |
+|    Acceptable trade-off: users tolerate slight delay in feed but        |
+|    not feed downtime.                                                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 16: QUICK REFERENCE SUMMARY
 
 ```
 +-------------------------------------------------------------------------+

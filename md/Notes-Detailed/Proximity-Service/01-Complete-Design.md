@@ -6,6 +6,48 @@ location (latitude/longitude) and a search radius. At scale, it must index hundr
 of millions of businesses, serve geo-queries with sub-200ms latency, and handle
 a massively read-heavy workload across the globe.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a service to find nearby businesses        |
+|    (like Yelp) or nearby people (like Nearby Friends)?                  |
+|                                                                         |
+|  INTERVIEWER: Nearby businesses / Points of Interest (POI). Static      |
+|    locations (restaurants, shops). Not real-time moving entities.       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many businesses and queries?                |
+|                                                                         |
+|  INTERVIEWER: 200M businesses globally, 500M queries/day.               |
+|    "Show me restaurants within 5km" is the primary query.               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What spatial indexing approach should I focus on?           |
+|    Geohash, quadtree, R-tree?                                           |
+|                                                                         |
+|  INTERVIEWER: Compare geohash and quadtree. Discuss trade-offs.         |
+|    This is the core design decision.                                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Nearby POI search (Yelp/Google Maps Places style)                    |
+|  * 200M businesses, 500M queries/day                                    |
+|  * Geohash vs Quadtree comparison                                       |
+|  * Filters: category, rating, price, open now                           |
+|  * Deep dive: spatial indexing + geo-query optimization                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS A PROXIMITY SERVICE?
@@ -1233,7 +1275,7 @@ a massively read-heavy workload across the globe.
 ||  1. ENTITY STATE MACHINE: Place / PoI Lifecycle                         |
 ||  ======================================================                 |
 ||                                                                         |
-||  SUBMITTED --> VALIDATED --> INDEXED --> ACTIVE --> (UPDATED/REMOVED)    |
+||  SUBMITTED --> VALIDATED --> INDEXED --> ACTIVE --> (UPDATED/REMOVED)   |
 ||                                                                         |
 ||  +----------+  schema   +----------+  geohash   +----------+            |
 ||  | SUBMITTED|  check,   | VALIDATED|  compute,  | INDEXED  |            |
@@ -1268,11 +1310,11 @@ a massively read-heavy workload across the globe.
 ||                                                                         |
 ||  Step 1: Validate and geocode                                           |
 ||    assert valid lat/lng, required fields present                        |
-||    geohash = geohash_encode(lat, lng, precision=6)  // e.g. "9q8yyk"   |
+||    geohash = geohash_encode(lat, lng, precision=6)  // e.g. "9q8yyk"    |
 ||                                                                         |
 ||  Step 2: Insert into PostgreSQL (PostGIS)                               |
 ||    INSERT INTO businesses                                               |
-||      (id, name, lat, lng, geohash, category, avg_rating,               |
+||      (id, name, lat, lng, geohash, category, avg_rating,                |
 ||       review_count, price_range, hours, is_active, created_at)          |
 ||    VALUES (gen_uuid(), :name, :lat, :lng, :geohash,                     |
 ||            :category, 0.0, 0, :price_range, :hours, true, NOW());       |
@@ -1297,7 +1339,7 @@ a massively read-heavy workload across the globe.
 ||                                                                         |
 ||  Step 1: Compute geohash neighborhood                                   |
 ||    user_geohash = geohash_encode(37.77, -122.41, precision=5)           |
-||    cells = [user_geohash] + 8_neighbors(user_geohash)  // 9 cells      |
+||    cells = [user_geohash] + 8_neighbors(user_geohash)  // 9 cells       |
 ||                                                                         |
 ||  Step 2: Check Redis cache for each cell                                |
 ||    for cell in cells:                                                   |
@@ -1312,12 +1354,12 @@ a massively read-heavy workload across the globe.
 ||                                                                         |
 ||  Step 3: Exact distance filter (Haversine)                              |
 ||    for each candidate:                                                  |
-||      dist = haversine(user_lat, user_lng, biz.lat, biz.lng)            |
-||      discard if dist > 5000 m                                          |
+||      dist = haversine(user_lat, user_lng, biz.lat, biz.lng)             |
+||      discard if dist > 5000 m                                           |
 ||                                                                         |
 ||  Step 4: Rank and paginate                                              |
-||    score = w1*(1/dist) + w2*avg_rating + w3*review_count               |
-||    sort by score DESC, return top 20 with cursor                       |
+||    score = w1*(1/dist) + w2*avg_rating + w3*review_count                |
+||    sort by score DESC, return top 20 with cursor                        |
 ||                                                                         |
 ||  4. FAILURE SCENARIOS                                                   |
 ||  ======================================================                 |
@@ -1345,13 +1387,44 @@ a massively read-heavy workload across the globe.
 ||                                                                         |
 ||  * Redis geo cache: TTL 15 min per cell key. Event-driven               |
 ||    invalidation on business_updated events for critical changes.        |
-||  * biz:{id} cache: TTL 15 min; invalidated on update event.            |
+||  * biz:{id} cache: TTL 15 min; invalidated on update event.             |
 ||  * Soft-deleted businesses (is_active=false) excluded from search       |
 ||    queries. Hard-delete batch job runs monthly for businesses           |
 ||    inactive > 1 year.                                                   |
 ||  * Stale Elasticsearch documents reconciled via nightly full            |
 ||    re-index job comparing ES state with PostgreSQL source of truth.     |
 ||                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. GEOHASH-BASED SPATIAL INDEX in database. Encode (lat, lng) to       |
+|     geohash string. Query current cell + 8 neighbors for edge cases.    |
+|  2. ELASTICSEARCH for combined geo + text + filter queries.             |
+|     geo_distance + term filters + full-text in one query.               |
+|  3. REDIS CACHE for hot queries (same location searched often).         |
+|     Cache key: hash(geohash_prefix, filters, page).                     |
+|  4. BUSINESS DATA is mostly static (updated daily). Read replicas       |
+|     serve queries; writes are infrequent.                               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * GEOHASH vs QUADTREE: Geohash is simpler (string prefix query)        |
+|    but has fixed-grid precision. Quadtree adapts to density (finer      |
+|    in cities). Geohash wins for DB-backed systems; quadtree wins        |
+|    for in-memory.                                                       |
+|  * PRECISION vs QUERY COST: Higher geohash precision = smaller          |
+|    cells = more cells to query for a radius. 6-char geohash             |
+|    (~1.2km) is the sweet spot for 5km radius searches.
+|                                                                         |
 +-------------------------------------------------------------------------+
 ```
 

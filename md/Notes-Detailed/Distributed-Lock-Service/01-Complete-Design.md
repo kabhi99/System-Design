@@ -2,7 +2,83 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
-## SECTION 1: TABLE OF CONTENTS
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a general-purpose distributed lock         |
+|    service like ZooKeeper, or a specific locking mechanism for a        |
+|    particular use case (e.g., rate limiting, leader election)?          |
+|                                                                         |
+|  INTERVIEWER: A general-purpose distributed lock service.               |
+|    Discuss multiple backend options (Redis, ZooKeeper, etcd)            |
+|    and compare their trade-offs.                                        |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What correctness guarantees do we need? Is it OK if         |
+|    the lock is occasionally held by two processes simultaneously        |
+|    (efficiency lock), or must it be strictly mutual exclusion           |
+|    (correctness lock)?                                                  |
+|                                                                         |
+|  INTERVIEWER: Design for both use cases. An efficiency lock             |
+|    prevents duplicate work (minor if violated). A correctness           |
+|    lock prevents data corruption (catastrophic if violated).            |
+|    Discuss what guarantees each backend provides.                       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many lock acquisitions per second?          |
+|                                                                         |
+|  INTERVIEWER: Target 100K lock operations per second with               |
+|    sub-10ms latency for acquisition. Locks held for milliseconds        |
+|    to seconds typically, occasionally minutes.                          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I cover the RedLock algorithm and the                |
+|    controversy around it?                                               |
+|                                                                         |
+|  INTERVIEWER: Yes, absolutely. Martin Kleppmann's critique is a         |
+|    classic distributed systems discussion. Understand both sides.       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should the service support fencing tokens to prevent        |
+|    stale lock holders from corrupting shared resources?                 |
+|                                                                         |
+|  INTERVIEWER: Yes. Fencing tokens are critical for correctness          |
+|    locks. Discuss how they work and why TTL alone is insufficient.      |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I cover leader election as a use case, or just       |
+|    mutual exclusion?                                                    |
+|                                                                         |
+|  INTERVIEWER: Cover both. Leader election is a natural extension        |
+|    of distributed locks and a common interview follow-up.               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * General-purpose distributed lock service                             |
+|  * Compare Redis vs ZooKeeper vs etcd backends                          |
+|  * Efficiency locks AND correctness locks                               |
+|  * 100K lock ops/sec, sub-10ms latency                                  |
+|  * Fencing tokens for stale-lock protection                             |
+|  * RedLock algorithm + Kleppmann critique                               |
+|  * Leader election as use case                                          |
+|  * Deep dive: safety guarantees + failure modes                         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: TABLE OF CONTENTS
 
 1. Introduction & Motivation
 2. Requirements
@@ -1154,7 +1230,7 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |                                                                          |
 |  1. ENTITY STATE MACHINE (Lock Lifecycle)                                |
 |                                                                          |
-|    [FREE] --------> [ACQUIRED] --------> [RELEASED] -----> [FREE]       |
+|    [FREE] --------> [ACQUIRED] --------> [RELEASED] -----> [FREE]        |
 |       ^                  |                                    ^          |
 |       |                  |  (TTL expires                      |          |
 |       |                  |   before release)                  |          |
@@ -1167,14 +1243,14 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |       |   [ACQUIRED] ---> [RENEWED] ---> [ACQUIRED]                      |
 |       |                   (heartbeat extends TTL, same holder)           |
 |       |                                                                  |
-|       +--- [ACQUIRED by Client B] (after expiry of Client A's lock)     |
+|       +--- [ACQUIRED by Client B] (after expiry of Client A's lock)      |
 |            New fencing token issued (token = 34 > 33)                    |
 |                                                                          |
 |    FREE:      Resource unlocked, any client can acquire                  |
 |    ACQUIRED:  Client holds lock with TTL and fencing token               |
 |    RENEWED:   Same holder extends TTL via heartbeat                      |
 |    RELEASED:  Client explicitly releases (DEL key)                       |
-|    EXPIRED:   TTL elapsed, lock auto-released by Redis/ZK/etcd          |
+|    EXPIRED:   TTL elapsed, lock auto-released by Redis/ZK/etcd           |
 |                                                                          |
 |  ======================================================================  |
 |                                                                          |
@@ -1199,37 +1275,37 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |      |    INCR fence_token:{resource_name}                               |
 |      |    Client stores token for all protected writes                   |
 |      v                                                                   |
-|    APPROACH B: Redlock (5 independent Redis instances)                    |
+|    APPROACH B: Redlock (5 independent Redis instances)                   |
 |      |                                                                   |
 |      |  Step 1: Record T1 = current_time_ms()                            |
 |      |  Step 2: Try SET resource owner NX EX 30 on ALL 5 instances       |
 |      |    +--------+ +--------+ +--------+ +--------+ +--------+         |
-|      |    |Redis 1 | |Redis 2 | |Redis 3 | |Redis 4 | |Redis 5 |        |
+|      |    |Redis 1 | |Redis 2 | |Redis 3 | |Redis 4 | |Redis 5 |         |
 |      |    |  OK    | |  OK    | | FAIL   | |  OK    | |  OK    |         |
 |      |    +--------+ +--------+ +--------+ +--------+ +--------+         |
 |      |  Step 3: Record T2 = current_time_ms()                            |
 |      |  Step 4: Lock acquired IF:                                        |
 |      |    Successes >= 3 (majority) AND (T2-T1) < TTL                    |
-|      |    Effective TTL = 30s - (T2-T1)                                   |
+|      |    Effective TTL = 30s - (T2-T1)                                  |
 |      |  Step 5: If FAILED, release on ALL instances                      |
 |      v                                                                   |
 |    APPROACH C: ZooKeeper (consensus-based, strongest safety)             |
 |      |                                                                   |
 |      |  Step 1: Create ephemeral sequential node                         |
-|      |    create("/locks/resource/lock-", EPHEMERAL|SEQUENTIAL)           |
-|      |    -> creates "/locks/resource/lock-0000000034"                    |
+|      |    create("/locks/resource/lock-", EPHEMERAL|SEQUENTIAL)          |
+|      |    -> creates "/locks/resource/lock-0000000034"                   |
 |      |                                                                   |
 |      |  Step 2: Get children, sort by sequence number                    |
 |      |    If my node is the lowest -> lock acquired                      |
-|      |    Fencing token = sequence number (34)                            |
+|      |    Fencing token = sequence number (34)                           |
 |      |                                                                   |
 |      |  Step 3: If not lowest, watch the node just before mine           |
-|      |    (FIFO fairness: each waiter watches one predecessor)            |
+|      |    (FIFO fairness: each waiter watches one predecessor)           |
 |      |                                                                   |
 |      |  Step 4: On predecessor deletion -> re-check, acquire             |
 |                                                                          |
 |    RELEASE (Redis, Lua for atomicity):                                   |
-|      if redis.call("GET", KEYS[1]) == ARGV[1] then                      |
+|      if redis.call("GET", KEYS[1]) == ARGV[1] then                       |
 |          return redis.call("DEL", KEYS[1])                               |
 |      else return 0 end                                                   |
 |      (Only the holder can release; prevents deleting another's lock)     |
@@ -1244,11 +1320,11 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |      TTL resource_name -> remaining seconds                              |
 |                                                                          |
 |    Lock Renewal (heartbeat, extends TTL while working):                  |
-|      Client runs renewal loop every TTL/3 (e.g., every 10s):            |
+|      Client runs renewal loop every TTL/3 (e.g., every 10s):             |
 |                                                                          |
 |      Lua script (atomic check-and-extend):                               |
-|        if redis.call("GET", KEYS[1]) == ARGV[1] then                    |
-|            return redis.call("PEXPIRE", KEYS[1], ARGV[2])               |
+|        if redis.call("GET", KEYS[1]) == ARGV[1] then                     |
+|            return redis.call("PEXPIRE", KEYS[1], ARGV[2])                |
 |        else return 0 end                                                 |
 |                                                                          |
 |      If renewal returns 0 -> lock was lost (expired or stolen)           |
@@ -1267,24 +1343,24 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |  What Fails               | Impact & Recovery                            |
 |  -------------------------+----------------------------------------------+
 |  Lock holder crashes      | Lock auto-expires via TTL (Redis) or         |
-|  (no explicit release)    | ephemeral node deletion (ZK session timeout). |
-|                           | Next client acquires after TTL. Set TTL       |
-|                           | appropriately (not too long, not too short).  |
+|  (no explicit release)    | ephemeral node deletion (ZK session timeout).|
+|                           | Next client acquires after TTL. Set TTL      |
+|                           | appropriately (not too long, not too short). |
 |  -------------------------+----------------------------------------------+
-|  GC pause / network delay | Client A's lock expires while paused.         |
-|  on lock holder           | Client B acquires with new fencing token.     |
-|                           | Client A resumes, tries to write -> storage   |
-|                           | rejects stale fencing token. DATA SAFE.       |
+|  GC pause / network delay | Client A's lock expires while paused.        |
+|  on lock holder           | Client B acquires with new fencing token.    |
+|                           | Client A resumes, tries to write -> storage  |
+|                           | rejects stale fencing token. DATA SAFE.      |
 |  -------------------------+----------------------------------------------+
-|  Redis master failover    | Lock may be lost if not yet replicated.       |
-|  (single-instance lock)   | Client B acquires same lock -> TWO HOLDERS.   |
-|                           | Mitigation: use Redlock (5 instances) or      |
+|  Redis master failover    | Lock may be lost if not yet replicated.      |
+|  (single-instance lock)   | Client B acquires same lock -> TWO HOLDERS.  |
+|                           | Mitigation: use Redlock (5 instances) or     |
 |                           | ZooKeeper/etcd for correctness-critical locks.|
 |  -------------------------+----------------------------------------------+
-|  Clock skew (Redlock)     | If clocks drift, TTLs become inaccurate.      |
-|                           | Lock may expire early or late. Mitigation:    |
-|                           | use NTP, keep clock drift << TTL. For safety- |
-|                           | critical: prefer ZK/etcd (no clock reliance). |
+|  Clock skew (Redlock)     | If clocks drift, TTLs become inaccurate.     |
+|                           | Lock may expire early or late. Mitigation:   |
+|                           | use NTP, keep clock drift << TTL. For safety-|
+|                           | critical: prefer ZK/etcd (no clock reliance).|
 |  -------------------------+----------------------------------------------+
 |                                                                          |
 |  ======================================================================  |
@@ -1639,7 +1715,56 @@ instances (typically N=5) to achieve stronger safety guarantees.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 19: QUICK REFERENCE CARD
+## SECTION 19: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. REDIS FOR EFFICIENCY LOCKS, ZOOKEEPER/ETCD FOR CORRECTNESS          |
+|     Redis SETNX + TTL is fast (~1ms) but unsafe under partitions        |
+|     (split-brain can grant lock to two holders). ZooKeeper and          |
+|     etcd use consensus (ZAB / Raft) which is slower (~10ms) but         |
+|     guarantees mutual exclusion even during failures.                   |
+|                                                                         |
+|  2. FENCING TOKENS FOR STALE LOCK HOLDERS                               |
+|     TTL expiry alone is insufficient: a GC pause can cause a            |
+|     process to act on a lock it no longer holds. Fencing tokens         |
+|     (monotonic integers) are checked by the resource server to          |
+|     reject requests from stale holders.                                 |
+|                                                                         |
+|  3. LEASE-BASED WITH AUTO-RENEWAL                                       |
+|     Locks have a TTL (lease). Holders renew before expiry. If a         |
+|     holder crashes, TTL ensures the lock is eventually released.        |
+|     Renewal runs at TTL/3 intervals to handle transient delays.         |
+|                                                                         |
+|  4. REDLOCK: USE WITH CAUTION                                           |
+|     RedLock acquires locks across N independent Redis masters.          |
+|     Provides better safety than single Redis but is NOT equivalent      |
+|     to consensus-based locking. Kleppmann showed that clock skew        |
+|     and GC pauses can violate safety. Use RedLock for efficiency        |
+|     locks; use ZooKeeper/etcd for correctness locks.                    |
+|                                                                         |
+|  5. LEADER ELECTION AS LOCK EXTENSION                                   |
+|     A long-lived lock = leader lease. The holder is the leader.         |
+|     Other candidates watch/wait. On leader failure, TTL expires         |
+|     and a new leader acquires the lock. ZooKeeper ephemeral nodes       |
+|     make this pattern natural (node dies = lock released).              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  THE ONE RULE TO REMEMBER:                                              |
+|                                                                         |
+|  If violating mutual exclusion causes DATA CORRUPTION, use a            |
+|  consensus-based system (ZooKeeper, etcd) with fencing tokens.          |
+|  If it only causes DUPLICATE WORK, Redis with TTL is simpler            |
+|  and faster.                                                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 20: QUICK REFERENCE CARD
 
 ```
 +-------------------------------------------------------------------------+

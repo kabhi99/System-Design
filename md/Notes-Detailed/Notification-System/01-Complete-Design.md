@@ -1,7 +1,84 @@
-# NOTIFICATION SYSTEM - HIGH LEVEL DESIGN
+# NOTIFICATION SYSTEM DESIGN (PUSH / SMS / EMAIL)
+*Complete Design: Requirements, Architecture, and Interview Guide*
 
-A COMPLETE CONCEPTUAL GUIDE
-## SECTION 1: UNDERSTANDING THE PROBLEM
+A notification system sends timely, relevant messages to users across multiple
+channels (push, SMS, email, in-app). At scale, it must handle billions of
+notifications per day with priority routing, rate limiting, and delivery tracking
+while respecting user preferences and minimizing notification fatigue.
+
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: What types of notifications should we support?              |
+|    Just push notifications, or also SMS, email, and in-app?             |
+|                                                                         |
+|  INTERVIEWER: All four: push (iOS APNs + Android FCM), SMS,             |
+|    email, and in-app. The system should be channel-agnostic.            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Are notifications real-time (immediate) or can they         |
+|    be batched and sent in digests?                                      |
+|                                                                         |
+|  INTERVIEWER: Both. Some are urgent (payment alerts) and must be        |
+|    immediate. Others (social updates) can be batched into digests.      |
+|    Priority levels determine the behavior.                              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale are we targeting?                                |
+|                                                                         |
+|  INTERVIEWER: 100M DAU, 500M notifications per day across all           |
+|    channels. Peak during events like Black Friday or flash sales.       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle user preferences and opt-out? For           |
+|    example, "don't send me marketing emails."                           |
+|                                                                         |
+|  INTERVIEWER: Yes. Users control which channels and categories          |
+|    they receive. This is critical for compliance (CAN-SPAM, GDPR).      |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What delivery guarantee do we need? At-least-once,          |
+|    exactly-once, or best-effort?                                        |
+|                                                                         |
+|  INTERVIEWER: At-least-once for critical notifications (payments,       |
+|    security). Best-effort for social notifications. Design for          |
+|    at-least-once with deduplication at the client.                      |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should the system generate notification content, or         |
+|    do upstream services provide the full message?                       |
+|                                                                         |
+|  INTERVIEWER: Upstream services send a notification request with        |
+|    a template ID and parameters. The notification system renders        |
+|    the final message using templates. Good question.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Multi-channel: push (APNs/FCM), SMS, email, in-app                   |
+|  * 100M DAU, 500M notifications/day                                     |
+|  * Priority levels: urgent (immediate) vs normal (batchable)            |
+|  * User preference management and opt-out                               |
+|  * Template-based message rendering                                     |
+|  * At-least-once delivery with client-side dedup                        |
+|  * Rate limiting per user to prevent notification fatigue               |
+|  * Delivery tracking and analytics                                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
@@ -1249,82 +1326,82 @@ A COMPLETE CONCEPTUAL GUIDE
 
 ```
 +-------------------------------------------------------------------------+
-|                                                                         |
+|                                                                        |
 |  1. ENTITY STATE MACHINE (Notification Lifecycle)                      |
-|                                                                         |
-|    [CREATED] --> [QUEUED] --> [SENDING] --> [DELIVERED]                 |
-|        |            |            |              |                       |
+|                                                                        |
+|    [CREATED] --> [QUEUED] --> [SENDING] --> [DELIVERED]                |
+|        |            |            |              |                      |
 |        |            |            |              +---> [OPENED/CLICKED] |
-|        |            |            |                                      |
+|        |            |            |                                     |
 |        |            |            +---> [FAILED] ---> [RETRYING]        |
-|        |            |                                    |              |
-|        |            |                   +----------------+              |
-|        |            |                   |                               |
-|        |            |                   v                               |
+|        |            |                                    |             |
+|        |            |                   +----------------+             |
+|        |            |                   |                              |
+|        |            |                   v                              |
 |        |            |              [DEAD_LETTER]                       |
-|        |            |                                                   |
+|        |            |                                                  |
 |        |            +---> [DROPPED]  (rate limit, user opted out,      |
 |        |                              quiet hours)                     |
-|        +---> [DROPPED]  (preference check failed at API layer)        |
-|                                                                         |
+|        +---> [DROPPED]  (preference check failed at API layer)         |
+|                                                                        |
 |    CREATED:    Notification API receives request, validates input      |
 |    QUEUED:     Written to Kafka topic (partitioned by priority)        |
-|    SENDING:    Channel worker picked up, calling provider (APNs/FCM)  |
-|    DELIVERED:  Provider confirmed delivery (or best-effort sent)      |
-|    FAILED:     Provider returned error (token invalid, rate limit)    |
-|    RETRYING:   Re-enqueued with exponential backoff                   |
-|    DEAD_LETTER: Max retries exceeded, moved to DLQ for inspection     |
-|    DROPPED:    Filtered by preferences, rate limit, or quiet hours    |
-|    OPENED:     User tapped push / opened email (tracking pixel)       |
-|                                                                         |
+|    SENDING:    Channel worker picked up, calling provider (APNs/FCM)   |
+|    DELIVERED:  Provider confirmed delivery (or best-effort sent)       |
+|    FAILED:     Provider returned error (token invalid, rate limit)     |
+|    RETRYING:   Re-enqueued with exponential backoff                    |
+|    DEAD_LETTER: Max retries exceeded, moved to DLQ for inspection      |
+|    DROPPED:    Filtered by preferences, rate limit, or quiet hours     |
+|    OPENED:     User tapped push / opened email (tracking pixel)        |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  2. CRITICAL WRITE PATH (Notification Dispatch)                        |
-|                                                                         |
+|                                                                        |
 |    Internal Service: POST /api/v1/notifications                        |
-|      { user_id, template_id, channel, data, priority }                |
-|      |                                                                  |
-|      v                                                                  |
+|      { user_id, template_id, channel, data, priority }                 |
+|      |                                                                 |
+|      v                                                                 |
 |    Step 1: Validate request and render template                        |
 |      |     SELECT * FROM notification_templates                        |
 |      |       WHERE template_id = 'order_shipped';                      |
 |      |     Render title/body with {{order_id}} placeholders            |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 2: Check user preferences (cached in Redis)                    |
 |      |     GET user_prefs:{user_id}                                    |
 |      |     Cache miss -> SELECT * FROM user_preferences                |
 |      |       WHERE user_id = ?;                                        |
 |      |     Check: channel enabled? category opted in?                  |
 |      |     Check: quiet_start/quiet_end in user's timezone             |
-|      |     If quiet hours -> schedule for after quiet_end               |
+|      |     If quiet hours -> schedule for after quiet_end              |
 |      |     If opted out -> DROP, return { status: "filtered" }         |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 3: Rate limit check                                            |
-|      |     Redis: INCR notif_rate:{user_id}:{channel} EX 3600         |
+|      |     Redis: INCR notif_rate:{user_id}:{channel} EX 3600          |
 |      |     If count > per_user_limit -> DROP                           |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 4: Persist notification record                                 |
-|      |     INSERT INTO notifications                                    |
+|      |     INSERT INTO notifications                                   |
 |      |       (notification_id, user_id, channel, template_id,          |
 |      |        title, body, status, priority, created_at,               |
-|      |        retry_count, metadata)                                    |
+|      |        retry_count, metadata)                                   |
 |      |     VALUES (uuid(), ?, 'PUSH', 'order_shipped',                 |
 |      |        'Order Shipped', 'Your order...', 'QUEUED',              |
-|      |        'HIGH', NOW(), 0, '{}');                                  |
-|      v                                                                  |
+|      |        'HIGH', NOW(), 0, '{}');                                 |
+|      v                                                                 |
 |    Step 5: Enqueue to Kafka (priority-based topic)                     |
 |      |     Topic: push.high  (channel.priority)                        |
 |      |     Key: user_id (partition by user for ordering)               |
 |      |     Payload: { notification_id, user_id, channel, title,        |
 |      |               body, device_tokens, priority }                   |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 6: Channel worker consumes from Kafka                          |
 |      |     Fetch device tokens:                                        |
 |      |       SELECT token, platform FROM device_tokens                 |
 |      |         WHERE user_id = ? AND is_valid = true;                  |
 |      |     Call provider: APNs (iOS) or FCM (Android)                  |
 |      |     Batch up to 500 notifications per FCM request               |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 7: Update status on provider response                          |
 |      |     UPDATE notifications SET status = 'DELIVERED',              |
 |      |       sent_at = NOW(), delivered_at = NOW()                     |
@@ -1334,43 +1411,43 @@ A COMPLETE CONCEPTUAL GUIDE
 |      |         is_valid = false WHERE token = ?;                       |
 |      |       If transient -> re-enqueue with backoff                   |
 |      |       If max retries -> move to DLQ                             |
-|                                                                         |
+|                                                                        |
 |    WRITE ORDER: PostgreSQL (notifications) -> Kafka -> Provider        |
 |                 -> PostgreSQL (status update)                          |
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  3. READ PATH (Notification Inbox - Paginated)                         |
-|                                                                         |
+|                                                                        |
 |    User: GET /api/v1/notifications?cursor=...&limit=20                 |
-|      |                                                                  |
-|      v                                                                  |
+|      |                                                                 |
+|      v                                                                 |
 |    Step 1: Redis check for in-app notifications                        |
-|      |     ZREVRANGEBYSCORE in_app:{user_id} +inf <cursor> LIMIT 20   |
+|      |     ZREVRANGEBYSCORE in_app:{user_id} +inf <cursor> LIMIT 20    |
 |      |     HIT -> return from cache                                    |
 |      |     MISS -> Step 2                                              |
-|      v                                                                  |
+|      v                                                                 |
 |    Step 2: Query Cassandra (optimized for this access pattern)         |
 |      |     SELECT * FROM in_app_notifications                          |
-|      |       WHERE user_id = ? ORDER BY created_at DESC LIMIT 20;     |
-|      v                                                                  |
+|      |       WHERE user_id = ? ORDER BY created_at DESC LIMIT 20;      |
+|      v                                                                 |
 |    Step 3: Return paginated list                                       |
 |            Unread count: Redis GET unread_count:{user_id}              |
-|                                                                         |
+|                                                                        |
 |    Mark as Read:                                                       |
 |      POST /api/v1/notifications/{id}/read                              |
 |      UPDATE in_app_notifications SET is_read = true                    |
 |        WHERE user_id = ? AND notification_id = ?;                      |
-|      Redis: DECR unread_count:{user_id}                               |
-|                                                                         |
+|      Redis: DECR unread_count:{user_id}                                |
+|                                                                        |
 |    Real-Time Delivery:                                                 |
 |      In-app worker writes to Redis sorted set + publishes              |
-|      via WebSocket to connected clients immediately                   |
-|                                                                         |
+|      via WebSocket to connected clients immediately                    |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  4. FAILURE SCENARIOS                                                  |
-|                                                                         |
+|                                                                        |
 |  What Fails               | Impact & Recovery                          |
 |  -------------------------+--------------------------------------------+
 |  APNs/FCM provider down   | Push notifications queue in Kafka. Workers |
@@ -1391,35 +1468,94 @@ A COMPLETE CONCEPTUAL GUIDE
 |                           | Fall back to secondary provider (Nexmo).   |
 |                           | Critical SMS (OTP) gets priority retry.    |
 |  -------------------------+--------------------------------------------+
-|                                                                         |
+|                                                                        |
 |  ====================================================================  |
-|                                                                         |
+|                                                                        |
 |  5. CLEANUP / EXPIRY                                                   |
-|                                                                         |
+|                                                                        |
 |    In-App Notification Expiry:                                         |
 |      in_app_notifications.expires_at checked on read                   |
 |      Background job: DELETE FROM in_app_notifications                  |
-|        WHERE expires_at < NOW();  (daily, batch of 50K)               |
-|      Redis: ZREMRANGEBYSCORE in_app:{user_id} -inf <30_days_ago>     |
-|                                                                         |
+|        WHERE expires_at < NOW();  (daily, batch of 50K)                |
+|      Redis: ZREMRANGEBYSCORE in_app:{user_id} -inf <30_days_ago>       |
+|                                                                        |
 |    Dead Letter Queue Cleanup:                                          |
-|      DLQ entries reviewed by ops team weekly                          |
-|      Auto-purge after 30 days if not replayed                         |
-|                                                                         |
-|    Stale Device Token Removal:                                        |
-|      Tokens marked is_valid=false by provider feedback                |
-|      Weekly job: DELETE FROM device_tokens                            |
-|        WHERE is_valid = false AND last_used_at < NOW()-INTERVAL 90d;  |
-|                                                                         |
+|      DLQ entries reviewed by ops team weekly                           |
+|      Auto-purge after 30 days if not replayed                          |
+|                                                                        |
+|    Stale Device Token Removal:                                         |
+|      Tokens marked is_valid=false by provider feedback                 |
+|      Weekly job: DELETE FROM device_tokens                             |
+|        WHERE is_valid = false AND last_used_at < NOW()-INTERVAL 90d;   |
+|                                                                        |
 |    Redis Cache TTL:                                                    |
-|      user_prefs:{user_id}: EX 3600 (1h, refreshed on update)         |
-|      unread_count:{user_id}: no TTL (maintained by INCR/DECR)        |
-|      notif_rate:{user_id}:{channel}: EX 3600 (auto-expire window)    |
+|      user_prefs:{user_id}: EX 3600 (1h, refreshed on update)           |
+|      unread_count:{user_id}: no TTL (maintained by INCR/DECR)          |
+|      notif_rate:{user_id}:{channel}: EX 3600 (auto-expire window)      |
+|                                                                        |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 14: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. CHANNEL-AGNOSTIC ARCHITECTURE                                       |
+|     Notification request is channel-independent. A router decides       |
+|     which channel(s) to use based on user preferences, priority,        |
+|     and channel availability. Adding a new channel requires only        |
+|     a new provider adapter, not core system changes.                    |
+|                                                                         |
+|  2. PRIORITY QUEUE WITH MULTIPLE TIERS                                  |
+|     Critical (payments, security) goes to high-priority queue with      |
+|     dedicated workers. Normal (social, marketing) goes to standard      |
+|     queue. Prevents marketing blasts from delaying payment alerts.      |
+|                                                                         |
+|  3. RATE LIMITING PER USER PER CHANNEL                                  |
+|     Redis sliding window: max N notifications per user per hour per     |
+|     channel. Prevents notification fatigue and respects user            |
+|     experience. Exceeded notifications are dropped or deferred.         |
+|                                                                         |
+|  4. TEMPLATE ENGINE FOR MESSAGE RENDERING                               |
+|     Upstream services send template_id + params. Notification           |
+|     system renders the final message per channel (push is short,        |
+|     email is rich HTML). Supports i18n and A/B testing.                 |
+|                                                                         |
+|  5. DELIVERY TRACKING WITH FEEDBACK LOOP                                |
+|     Every notification gets a unique ID tracked through send ->         |
+|     delivered -> opened. Provider callbacks (APNs, SendGrid) update     |
+|     status. Analytics pipeline consumes events for dashboards.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * AT-LEAST-ONCE vs EXACTLY-ONCE: At-least-once is simpler and          |
+|    sufficient with client-side dedup. Exactly-once requires             |
+|    distributed transactions with third-party providers (impossible      |
+|    in practice since APNs/FCM don't support transactions).              |
+|                                                                         |
+|  * PUSH LATENCY vs BATCHING EFFICIENCY: Immediate push for every        |
+|    notification wastes resources. Batching (digest every 15 min)        |
+|    saves cost but delays delivery. Priority tiers solve this:           |
+|    urgent = immediate, normal = batchable.                              |
+|                                                                         |
+|  * SMS COST vs REACH: SMS costs $0.01-0.05 per message. Push is         |
+|    free. We use SMS only for critical notifications (OTP, payment)      |
+|    where push delivery is uncertain (app not installed).                |
+|                                                                         |
+|  * USER PREFERENCE COMPLEXITY: Fine-grained preferences (per            |
+|    category, per channel, per time-of-day) improve UX but add           |
+|    query complexity. We cache preferences in Redis with event-          |
+|    driven invalidation on preference changes.                           |
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: INTERVIEW QUICK REFERENCE
+## SECTION 15: INTERVIEW QUICK REFERENCE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |

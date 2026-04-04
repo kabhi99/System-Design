@@ -5,6 +5,48 @@
 A distributed system that reliably executes tasks/jobs at specific
 times or intervals with high availability and exactly-once semantics.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: What types of jobs? One-time tasks, recurring/cron jobs,    |
+|    or both?                                                             |
+|                                                                         |
+|  INTERVIEWER: Both. Cron-like recurring jobs and one-time scheduled     |
+|    tasks. Think Airflow or Kubernetes CronJobs.                         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many jobs per day?                          |
+|                                                                         |
+|  INTERVIEWER: 10M job executions per day, 100K concurrent jobs,         |
+|    sub-second scheduling accuracy for cron triggers.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What guarantees? At-least-once or exactly-once execution?   |
+|                                                                         |
+|  INTERVIEWER: At-least-once with idempotent jobs as the baseline.       |
+|    No job should be silently dropped. Discuss how to prevent            |
+|    duplicate execution.                                                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Recurring cron jobs + one-time scheduled tasks                       |
+|  * 10M executions/day, 100K concurrent, sub-second accuracy             |
+|  * At-least-once execution, idempotent design                           |
+|  * Job dependencies (DAG), retries, priority queues                     |
+|  * Deep dive: scheduling accuracy + leader election                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ```
@@ -1469,6 +1511,34 @@ times or intervals with high availability and exactly-once semantics.
 |  Orphan detection:                                                      |
 |    Scan for RUNNING executions with no heartbeat in 5 minutes.          |
 |    Mark as TIMEOUT, release lock, trigger retry or DLQ.                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. LEADER-BASED SCHEDULER: single leader assigns jobs to workers.      |
+|     Leader elected via distributed lock (ZooKeeper/etcd).               |
+|  2. JOB QUEUE per priority. Workers pull from highest-priority queue    |
+|     first. Dead-letter queue for repeatedly failing jobs.               |
+|  3. HEARTBEAT + LEASE for worker liveness. Missed heartbeats trigger    |
+|     job reassignment to another worker.                                 |
+|  4. DAG EXECUTOR for job dependencies. Topological sort determines      |
+|     execution order. Parallel execution of independent nodes.           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * AT-LEAST-ONCE vs EXACTLY-ONCE: At-least-once is simpler; jobs        |
+|    must be idempotent. Exactly-once requires distributed transactions.  |
+|  * PULL vs PUSH to workers: Pull gives workers control over backpressure.|
+|    Push is lower latency but risks overwhelming slow workers.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

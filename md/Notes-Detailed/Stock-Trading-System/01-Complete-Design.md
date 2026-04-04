@@ -5,7 +5,73 @@ A stock trading platform handles order placement, matching, execution,
 and real-time market data distribution for millions of concurrent users
 with strict latency and consistency requirements.
 
-## SECTION 1: REQUIREMENTS
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  INTERVIEWER: "Design a stock trading system."                            |
+|                                                                           |
+|  Q1: "What type of exchange are we building -- equities only, or          |
+|       multi-asset (options, futures, crypto)?"                            |
+|  A1: "Focus on equities (stocks) only. A single national exchange         |
+|       like NASDAQ or NYSE. No derivatives or crypto for now."             |
+|                                                                           |
+|  Q2: "Which order types do we need to support?"                           |
+|  A2: "Market orders, limit orders, and stop orders at minimum.            |
+|       Time-in-force variants like IOC (Immediate-or-Cancel) and           |
+|       GTC (Good-Till-Cancelled) are in scope too."                        |
+|                                                                           |
+|  Q3: "Are we designing the matching engine itself, or a brokerage         |
+|       that routes orders to an external exchange?"                        |
+|  A3: "The full exchange, including the matching engine. This is the       |
+|       core differentiator -- we own the order book and matching           |
+|       logic. The brokerage layer is out of scope."                        |
+|                                                                           |
+|  Q4: "What scale should we target for orders and users?"                  |
+|  A4: "Peak of 100K orders/sec, 10M trades/day. Millions of                |
+|       registered users with 1M+ concurrent during market hours.           |
+|       Around 5000 listed stocks."                                         |
+|                                                                           |
+|  Q5: "What are the latency requirements for order matching?"              |
+|  A5: "Sub-millisecond for the matching engine itself. End-to-end          |
+|       order-to-acknowledgement under 10ms including network hops          |
+|       and gateway validation."                                            |
+|                                                                           |
+|  Q6: "Do we need to handle regulatory requirements like audit             |
+|       trails and fair ordering guarantees?"                               |
+|  A6: "Yes. Every order and trade must be logged immutably for             |
+|       SEC/FINRA compliance. Strict price-time priority enforced           |
+|       through a sequencer for fair ordering. Must retain trade            |
+|       records for 7+ years."                                              |
+|                                                                           |
+|  Q7: "How should we distribute real-time market data to clients?"         |
+|  A7: "WebSocket for real-time price feeds. Support Level 1 (best          |
+|       bid/ask) and Level 2 (full book depth). Fan-out to 1M+              |
+|       concurrent subscribers with batched binary updates."                |
+|                                                                           |
+|  Q8: "Should we cover settlement and clearing, or just matching?"         |
+|  A8: "Include post-trade settlement at a high level. T+1 settlement       |
+|       with netting. The focus is matching engine and market data,         |
+|       but we should show the full post-trade pipeline."                   |
+|                                                                           |
+|  -----------------------------------------------------------------------  |
+|                                                                           |
+|  AGREED SCOPE:                                                            |
+|                                                                           |
+|  * Equities-only exchange (stocks, not options/futures/crypto)            |
+|  * Order types: market, limit, stop, IOC, GTC                             |
+|  * Full matching engine with price-time priority (sub-ms latency)         |
+|  * Scale: 100K orders/sec peak, 10M trades/day, 1M+ connections           |
+|  * Sequencer for deterministic fair ordering of all orders                |
+|  * Immutable event log for SEC/FINRA audit trail compliance               |
+|  * Real-time market data fan-out via WebSocket (L1 + L2 data)             |
+|  * Post-trade pipeline: settlement (T+1), portfolio, reporting            |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+## SECTION 2: REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -29,7 +95,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: KEY TERMINOLOGY
+## SECTION 3: KEY TERMINOLOGY
 
 ```
 +--------------------------------------------------------------------------+
@@ -92,7 +158,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 3: HIGH-LEVEL ARCHITECTURE
+## SECTION 4: HIGH-LEVEL ARCHITECTURE
 
 ```
 +--------------------------------------------------------------------------+
@@ -130,7 +196,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 4: MATCHING ENGINE
+## SECTION 5: MATCHING ENGINE
 
 ```
 +-------------------------------------------------------------------------+
@@ -177,7 +243,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: ORDER TYPES AND RISK MANAGEMENT
+## SECTION 6: ORDER TYPES AND RISK MANAGEMENT
 
 ```
 +-------------------------------------------------------------------------+
@@ -210,7 +276,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 6: REAL-TIME MARKET DATA
+## SECTION 7: REAL-TIME MARKET DATA
 
 ```
 +--------------------------------------------------------------------------+
@@ -245,7 +311,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 7: SETTLEMENT AND RELIABILITY
+## SECTION 8: SETTLEMENT AND RELIABILITY
 
 ```
 +-------------------------------------------------------------------------+
@@ -278,7 +344,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: SCALE ESTIMATION
+## SECTION 9: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -340,7 +406,7 @@ with strict latency and consistency requirements.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 9: DESIGN ALTERNATIVES AND TRADE-OFFS
+## SECTION 10: DESIGN ALTERNATIVES AND TRADE-OFFS
 
 ```
 +--------------------------------------------------------------------------+
@@ -434,7 +500,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 10: COMMON ISSUES AND FAILURE SCENARIOS
+## SECTION 11: COMMON ISSUES AND FAILURE SCENARIOS
 
 ```
 +--------------------------------------------------------------------------+
@@ -533,7 +599,7 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 11: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
+## SECTION 12: DETAILED WRITE/READ PATHS AND STATE MANAGEMENT
 
 ```
 +--------------------------------------------------------------------------+
@@ -541,8 +607,8 @@ with strict latency and consistency requirements.
 ||  1. ENTITY STATE MACHINE (Order)                                        |
 ||                                                                         |
 ||  PENDING ──> OPEN ──> PARTIALLY_FILLED ──> FILLED                       |
-||    │           │            │                                            |
-||    │           │            └──> CANCELLED (user cancel remaining qty)   |
+||    │           │            │                                           |
+||    │           │            └──> CANCELLED (user cancel remaining qty)  |
 ||    │           │                                                        |
 ||    │           └──> CANCELLED (user cancel before any fill)             |
 ||    │           │                                                        |
@@ -554,7 +620,7 @@ with strict latency and consistency requirements.
 ||  PENDING_TRIGGER ──> TRIGGERED ──> OPEN ──> (same as above)             |
 ||                                                                         |
 ||  Transition rules:                                                      |
-||  * PENDING: validated by gateway, awaiting matching engine               |
+||  * PENDING: validated by gateway, awaiting matching engine              |
 ||  * OPEN: in the order book, eligible for matching                       |
 ||  * PARTIALLY_FILLED: some qty matched, remainder still in book          |
 ||  * FILLED: fully matched, terminal state                                |
@@ -565,44 +631,44 @@ with strict latency and consistency requirements.
 ||  2. CRITICAL WRITE PATH (Order Matching in the Order Book)              |
 ||                                                                         |
 ||  Client        API GW       Order Mgmt      Matching Engine             |
-||    |              |             |                  |                     |
-||    |-- place ---->|             |                  |                     |
-||    |  order       |-- validate->|                  |                     |
-||    |  (AAPL,      |             |                  |                     |
+||    |              |             |                  |                    |
+||    |-- place ---->|             |                  |                    |
+||    |  order       |-- validate->|                  |                    |
+||    |  (AAPL,      |             |                  |                    |
 ||    |   BUY,       |  Pre-trade risk checks:        |                    |
-||    |   150.20,    |  * balance >= order_value       |                    |
+||    |   150.20,    |  * balance >= order_value       |                   |
 ||    |   500 qty)   |  * position limits OK           |                   |
-||    |              |  * circuit breaker check         |                   |
-||    |              |  * rate limit per user           |                   |
-||    |              |             |                  |                     |
-||    |              |  WAL: log order before ACK      |                    |
-||    |              |             |                  |                     |
-||    |              |             |-- route to       |                     |
-||    |              |             |   AAPL engine -->|                     |
-||    |              |             |                  |                     |
-||    |              |  Matching engine (single-threaded, in-memory):       |
-||    |              |                                                      |
-||    |              |  // BUY $150.20 x 500 arrives                        |
-||    |              |  best_ask = asks.peek()  // $150.15 x 300            |
-||    |              |  if buy.price >= best_ask.price:                     |
-||    |              |    trade(300 @ $150.15)  // partial fill             |
-||    |              |    emit TradeExecuted event                          |
-||    |              |    remaining = 200                                   |
-||    |              |    next_ask = asks.peek()  // $150.20 x 700          |
-||    |              |    trade(200 @ $150.20)  // fill complete            |
-||    |              |    emit TradeExecuted event                          |
-||    |              |    order status = FILLED                             |
-||    |              |                                                      |
-||    |              |  Events written to WAL (append-only log):            |
-||    |              |    { type: TRADE, order_id, price, qty, ts }         |
-||    |              |                  |                                   |
-||    |              |  Kafka: emit events to downstream                    |
-||    |              |    -> Trade Execution Svc (update portfolio)         |
-||    |              |    -> Market Data Svc (update best bid/ask)          |
-||    |              |    -> Settlement Svc (T+1 queue)                     |
-||    |              |    -> Regulatory audit log                           |
-||    |              |                  |                                   |
-||    |<-- fills ----|<-- ack ---------|                                    |
+||    |              |  * circuit breaker check         |                  |
+||    |              |  * rate limit per user           |                  |
+||    |              |             |                  |                    |
+||    |              |  WAL: log order before ACK      |                   |
+||    |              |             |                  |                    |
+||    |              |             |-- route to       |                    |
+||    |              |             |   AAPL engine -->|                    |
+||    |              |             |                  |                    |
+||    |              |  Matching engine (single-threaded, in-memory):      |
+||    |              |                                                     |
+||    |              |  // BUY $150.20 x 500 arrives                       |
+||    |              |  best_ask = asks.peek()  // $150.15 x 300           |
+||    |              |  if buy.price >= best_ask.price:                    |
+||    |              |    trade(300 @ $150.15)  // partial fill            |
+||    |              |    emit TradeExecuted event                         |
+||    |              |    remaining = 200                                  |
+||    |              |    next_ask = asks.peek()  // $150.20 x 700         |
+||    |              |    trade(200 @ $150.20)  // fill complete           |
+||    |              |    emit TradeExecuted event                         |
+||    |              |    order status = FILLED                            |
+||    |              |                                                     |
+||    |              |  Events written to WAL (append-only log):           |
+||    |              |    { type: TRADE, order_id, price, qty, ts }        |
+||    |              |                  |                                  |
+||    |              |  Kafka: emit events to downstream                   |
+||    |              |    -> Trade Execution Svc (update portfolio)        |
+||    |              |    -> Market Data Svc (update best bid/ask)         |
+||    |              |    -> Settlement Svc (T+1 queue)                    |
+||    |              |    -> Regulatory audit log                          |
+||    |              |                  |                                  |
+||    |<-- fills ----|<-- ack ---------|                                   |
 ||                                                                         |
 ||  Data structures in matching engine:                                    |
 ||  * Red-black tree: price levels (O(log N) insert/remove)                |
@@ -614,18 +680,18 @@ with strict latency and consistency requirements.
 ||  3. READ PATH                                                           |
 ||                                                                         |
 ||  ORDER BOOK (Level 2 market data):                                      |
-||    Matching Engine -> in-memory snapshot -> Market Data Svc              |
+||    Matching Engine -> in-memory snapshot -> Market Data Svc             |
 ||    -> WebSocket push to subscribers (batched every 100ms)               |
-||    * No DB read - purely in-memory from matching engine state            |
+||    * No DB read - purely in-memory from matching engine state           |
 ||                                                                         |
 ||  PORTFOLIO / HOLDINGS:                                                  |
-||    Client --> Portfolio Svc --> PostgreSQL/TimescaleDB                   |
+||    Client --> Portfolio Svc --> PostgreSQL/TimescaleDB                  |
 ||    * Read replica for display queries                                   |
 ||    * Updated async via Kafka TradeExecuted events                       |
 ||                                                                         |
 ||  TRADE HISTORY:                                                         |
-||    Client --> Trade Svc --> Hot: PostgreSQL (last 90 days)               |
-||                         --> Cold: S3 Parquet (via Athena)                |
+||    Client --> Trade Svc --> Hot: PostgreSQL (last 90 days)              |
+||                         --> Cold: S3 Parquet (via Athena)               |
 ||    * Immutable event log, append-only                                   |
 ||                                                                         |
 ||  LAST PRICE / TICKER:                                                   |
@@ -692,7 +758,62 @@ with strict latency and consistency requirements.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 12: INTERVIEW QUESTIONS
+## SECTION 13: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. SINGLE-THREADED MATCHING ENGINE                                     |
+|     Price-time priority enforced deterministically without locks.       |
+|     LMAX Disruptor pattern: one thread processes millions of            |
+|     orders/sec from a ring buffer. Sharded by symbol.                   |
+|                                                                         |
+|  2. ORDER BOOK AS SORTED DATA STRUCTURE                                 |
+|     Buy orders in max-heap (highest bid first), sell orders in          |
+|     min-heap (lowest ask first). In-memory for sub-microsecond          |
+|     matching. Persistent event log for durability.                      |
+|                                                                         |
+|  3. SEQUENCER FOR FAIR ORDERING                                         |
+|     All incoming orders pass through a sequencer that assigns           |
+|     monotonic sequence numbers before reaching the matching             |
+|     engine. Guarantees fair time-priority regardless of network         |
+|     path.                                                               |
+|                                                                         |
+|  4. EVENT SOURCING FOR AUDIT TRAIL                                      |
+|     Every order placement, match, cancellation, and fill is an          |
+|     immutable event. State is reconstructable by replaying events.      |
+|     Critical for regulatory compliance and crash recovery.              |
+|                                                                         |
+|  5. MARKET DATA FAN-OUT VIA PUB/SUB                                     |
+|     Trade events and order book snapshots published to Kafka            |
+|     topics. WebSocket gateway subscribes and pushes to millions         |
+|     of clients. Binary protocol (protobuf) for minimal latency.         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * LATENCY vs THROUGHPUT: Single-threaded matching minimizes            |
+|    latency (microseconds) but caps throughput per symbol. Sharding      |
+|    by symbol parallelizes across symbols while keeping per-symbol       |
+|    ordering strict.                                                     |
+|                                                                         |
+|  * IN-MEMORY vs DURABLE ORDER BOOK: In-memory is fast but               |
+|    volatile. Event sourcing provides durability via replay.             |
+|    Trade-off: recovery time (replay all events) vs checkpointing        |
+|    (periodic snapshots + replay from last snapshot).                    |
+|                                                                         |
+|  * SYNCHRONOUS vs ASYNC SETTLEMENT: Stock settlement is T+1             |
+|    (async batch). Crypto is immediate. Async settlement decouples       |
+|    matching speed from settlement complexity but introduces risk        |
+|    (counterparty default between match and settlement).                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 14: INTERVIEW QUESTIONS
 
 ```
 +--------------------------------------------------------------------------+

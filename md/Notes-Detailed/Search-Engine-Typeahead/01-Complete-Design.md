@@ -2,7 +2,80 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
-## SECTION 1: TABLE OF CONTENTS
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a full-text search engine (like Google     |
+|    Search), a typeahead/autocomplete feature, or both?                  |
+|                                                                         |
+|  INTERVIEWER: Both, but weight them differently. Spend 30% on the       |
+|    search engine (indexing, ranking) and 70% on the typeahead/          |
+|    autocomplete (latency, prefix matching, ranking suggestions).        |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: For typeahead, what data sources power the suggestions?     |
+|    Past queries, trending searches, personalized history?               |
+|                                                                         |
+|  INTERVIEWER: All three. Historical query frequency is the primary      |
+|    signal. Trending/recency boosts are important. Personalization       |
+|    is a nice-to-have. Focus on the data collection pipeline and         |
+|    serving architecture.                                                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What latency requirement for typeahead? Users expect        |
+|    suggestions to appear as they type.                                  |
+|                                                                         |
+|  INTERVIEWER: Under 100ms p99 for suggestion results. Every             |
+|    keystroke triggers a query. This is the hardest constraint.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many queries per day and how large is       |
+|    the suggestion dataset?                                              |
+|                                                                         |
+|  INTERVIEWER: 10 billion search queries/day, 5 billion typeahead        |
+|    requests/day. Suggestion corpus: ~100 million unique queries         |
+|    with frequency counts.                                               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should the typeahead support multi-language and spell       |
+|    correction?                                                          |
+|                                                                         |
+|  INTERVIEWER: Multi-language yes. Spell correction is a bonus -         |
+|    mention it but don't deep-dive.                                      |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: For the search engine portion, should I cover web           |
+|    crawling and document ingestion, or just the index and ranking?      |
+|                                                                         |
+|  INTERVIEWER: Skip crawling. Focus on inverted index structure,         |
+|    BM25/TF-IDF ranking, and the query processing pipeline.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Search engine: inverted index, BM25 ranking, query pipeline          |
+|  * Typeahead: prefix matching, ranked suggestions, <100ms p99           |
+|  * 10B queries/day, 5B typeahead requests/day                           |
+|  * Data sources: query frequency, trending, personalization             |
+|  * Trie vs prefix table comparison for typeahead                        |
+|  * Multi-language support                                               |
+|  * Deep dive: typeahead serving architecture + data pipeline            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: TABLE OF CONTENTS
 
 1. Requirements
 2. Key Terminology
@@ -1565,13 +1638,13 @@
 ||  ======================================================                 |
 ||                                                                         |
 ||  RAW_QUERY ---> AGGREGATED ---> INDEXED_IN_TRIE ---> SERVED             |
-||      |          (Flink           (offline Trie        (top-K             |
-||      |           window)          rebuild + S3)        lookup)           |
+||      |          (Flink           (offline Trie        (top-K            |
+||      |           window)          rebuild + S3)        lookup)          |
 ||      |                                                   |              |
 ||      |  real-time spike                    freq drops    |              |
 ||      +---> TRENDING_OVERLAY --+              +----------+               |
-||            (Flink sliding     |              |                           |
-||             window, 1 hr)     |              v                           |
+||            (Flink sliding     |              |                          |
+||             window, 1 hr)     |              v                          |
 ||                               |         DECAYED/PRUNED                  |
 ||                               |         (dropped at next                |
 ||                               |          Trie rebuild)                  |
@@ -1597,7 +1670,7 @@
 ||        node = trie.insert(query.toLowerCase())                          |
 ||        node.frequency = freq                                            |
 ||    for node in trie.BFS():                                              |
-||        node.top_k = heapSelect(descendants, K=10, by=freq)             |
+||        node.top_k = heapSelect(descendants, K=10, by=freq)              |
 ||    serialize(trie) -> S3  s3://tries/{locale}/{timestamp}.bin           |
 ||                                                                         |
 ||  Step 4: Atomic hot-swap on Trie servers                                |
@@ -1661,8 +1734,8 @@
 ||  * Offensive / policy-violating queries filtered via blocklist          |
 ||    checked at build Step 3.                                             |
 ||  * CDN cache: TTL 5-15 min auto-evicts stale suggestions.               |
-||  * Redis cache: TTL 1-5 min; LRU eviction for tail prefixes.           |
-||  * S3 trie snapshots: retained 7 days for rollback, then               |
+||  * Redis cache: TTL 1-5 min; LRU eviction for tail prefixes.            |
+||  * S3 trie snapshots: retained 7 days for rollback, then                |
 ||    lifecycle-deleted.                                                   |
 ||  * Trending overlay entries auto-expire after sliding window closes.    |
 ||                                                                         |
@@ -1695,4 +1768,45 @@
 +--------------------------------------------------------------------------+
 ```
 
-*End of Search Engine and Typeahead System Design*
+## SECTION 21: WRAP-UP - KEY TRADE-OFFS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * TRIE vs PREFIX TABLE: Trie gives O(prefix_len) lookup and            |
+|    natural prefix traversal but uses more memory (pointer overhead).    |
+|    Prefix hash table (prefix -> top-K list) is simpler, cache-          |
+|    friendly, and easier to shard. We use trie for in-memory serving     |
+|    with pre-computed top-K at each node. The trie is rebuilt from       |
+|    aggregated query logs every 2 hours.                                 |
+|                                                                         |
+|  * FRESHNESS vs SERVING LATENCY: Real-time indexing (NRT, 1s            |
+|    refresh) keeps search results fresh but adds write amplification.    |
+|    Typeahead suggestions use batch-rebuilt tries (2h cycle) + a         |
+|    real-time trending overlay for breaking queries. Trade-off:          |
+|    most suggestions are 2h stale but trending queries appear            |
+|    within minutes.                                                      |
+|                                                                         |
+|  * PERSONALIZATION vs CACHE HIT RATE: Personalized suggestions          |
+|    (user's own history) are highly relevant but uncacheable at CDN      |
+|    level (unique per user). Non-personalized suggestions have high      |
+|    cache hit rate (~80% at CDN). We serve non-personalized from CDN     |
+|    and blend in personalized results client-side from a separate API.   |
+|                                                                         |
+|  * DOCUMENT-BASED vs TERM-BASED SHARDING: Document-based sharding       |
+|    keeps all terms for one document on one shard (simpler scoring,      |
+|    independent shards). Term-based sharding keeps all documents for     |
+|    one term on one shard (faster single-term queries but requires       |
+|    scatter-gather for multi-term). We chose document-based for          |
+|    operational simplicity.                                              |
+|                                                                         |
+|  * EXACT MATCH vs FUZZY/SPELL-CORRECTED: Exact prefix match is          |
+|    fast and predictable. Spell correction (edit distance, noisy         |
+|    channel model) catches typos but adds latency (~20ms). We run        |
+|    spell correction in parallel with exact match and merge results      |
+|    if the exact match returns too few suggestions.                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

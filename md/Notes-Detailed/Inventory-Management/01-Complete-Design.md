@@ -2,6 +2,41 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing inventory for e-commerce (Amazon/Walmart)  |
+|    or warehouse/supply chain management?                                |
+|                                                                         |
+|  INTERVIEWER: E-commerce inventory. Track stock levels, prevent         |
+|    overselling, handle concurrent purchases. Think Amazon's "Add to     |
+|    Cart" and checkout flow.                                             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many SKUs and transactions?                 |
+|                                                                         |
+|  INTERVIEWER: 100M SKUs, 10K orders/sec peak (Black Friday).            |
+|    Zero tolerance for overselling on limited-stock items.               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * E-commerce inventory management (Amazon style)                       |
+|  * 100M SKUs, 10K orders/sec peak                                       |
+|  * Oversell prevention (the core problem)                               |
+|  * Multi-warehouse stock aggregation                                    |
+|  * Deep dive: concurrent stock deduction + reservation pattern          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ```
@@ -978,17 +1013,17 @@
 |                                                                         |
 |  AVAILABLE ──> RESERVED ──> COMMITTED ──> SHIPPED                       |
 |      │            │             │                                       |
-|      │            │             └──> RETURNED (back to inspection)       |
+|      │            │             └──> RETURNED (back to inspection)      |
 |      │            │                      │                              |
-|      │            │                      ├──> AVAILABLE (sellable)       |
-|      │            │                      └──> DAMAGED (unsellable)       |
+|      │            │                      ├──> AVAILABLE (sellable)      |
+|      │            │                      └──> DAMAGED (unsellable)      |
 |      │            │                                                     |
-|      │            └──> RELEASED (order cancelled, back to available)     |
+|      │            └──> RELEASED (order cancelled, back to available)    |
 |      │                                                                  |
 |      └──> DAMAGED (defective, removed from saleable pool)               |
 |      └──> IN_TRANSIT (warehouse transfer initiated)                     |
 |                │                                                        |
-|                └──> AVAILABLE (at destination, transfer received)        |
+|                └──> AVAILABLE (at destination, transfer received)       |
 |                                                                         |
 |  Transition rules:                                                      |
 |  * AVAILABLE -> RESERVED: order placed (atomic decrement)               |
@@ -997,7 +1032,7 @@
 |  * RESERVED -> RELEASED: order cancelled (back to available)            |
 |  * Every transition writes to inventory_ledger in same txn              |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Reserve with Warehouse Allocation)             |
 |                                                                         |
@@ -1012,52 +1047,52 @@
 |    |   Lua script (atomic check-and-decrement):      |         |        |
 |    |   local key = "stock:{sku}:{loc}"               |         |        |
 |    |   local current = tonumber(redis.call('GET',key))|        |        |
-|    |   if current >= quantity then                    |         |        |
-|    |     redis.call('DECRBY', key, quantity)          |         |        |
-|    |     return current - quantity                    |         |        |
+|    |   if current >= quantity then                    |         |       |
+|    |     redis.call('DECRBY', key, quantity)          |         |       |
+|    |     return current - quantity                    |         |       |
 |    |   end                                           |         |        |
 |    |   return -1  -- insufficient stock              |         |        |
 |    |                 |               |               |         |        |
 |    |   NORMAL PATH (DB is primary):  |               |         |        |
 |    |                 |               |               |         |        |
 |    |   BEGIN TRANSACTION;            |               |         |        |
-|    |     SELECT available, reserved, version          |         |        |
-|    |       FROM inventory_records                     |         |        |
-|    |       WHERE sku_id = :sku AND location_id = :loc |         |        |
-|    |       FOR UPDATE;                                |         |        |
+|    |     SELECT available, reserved, version          |         |       |
+|    |       FROM inventory_records                     |         |       |
+|    |       WHERE sku_id = :sku AND location_id = :loc |         |       |
+|    |       FOR UPDATE;                                |         |       |
 |    |                 |               |               |         |        |
-|    |     IF available < :quantity THEN                |         |        |
-|    |       ROLLBACK; RETURN insufficient_stock        |         |        |
+|    |     IF available < :quantity THEN                |         |       |
+|    |       ROLLBACK; RETURN insufficient_stock        |         |       |
 |    |     END IF;                     |               |         |        |
 |    |                 |               |               |         |        |
-|    |     UPDATE inventory_records                     |         |        |
-|    |       SET available = available - :quantity,     |         |        |
-|    |           reserved = reserved + :quantity,       |         |        |
+|    |     UPDATE inventory_records                     |         |       |
+|    |       SET available = available - :quantity,     |         |       |
+|    |           reserved = reserved + :quantity,       |         |       |
 |    |           version = version + 1,                |         |        |
-|    |           updated_at = now()                     |         |        |
+|    |           updated_at = now()                     |         |       |
 |    |       WHERE sku_id = :sku AND location_id = :loc;|        |        |
 |    |                 |               |               |         |        |
-|    |     INSERT INTO inventory_ledger                 |         |        |
-|    |       (sku_id, location_id, operation, quantity, |         |        |
-|    |        reference_type, reference_id,             |         |        |
-|    |        before_available, after_available,        |         |        |
-|    |        before_reserved, after_reserved,          |         |        |
-|    |        actor_id, created_at)                     |         |        |
+|    |     INSERT INTO inventory_ledger                 |         |       |
+|    |       (sku_id, location_id, operation, quantity, |         |       |
+|    |        reference_type, reference_id,             |         |       |
+|    |        before_available, after_available,        |         |       |
+|    |        before_reserved, after_reserved,          |         |       |
+|    |        actor_id, created_at)                     |         |       |
 |    |       VALUES (:sku, :loc, 'reserve', :qty,      |         |        |
-|    |        'order', :order_id,                       |         |        |
-|    |        :old_avail, :new_avail,                   |         |        |
-|    |        :old_reserved, :new_reserved,             |         |        |
-|    |        :system_id, now());                       |         |        |
+|    |        'order', :order_id,                       |         |       |
+|    |        :old_avail, :new_avail,                   |         |       |
+|    |        :old_reserved, :new_reserved,             |         |       |
+|    |        :system_id, now());                       |         |       |
 |    |   COMMIT;                       |               |         |        |
 |    |                 |               |               |         |        |
-|    |   Invalidate/update Redis cache: |               |         |        |
-|    |     SET stock:{sku}:{loc} :new_avail             |         |        |
+|    |   Invalidate/update Redis cache: |               |         |       |
+|    |     SET stock:{sku}:{loc} :new_avail             |         |       |
 |    |                 |               |               |         |        |
 |    |   Kafka: emit stock_changed event               |         |        |
-|    |     -> search-consumer (update product listing)  |         |        |
-|    |     -> alert-consumer (check safety_stock)       |         |        |
-|    |     -> analytics-consumer (ClickHouse time-series)|        |        |
-|    |     -> marketplace-sync-consumer (update feeds)  |         |        |
+|    |     -> search-consumer (update product listing)  |         |       |
+|    |     -> alert-consumer (check safety_stock)       |         |       |
+|    |     -> analytics-consumer (ClickHouse time-series)|        |       |
+|    |     -> marketplace-sync-consumer (update feeds)  |         |       |
 |    |                 |               |               |         |        |
 |    |<-- reserved ----|               |               |         |        |
 |                                                                         |
@@ -1068,7 +1103,7 @@
 |    ORDER BY receipt_date ASC (FIFO) LIMIT :qty                          |
 |  * Create pick_list with bin locations and quantities                   |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  3. READ PATH                                                           |
 |                                                                         |
@@ -1076,31 +1111,31 @@
 |    Client --> Redis cache (stock:{sku}:total)                           |
 |    * Aggregate across all locations, cached                             |
 |    * TTL: 10 seconds (eventual consistency OK for display)              |
-|    MISS --> Read replica (PostgreSQL)                                    |
-|    SELECT SUM(available) FROM inventory_records                          |
+|    MISS --> Read replica (PostgreSQL)                                   |
+|    SELECT SUM(available) FROM inventory_records                         |
 |      WHERE sku_id = :sku;                                               |
 |                                                                         |
 |  STOCK BY LOCATION (warehouse dashboard):                               |
-|    Internal --> PostgreSQL read replica                                  |
-|    SELECT * FROM inventory_records                                       |
+|    Internal --> PostgreSQL read replica                                 |
+|    SELECT * FROM inventory_records                                      |
 |      WHERE sku_id = :sku;                                               |
-|    * Returns all locations with their available/reserved/damaged         |
+|    * Returns all locations with their available/reserved/damaged        |
 |    * Read replica: < 100ms lag under normal conditions                  |
 |                                                                         |
 |  INVENTORY HISTORY (audit):                                             |
-|    Internal --> inventory_ledger table                                   |
-|    SELECT * FROM inventory_ledger                                        |
+|    Internal --> inventory_ledger table                                  |
+|    SELECT * FROM inventory_ledger                                       |
 |      WHERE sku_id = :sku AND location_id = :loc                         |
 |      AND created_at BETWEEN :start AND :end                             |
 |      ORDER BY created_at DESC;                                          |
-|    * Partitioned by month; partition pruning for date ranges             |
+|    * Partitioned by month; partition pruning for date ranges            |
 |                                                                         |
 |  TIME-SERIES ANALYTICS:                                                 |
-|    Dashboard --> ClickHouse (columnar, fast aggregation)                 |
+|    Dashboard --> ClickHouse (columnar, fast aggregation)                |
 |    * "Stock level for SKU X over last 30 days"                          |
 |    * Built from Kafka stock_changed events                              |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
@@ -1134,7 +1169,7 @@
 |  |                              | order, notify customer).           |  |
 |  +------------------------------+------------------------------------+  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
@@ -1157,8 +1192,8 @@
 |  * After flash sale: full reconciliation between Redis and DB           |
 |                                                                         |
 |  CYCLE COUNTING ADJUSTMENTS:                                            |
-|  * Physical count discrepancies create ledger entries:                   |
-|    operation = 'adjust', quantity = (physical - system)                  |
+|  * Physical count discrepancies create ledger entries:                  |
+|    operation = 'adjust', quantity = (physical - system)                 |
 |  * Requires supervisor approval for adjustments > threshold             |
 |  * Triggers shrinkage alert if cumulative adjustments are large         |
 |                                                                         |
@@ -1167,6 +1202,36 @@
 |  * Stale feed: if sync fails, retry with backoff                        |
 |  * Automatic listing disable if stock reaches 0                         |
 |  * Re-enable listing when stock replenished above threshold             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. ATOMIC STOCK DEDUCTION: UPDATE stock SET qty = qty - 1 WHERE        |
+|     qty > 0. Database enforces constraint. No application-level lock.   |
+|  2. RESERVATION PATTERN: "Add to Cart" creates a soft hold (TTL).       |
+|     Checkout converts hold to deduction. Expired holds release stock.   |
+|  3. SHARD BY SKU_ID: all stock for one SKU on one shard. Enables        |
+|     single-shard ACID transactions for deduction.                       |
+|  4. EVENTUAL CONSISTENCY for display ("2 left in stock" is approximate).|
+|     Strong consistency for deduction (the write path).                  |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * RESERVATION TTL: Short TTL (5 min) reduces phantom stock but         |
+|    frustrates slow shoppers. Long TTL (30 min) is user-friendly         |
+|    but locks stock others could buy. 10-15 min is typical.              |
+|  * DISPLAY ACCURACY vs PERFORMANCE: Real-time stock count from DB       |
+|    is accurate but expensive. Cached count (30s TTL) is fast but        |
+|    may show "in stock" when sold out. Acceptable for display.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

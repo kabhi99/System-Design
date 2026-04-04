@@ -2,7 +2,111 @@
 
 A COMPLETE CONCEPTUAL GUIDE
 
-## SECTION 1: UNDERSTANDING THE PROBLEM
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                           |
+|  (establishing scope before diving into design)                           |
+|                                                                           |
+|  CANDIDATE: What type of social media platform are we designing?          |
+|    A short-form text platform like Twitter/X, a social graph              |
+|    platform like Facebook, or a visual platform like Instagram?           |
+|                                                                           |
+|  INTERVIEWER: Think Twitter/X-style. Short text posts with                |
+|    optional media. A follow-based graph (not mutual friending)            |
+|    and a home feed. We can borrow elements from Instagram for             |
+|    media but the primary UX is a text-first timeline.                     |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: Which core features should I prioritize? Posting,             |
+|    following, feed generation, likes, comments, reposts?                  |
+|                                                                           |
+|  INTERVIEWER: Yes, all of those. Post creation, follow/unfollow,          |
+|    a personalized home feed, likes, comments, and reposts. Also           |
+|    hashtags, mentions, and user search. Skip DMs and Stories.             |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: What scale are we targeting in terms of users and             |
+|    daily activity?                                                        |
+|                                                                           |
+|  INTERVIEWER: Assume 500M daily active users, around 1 billion            |
+|    feed reads per day, and roughly 200M new posts per day.                |
+|    Average user follows about 200 accounts. Some accounts                 |
+|    (celebrities) have 50M+ followers.                                     |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: What content types should posts support? Just text,           |
+|    or also images and video?                                              |
+|                                                                           |
+|  INTERVIEWER: Text posts up to 280 characters, images (up to 4            |
+|    per post), and short-form video (up to 2 minutes). Text is             |
+|    the dominant format. Don't deep-dive into video transcoding            |
+|    but mention the media pipeline.                                        |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: Should the home feed be real-time (push updates as            |
+|    new posts arrive) or refresh-on-pull?                                  |
+|                                                                           |
+|  INTERVIEWER: Pull-to-refresh for the primary experience, but             |
+|    show a "new posts available" nudge via a lightweight push              |
+|    channel (WebSocket or SSE). Don't auto-inject posts into a             |
+|    feed the user is reading—that's disorienting.                          |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: How should we handle the celebrity/influencer                 |
+|    problem? A user with 50M followers causes massive fan-out              |
+|    if we push each post to every follower's feed.                         |
+|                                                                           |
+|  INTERVIEWER: Great observation. Discuss a hybrid strategy:               |
+|    fan-out on write for normal users and fan-out on read for              |
+|    celebrity accounts. Define the threshold and explain the               |
+|    trade-offs.                                                            |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: Should we cover content moderation—detecting spam,            |
+|    hate speech, and policy-violating media?                               |
+|                                                                           |
+|  INTERVIEWER: Cover it at a high level. Mention an async                  |
+|    moderation pipeline (ML classifiers + human review), but               |
+|    don't deep-dive into ML models. Focus more on the fan-out,             |
+|    feed ranking, and data model.                                          |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  CANDIDATE: Should the feed be purely chronological or ranked             |
+|    by relevance?                                                          |
+|                                                                           |
+|  INTERVIEWER: Start with reverse chronological for clarity,               |
+|    then discuss adding a lightweight ranking layer. Cover                 |
+|    signals like recency, engagement, and affinity. This is a              |
+|    great area to show depth.                                              |
+|                                                                           |
+|  -----------------------------------------------------------------        |
+|                                                                           |
+|  AGREED SCOPE:                                                            |
+|                                                                           |
+|  * Twitter/X-style platform (follow graph, not mutual friends)            |
+|  * Core features: post, follow, feed, like, comment, repost               |
+|  * 500M DAU, 1B feed reads/day, 200M posts/day                            |
+|  * Text posts (280 chars) + images + short video                          |
+|  * Pull-to-refresh feed with lightweight push notification                |
+|  * Hybrid fan-out: write for normal, read for celebrities                 |
+|  * Chronological feed with optional ranking layer                         |
+|  * Content moderation pipeline (high-level only)                          |
+|  * Deep dive: feed generation, fan-out, and data model                    |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 
 ```
 +-------------------------------------------------------------------------+
@@ -44,7 +148,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 2: REQUIREMENTS
+## SECTION 3: REQUIREMENTS
 
 ```
 +-------------------------------------------------------------------------+
@@ -109,7 +213,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 3: KEY TERMINOLOGY
+## SECTION 4: KEY TERMINOLOGY
 
 ```
 +-------------------------------------------------------------------------+
@@ -167,7 +271,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4: SCALE ESTIMATION
+## SECTION 5: SCALE ESTIMATION
 
 ```
 +-------------------------------------------------------------------------+
@@ -238,7 +342,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 5: HIGH-LEVEL ARCHITECTURE
+## SECTION 6: HIGH-LEVEL ARCHITECTURE
 
 ```
 +-------------------------------------------------------------------------+
@@ -331,7 +435,7 @@ A COMPLETE CONCEPTUAL GUIDE
 ** Full-text search*
 ** Trending topics*
 
-## SECTION 6: DATA MODEL
+## SECTION 7: DATA MODEL
 
 ```
 +-------------------------------------------------------------------------+
@@ -461,7 +565,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 7: NEWS FEED - THE CORE CHALLENGE
+## SECTION 8: NEWS FEED - THE CORE CHALLENGE
 
 ```
 +-------------------------------------------------------------------------+
@@ -634,7 +738,7 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 8: FEED CACHE DESIGN
+## SECTION 9: FEED CACHE DESIGN
 
 ```
 +-------------------------------------------------------------------------+
@@ -1638,7 +1742,7 @@ A COMPLETE CONCEPTUAL GUIDE
 ||  1. ENTITY STATE MACHINE: Post Lifecycle                                |
 ||  ======================================================                 |
 ||                                                                         |
-||  CREATED --> STORED --> FANOUT_QUEUED --> DISTRIBUTED --> (DELETED)      |
+||  CREATED --> STORED --> FANOUT_QUEUED --> DISTRIBUTED --> (DELETED)     |
 ||                                                                         |
 ||  +----------+ INSERT   +----------+ Kafka    +-----------+              |
 ||  | CREATED  | -------> | STORED   | -------> | FANOUT    |              |
@@ -1646,7 +1750,7 @@ A COMPLETE CONCEPTUAL GUIDE
 ||  +----------+          |  DB)     |          | (Kafka)   |              |
 ||                        +----------+          +-----------+              |
 ||                                                   |                     |
-||                          Fanout Service            |                     |
+||                          Fanout Service            |                    |
 ||                          ZADD feed:{follower}      v                    |
 ||                                              +-----------+              |
 ||                                              |DISTRIBUTED|              |
@@ -1670,9 +1774,9 @@ A COMPLETE CONCEPTUAL GUIDE
 ||                                                                         |
 ||  Step 2: Write to Posts DB                                              |
 ||    INSERT INTO posts (post_id, user_id, content, created_at,            |
-||                       reply_to_id, has_media)                            |
+||                       reply_to_id, has_media)                           |
 ||    VALUES (:post_id, :user_id, :content, NOW(),                         |
-||            :reply_to_id, :has_media);                                    |
+||            :reply_to_id, :has_media);                                   |
 ||                                                                         |
 ||  Step 3: Write to post content cache                                    |
 ||    SET post:{post_id} = {post JSON blob}  // Redis, TTL 48 hrs          |
@@ -1686,12 +1790,12 @@ A COMPLETE CONCEPTUAL GUIDE
 ||      for each follower_id in followers:                                 |
 ||        ZADD feed:{follower_id} {timestamp} {post_id}                    |
 ||        ZREMRANGEBYRANK feed:{follower_id} 0 -801  // trim to 800        |
-||    ELSE:                              // PULL model (celebrity)          |
+||    ELSE:                              // PULL model (celebrity)         |
 ||      skip fanout; followers pull at read time                           |
 ||                                                                         |
 ||  Step 6 (async): Notification + Search Index                            |
-||    Notification Service: push to mentioned users, followers              |
-||    Search Indexer: index post in Elasticsearch                           |
+||    Notification Service: push to mentioned users, followers             |
+||    Search Indexer: index post in Elasticsearch                          |
 ||                                                                         |
 ||  3. READ PATH: Feed Generation (Hybrid Push+Pull)                       |
 ||  ======================================================                 |
@@ -1700,7 +1804,7 @@ A COMPLETE CONCEPTUAL GUIDE
 ||                                                                         |
 ||  Step 1: Read pre-computed feed from Redis                              |
 ||    post_ids = ZREVRANGE feed:user_A {cursor} {cursor+19}                |
-||    // Already populated by Fanout Service (push model)                   |
+||    // Already populated by Fanout Service (push model)                  |
 ||                                                                         |
 ||  Step 2: Merge celebrity posts (pull model)                             |
 ||    celeb_ids = GET celebs_followed:{user_A}  // cached list             |
@@ -1814,4 +1918,62 @@ A COMPLETE CONCEPTUAL GUIDE
 +-------------------------------------------------------------------------+
 ```
 
-END OF SOCIAL MEDIA PLATFORM SYSTEM DESIGN
+## SECTION 17: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. HYBRID FAN-OUT STRATEGY                                             |
+|     Fan-out on write for normal users (<10K followers). Fan-out on      |
+|     read for celebrities (>10K followers). Merge at read time.          |
+|     Avoids thundering herd on celebrity posts while keeping feed        |
+|     reads fast for the common case.                                     |
+|                                                                         |
+|  2. FEED CACHE IN REDIS SORTED SETS                                     |
+|     Pre-computed feed stored per user. Score = timestamp for            |
+|     chronological ordering (or ranking score). Feed read is O(1)        |
+|     cache lookup. Cache invalidation on new posts, unfollows.           |
+|                                                                         |
+|  3. ASYNC POST PROCESSING PIPELINE                                      |
+|     Post write is synchronous (store in DB, return ID). Fan-out,        |
+|     notification, search indexing, media processing all happen          |
+|     asynchronously via Kafka. Keeps post creation latency low.          |
+|                                                                         |
+|  4. CONTENT MODERATION PIPELINE                                         |
+|     Async ML-based pipeline screens posts for harmful content.          |
+|     Pre-publish check for images/videos (hash matching for known        |
+|     bad content). Post-publish review for text (NLP classifier).        |
+|     Human review queue for borderline cases.                            |
+|                                                                         |
+|  5. GRAPH-BASED SOCIAL LAYER                                            |
+|     Follow/friend relationships in adjacency list (or graph DB).        |
+|     Powers fan-out target resolution, mutual friends, follower          |
+|     count. Cached in Redis for hot-path lookups.                        |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * FAN-OUT WRITE vs READ: Write pre-computes feeds (fast reads)         |
+|    but wastes work for inactive users and is expensive for              |
+|    celebrities. Read saves write cost but adds read latency.            |
+|    Hybrid approach adds complexity (two code paths + merge).            |
+|                                                                         |
+|  * CHRONOLOGICAL vs RANKED FEED: Chronological is simple and            |
+|    transparent. Ranked boosts engagement but requires ML models,        |
+|    feature stores, and adds ~200ms latency. We start chronological      |
+|    and add ranking as an optimization.                                  |
+|                                                                         |
+|  * STRONG vs EVENTUAL CONSISTENCY: Like counts and follower counts      |
+|    are eventually consistent (acceptable: "1.2M likes" doesn't need     |
+|    to be exact). Post content and user data are strongly consistent     |
+|    (read-after-write from primary).                                     |
+|                                                                         |
+|  * MEDIA STORAGE: Store original + generate thumbnails/variants         |
+|    async. CDN serves media. Trade-off: storage cost (keeping all        |
+|    variants) vs compute cost (generating on-the-fly).                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

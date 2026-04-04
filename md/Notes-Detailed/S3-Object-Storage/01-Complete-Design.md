@@ -2,6 +2,40 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a full object storage service like S3,     |
+|    or just the distributed storage layer underneath?                    |
+|                                                                         |
+|  INTERVIEWER: The full service. Cover the API layer (PUT/GET/DELETE),   |
+|    metadata management, data storage, durability, and versioning.       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale and durability target?                           |
+|                                                                         |
+|  INTERVIEWER: Exabyte-scale storage. 11 nines of durability             |
+|    (99.999999999%). This is the defining requirement.                   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * S3-style object storage: PUT/GET/DELETE/LIST                         |
+|  * Exabyte scale, 11 nines durability                                   |
+|  * Metadata service + data storage separation                           |
+|  * Versioning, lifecycle policies                                       |
+|  * Deep dive: data placement + erasure coding vs replication            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 Object storage is a flat-namespace, HTTP-accessible storage system optimized
@@ -1133,21 +1167,21 @@ block storage.
 |                                                                       |
 |  1. ENTITY STATE MACHINE (Object)                                     |
 |                                                                       |
-|    UPLOADING --> STORED --> REPLICATED --> DELETED                     |
+|    UPLOADING --> STORED --> REPLICATED --> DELETED                    |
 |       |            |           |              |                       |
-|       |            |           |              +--> DELETE_MARKER       |
+|       |            |           |              +--> DELETE_MARKER      |
 |       |            |           |                   (versioning on)    |
 |       |            |           +--> DEGRADED (chunk lost)             |
 |       |            |                    |                             |
 |       |            |                    +--> REPAIRED (scanner)       |
 |       |            +--> TIERED (lifecycle: Standard-->IA-->Glacier)   |
-|       +--> ABORTED (multipart abort, orphaned chunks)                |
+|       +--> ABORTED (multipart abort, orphaned chunks)                 |
 |                                                                       |
-|  Metadata record: (bucket, key, version_id) in sharded DB (Raft)     |
+|  Metadata record: (bucket, key, version_id) in sharded DB (Raft)      |
 |  Data: erasure-coded chunks on data nodes (volumes)                   |
 |  State transitions tracked via metadata service commits               |
 |                                                                       |
-|  -----------------------------------------------------------------   |
+|  -----------------------------------------------------------------    |
 |                                                                       |
 |  2. CRITICAL WRITE PATH (Multipart Upload)                            |
 |                                                                       |
@@ -1171,19 +1205,19 @@ block storage.
 |        bucket, key, version_id, size, etag,                           |
 |        storage_class, created_at, chunk_locations                     |
 |      ) VALUES (                                                       |
-|        'my-photos', 'vacation.jpg', 'v3nX8kL2',                      |
+|        'my-photos', 'vacation.jpg', 'v3nX8kL2',                       |
 |        24000000, 'a1b2c3d4...', 'STANDARD', NOW(),                    |
-|        '[{chunk:0, node:DN-42, vol:7, offset:83886080},              |
+|        '[{chunk:0, node:DN-42, vol:7, offset:83886080},               |
 |          {chunk:1, node:DN-17, vol:3, offset:12582912}, ...]'         |
 |      );                                                               |
-|      UPDATE prefix_index SET latest_version = 'v3nX8kL2'             |
-|        WHERE bucket = 'my-photos' AND key = 'vacation.jpg';          |
+|      UPDATE prefix_index SET latest_version = 'v3nX8kL2'              |
+|        WHERE bucket = 'my-photos' AND key = 'vacation.jpg';           |
 |    COMMIT;  -- quorum ack from Raft replicas                          |
 |                                                                       |
 |  PUT returns 200 + ETag ONLY after metadata committed.                |
-|  This guarantees strong read-after-write consistency.                  |
+|  This guarantees strong read-after-write consistency.                 |
 |                                                                       |
-|  -----------------------------------------------------------------   |
+|  -----------------------------------------------------------------    |
 |                                                                       |
 |  3. READ PATH (Object Retrieval)                                      |
 |                                                                       |
@@ -1194,12 +1228,12 @@ block storage.
 |    |                                                                  |
 |    v                                                                  |
 |  Metadata Service --> lookup (bucket, key) in sharded DB              |
-|    Returns: chunk_locations [{node, vol, offset, len} x (k+m)]       |
+|    Returns: chunk_locations [{node, vol, offset, len} x (k+m)]        |
 |    |                                                                  |
 |    v                                                                  |
 |  Data Service --> read k chunks from nearest/fastest data nodes       |
-|    - Verify CRC-32C checksum per chunk                                |
-|    - If chunk corrupt/unavailable: read parity chunk instead,         |
+|    * Verify CRC-32C checksum per chunk                                |
+|    * If chunk corrupt/unavailable: read parity chunk instead,         |
 |      reconstruct via Reed-Solomon erasure decoding                    |
 |    |                                                                  |
 |    v                                                                  |
@@ -1207,55 +1241,83 @@ block storage.
 |                                                                       |
 |  Caching layers:                                                      |
 |    1. CDN edge cache (for public / pre-signed objects)                |
-|    2. Read cache (in-memory/SSD, keyed by chunk_id, LRU/LFU)         |
+|    2. Read cache (in-memory/SSD, keyed by chunk_id, LRU/LFU)          |
 |    3. Client-side: ETag / If-None-Match --> 304 Not Modified          |
 |                                                                       |
-|  -----------------------------------------------------------------   |
+|  -----------------------------------------------------------------    |
 |                                                                       |
-|  4. FAILURE SCENARIOS                                                  |
+|  4. FAILURE SCENARIOS                                                 |
 |                                                                       |
 |  +---------------------------+-------------------------------------+  |
 |  | What Fails                | Impact & Recovery                   |  |
 |  +---------------------------+-------------------------------------+  |
-|  | Data node dies            | RS(6,3): reads use remaining 8     |  |
-|  |                           | healthy chunks (need any 6 of 9).  |  |
-|  |                           | Repair scanner reconstructs lost   |  |
-|  |                           | chunks on healthy nodes.           |  |
+|  | Data node dies            | RS(6,3): reads use remaining 8     |   |
+|  |                           | healthy chunks (need any 6 of 9).  |   |
+|  |                           | Repair scanner reconstructs lost   |   |
+|  |                           | chunks on healthy nodes.           |   |
 |  +---------------------------+-------------------------------------+  |
-|  | Metadata shard leader     | Raft elects new leader in seconds. |  |
-|  | crashes                   | Writes block briefly; reads from   |  |
-|  |                           | followers continue.                |  |
+|  | Metadata shard leader     | Raft elects new leader in seconds. |   |
+|  | crashes                   | Writes block briefly; reads from   |   |
+|  |                           | followers continue.                |   |
 |  +---------------------------+-------------------------------------+  |
-|  | Multipart upload fails    | Client retries individual parts.   |  |
-|  | midway                    | Uncommitted parts orphaned; GC     |  |
-|  |                           | reclaims after 7-day grace period. |  |
+|  | Multipart upload fails    | Client retries individual parts.   |   |
+|  | midway                    | Uncommitted parts orphaned; GC     |   |
+|  |                           | reclaims after 7-day grace period. |   |
 |  +---------------------------+-------------------------------------+  |
-|  | Bit rot / silent          | CRC-32C mismatch on read triggers  |  |
-|  | corruption                | re-read from another chunk. Repair |  |
-|  |                           | scanner detects in background.     |  |
+|  | Bit rot / silent          | CRC-32C mismatch on read triggers  |   |
+|  | corruption                | re-read from another chunk. Repair |   |
+|  |                           | scanner detects in background.     |   |
 |  +---------------------------+-------------------------------------+  |
 |                                                                       |
-|  -----------------------------------------------------------------   |
+|  -----------------------------------------------------------------    |
 |                                                                       |
-|  5. CLEANUP / EXPIRY                                                   |
+|  5. CLEANUP / EXPIRY                                                  |
 |                                                                       |
-|  Garbage Collection (continuous background job):                       |
+|  Garbage Collection (continuous background job):                      |
 |    Mark phase: scan metadata for deleted objects, expired versions,   |
 |      aborted multipart uploads > 7 days old.                          |
 |    Reference check: verify no other metadata points to chunks.        |
 |    Sweep phase: delete commands to data nodes, free volume space.     |
 |    Compact volumes when fragmentation > 30%.                          |
 |                                                                       |
-|  Lifecycle policies:                                                   |
+|  Lifecycle policies:                                                  |
 |    Day 30 --> Infrequent Access, Day 90 --> Glacier,                  |
 |    Day 365 --> Deep Archive, Day 2555 --> permanent delete.           |
 |    Background job scans metadata, rewrites with denser EC,            |
-|    updates storage_class field.                                        |
+|    updates storage_class field.                                       |
 |                                                                       |
 |  Grace period: 24 hours before chunk deletion (protects in-flight     |
-|  reads that may still reference old chunk locations).                  |
+|  reads that may still reference old chunk locations).                 |
 |                                                                       |
 +-----------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. SEPARATION OF METADATA AND DATA: metadata in distributed DB         |
+|     (DynamoDB-style), data in append-only storage nodes.                |
+|  2. ERASURE CODING (e.g., Reed-Solomon 6+3) for durability at 1.5x      |
+|     storage cost. vs 3x for triple replication. Achieves 11 nines.      |
+|  3. CONTENT-ADDRESSABLE STORAGE with hash-based dedup.                  |
+|  4. WRITE-AHEAD LOG on storage nodes for crash recovery.                |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * ERASURE CODING vs REPLICATION: EC saves 50% storage but adds         |
+|    CPU cost for encode/decode. Replication is simpler and faster        |
+|    for reads. EC wins at exabyte scale on cost.                         |
+|  * STRONG vs EVENTUAL for object reads: S3 now provides strong          |
+|    read-after-write consistency. Costs more (consensus on metadata)     |
+|    but eliminates stale-read bugs for users.
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 14: INTERVIEW Q&A

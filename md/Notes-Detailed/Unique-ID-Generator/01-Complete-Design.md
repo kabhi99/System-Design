@@ -2,6 +2,42 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: What properties does the ID need? Unique, sorted,           |
+|    compact? And at what scale?                                          |
+|                                                                         |
+|  INTERVIEWER: Globally unique, roughly time-sortable, 64-bit.           |
+|    10K IDs per second per node, thousands of nodes. Think               |
+|    Twitter Snowflake.                                                   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should IDs be sequential (auto-increment) or just           |
+|    roughly ordered by time?                                             |
+|                                                                         |
+|  INTERVIEWER: Roughly time-ordered is sufficient. Strict sequential     |
+|    requires coordination (bottleneck). Discuss the trade-offs.          |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Distributed unique ID generator (Snowflake style)                    |
+|  * 64-bit, globally unique, roughly time-sortable                       |
+|  * 10K IDs/sec/node, no coordination between nodes                      |
+|  * Compare: UUID, DB auto-increment, Snowflake, ULID                    |
+|  * Deep dive: Snowflake bit layout + clock skew handling                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 Every distributed system needs a way to uniquely identify entities - messages,
@@ -1085,6 +1121,34 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   |    last_timestamp to detect drift across restarts.             |
   |                                                                |
   +----------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. SNOWFLAKE FORMAT: 1 bit sign + 41 bits timestamp + 10 bits          |
+|     machine ID + 12 bits sequence. 69 years of timestamps,              |
+|     1024 machines, 4096 IDs per millisecond per machine.                |
+|  2. NO COORDINATION: each node generates IDs independently.             |
+|     Machine ID assigned at startup via ZooKeeper or config.             |
+|  3. CLOCK SKEW HANDLING: if clock goes backward, reject requests        |
+|     until clock catches up. NTP must be configured properly.            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * UUID vs SNOWFLAKE: UUID is 128-bit, no coordination, but not         |
+|    sortable and wastes index space. Snowflake is 64-bit, sortable,      |
+|    but requires machine ID assignment.                                  |
+|  * TIME-SORTABLE vs RANDOM: Sortable IDs leak creation time (privacy    |
+|    concern). Random UUIDs don't. Sortable wins for DB index locality.
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 11: SUMMARY

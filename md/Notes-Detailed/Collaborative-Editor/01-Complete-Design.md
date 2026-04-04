@@ -6,6 +6,49 @@ the same document while seeing each other's changes instantly. At scale, it
 must resolve conflicting edits, maintain consistency, broadcast cursor positions,
 and persist every version of the document - all with sub-100ms latency.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a real-time collaborative text editor      |
+|    like Google Docs, or also spreadsheets and presentations?            |
+|                                                                         |
+|  INTERVIEWER: Focus on real-time collaborative text editing.            |
+|    Multiple users editing the same document simultaneously.             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What conflict resolution approach should I use?             |
+|    OT (Operational Transformation) or CRDT?                             |
+|                                                                         |
+|  INTERVIEWER: Discuss both and their trade-offs. OT is what Google      |
+|    Docs uses. CRDT is gaining popularity (Figma, Yjs). This is          |
+|    the core deep dive topic.                                            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many concurrent editors per document?       |
+|                                                                         |
+|  INTERVIEWER: 100M total documents, up to 50 concurrent editors         |
+|    per document, 10M DAU.                                               |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Real-time collaborative text editing (Google Docs style)             |
+|  * OT vs CRDT comparison (the hard problem)                             |
+|  * 100M documents, 50 concurrent editors, 10M DAU                       |
+|  * Cursor presence, undo/redo, offline editing                          |
+|  * Deep dive: conflict resolution algorithms                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ### WHAT IS COLLABORATIVE EDITING?
@@ -1232,7 +1275,7 @@ and persist every version of the document - all with sub-100ms latency.
 ||  1. ENTITY STATE MACHINE: Operation Lifecycle                           |
 ||  ======================================================                 |
 ||                                                                         |
-||  LOCAL --> PENDING --> SENT --> TRANSFORMED --> ACKNOWLEDGED --> APPLIED  |
+||  LOCAL --> PENDING --> SENT --> TRANSFORMED --> ACKNOWLEDGED --> APPLIED|
 ||                                                                         |
 ||  +----------+  apply   +----------+  send via +----------+              |
 ||  | LOCAL    |  locally | PENDING  |  WebSocket| SENT     |              |
@@ -1289,8 +1332,8 @@ and persist every version of the document - all with sub-100ms latency.
 ||                                                                         |
 ||  Step 4: Persist to durable operations log                              |
 ||    APPEND ops_log  // Kafka / DynamoDB / Cassandra                      |
-||      {docId, version: 1046, op: transformed_op, userId: "A"}           |
-||    *** durable write BEFORE broadcast ***                                |
+||      {docId, version: 1046, op: transformed_op, userId: "A"}            |
+||    *** durable write BEFORE broadcast ***                               |
 ||                                                                         |
 ||  Step 5: Apply to server canonical document state (in-memory)           |
 ||    doc.apply(transformed_op)                                            |
@@ -1310,10 +1353,10 @@ and persist every version of the document - all with sub-100ms latency.
 ||                                                                         |
 ||  Step 1: Load document metadata                                         |
 ||    SELECT * FROM documents WHERE doc_id = 'doc_abc123'                  |
-||    // PostgreSQL: owner, title, permissions, latest_snapshot_version     |
+||    // PostgreSQL: owner, title, permissions, latest_snapshot_version    |
 ||                                                                         |
 ||  Step 2: Load latest snapshot                                           |
-||    snapshot = S3.get("snapshots/doc_abc123/v1500.bin")                   |
+||    snapshot = S3.get("snapshots/doc_abc123/v1500.bin")                  |
 ||    // Full document state at version 1500                               |
 ||                                                                         |
 ||  Step 3: Replay operations since snapshot                               |
@@ -1356,7 +1399,7 @@ and persist every version of the document - all with sub-100ms latency.
 ||                                                                         |
 ||  * Snapshot creation: every 1000 ops, or 5 min of inactivity,           |
 ||    or when all editors leave. Prevents long replay chains.              |
-||  * Ops log compaction: ops before the oldest retained snapshot           |
+||  * Ops log compaction: ops before the oldest retained snapshot          |
 ||    are archived to cold storage (S3 Glacier) then deleted from          |
 ||    hot ops log. Tiered retention:                                       |
 ||    - Last 24h: every 1000-op snapshot                                   |
@@ -1367,6 +1410,37 @@ and persist every version of the document - all with sub-100ms latency.
 ||  * Deleted documents: soft-delete in metadata DB; hard-delete           |
 ||    (ops log + snapshots + S3) after 30-day recycle bin period.          |
 ||                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. OT WITH CENTRAL SERVER for conflict resolution. Simpler than        |
+|     CRDT, proven at Google scale. Server is the single source of        |
+|     truth for operation ordering.                                       |
+|  2. WEBSOCKET for real-time operation broadcast. Each document          |
+|     session is a persistent connection.                                 |
+|  3. DOCUMENT VERSIONING with operation log. Any state can be            |
+|     reconstructed by replaying operations from a snapshot.              |
+|  4. PERIODIC SNAPSHOTS reduce replay cost. Snapshot every 100           |
+|     operations or 5 minutes.                                            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * OT vs CRDT: OT requires a central server (simpler, proven) but       |
+|    single point of failure. CRDT is peer-to-peer capable but more       |
+|    complex and uses more memory (tombstones).                           |
+|  * LATENCY vs CONSISTENCY: Local-first editing (optimistic) gives       |
+|    instant response but operations may be reordered by server.          |
+|    Users see their own edits immediately, others' with slight delay.
+|                                                                         |
 +-------------------------------------------------------------------------+
 ```
 

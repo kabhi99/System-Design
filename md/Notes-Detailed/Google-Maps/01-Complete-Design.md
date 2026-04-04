@@ -2,7 +2,76 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
-## SECTION 1: UNDERSTANDING THE PROBLEM
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing the full Google Maps product, or a         |
+|    specific feature like navigation, search, or map rendering?          |
+|                                                                         |
+|  INTERVIEWER: Focus on three core features: map tile rendering,         |
+|    route planning (A to B navigation), and ETA prediction. Don't        |
+|    go deep into Street View or indoor maps.                             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale should I target?                                 |
+|                                                                         |
+|  INTERVIEWER: 1 billion DAU, 5 billion map tile requests/day,           |
+|    500 million route calculations/day. Think global scale.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: For routing, should I support just driving, or also         |
+|    walking, cycling, and public transit?                                |
+|                                                                         |
+|  INTERVIEWER: Focus on driving. Mention that the graph model            |
+|    supports other modes but don't deep-dive each one.                   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should the routing account for real-time traffic?           |
+|                                                                         |
+|  INTERVIEWER: Yes. Real-time traffic integration is a key               |
+|    differentiator. Discuss how live traffic data adjusts edge           |
+|    weights in the road graph.                                           |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: For map rendering, should I design for raster tiles         |
+|    (pre-rendered images) or vector tiles (client-side rendering)?       |
+|                                                                         |
+|  INTERVIEWER: Discuss both and the trade-offs. Modern systems use       |
+|    vector tiles but raster is still relevant for understanding.         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I cover the data ingestion pipeline (how map         |
+|    data from satellites, street cars, and user reports gets in)?        |
+|                                                                         |
+|  INTERVIEWER: Briefly. Focus your deep dive on the serving path:        |
+|    tile rendering, routing algorithms, and ETA prediction.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Map tile rendering (raster vs vector trade-offs)                     |
+|  * Route planning with real-time traffic (driving focus)                |
+|  * ETA prediction                                                       |
+|  * 1B DAU, 5B tile requests/day, 500M routes/day                        |
+|  * Routing algorithms: Dijkstra vs A* vs contraction hierarchies        |
+|  * Data ingestion mentioned briefly                                     |
+|  * Deep dive: routing graph model + traffic integration                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 2: UNDERSTANDING THE PROBLEM
 
 Google Maps is a global-scale mapping and navigation platform that serves
 billions of requests daily. The core challenge is delivering fast, accurate
@@ -1011,7 +1080,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 |  1. ENTITY STATE MACHINE: Route Lifecycle                              |
 |  ======================================================                |
 |                                                                        |
-|  REQUESTED --> GRAPH_LOADED --> COMPUTED --> NAVIGATING --> COMPLETED   |
+|  REQUESTED --> GRAPH_LOADED --> COMPUTED --> NAVIGATING --> COMPLETED  |
 |                                                  |                     |
 |  +-----------+ load shard +-----------+  CH     +----------+           |
 |  | REQUESTED | ---------> | GRAPH     | query   | COMPUTED |           |
@@ -1026,8 +1095,8 @@ square tiles. At zoom level z, there are 4^z tiles.
 |                                                 | turn)    |           |
 |                                                 +----------+           |
 |                                                  |        |            |
-|                          traffic / road closure   |        | arrive     |
-|                          -> REROUTED (re-query)   |        v            |
+|                          traffic / road closure   |        | arrive    |
+|                          -> REROUTED (re-query)   |        v           |
 |                                                   |   +----------+     |
 |                                                   |   |COMPLETED |     |
 |                                                   |   +----------+     |
@@ -1064,19 +1133,19 @@ square tiles. At zoom level z, there are 4^z tiles.
 |      trigger rerouting for active navigation sessions                  |
 |                                                                        |
 |  Step 5: Tile pipeline (separate cadence)                              |
-|    Base tiles: re-render from source data weekly/daily                  |
+|    Base tiles: re-render from source data weekly/daily                 |
 |    Traffic overlay tiles: refresh every 30-60 sec from speed DB        |
 |    CDN invalidation for affected tile keys                             |
 |                                                                        |
 |  Step 6: CH rebuild (periodic, hours)                                  |
 |    On significant graph changes (new roads, closures):                 |
 |    Re-contract road graph -> new shortcut edges                        |
-|    Swap old CH -> new CH atomically on routing servers                  |
+|    Swap old CH -> new CH atomically on routing servers                 |
 |                                                                        |
 |  3. READ PATH: Route Computation + Tile Serving                        |
 |  ======================================================                |
 |                                                                        |
-|  GET /v1/route?origin=A&dest=B&mode=driving                           |
+|  GET /v1/route?origin=A&dest=B&mode=driving                            |
 |                                                                        |
 |  Routing:                                                              |
 |    1. Identify graph shard(s) covering origin and destination          |
@@ -1086,7 +1155,7 @@ square tiles. At zoom level z, there are 4^z tiles.
 |       Meet at highest-importance node on shortest path                 |
 |    3. Unpack shortcut edges to recover full road-segment path          |
 |    4. Overlay live traffic weights from Speed DB / Redis cache         |
-|       live_weight = segment.length_m / (live_speed_kmh / 3.6)         |
+|       live_weight = segment.length_m / (live_speed_kmh / 3.6)          |
 |    5. ETA ML model: features = {segments, speeds, time_of_day,         |
 |       weather, turns} -> predicted trip time + confidence              |
 |    6. Generate turn-by-turn instructions from segment metadata         |
@@ -1111,10 +1180,10 @@ square tiles. At zoom level z, there are 4^z tiles.
 |  |                      | CH rebuild completes.                   |    |
 |  +----------------------+-----------------------------------------+    |
 |  | Graph shard unavail. | Replica serves reads. Cross-shard route |    |
-|  |                      | degrades to coarser path until recovery. |    |
+|  |                      | degrades to coarser path until recovery. |   |
 |  +----------------------+-----------------------------------------+    |
 |  | Tile CDN miss storm  | Origin tile servers absorb load. Auto-  |    |
-|  |                      | scale tile rendering fleet. Pre-warm     |    |
+|  |                      | scale tile rendering fleet. Pre-warm     |   |
 |  |                      | cache for popular zoom levels.          |    |
 |  +----------------------+-----------------------------------------+    |
 |                                                                        |
@@ -1265,4 +1334,64 @@ square tiles. At zoom level z, there are 4^z tiles.
 +------------------------------------------------------------------------+
 ```
 
-*End of Google Maps / Navigation System Design Notes*
+## SECTION 15: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. VECTOR TILES OVER RASTER TILES                                      |
+|     Vector tiles contain structured data (roads, labels, polygons)      |
+|     rendered client-side. 5-10x smaller than raster. Support smooth     |
+|     zooming, rotation, and dynamic styling. Raster used as fallback     |
+|     for low-end devices.                                                |
+|                                                                         |
+|  2. CONTRACTION HIERARCHIES FOR FAST ROUTING                            |
+|     Pre-processed graph with shortcut edges. Reduces Dijkstra's         |
+|     search space from millions of nodes to thousands. Sub-second        |
+|     cross-country routes. Trade-off: hours of preprocessing when        |
+|     graph changes, but queries are ~1000x faster.                       |
+|                                                                         |
+|  3. LIVE TRAFFIC VIA EDGE WEIGHT UPDATES                                |
+|     Road graph edges have dynamic weights (travel time). Real-time      |
+|     GPS probes from phones update edge weights every few minutes.       |
+|     Routing uses traffic-adjusted weights without rebuilding the        |
+|     full contraction hierarchy (overlay technique).                     |
+|                                                                         |
+|  4. ML-BASED ETA PREDICTION                                             |
+|     Combines graph-based shortest path time with ML correction          |
+|     (traffic patterns, time-of-day, weather, events). Historical        |
+|     travel times as training data. Model corrects systematic            |
+|     over/under-estimation from graph alone.                             |
+|                                                                         |
+|  5. CDN + TILE CACHE FOR MAP RENDERING AT SCALE                         |
+|     Map tiles served from CDN edge (sub-50ms globally). Long TTL        |
+|     for base tiles (days), short TTL for traffic overlays (minutes).    |
+|     Invalidation on map data updates (new roads, construction).         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * PRECOMPUTATION vs REAL-TIME: Contraction hierarchies are fast        |
+|    but expensive to rebuild. Live traffic overlays add real-time        |
+|    accuracy without full rebuild. Balance: rebuild nightly, overlay     |
+|    traffic in real-time.                                                |
+|                                                                         |
+|  * VECTOR vs RASTER TILES: Vector is smaller and more flexible but      |
+|    requires client-side GPU rendering. Raster is larger but works       |
+|    on any device. Modern apps default to vector with raster fallback.   |
+|                                                                         |
+|  * ETA ACCURACY vs LATENCY: More sophisticated ML models give           |
+|    better ETAs but add latency. Budget: routing graph (200ms) +         |
+|    ML correction (50ms) = 250ms total. Simpler model used for           |
+|    real-time re-routing during navigation.                              |
+|                                                                         |
+|  * GLOBAL GRAPH vs REGIONAL SHARDING: One global graph enables          |
+|    cross-region routes but is huge. Regional shards are smaller         |
+|    but cross-region queries need multi-shard coordination. We use       |
+|    hierarchical sharding: local detail + coarse global overlay.         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

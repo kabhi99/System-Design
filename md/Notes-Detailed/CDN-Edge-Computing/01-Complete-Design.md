@@ -5,6 +5,48 @@ A Content Delivery Network (CDN) is a geographically distributed network of
 servers that delivers content to users from the nearest location, reducing
 latency and offloading origin servers.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a CDN from scratch (like Cloudflare),      |
+|    or a system that uses CDN as a component?                            |
+|                                                                         |
+|  INTERVIEWER: Design a CDN system. Cover how content gets cached        |
+|    at edge nodes, cache invalidation, and the request routing logic.    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I also cover edge computing (running code at         |
+|    the edge) or just static content caching?                            |
+|                                                                         |
+|  INTERVIEWER: Primarily static content caching. Briefly mention         |
+|    edge compute (Cloudflare Workers style) as an extension.             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many edge nodes and requests/sec?           |
+|                                                                         |
+|  INTERVIEWER: 200+ global PoPs (Points of Presence), 50M requests       |
+|    per second globally. 99%+ cache hit ratio target.                    |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * CDN with global edge caching                                         |
+|  * 200+ PoPs, 50M req/sec, 99%+ cache hit ratio                         |
+|  * Cache invalidation strategies                                        |
+|  * Request routing (DNS + Anycast)                                      |
+|  * Deep dive: cache hierarchy + invalidation + consistency              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: REQUIREMENTS AND SCALE
 
 ```
@@ -557,26 +599,26 @@ latency and offloading origin servers.
 |                                                                         |
 |  1. ENTITY STATE MACHINE (Cached Content)                               |
 |                                                                         |
-|    MISS --> FETCHED --> CACHED --> STALE --> REVALIDATED                 |
-|      |                    |          |            |                      |
-|      |                    |          |            +--> CACHED (new TTL)  |
-|      |                    |          +--> PURGED (purge API)             |
+|    MISS --> FETCHED --> CACHED --> STALE --> REVALIDATED                |
+|      |                    |          |            |                     |
+|      |                    |          |            +--> CACHED (new TTL) |
+|      |                    |          +--> PURGED (purge API)            |
 |      |                    +--> EVICTED (LRU/LFU, disk pressure)         |
 |      +--> COALESCED (waiting on single origin fetch)                    |
 |                                                                         |
-|  State stored in: Varnish/Nginx cache entries (RAM + SSD per PoP)      |
-|  Cache key: normalize(host + path + sorted_query + Vary headers)       |
+|  State stored in: Varnish/Nginx cache entries (RAM + SSD per PoP)       |
+|  Cache key: normalize(host + path + sorted_query + Vary headers)        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Cache Population on Miss)                      |
 |                                                                         |
-|  Step 1: Request arrives at edge PoP (Anycast IP / GeoDNS routing)     |
-|  Step 2: TLS 1.3/QUIC termination + WAF/DDoS filter at edge            |
+|  Step 1: Request arrives at edge PoP (Anycast IP / GeoDNS routing)      |
+|  Step 2: TLS 1.3/QUIC termination + WAF/DDoS filter at edge             |
 |  Step 3: Build cache key = normalize(host + path + sorted_query)        |
 |  Step 4: Lookup in Varnish/Nginx local cache --> MISS                   |
 |  Step 5: Acquire coalesce lock for this cache key                       |
-|  Step 6: Fetch from shield/mid-tier cache (regional PoP)               |
+|  Step 6: Fetch from shield/mid-tier cache (regional PoP)                |
 |  Step 7: Shield MISS --> single origin fetch (HTTPS)                    |
 |  Step 8: Origin returns response + Cache-Control headers                |
 |  Step 9: Parse s-maxage/max-age --> store at edge + shield with TTL     |
@@ -587,23 +629,23 @@ latency and offloading origin servers.
 |    cache_key = normalize(host + path + sorted_query + vary)             |
 |    entry = local_cache.get(cache_key)                                   |
 |                                                                         |
-|    if entry == NULL or entry.ttl_expired():                              |
+|    if entry == NULL or entry.ttl_expired():                             |
 |      if entry and headers.stale_while_revalidate > 0:                   |
 |        serve_stale(entry)   -- immediate response                       |
 |        async { refresh_from_origin(cache_key) }                         |
-|      else:                                                               |
+|      else:                                                              |
 |        lock = coalesce_lock.try_acquire(cache_key, 5s)                  |
-|        if lock.held:                                                     |
+|        if lock.held:                                                    |
 |          resp = shield.fetch(origin_url)                                |
 |          if resp is MISS: resp = origin.fetch(url, headers)             |
 |          ttl = parse_s_maxage(resp) or parse_max_age(resp)              |
 |          local_cache.put(cache_key, resp.body, ttl)                     |
 |          lock.release_and_notify_waiters(resp)                          |
-|        else:                                                             |
+|        else:                                                            |
 |          resp = lock.wait_for_result(timeout=5s)                        |
-|    return resp  -- X-Cache: HIT | MISS | STALE                         |
+|    return resp  -- X-Cache: HIT | MISS | STALE                          |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
 |  3. READ PATH (Request Routing + Cache Lookup)                          |
 |                                                                         |
@@ -617,18 +659,18 @@ latency and offloading origin servers.
 |                                        YES/  \NO                        |
 |                                         /     \                         |
 |                                   Serve    Shield / Mid-Tier            |
-|                                   cached    --> Origin fetch             |
+|                                   cached    --> Origin fetch            |
 |                                  (< 50ms)    (100-500ms)                |
 |                                                                         |
 |  Cache layers checked in order:                                         |
 |    1. Edge RAM cache (Varnish hot objects, ~10 GB per PoP)              |
-|    2. Edge SSD cache (Nginx disk cache, ~500 GB per PoP)               |
+|    2. Edge SSD cache (Nginx disk cache, ~500 GB per PoP)                |
 |    3. Shield/mid-tier cache (regional, collapses origin requests)       |
 |    4. Origin server (your app / S3 bucket -- only on full miss)         |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  4. FAILURE SCENARIOS                                                    |
+|  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
 |  +------------------------+------------------------------------+        |
 |  | What Fails             | Impact & Recovery                  |        |
@@ -650,25 +692,56 @@ latency and offloading origin servers.
 |  |                        | 30 days before expiry.             |        |
 |  +------------------------+------------------------------------+        |
 |                                                                         |
-|  -------------------------------------------------------------------   |
+|  -------------------------------------------------------------------    |
 |                                                                         |
-|  5. CLEANUP / EXPIRY                                                     |
+|  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
-|  TTL-based expiry:                                                       |
+|  TTL-based expiry:                                                      |
 |    Cache-Control s-maxage / max-age dictates entry lifetime.            |
 |    Expired entries served stale only if stale-while-revalidate set.     |
 |                                                                         |
-|  Active purge:                                                           |
+|  Active purge:                                                          |
 |    POST /purge {"urls": [...]} --> fanout to all 300+ PoPs              |
 |    Propagation latency: 1-30 seconds via internal message bus.          |
 |                                                                         |
-|  Eviction (disk pressure):                                               |
+|  Eviction (disk pressure):                                              |
 |    LRU/LFU eviction with admission policy (skip one-hit objects).       |
-|    Tiered: SSD for hot, HDD for warm. Monitor eviction rate.           |
+|    Tiered: SSD for hot, HDD for warm. Monitor eviction rate.            |
 |                                                                         |
-|  Versioned URLs (/app.abc123.js):                                        |
-|    Old URLs never re-requested after deploy, evicted by LRU.           |
+|  Versioned URLs (/app.abc123.js):                                       |
+|    Old URLs never re-requested after deploy, evicted by LRU.            |
 |    No explicit cleanup needed -- immutable content, new hash = new URL. |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. TWO-TIER CACHE: Edge PoP (L1) + Regional shield (L2) + Origin.      |
+|     Shield absorbs cache misses, protecting origin from thundering      |
+|     herd.                                                               |
+|  2. DNS + ANYCAST routing directs users to nearest healthy PoP.         |
+|     GeoDNS for initial resolution, Anycast for failover.                |
+|  3. PULL-BASED caching (cache on first request) for most content.       |
+|     Push-based pre-warming for known popular content (live events).     |
+|  4. TTL + PURGE API for invalidation. Purge propagates to all           |
+|     PoPs within seconds via internal message bus.                       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * FRESHNESS vs HIT RATIO: Longer TTL = higher hits but staler.         |
+|    Short TTL = fresher but more origin load. stale-while-revalidate     |
+|    balances both.                                                       |
+|  * PUSH vs PULL: Push guarantees content is warm but wastes edge        |
+|    storage for unpopular content. Pull is efficient but first           |
+|    request is slow (cache miss).
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```

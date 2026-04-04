@@ -2,6 +2,56 @@
 
 *Complete Design: Requirements, Architecture, and Interview Guide*
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a real-time auction (like eBay bidding)    |
+|    or a sealed-bid auction (like ad auctions)?                          |
+|                                                                         |
+|  INTERVIEWER: Real-time auction like eBay. Users place bids over        |
+|    a time window. Highest bid at deadline wins. Support "Buy It Now."   |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What's the scale? How many concurrent auctions?             |
+|                                                                         |
+|  INTERVIEWER: 10M active auctions at any time, 1000 bids/sec            |
+|    peak. Some popular items get 100+ bids in final seconds.             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: The "sniping" problem - many bids in the last seconds.      |
+|    Should I handle this with bid extensions?                            |
+|                                                                         |
+|  INTERVIEWER: Yes. Extend auction by 2 minutes if a bid arrives         |
+|    in the final minute. This is a key design challenge.                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: How do we prevent double-charging or missed bids from       |
+|    concurrent submissions?                                              |
+|                                                                         |
+|  INTERVIEWER: Great question. Strong consistency on bid acceptance      |
+|    is critical. Discuss concurrency control approaches.                 |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Real-time auction (eBay-style) with countdown timer                  |
+|  * 10M concurrent auctions, 1000 bids/sec peak                          |
+|  * Bid extensions for sniping prevention                                |
+|  * Strong consistency on bid acceptance                                 |
+|  * Deep dive: concurrency control + auction close timing                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ```
@@ -871,12 +921,12 @@
 ||  1. ENTITY STATE MACHINE (Auction)                                      |
 ||                                                                         |
 ||  CREATED ──> SCHEDULED ──> ACTIVE ──> ENDING_SOON ──> ENDED             |
-||    │                         │              │            │               |
-||    │                         │              │       +----+----+          |
-||    │                         │              │       │         │          |
+||    │                         │              │            │              |
+||    │                         │              │       +----+----+         |
+||    │                         │              │       │         │         |
 ||    └──> CANCELLED            └──> CANCELLED │    reserve    no bids     |
 ||         (no bids,                 (no bids  │    met?       or reserve  |
-||          pre-start)                only)    │    │          not met      |
+||          pre-start)                only)    │    │          not met     |
 ||                                             │    v          │           |
 ||                              (auto-extend)--+  PAYMENT      v           |
 ||                              (bid in last      PENDING   NO_SALE        |
@@ -897,75 +947,75 @@
 ||  2. CRITICAL WRITE PATH (Bid Placement with Race Condition Handling)    |
 ||                                                                         |
 ||  Client        API GW       Bid Svc          Redis             PG       |
-||    |              |            |                |               |        |
-||    |-- place ---->|            |                |               |        |
-||    |  bid($150)   |            |                |               |        |
-||    |              |--validate->|                |               |        |
-||    |              |            |                |               |        |
-||    |              |  1. Check auction status (ACTIVE?)           |       |
-||    |              |  2. Verify bidder != seller                  |       |
-||    |              |  3. Rate limit check (max N bids/min)        |       |
-||    |              |            |                |               |        |
-||    |              |  Redis Lua script (atomic):  |               |        |
-||    |              |            |                |               |        |
-||    |              |  local key = "auction:{id}:bids"             |       |
-||    |              |  local top = redis.call(                     |       |
+||    |              |            |                |               |       |
+||    |-- place ---->|            |                |               |       |
+||    |  bid($150)   |            |                |               |       |
+||    |              |--validate->|                |               |       |
+||    |              |            |                |               |       |
+||    |              |  1. Check auction status (ACTIVE?)           |      |
+||    |              |  2. Verify bidder != seller                  |      |
+||    |              |  3. Rate limit check (max N bids/min)        |      |
+||    |              |            |                |               |       |
+||    |              |  Redis Lua script (atomic):  |               |      |
+||    |              |            |                |               |       |
+||    |              |  local key = "auction:{id}:bids"             |      |
+||    |              |  local top = redis.call(                     |      |
 ||    |              |    'ZREVRANGE', key, 0, 0, 'WITHSCORES')    |       |
-||    |              |  local current_price = tonumber(top[2])      |       |
-||    |              |  local min_incr = get_increment(current_price)|      |
-||    |              |  if bid_amount >= current_price + min_incr then|     |
-||    |              |    redis.call('ZADD', key, bid_amount, bid_id)|      |
-||    |              |    return 1  -- accepted                     |       |
-||    |              |  end                                         |       |
-||    |              |  return 0  -- rejected (too low)             |       |
-||    |              |            |                |               |        |
-||    |              |  If accepted:                |               |        |
-||    |              |    UPDATE auctions SET current_price = :bid, |        |
-||    |              |      bid_count = bid_count + 1,              |        |
-||    |              |      highest_bidder_id = :user,              |        |
-||    |              |      version = version + 1                   |        |
-||    |              |      WHERE id = :auc AND version = :ver;     |        |
-||    |              |            |                |               |        |
-||    |              |    INSERT INTO bids                          |        |
-||    |              |      (id, auction_id, user_id, amount,       |        |
-||    |              |       bid_type, status, created_at)          |        |
-||    |              |      VALUES (..., 'manual', 'accepted', now());      |
-||    |              |            |                |               |        |
-||    |              |  Auto-extend check:          |               |        |
-||    |              |    IF end_time - now() < 5 min:              |        |
-||    |              |      new_end = now() + 5 min                 |        |
-||    |              |      ZADD timers XX new_end auction_id (Redis)|       |
-||    |              |      UPDATE auctions SET end_time = new_end; |        |
-||    |              |            |                |               |        |
-||    |              |  Trigger proxy bid evaluation:               |        |
-||    |              |    SELECT * FROM proxy_bids                  |        |
-||    |              |      WHERE auction_id = :auc AND active      |        |
-||    |              |        AND max_amount > :bid + min_incr;     |        |
-||    |              |    IF found: place auto-bid at :bid + incr   |        |
-||    |              |            |                |               |        |
-||    |              |  Kafka: emit BidPlaced event                 |        |
-||    |              |    -> fanout svc -> WebSocket servers         |       |
-||    |              |    -> notification svc (outbid alerts)        |       |
-||    |              |            |                |               |        |
-||    |<-- accepted--|            |                |               |        |
+||    |              |  local current_price = tonumber(top[2])      |      |
+||    |              |  local min_incr = get_increment(current_price)|     |
+||    |              |  if bid_amount >= current_price + min_incr then|    |
+||    |              |    redis.call('ZADD', key, bid_amount, bid_id)|     |
+||    |              |    return 1  -- accepted                     |      |
+||    |              |  end                                         |      |
+||    |              |  return 0  -- rejected (too low)             |      |
+||    |              |            |                |               |       |
+||    |              |  If accepted:                |               |      |
+||    |              |    UPDATE auctions SET current_price = :bid, |      |
+||    |              |      bid_count = bid_count + 1,              |      |
+||    |              |      highest_bidder_id = :user,              |      |
+||    |              |      version = version + 1                   |      |
+||    |              |      WHERE id = :auc AND version = :ver;     |      |
+||    |              |            |                |               |       |
+||    |              |    INSERT INTO bids                          |      |
+||    |              |      (id, auction_id, user_id, amount,       |      |
+||    |              |       bid_type, status, created_at)          |      |
+||    |              |      VALUES (..., 'manual', 'accepted', now());     |
+||    |              |            |                |               |       |
+||    |              |  Auto-extend check:          |               |      |
+||    |              |    IF end_time - now() < 5 min:              |      |
+||    |              |      new_end = now() + 5 min                 |      |
+||    |              |      ZADD timers XX new_end auction_id (Redis)|     |
+||    |              |      UPDATE auctions SET end_time = new_end; |      |
+||    |              |            |                |               |       |
+||    |              |  Trigger proxy bid evaluation:               |      |
+||    |              |    SELECT * FROM proxy_bids                  |      |
+||    |              |      WHERE auction_id = :auc AND active      |      |
+||    |              |        AND max_amount > :bid + min_incr;     |      |
+||    |              |    IF found: place auto-bid at :bid + incr   |      |
+||    |              |            |                |               |       |
+||    |              |  Kafka: emit BidPlaced event                 |      |
+||    |              |    -> fanout svc -> WebSocket servers         |     |
+||    |              |    -> notification svc (outbid alerts)        |     |
+||    |              |            |                |               |       |
+||    |<-- accepted--|            |                |               |       |
 ||                                                                         |
 ||  ================================================================       |
 ||                                                                         |
 ||  3. READ PATH                                                           |
 ||                                                                         |
 ||  AUCTION DETAIL PAGE:                                                   |
-||    Client --> Redis (current_price, bid_count, time_remaining)           |
-||    * Redis is source of truth for live bid data during ACTIVE state      |
+||    Client --> Redis (current_price, bid_count, time_remaining)          |
+||    * Redis is source of truth for live bid data during ACTIVE state     |
 ||    * Auction metadata (title, images): Redis with 5-min TTL             |
 ||    * Cache miss -> PostgreSQL -> populate Redis                         |
 ||                                                                         |
 ||  SEARCH / BROWSE:                                                       |
-||    Client --> Elasticsearch (full-text, category, price filters)         |
+||    Client --> Elasticsearch (full-text, category, price filters)        |
 ||    * Eventually consistent (slight delay after auction updates)         |
 ||    * CDN cache for category listing pages (30s TTL)                     |
 ||                                                                         |
 ||  BID HISTORY:                                                           |
-||    Client --> PostgreSQL (bids table, indexed on auction_id)             |
+||    Client --> PostgreSQL (bids table, indexed on auction_id)            |
 ||    SELECT * FROM bids WHERE auction_id = :id                            |
 ||      ORDER BY amount DESC LIMIT 50;                                     |
 ||                                                                         |
@@ -1032,6 +1082,39 @@
 ||  * ES index for active auctions refreshed every 30s                     |
 ||                                                                         |
 +--------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. OPTIMISTIC LOCKING on current_bid prevents double-acceptance.       |
+|     UPDATE WHERE bid > current_bid AND version = expected_version.      |
+|  2. AUCTION TIMER managed by a scheduler service with 1s precision.     |
+|     Bid extensions reset timer atomically with bid acceptance.          |
+|  3. REAL-TIME PUSH via WebSocket for bid updates. Subscribers see       |
+|     new bids instantly without polling.                                 |
+|  4. EVENT SOURCING for bid history: every bid is an immutable event.    |
+|     Auction state is derived by replaying bids.                         |
+|  5. PAYMENT HOLD: winning bidder's payment is pre-authorized.           |
+|     Captured on auction close. Losers' holds are released.              |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * BID EXTENSIONS vs HARD DEADLINE: Extensions prevent sniping but      |
+|    make auction duration unpredictable. Trade-off favors fairness.      |
+|  * CONSISTENCY vs LATENCY: Bid acceptance uses strong consistency       |
+|    (optimistic lock). Bid display uses eventual consistency (cache).    |
+|  * SINGLE-LEADER vs DISTRIBUTED: Auction state on a single shard        |
+|    (by auction_id) avoids distributed transactions but limits           |
+|    throughput per auction to one DB node's capacity.
+|                                                                         |
++-------------------------------------------------------------------------+
 ```
 
 ## SECTION 13: INTERVIEW QUESTIONS AND ANSWERS

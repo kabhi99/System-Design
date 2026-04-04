@@ -6,6 +6,55 @@ for billing, reporting, analytics dashboards, and fraud detection. At scale,
 it must process billions of events daily with exactly-once counting semantics
 to ensure accurate advertiser billing and campaign performance measurement.
 
+## SECTION 1: SCOPING THE PROBLEM WITH THE INTERVIEWER
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEWER-CANDIDATE DIALOGUE                                         |
+|  (establishing scope before diving into design)                         |
+|                                                                         |
+|  CANDIDATE: Are we designing a generic event counting system, or        |
+|    specifically for ad clicks and impressions?                          |
+|                                                                         |
+|  INTERVIEWER: Focus on ad click aggregation. Count clicks per ad        |
+|    per minute/hour/day. Support real-time dashboards and billing.       |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: What scale? How many click events per second?               |
+|                                                                         |
+|  INTERVIEWER: 10,000 ad clicks per second average, 50K peak.            |
+|    Billions of impressions per day. Low-latency aggregation.            |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Do we need exact counts or are approximate counts           |
+|    acceptable (e.g., HyperLogLog for unique users)?                     |
+|                                                                         |
+|  INTERVIEWER: Exact counts for billing (money is involved).             |
+|    Approximate is fine for analytics dashboards.                        |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  CANDIDATE: Should I handle click fraud detection?                      |
+|                                                                         |
+|  INTERVIEWER: Mention it briefly. Focus on the aggregation              |
+|    pipeline: ingestion, dedup, windowed counting, and querying.         |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  AGREED SCOPE:                                                          |
+|                                                                         |
+|  * Ad click aggregation for billing and analytics                       |
+|  * 10K clicks/sec avg, 50K peak, billions of impressions/day            |
+|  * Exact counts for billing, approximate for analytics                  |
+|  * Stream processing with windowed aggregation                          |
+|  * Deep dive: exactly-once counting, late event handling                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## SECTION 1: UNDERSTANDING THE PROBLEM
 
 ```
@@ -893,7 +942,7 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |                                                                         |
 |  RAW ──> DEDUPLICATED ──> AGGREGATED ──> SETTLED (billed)               |
 |   │           │                │                                        |
-|   │           │                └──> FRAUD_FLAGGED (excluded from bill)   |
+|   │           │                └──> FRAUD_FLAGGED (excluded from bill)  |
 |   │           │                          │                              |
 |   │           │                          └──> FRAUD_CONFIRMED           |
 |   │           │                          └──> FRAUD_CLEARED             |
@@ -911,41 +960,41 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |  * SETTLED: aggregation used in billing invoice                         |
 |  * FRAUD_FLAGGED can be cleared retroactively (added back to bill)      |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  2. CRITICAL WRITE PATH (Click Dedup + Aggregation Window Flush)        |
 |                                                                         |
 |  User        Click Tracker      Redis/Bloom      Kafka                  |
-|    |              |                  |              |                    |
-|    |-- click ---->|                  |              |                    |
-|    |  (ad_12345)  |                  |              |                    |
-|    |              |                  |              |                    |
-|    |              |  1. Validate event (required fields present)         |
-|    |              |  2. Enrich: geo lookup from IP, device parse         |
-|    |              |                  |              |                    |
-|    |              |  3. Dedup check:  |              |                    |
+|    |              |                  |              |                   |
+|    |-- click ---->|                  |              |                   |
+|    |  (ad_12345)  |                  |              |                   |
+|    |              |                  |              |                   |
+|    |              |  1. Validate event (required fields present)        |
+|    |              |  2. Enrich: geo lookup from IP, device parse        |
+|    |              |                  |              |                   |
+|    |              |  3. Dedup check:  |              |                  |
 |    |              |  SETNX click_id:{uuid} 1 EX 300  |                  |
-|    |              |    key exists? -> DUPLICATE, drop |                  |
-|    |              |    key new?    -> accept, continue|                  |
-|    |              |                  |              |                    |
-|    |              |  4. Produce to Kafka:            |                    |
-|    |              |     topic: ad-clicks             |                    |
-|    |              |     key: hash(ad_id) (partition)  |                   |
-|    |              |     value: full click event JSON  |                   |
-|    |              |                  |              |                    |
-|    |<-- 302 redirect to landing page |              |                    |
-|                                      |              |                    |
+|    |              |    key exists? -> DUPLICATE, drop |                 |
+|    |              |    key new?    -> accept, continue|                 |
+|    |              |                  |              |                   |
+|    |              |  4. Produce to Kafka:            |                  |
+|    |              |     topic: ad-clicks             |                  |
+|    |              |     key: hash(ad_id) (partition)  |                 |
+|    |              |     value: full click event JSON  |                 |
+|    |              |                  |              |                   |
+|    |<-- 302 redirect to landing page |              |                   |
+|                                      |              |                   |
 |                                      |         Flink Consumers          |
-|                                      |              |                    |
-|    Flink Stream Processor:                          |                    |
-|                                                     |                    |
-|    // Tumbling window: 1 minute                     |                    |
+|                                      |              |                   |
+|    Flink Stream Processor:                          |                   |
+|                                                     |                   |
+|    // Tumbling window: 1 minute                     |                   |
 |    events                                                               |
-|      .keyBy(e -> (e.ad_id, e.campaign_id, e.geo, e.device))            |
-|      .window(TumblingEventTimeWindows.of(Time.minutes(1)))             |
+|      .keyBy(e -> (e.ad_id, e.campaign_id, e.geo, e.device))             |
+|      .window(TumblingEventTimeWindows.of(Time.minutes(1)))              |
 |      .allowedLateness(Time.minutes(2))                                  |
 |      .aggregate(new ClickCounter())                                     |
-|      .addSink(clickHouseSink)  // idempotent UPSERT                    |
+|      .addSink(clickHouseSink)  // idempotent UPSERT                     |
 |                                                                         |
 |    Sink (idempotent):                                                   |
 |    INSERT INTO ad_click_aggregations                                    |
@@ -954,19 +1003,19 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |    VALUES (...)                                                         |
 |    ON CONFLICT (ad_id, campaign_id, geo, device, event_minute)          |
 |    DO UPDATE SET click_count = EXCLUDED.click_count;                    |
-|    -- UPSERT: re-execution produces same result                        |
+|    -- UPSERT: re-execution produces same result                         |
 |                                                                         |
 |    Flink checkpointing:                                                 |
 |    * Snapshot state + Kafka offset to S3 every 30 seconds               |
 |    * On failure: restore checkpoint, replay from offset                 |
 |    * End-to-end exactly-once for billing pipeline                       |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  3. READ PATH                                                           |
 |                                                                         |
 |  REAL-TIME DASHBOARD (last 48h):                                        |
-|    Advertiser UI --> Query Service --> Redis (popular query cache)       |
+|    Advertiser UI --> Query Service --> Redis (popular query cache)      |
 |      HIT  --> return cached rollup (TTL 60s)                            |
 |      MISS --> ClickHouse (hot storage, sub-second)                      |
 |    SELECT SUM(click_count), SUM(impression_count)                       |
@@ -977,7 +1026,7 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |  HISTORICAL QUERIES (7-90 days):                                        |
 |    Query Router --> ClickHouse warm storage (SSD/HDD)                   |
 |    * Hour-level aggregations, queries in seconds                        |
-|    * Pre-computed materialized views for campaign/advertiser rollups     |
+|    * Pre-computed materialized views for campaign/advertiser rollups    |
 |                                                                         |
 |  LONG-TERM ANALYTICS (>90 days):                                        |
 |    Query Router --> S3 Parquet (via Spark/Presto/Athena)                |
@@ -985,12 +1034,12 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |    * Used for monthly invoices, annual trend analysis                   |
 |                                                                         |
 |  BILLING FEED:                                                          |
-|    Billing Service --> ClickHouse (verified counts)                      |
+|    Billing Service --> ClickHouse (verified counts)                     |
 |    * Reads fraud-filtered aggregations                                  |
 |    * Nightly reconciliation: stream count vs raw event count            |
 |    * Discrepancies flagged before invoice generation                    |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  4. FAILURE SCENARIOS                                                   |
 |                                                                         |
@@ -1019,7 +1068,7 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |  |                              | in tracker (batch 100 -> 1 msg).   |  |
 |  +------------------------------+------------------------------------+  |
 |                                                                         |
-|  ================================================================      |
+|  ================================================================       |
 |                                                                         |
 |  5. CLEANUP / EXPIRY                                                    |
 |                                                                         |
@@ -1044,6 +1093,39 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |  * Batch ML pipeline runs nightly, flags retroactive fraud              |
 |  * Flagged clicks deducted from next billing cycle                      |
 |  * Flagged events never deleted -- stored for audit                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION N: WRAP-UP
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SUMMARY OF KEY DESIGN DECISIONS:                                       |
+|                                                                         |
+|  1. STREAM PROCESSING (Kafka + Flink) for real-time aggregation.        |
+|     Events flow: Click -> Kafka -> Flink (dedup + window) -> DB.        |
+|  2. EXACTLY-ONCE via idempotent writes + Kafka transactional            |
+|     producer. Critical for billing accuracy.                            |
+|  3. WATERMARKS for late event handling. Events arriving after           |
+|     the window closes are counted in a correction pass.                 |
+|  4. TIME-SERIES DB (ClickHouse/Druid) for aggregated results.           |
+|     Optimized for time-range queries and roll-ups.                      |
+|  5. LAMBDA ARCHITECTURE: real-time stream layer + batch layer           |
+|     for reconciliation. Batch corrects stream inaccuracies.             |
+|                                                                         |
+|  -----------------------------------------------------------------      |
+|                                                                         |
+|  KEY TRADE-OFFS:                                                        |
+|                                                                         |
+|  * LATENCY vs ACCURACY: Lower aggregation windows (1s) give             |
+|    faster results but more overhead. 1-min windows balance both.        |
+|  * EXACTLY-ONCE vs AT-LEAST-ONCE: Exactly-once adds ~20% latency        |
+|    but is required for billing. Analytics can use at-least-once.        |
+|  * PRE-AGGREGATION vs RAW STORAGE: Pre-aggregating saves query          |
+|    cost but loses raw event detail. We store both: raw in S3,           |
+|    aggregated in time-series DB.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
