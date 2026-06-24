@@ -317,45 +317,161 @@
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
-|  SCENARIO 2: DATABASE FAILURE AFTER CHARGE                              |
-|  =============================================                          |
+|  SCENARIO 2: STEP 5 SUCCEEDED, STEP 6 FAILED                            |
+|  ============================================                           |
+|  (THE SINGLE MOST DANGEROUS FAILURE IN PAYMENTS)                        |
 |                                                                         |
-|  Problem: Card charged but DB update failed                             |
+|  Problem: Card network captured the funds, but our DB update failed.    |
+|  Customer's card WAS charged, but our system has NO record of it.       |
 |                                                                         |
 |  +-------------------------------------------------------------------+  |
 |  |                                                                   |  |
-|  |  1. Card charged successfully Y                                   |  |
-|  |  2. UPDATE payments SET status = 'CAPTURED' > DB ERROR!           |  |
-|  |  3. Transaction rolled back                                       |  |
-|  |  4. Customer sees "failed" but money is gone!                     |  |
+|  |  Card Network state:  CAPTURED  (customer's card debited)         |  |
+|  |  Our DB state:        PENDING   (we think it never happened)      |  |
+|  |                                                                   |  |
+|  |  Bad outcomes if mishandled:                                      |  |
+|  |   - Retry blindly   -> DOUBLE CHARGE the customer                 |  |
+|  |   - Mark as failed  -> customer paid, no fulfillment, chargeback  |  |
 |  |                                                                   |  |
 |  +-------------------------------------------------------------------+  |
 |                                                                         |
-|  SOLUTION: Write to WAL/Event log BEFORE processing                     |
+|  KEY INSIGHT:                                                           |
+|  You CANNOT do 2-phase commit across your DB and Visa/Mastercard.       |
+|  Your DB is a CACHE of the card network's state.                        |
+|  The card network is the SYSTEM OF RECORD.                              |
 |                                                                         |
-|  def process_payment():                                                 |
-|      # 1. Write intent to durable log                                   |
-|      write_to_wal({                                                     |
-|          type: "PAYMENT_INTENT",                                        |
-|          payment_id: id,                                                |
-|          amount: amount,                                                |
-|          timestamp: now()                                               |
-|      })                                                                 |
+|  ============ THE 5 MECHANISMS (USED TOGETHER) ============             |
 |                                                                         |
-|      # 2. Process with card network                                     |
-|      result = charge_card(...)                                          |
+|  ----------------------------------------------------------------       |
+|  MECHANISM 1: WRITE INTENT BEFORE CALLING THE NETWORK                   |
+|               (WAL / Outbox pattern)                                    |
+|  ----------------------------------------------------------------       |
 |                                                                         |
-|      # 3. Write result to log                                           |
-|      write_to_wal({                                                     |
-|          type: "PAYMENT_RESULT",                                        |
-|          payment_id: id,                                                |
-|          result: result                                                 |
-|      })                                                                 |
+|  Durably persist "I am about to attempt this charge" BEFORE step 5.     |
 |                                                                         |
-|      # 4. Update database (if fails, WAL has truth)                     |
-|      update_database(...)                                               |
+|     BEGIN TRANSACTION                                                   |
+|       INSERT INTO payments (id, status, idempotency_key, amount, ...)   |
+|       VALUES (?, 'PROCESSING', ?, ?, ...);                              |
 |                                                                         |
-|  Recovery process reads WAL and reconciles database                     |
+|       INSERT INTO payment_events (payment_id, type)                     |
+|       VALUES (?, 'AUTH_REQUESTED');                                     |
+|     COMMIT;                                                             |
+|                                                                         |
+|     -- ONLY NOW call the card network --                                |
+|                                                                         |
+|  Why: if the process dies between steps 5 and 6, recovery finds the     |
+|  row stuck in PROCESSING and can reconcile from the card network.       |
+|  Without this row you have no evidence a charge was even attempted.     |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  MECHANISM 2: IDEMPOTENCY KEY ON THE CARD NETWORK CALL                  |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|  THE mechanism that makes retries SAFE.                                 |
+|                                                                         |
+|     POST /charges                                                       |
+|     Idempotency-Key: pay_abc123_attempt                                 |
+|     { "amount": 5000, "card_token": "tok_xxx" }                         |
+|                                                                         |
+|  Resending the same Idempotency-Key returns the ORIGINAL response       |
+|  WITHOUT re-charging the card. Stripe / Adyen / Braintree all support   |
+|  this. Always pass the SAME key on every retry of the same payment.     |
+|                                                                         |
+|  Effect: step 5 becomes safely retryable as many times as needed.       |
+|  When step 6 fails we can replay (5 + 6) as a unit, no double-charge.   |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  MECHANISM 3: AGGRESSIVE DURABLE RETRY ON STEP 6                        |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|  Most DB failures are transient (failover, connection blip, restart).   |
+|                                                                         |
+|     try:                                                                |
+|         retry_db_update(payment_id, status='CAPTURED',                  |
+|                         max_attempts=5,                                 |
+|                         backoff='exponential')                          |
+|     except StillFailing:                                                |
+|         # hand off to a durable async retry queue                       |
+|         kafka.emit('payment.dlq', {                                     |
+|             payment_id,                                                 |
+|             idempotency_key,                                            |
+|             action: 'UPDATE_STATUS_TO_CAPTURED',                        |
+|             processor_response,                                         |
+|         })                                                              |
+|                                                                         |
+|  The Kafka/SQS write IS the durable record of "unprocessed work."       |
+|  An async worker drains the queue and retries until the DB recovers,    |
+|  using the SAME idempotency_key so retries stay safe.                   |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  MECHANISM 4: RECONCILIATION JOB (THE SAFETY NET)                       |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|  Background job that runs every ~60 seconds:                            |
+|                                                                         |
+|     SELECT * FROM payments                                              |
+|     WHERE status = 'PROCESSING'                                         |
+|       AND updated_at < NOW() - INTERVAL '2 minutes';                    |
+|                                                                         |
+|  For each stuck row, ASK THE CARD NETWORK FOR THE TRUTH:                |
+|                                                                         |
+|     GET /charges?idempotency_key=pay_abc123_attempt                     |
+|                                                                         |
+|     Card network response       ->  DB action                           |
+|     -------------------------------------------------                   |
+|     CAPTURED                    ->  UPDATE -> 'CAPTURED'                |
+|     NOT_FOUND (never received)  ->  UPDATE -> 'FAILED'                  |
+|     FAILED / DECLINED           ->  UPDATE -> 'FAILED'                  |
+|     PENDING / authorizing       ->  retry next cycle                    |
+|                                                                         |
+|  Catches EVERY case where the process died between steps 5 and 6.       |
+|  Also fixes drift from lost webhooks, chargebacks, manual adjustments.  |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  MECHANISM 5: COMPENSATING ACTION (LAST RESORT)                         |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|  If after N hours the DB still cannot record the capture (schema        |
+|  corruption, datacenter loss), do NOT strand the customer's money.      |
+|                                                                         |
+|  Saga-style compensation:                                               |
+|    1. Issue a REFUND through the card network                           |
+|       POST /refunds { charge_id: ..., idempotency_key: ... }            |
+|    2. Notify customer: "transaction reversed, please try again"         |
+|    3. When DB is back, mark the internal record as 'REVERSED'           |
+|                                                                         |
+|  This is the escape hatch when forward recovery is impossible.          |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  BONUS: TWO-PHASE FLOW (AUTH + CAPTURE) LIMITS THE BLAST RADIUS         |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|  Most production systems split the card flow into two phases:           |
+|                                                                         |
+|     Step A: AUTH    -> hold funds on the card (NO money moves yet)      |
+|     Step B: DB update (record auth_id, status='AUTHORIZED')             |
+|     Step C: CAPTURE -> actually charge (only after order is ready)      |
+|                                                                         |
+|  If step B fails after step A: the auth simply EXPIRES in ~7 days.      |
+|  No money lost, no refund needed -- safer than capture-then-DB.         |
+|                                                                         |
+|  ----------------------------------------------------------------       |
+|  SUMMARY: HOW THE 5 MECHANISMS COMPOSE                                  |
+|  ----------------------------------------------------------------       |
+|                                                                         |
+|   #   Mechanism              What it gives you                          |
+|   ----------------------------------------------------------            |
+|   1   Write intent first     "I always know I tried"                    |
+|   2   Idempotency key        "Retries are free"                         |
+|   3   Durable retry queue    "Crashes don't lose work"                  |
+|   4   Reconciliation job     "Source of truth = card network"           |
+|   5   Compensating refund    "Escape hatch when DB is dead"             |
+|                                                                         |
+|  GOLDEN RULE:                                                           |
+|  Your DB is a CACHE of the card network's state.                        |
+|  The card network is the SYSTEM OF RECORD. Design every flow            |
+|  assuming the DB can disagree -- always be able to re-derive            |
+|  truth from the network.                                                |
 |                                                                         |
 |  --------------------------------------------------------------------   |
 |                                                                         |
