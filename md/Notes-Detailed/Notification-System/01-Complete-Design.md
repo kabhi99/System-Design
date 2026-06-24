@@ -1496,7 +1496,952 @@ while respecting user preferences and minimizing notification fatigue.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 14: WRAP-UP
+## SECTION 14: SCALING TO 30K+ NOTIFICATIONS/SECOND
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TARGET LOAD                                                            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Average:  ~18,500 notifications/sec  (~1.6B/day)                 |  |
+|  |  Peak:     ~30,000 - 185,000 notifications/sec  (10x burst)       |  |
+|  |                                                                   |  |
+|  |  Sources of bursts:                                               |  |
+|  |   - Marketing blast: 50M emails kicked off at 9 AM                |  |
+|  |   - Breaking news push: 100M users in 60 seconds                  |  |
+|  |   - Black Friday: 5x normal traffic for 4 hours                   |  |
+|  |   - Outage recovery: backlog drain when provider returns          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  BOTTLENECK ANALYSIS  (where 30k/sec actually breaks)                   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Layer              | Limit (typical)  | Mitigation               |  |
+|  |  -------------------+------------------+------------------------- |  |
+|  |  Notification API   | ~5k req/sec/node | Horizontal scale + LB    |  |
+|  |  Redis (rate limit) | ~100k ops/sec    | Cluster + local cache    |  |
+|  |  DB insert (PG)     | ~10k writes/sec  | Async, batch, Cassandra  |  |
+|  |  Kafka producer     | ~1M msg/sec      | Partition + batch + zstd |  |
+|  |  Channel worker     | ~500 req/sec/wkr | Pool size + HTTP/2 reuse |  |
+|  |  APNs / FCM         | ~50k+ msg/sec    | HTTP/2 multiplex, retry  |  |
+|  |  SMS (Twilio)       | ~100 msg/sec/num | Provision more numbers   |  |
+|  |  Email (SendGrid)   | ~10k msg/sec     | Multiple IPs, accounts   |  |
+|  |                                                                   |  |
+|  |  TIGHTEST BOTTLENECK is usually:                                  |  |
+|  |   1) Provider rate limits (especially SMS)                        |  |
+|  |   2) DB write throughput (without async/batch)                    |  |
+|  |   3) Worker concurrency (without HTTP/2 reuse)                    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  CAPACITY MATH  (sizing for 30k push/sec sustained)                     |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. KAFKA PARTITIONS                                              |  |
+|  |     Each partition: ~10k msg/sec safely                           |  |
+|  |     30k / 5k (safe headroom) = 6 partitions minimum               |  |
+|  |     Use 32 partitions for parallelism + future headroom           |  |
+|  |                                                                   |  |
+|  |  2. WORKER COUNT                                                  |  |
+|  |     One worker pod ~ 500 calls/sec (HTTP/2 to FCM)                |  |
+|  |     30,000 / 500 = 60 worker pods                                 |  |
+|  |     +50% headroom -> 90 worker pods                               |  |
+|  |     Each pod runs ~200 concurrent coroutines (async I/O)          |  |
+|  |                                                                   |  |
+|  |  3. DB WRITE THROUGHPUT                                           |  |
+|  |     30k inserts/sec on one PG node = NOT OK                       |  |
+|  |     Options:                                                      |  |
+|  |     - Cassandra (LSM): 30k writes/sec/node trivially              |  |
+|  |     - PG with batch INSERT (1000 rows/txn) = 30 txn/sec OK        |  |
+|  |     - Shard by user_id across N PG primaries                      |  |
+|  |     - Async write (worker writes after enqueue, not before)       |  |
+|  |                                                                   |  |
+|  |  4. CONNECTION POOLING                                            |  |
+|  |     FCM HTTP/2: each conn multiplexes ~100 concurrent streams     |  |
+|  |     30,000 / 100 = 300 concurrent streams across pool             |  |
+|  |     -> 10 HTTP/2 conns per pod x 90 pods = 900 total              |  |
+|  |     FCM allows thousands of concurrent connections per project    |  |
+|  |                                                                   |  |
+|  |  5. RATE LIMITER (Redis)                                          |  |
+|  |     30k INCR ops/sec on one Redis = OK (Redis does 100k+/sec)     |  |
+|  |     For safety, use Redis cluster sharded by user_id              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  KAFKA PARTITIONING STRATEGY                                            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PARTITION KEY:  hash(user_id)                                    |  |
+|  |   - Same user's notifications stay ordered per partition          |  |
+|  |   - Hot users distributed if partition count is large enough      |  |
+|  |   - DO NOT key by notification_id (kills ordering per user)       |  |
+|  |                                                                   |  |
+|  |  TOPICS BY CHANNEL x PRIORITY:                                    |  |
+|  |    notifications.push.critical    ( 4 partitions, OTP/security)   |  |
+|  |    notifications.push.high        (16 partitions, transactional)  |  |
+|  |    notifications.push.normal      (32 partitions, social)         |  |
+|  |    notifications.push.low         (32 partitions, marketing)      |  |
+|  |    notifications.email.high       ( 8 partitions)                 |  |
+|  |    notifications.email.low        (16 partitions)                 |  |
+|  |    notifications.sms.critical     ( 4 partitions, OTP)            |  |
+|  |                                                                   |  |
+|  |  WHY SPLIT BY PRIORITY (not just channel):                        |  |
+|  |   - Dedicated worker pool per topic                               |  |
+|  |   - Critical never blocked behind marketing backlog               |  |
+|  |   - Independent scaling and lag SLOs per priority                 |  |
+|  |   - Low-priority workers can run on spot/preemptible instances    |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  WORKER POOL DESIGN  (push worker, single pod)                          |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |   Kafka consumer (poll batch of 500 msgs)                         |  |
+|  |        |                                                          |  |
+|  |        v                                                          |  |
+|  |   In-memory bounded queue (10k slots)  <- backpressure here       |  |
+|  |        |                                                          |  |
+|  |        v                                                          |  |
+|  |   Async worker pool: 200 coroutines                               |  |
+|  |        |                                                          |  |
+|  |        v                                                          |  |
+|  |   HTTP/2 connection pool (10 conns to FCM)                        |  |
+|  |        |                                                          |  |
+|  |        v                                                          |  |
+|  |   FCM /send (multiplexed streams)                                 |  |
+|  |                                                                   |  |
+|  |  SKETCH (async pseudocode):                                       |  |
+|  |                                                                   |  |
+|  |    consumer = kafka.subscribe("notifications.push.high")          |  |
+|  |    pool     = HttpPool(host="fcm.googleapis.com", conns=10)       |  |
+|  |    sem      = Semaphore(200)   # max in-flight                    |  |
+|  |                                                                   |  |
+|  |    async for batch in consumer.poll(500):                         |  |
+|  |        coros = [send_one(m, pool, sem) for m in batch]            |  |
+|  |        await gather(*coros)                                       |  |
+|  |        consumer.commit(batch.last_offset)                         |  |
+|  |                                                                   |  |
+|  |    async def send_one(msg, pool, sem):                            |  |
+|  |        async with sem:                                            |  |
+|  |            try:                                                   |  |
+|  |                resp = await pool.post("/send", payload=msg, ...)  |  |
+|  |                await update_status(msg.id, "DELIVERED")           |  |
+|  |            except RetryableError:                                 |  |
+|  |                await retry_queue.enqueue(msg)                     |  |
+|  |                                                                   |  |
+|  |  KEY POINTS:                                                      |  |
+|  |   - One Kafka commit per BATCH, not per message (10x faster)      |  |
+|  |   - Semaphore caps in-flight so we don't OOM on bursts            |  |
+|  |   - Connection pool keeps HTTP/2 conns warm                       |  |
+|  |   - Status update is fire-and-forget (async) to keep latency low  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  HTTP/2 MULTIPLEXING  (key to high throughput)                          |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  HTTP/1.1:  1 in-flight request per TCP connection                |  |
+|  |   - Need 1000 connections to send 1000 concurrent reqs            |  |
+|  |   - Connection setup/teardown + TLS overhead each time            |  |
+|  |   - Easy to exhaust ephemeral ports / TLS handshakes              |  |
+|  |                                                                   |  |
+|  |  HTTP/2:   ~100 concurrent streams per connection (default)       |  |
+|  |   - 10 connections -> 1000 in-flight requests                     |  |
+|  |   - Single TLS handshake amortized across many requests           |  |
+|  |   - APNs and FCM both REQUIRE HTTP/2                              |  |
+|  |                                                                   |  |
+|  |  THROUGHPUT IMPACT:                                               |  |
+|  |   HTTP/1.1: ~50 req/sec/worker (connection-bound)                 |  |
+|  |   HTTP/2:   ~500 req/sec/worker (10x improvement)                 |  |
+|  |                                                                   |  |
+|  |  APNs SPECIFIC:                                                   |  |
+|  |   - Persistent HTTP/2 to api.push.apple.com                       |  |
+|  |   - JWT-based auth (sign once per hour, reuse on every request)   |  |
+|  |   - ~1000 concurrent streams per connection                       |  |
+|  |   - Pre-warm connections at pod startup                           |  |
+|  |                                                                   |  |
+|  |  FCM SPECIFIC:                                                    |  |
+|  |   - HTTP v1 API uses OAuth2 access tokens (cache 50 min)          |  |
+|  |   - Multicast endpoint: up to 500 tokens per request              |  |
+|  |   - Use multicast for broadcasts (1 req = 500 sends)              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  PROVIDER BATCHING  (reducing request count)                            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FCM Multicast:                                                   |  |
+|  |    POST /v1/projects/{p}/messages:sendEach                        |  |
+|  |    Body: { tokens: [tok1...tok500], message: {...} }              |  |
+|  |    Result: up to 500 sends in 1 HTTP request                      |  |
+|  |    Throughput multiplier: 500x                                    |  |
+|  |    Use for: marketing blast, breaking news, broadcasts            |  |
+|  |    Don't use for: personalized notifications (body differs)       |  |
+|  |                                                                   |  |
+|  |  APNs:                                                            |  |
+|  |    No native multicast - rely on HTTP/2 stream multiplexing       |  |
+|  |    Send N individual reqs on the same connection in parallel      |  |
+|  |                                                                   |  |
+|  |  SendGrid:                                                        |  |
+|  |    /v3/mail/send accepts up to 1000 personalizations/req          |  |
+|  |    Group recipients with same template into one API call          |  |
+|  |                                                                   |  |
+|  |  Twilio:                                                          |  |
+|  |    No bulk endpoint, but Messaging Service rotates across many    |  |
+|  |    sender numbers automatically to multiply throughput            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  BACKPRESSURE AND LOAD SHEDDING                                         |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  When input rate > processing rate, options are:                  |  |
+|  |                                                                   |  |
+|  |  1. BUFFER  (Kafka does this naturally)                           |  |
+|  |     - Kafka retains messages; consumer lag grows                  |  |
+|  |     - OK for non-realtime (marketing, digests)                    |  |
+|  |     - NOT ok for critical (OTP must arrive in seconds)            |  |
+|  |                                                                   |  |
+|  |  2. BACKPRESSURE TO PRODUCER                                      |  |
+|  |     - Producer.send blocks if topic backlog past threshold        |  |
+|  |     - API returns 503 to calling service                          |  |
+|  |     - Caller retries with backoff (or dead-letters)               |  |
+|  |                                                                   |  |
+|  |  3. LOAD SHEDDING  (drop low priority first)                      |  |
+|  |     - Worker checks consumer lag for its topic                    |  |
+|  |     - If lag > 5 min on `.low` topic: drop msg, emit metric       |  |
+|  |     - critical and high are NEVER shed                            |  |
+|  |                                                                   |  |
+|  |  4. CIRCUIT BREAKER  (provider down)                              |  |
+|  |     - If FCM error rate > 50% for 30s: open circuit               |  |
+|  |     - Workers pause; messages stay in Kafka                       |  |
+|  |     - Probe every 30s until provider recovers                     |  |
+|  |     - Avoids hammering a broken provider                          |  |
+|  |                                                                   |  |
+|  |  5. SCHEDULER-LEVEL THROTTLING                                    |  |
+|  |     - Marketing blasts use token bucket (e.g. 10k/sec global)     |  |
+|  |     - Smooths burst over time, protects downstream                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  AUTO-SCALING TRIGGERS                                                  |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Scale workers UP when:                                           |  |
+|  |   - Kafka consumer lag > 30s on critical/high topics              |  |
+|  |   - p95 dispatch latency > 2s                                     |  |
+|  |   - CPU > 70% sustained for 3 min                                 |  |
+|  |                                                                   |  |
+|  |  Scale workers DOWN when:                                         |  |
+|  |   - Consumer lag near 0 AND CPU < 30% for 10 min                  |  |
+|  |   - Keep minReplicas high enough to absorb sudden bursts          |  |
+|  |                                                                   |  |
+|  |  KEDA (Kubernetes Event-Driven Autoscaling):                      |  |
+|  |    trigger:        kafka                                          |  |
+|  |    topic:          notifications.push.high                        |  |
+|  |    lagThreshold:   1000 msgs per partition                        |  |
+|  |    minReplicas:    10                                             |  |
+|  |    maxReplicas:    200                                            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+*+-------------------------------------------------------------------------+*
+
+## SECTION 15: SCHEDULED NOTIFICATIONS DEEP DIVE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WHY SCHEDULING IS HARD                                                 |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Use cases:                                                       |  |
+|  |   - Reminders: "Your appointment is in 1 hour"                    |  |
+|  |   - Deferred: "Send after quiet hours end at 8 AM local"          |  |
+|  |   - Marketing blast: "Send to 50M users at 9 AM tomorrow"         |  |
+|  |   - Drip campaign: "Day 1: welcome, Day 3: tip, Day 7: upsell"    |  |
+|  |   - Recurring: "Weekly digest every Monday 9 AM"                  |  |
+|  |                                                                   |  |
+|  |  Challenges:                                                      |  |
+|  |   - 100M+ scheduled notifications outstanding at any moment       |  |
+|  |   - Must fire at correct time +/- a few seconds                   |  |
+|  |   - Bursts: 50M jobs all firing at 9 AM sharp                     |  |
+|  |   - Cancellation (user unsubscribed before send)                  |  |
+|  |   - Timezone-aware (per-user local time)                          |  |
+|  |   - Exactly-once dispatch is impossible (best: at-least-once)     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  APPROACH 1: DB-BACKED SCHEDULE + SWEEPER  (simple, small scale)        |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Schema:                                                          |  |
+|  |    scheduled_notifications (                                      |  |
+|  |       id          UUID PRIMARY KEY,                               |  |
+|  |       user_id     BIGINT,                                         |  |
+|  |       payload     JSONB,                                          |  |
+|  |       fire_at     TIMESTAMP,                                      |  |
+|  |       status      VARCHAR  -- PENDING | FIRED | CANCELLED         |  |
+|  |    );                                                             |  |
+|  |    INDEX (status, fire_at);                                       |  |
+|  |                                                                   |  |
+|  |  Sweeper loop (every 5 seconds):                                  |  |
+|  |    SELECT * FROM scheduled_notifications                          |  |
+|  |    WHERE status = 'PENDING' AND fire_at <= NOW()                  |  |
+|  |    ORDER BY fire_at                                               |  |
+|  |    LIMIT 10000                                                    |  |
+|  |    FOR UPDATE SKIP LOCKED;          -- avoid double-fire          |  |
+|  |                                                                   |  |
+|  |    Then: push each onto Kafka, then:                              |  |
+|  |    UPDATE scheduled_notifications SET status = 'FIRED'            |  |
+|  |    WHERE id IN (...);                                             |  |
+|  |                                                                   |  |
+|  |  Pros: simple, transactional, easy cancellation                   |  |
+|  |  Cons: doesn't scale past ~1M rows scanned/sec; spikes hit DB     |  |
+|  |  Use: small/medium (<10M scheduled, low fire rate)                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  APPROACH 2: REDIS SORTED SET (ZSET)  (most common at scale)            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  IDEA: Store scheduled jobs in a ZSET keyed by fire-time epoch.   |  |
+|  |                                                                   |  |
+|  |  ZADD schedule:queue  <fire_at_epoch>  <notification_id>          |  |
+|  |  ZADD schedule:queue  1730000000      ntf-abc-123                 |  |
+|  |                                                                   |  |
+|  |  Sweeper (runs every 1 second):                                   |  |
+|  |    now = epoch_now()                                              |  |
+|  |    ids = ZRANGEBYSCORE schedule:queue -inf <now> LIMIT 5000       |  |
+|  |    ZREM schedule:queue <ids...>                                   |  |
+|  |    For each id: produce to Kafka                                  |  |
+|  |                                                                   |  |
+|  |  ATOMIC POP via Lua (avoids race):                                |  |
+|  |    local ids = redis.call('ZRANGEBYSCORE', KEYS[1], '-inf',       |  |
+|  |                            ARGV[1], 'LIMIT', 0, ARGV[2])          |  |
+|  |    if #ids > 0 then redis.call('ZREM', KEYS[1], unpack(ids)) end  |  |
+|  |    return ids                                                     |  |
+|  |                                                                   |  |
+|  |  SHARDING for 100M scheduled jobs:                                |  |
+|  |    Key by time bucket: schedule:queue:<minute>                    |  |
+|  |    Each sweeper handles its own minute bucket                     |  |
+|  |    Or shard by hash(user_id) into N ZSETs                         |  |
+|  |                                                                   |  |
+|  |  CANCELLATION:                                                    |  |
+|  |    ZREM schedule:queue <notification_id>  (O(log N))              |  |
+|  |    If already fired: send a "cancel" marker downstream            |  |
+|  |                                                                   |  |
+|  |  Pros: very fast, scales to 100M+ scheduled, cheap O(log N)       |  |
+|  |  Cons: not durable by default (use AOF + replicas)                |  |
+|  |  Used by: Stripe, Uber, Slack (variants of this pattern)          |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  APPROACH 3: HIERARCHICAL TIMER WHEEL                                   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  IDEA: Circular array of buckets, each bucket = 1 time slot.      |  |
+|  |        Higher wheel ticks slower (sec -> min -> hour -> day).     |  |
+|  |        Insert/expire are O(1).                                    |  |
+|  |                                                                   |  |
+|  |    Wheel A (seconds, 60 slots, ticks every 1s)                    |  |
+|  |    Wheel B (minutes, 60 slots, ticks when A wraps)                |  |
+|  |    Wheel C (hours,   24 slots, ticks when B wraps)                |  |
+|  |    Wheel D (days,    30 slots, ticks when C wraps)                |  |
+|  |                                                                   |  |
+|  |  On tick, current slot's jobs are either fired (Wheel A) or       |  |
+|  |  cascaded down (re-bucketed at finer resolution).                 |  |
+|  |                                                                   |  |
+|  |  Used by: Kafka, Netty, Linux kernel (timer subsystem).           |  |
+|  |                                                                   |  |
+|  |  Pros: O(1) add / fire / cancel; very low memory per timer        |  |
+|  |  Cons: in-memory only; needs persistent log for restart safety    |  |
+|  |  Use: high-frequency short timeouts (retry, session expiry)       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  APPROACH 4: KAFKA + DELAY TOPICS                                       |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  IDEA: Use Kafka topics dedicated to fixed delays.                |  |
+|  |                                                                   |  |
+|  |    notifications.delay.5s                                         |  |
+|  |    notifications.delay.30s                                        |  |
+|  |    notifications.delay.5m                                         |  |
+|  |    notifications.delay.1h                                         |  |
+|  |    notifications.delay.1d                                         |  |
+|  |                                                                   |  |
+|  |  Worker for delay.5m:                                             |  |
+|  |    msg = consumer.poll()                                          |  |
+|  |    if now() - msg.timestamp < 5min: sleep(remaining)              |  |
+|  |    else: produce to notifications.push.high                       |  |
+|  |                                                                   |  |
+|  |  For arbitrary delays: bucket to nearest delay topic, then hop    |  |
+|  |  through finer-grained ones (delay.1d -> delay.1h -> ... ).       |  |
+|  |                                                                   |  |
+|  |  Apache Pulsar has native delayed delivery (supersedes this).     |  |
+|  |  RabbitMQ has TTL + dead-letter exchanges to emulate.             |  |
+|  |                                                                   |  |
+|  |  Pros: reuses existing Kafka infra; durable                       |  |
+|  |  Cons: clumsy for arbitrary delays; ordering across buckets weak  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  APPROACH 5: TEMPORAL / QUARTZ / WORKFLOW ENGINE                        |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  For COMPLEX schedules (multi-step drip campaigns, cron jobs):    |  |
+|  |   - Temporal.io / Cadence: workflow engine with durable timers    |  |
+|  |   - Quartz Scheduler (Java): cron expressions, persistent jobs    |  |
+|  |   - AWS EventBridge Scheduler: managed cron at scale              |  |
+|  |                                                                   |  |
+|  |  Temporal example (drip campaign):                                |  |
+|  |                                                                   |  |
+|  |    @workflow                                                      |  |
+|  |    async def welcome_drip(user_id):                               |  |
+|  |        send_notification(user_id, "welcome")                      |  |
+|  |        await sleep(timedelta(days=1))                             |  |
+|  |        send_notification(user_id, "day_2_tip")                    |  |
+|  |        await sleep(timedelta(days=4))                             |  |
+|  |        send_notification(user_id, "day_7_upsell")                 |  |
+|  |                                                                   |  |
+|  |  Temporal persists the workflow state, so an idle 7-day sleep is  |  |
+|  |  free -- the workflow rehydrates on the right day.                |  |
+|  |                                                                   |  |
+|  |  Pros: durable, replay-safe, expresses complex flows naturally    |  |
+|  |  Cons: heavier infra; not optimized for 100M one-shot timers      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  TIMEZONE-AWARE SCHEDULING  (the "send at 9 AM local" problem)          |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Goal: deliver to every user at 9 AM IN THEIR LOCAL TIMEZONE.     |  |
+|  |                                                                   |  |
+|  |  Naive: store fire_at as UTC -- but "9 AM local" is 24 distinct   |  |
+|  |  UTC instants (one per timezone).                                 |  |
+|  |                                                                   |  |
+|  |  Pattern:                                                         |  |
+|  |    1. Group users by timezone (cached in user_preferences).       |  |
+|  |    2. For each TZ, compute "9 AM in TZ" -> UTC fire_at.           |  |
+|  |    3. Schedule each user with their own fire_at.                  |  |
+|  |                                                                   |  |
+|  |  CODE:                                                            |  |
+|  |    for tz in distinct_user_timezones():                           |  |
+|  |        fire_utc = local_9am(tz).astimezone(UTC)                   |  |
+|  |        users   = SELECT user_id FROM user_prefs WHERE tz = ?      |  |
+|  |        for u in users:                                            |  |
+|  |            schedule(u, fire_utc, payload)                         |  |
+|  |                                                                   |  |
+|  |  DST gotcha: use tzdata-aware libs (zoneinfo, IANA), not fixed    |  |
+|  |  UTC offsets. "America/New_York" handles DST; "UTC-5" does not.   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  RECURRING SCHEDULES (cron-style)                                       |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  PATTERN: store a cron expression + a "next_fire_at"              |  |
+|  |                                                                   |  |
+|  |    recurring_jobs (                                               |  |
+|  |       id,                                                         |  |
+|  |       cron        VARCHAR,   -- '0 9 * * MON'                     |  |
+|  |       tz          VARCHAR,                                        |  |
+|  |       next_fire   TIMESTAMP, -- precomputed UTC                   |  |
+|  |       status                                                      |  |
+|  |    );                                                             |  |
+|  |                                                                   |  |
+|  |  On each fire:                                                    |  |
+|  |   1. Dispatch the notification (via Kafka).                       |  |
+|  |   2. Compute next_fire = croniter(cron, tz).next().               |  |
+|  |   3. UPDATE recurring_jobs SET next_fire = ? WHERE id = ?.        |  |
+|  |                                                                   |  |
+|  |  Sweeper queries WHERE next_fire <= NOW().                        |  |
+|  |  Idempotency: include next_fire timestamp in the dedup key so a   |  |
+|  |  double-tick doesn't double-fire the same occurrence.             |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  CANCELLATION                                                           |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Two windows where cancel can happen:                             |  |
+|  |                                                                   |  |
+|  |  1. BEFORE fire (in scheduler store):                             |  |
+|  |     - DB approach:  UPDATE status = 'CANCELLED' WHERE id = ?      |  |
+|  |     - Redis ZSET:   ZREM schedule:queue <id>                      |  |
+|  |                                                                   |  |
+|  |  2. AFTER fire, before delivery (already in Kafka):               |  |
+|  |     - Worker checks a "cancellations" set in Redis before send:   |  |
+|  |         if SISMEMBER cancellations:set <notification_id>: skip    |  |
+|  |     - Or: a "tombstone" message overrides original via dedup      |  |
+|  |                                                                   |  |
+|  |  3. AFTER provider call:                                          |  |
+|  |     - Cannot un-send. Best effort: client-side suppress on        |  |
+|  |       opening if the underlying entity (order, message) is gone.  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  COMPARISON                                                             |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Approach        | Scale     | Latency  | Best for                |  |
+|  |  ----------------+-----------+----------+------------------------ |  |
+|  |  DB + sweeper    | <10M      | ~5s      | MVP, low volume         |  |
+|  |  Redis ZSET      | 100M+     | ~1s      | High volume, popular    |  |
+|  |  Timer wheel     | 10M (mem) | ms       | Short timeouts, in-proc |  |
+|  |  Kafka delays    | 100M+     | bucketed | Reusing Kafka infra     |  |
+|  |  Temporal        | 10M       | ms-sec   | Complex workflows       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+*+-------------------------------------------------------------------------+*
+
+## SECTION 16: BATCHING DEEP DIVE
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TWO DISTINCT KINDS OF BATCHING                                         |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  1. PER-RECIPIENT BATCHING  (UX concern)                          |  |
+|  |     Goal: don't spam a user with 10 separate pushes.              |  |
+|  |     Combine many events into one summary notification.            |  |
+|  |                                                                   |  |
+|  |     Before: "Alice liked", "Bob liked", "Carol liked", ...        |  |
+|  |     After:  "Alice, Bob, and 8 others liked your post"            |  |
+|  |                                                                   |  |
+|  |  2. PER-PROVIDER BATCHING  (efficiency concern)                   |  |
+|  |     Goal: reduce HTTP requests to APNs / FCM / SendGrid.          |  |
+|  |     Combine many independent notifications into one API call.    |  |
+|  |                                                                   |  |
+|  |     Before: 500 HTTP POSTs to FCM (one per user)                  |  |
+|  |     After:  1 HTTP POST to FCM multicast with 500 tokens          |  |
+|  |                                                                   |  |
+|  |  These are SEPARATE concerns; both are needed at scale.           |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  PER-RECIPIENT BATCHING (UX)                                            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  AGGREGATION KEY:                                                 |  |
+|  |    (user_id, event_type, target_object_id)                        |  |
+|  |    e.g. (user=42, type='LIKE', object='post-789')                 |  |
+|  |                                                                   |  |
+|  |  WINDOW TYPES:                                                    |  |
+|  |                                                                   |  |
+|  |  Tumbling: fixed non-overlapping windows                          |  |
+|  |    [0-60s] [60-120s] [120-180s]                                   |  |
+|  |    Simple but bad UX (event at t=59 fires at t=60; event at       |  |
+|  |    t=61 fires at t=120).                                          |  |
+|  |                                                                   |  |
+|  |  Sliding (debounce): reset window on each new event               |  |
+|  |    First event at t=0, second at t=10 -> window resets to t=10    |  |
+|  |    Fire when no new events for N seconds                          |  |
+|  |    Risk: never fires if events keep streaming (so set a max)      |  |
+|  |                                                                   |  |
+|  |  Hybrid (PREFERRED):                                              |  |
+|  |    Fire at max(first_event + max_delay, last_event + min_delay)   |  |
+|  |    e.g. min_delay = 30s (cool down), max_delay = 5 min (cap)      |  |
+|  |    Good balance of UX + responsiveness                            |  |
+|  |                                                                   |  |
+|  |  IMPLEMENTATION (Redis):                                          |  |
+|  |                                                                   |  |
+|  |    On each new event:                                             |  |
+|  |       key = batch:{user_id}:{event_type}:{object_id}              |  |
+|  |       INCR  {key}:count                                           |  |
+|  |       LPUSH {key}:actors  <actor_id>     (cap list size)          |  |
+|  |       SET   {key}:first_at <now> NX                               |  |
+|  |       SET   {key}:last_at  <now>                                  |  |
+|  |       EXPIRE {key}:*       <max_window>                           |  |
+|  |       ZADD  pending_batches <fire_at>   <key>                     |  |
+|  |                                                                   |  |
+|  |    Sweeper (every second):                                        |  |
+|  |       Pop ready keys from pending_batches                         |  |
+|  |       Read aggregate, render template, enqueue 1 notification     |  |
+|  |       Delete batch keys                                           |  |
+|  |                                                                   |  |
+|  |  COPY TEMPLATES:                                                  |  |
+|  |    count=1:  "Alice liked your post"                              |  |
+|  |    count=2:  "Alice and Bob liked your post"                      |  |
+|  |    count=3:  "Alice, Bob, and Carol liked your post"              |  |
+|  |    count>3:  "Alice, Bob, and N-2 others liked your post"         |  |
+|  |                                                                   |  |
+|  |  LATE-ARRIVING EVENTS:                                            |  |
+|  |    If an event arrives AFTER the batch fired, options:            |  |
+|  |     - Start a new batch with cool-down (most common)              |  |
+|  |     - Edit prior in-app notification (if same UI list)            |  |
+|  |     - Drop if interval < min_separation (de-fatigue)              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  PER-PROVIDER BATCHING (efficiency)                                     |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  FCM MULTICAST:                                                   |  |
+|  |    Up to 500 device tokens per request                            |  |
+|  |    Same message body for all (broadcast use case)                 |  |
+|  |    Worker accumulates tokens in a 100ms window, then flushes:     |  |
+|  |                                                                   |  |
+|  |       buffer = []                                                 |  |
+|  |       last_flush = now()                                          |  |
+|  |       for msg in consumer:                                        |  |
+|  |           buffer.append(msg.token)                                |  |
+|  |           if len(buffer) >= 500 or                                |  |
+|  |              now() - last_flush > 100ms:                          |  |
+|  |               fcm.multicast(buffer, body)                         |  |
+|  |               buffer.clear(); last_flush = now()                  |  |
+|  |                                                                   |  |
+|  |  SENDGRID PERSONALIZATIONS:                                       |  |
+|  |    Up to 1000 personalizations per /v3/mail/send                  |  |
+|  |    Each has its own variables; one template; one API call         |  |
+|  |    Great for transactional bulk (order-shipped notices)           |  |
+|  |                                                                   |  |
+|  |  APNs (no native bulk):                                           |  |
+|  |    Send N independent reqs on one HTTP/2 connection in parallel   |  |
+|  |    With 100 concurrent streams: ~100x improvement over HTTP/1.1   |  |
+|  |                                                                   |  |
+|  |  DB WRITE BATCHING:                                               |  |
+|  |    Batch status updates from worker:                              |  |
+|  |       UPDATE notifications SET status='DELIVERED'                 |  |
+|  |       WHERE notification_id IN (?, ?, ?, ...);                    |  |
+|  |    1000 updates per batch -> DB load drops 1000x                  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  TRADE-OFFS: BATCH SIZE vs LATENCY                                      |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Larger batch  -> fewer HTTP reqs -> cheaper, higher throughput   |  |
+|  |  Larger batch  -> longer flush wait -> higher delivery latency    |  |
+|  |                                                                   |  |
+|  |  RULES OF THUMB:                                                  |  |
+|  |    Critical (OTP):     batch_size=1, flush=immediate (no batch)   |  |
+|  |    High (txn):         batch_size=50, flush_every=100ms           |  |
+|  |    Normal (social):    batch_size=200, flush_every=500ms          |  |
+|  |    Low (marketing):    batch_size=500, flush_every=1s             |  |
+|  |                                                                   |  |
+|  |  Use SEPARATE batch buffers per priority topic so OTP isn't       |  |
+|  |  sitting behind a half-full marketing batch.                      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+*+-------------------------------------------------------------------------+*
+
+## SECTION 17: IDEMPOTENCY AND DELIVERY GUARANTEES
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THE THREE GUARANTEES                                                   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  AT-MOST-ONCE  (fire-and-forget)                                  |  |
+|  |    - Send once, no retry                                          |  |
+|  |    - Possible loss; never duplicate                               |  |
+|  |    - Used by: UDP, basic UDP-style logging                        |  |
+|  |    - For notifications: only OK for trivial stuff (typing dots)   |  |
+|  |                                                                   |  |
+|  |  AT-LEAST-ONCE  (retry until ack)                                 |  |
+|  |    - Send, wait ack, retry on timeout                             |  |
+|  |    - Never lost; possible duplicates                              |  |
+|  |    - This is the realistic default for notifications              |  |
+|  |    - Must combine with idempotency to be safe                     |  |
+|  |                                                                   |  |
+|  |  EXACTLY-ONCE  (the holy grail)                                   |  |
+|  |    - Sent and delivered exactly once, period                      |  |
+|  |    - PROVABLY IMPOSSIBLE end-to-end across an untrusted network   |  |
+|  |       (Two Generals problem; FLP impossibility)                   |  |
+|  |    - Best we can do: at-least-once + idempotent receiver          |  |
+|  |       = "effectively-once" from the user's perspective            |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  WHY EXACTLY-ONCE IS IMPOSSIBLE END-TO-END                              |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Suppose worker calls FCM and we want to know "did FCM get it     |  |
+|  |  AND did we record success?" atomically.                          |  |
+|  |                                                                   |  |
+|  |  Scenarios after FCM returns 200:                                 |  |
+|  |   - Worker crashes before writing DB status                       |  |
+|  |     -> on restart, we don't know it succeeded                     |  |
+|  |     -> if we retry, FCM sends AGAIN (duplicate)                   |  |
+|  |     -> if we don't retry, we mis-report failure                   |  |
+|  |                                                                   |  |
+|  |  Scenarios on timeout:                                            |  |
+|  |   - Worker sent, FCM processed, ACK lost in transit               |  |
+|  |     -> worker thinks failure, retries                             |  |
+|  |     -> user receives 2 pushes                                     |  |
+|  |                                                                   |  |
+|  |  No 2PC is available with APNs / FCM (you can't write a           |  |
+|  |  distributed transaction into Apple's servers).                   |  |
+|  |                                                                   |  |
+|  |  CONCLUSION: aim for "effectively-once"                           |  |
+|  |              = at-least-once delivery + idempotent at every layer |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  IDEMPOTENCY LAYER 1: API ENDPOINT (CALLER -> NOTIFICATION SERVICE)     |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Caller sends Idempotency-Key header (or in body).                |  |
+|  |  Example: order-service sends key = "order-789-shipped".          |  |
+|  |                                                                   |  |
+|  |  API logic:                                                       |  |
+|  |    cached = redis.get(f"idem:{key}")                              |  |
+|  |    if cached:                                                     |  |
+|  |        return cached.response                                     |  |
+|  |    if not redis.set(f"idem:{key}", "processing",                  |  |
+|  |                     nx=True, ex=24h):                             |  |
+|  |        return 409 "in progress"                                   |  |
+|  |    try:                                                           |  |
+|  |        resp = process_notification(...)                           |  |
+|  |        redis.set(f"idem:{key}", resp, ex=24h)                     |  |
+|  |        return resp                                                |  |
+|  |    except TransientError:                                         |  |
+|  |        redis.delete(f"idem:{key}")    # allow retry               |  |
+|  |        raise                                                      |  |
+|  |                                                                   |  |
+|  |  KEY DESIGN:                                                      |  |
+|  |    - Caller-provided keys are best (caller knows business intent) |  |
+|  |    - Scope by (api_key, key, endpoint) to avoid cross-merchant    |  |
+|  |      collisions                                                   |  |
+|  |    - TTL ~ 24h (enough for retries; not unbounded growth)         |  |
+|  |    - Cache the SUCCESSFUL response so duplicate requests get      |  |
+|  |      the same notification_id back                                |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  IDEMPOTENCY LAYER 2: PRODUCER -> KAFKA                                 |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Use Kafka's idempotent producer (enable.idempotence=true):       |  |
+|  |   - Producer assigns sequence numbers; broker dedups within a     |  |
+|  |     5-message window per partition.                               |  |
+|  |   - Eliminates duplicates from producer retries.                  |  |
+|  |   - "Exactly-once within Kafka," but only WITHIN Kafka.           |  |
+|  |                                                                   |  |
+|  |  Kafka Transactions (transactional.id) extend this to             |  |
+|  |  "consume-transform-produce" within Kafka -- still doesn't span   |  |
+|  |  Kafka + external systems (APNs, DB writes outside).              |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  IDEMPOTENCY LAYER 3: WORKER -> DATABASE                                |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Worker may consume the same Kafka message twice (consumer        |  |
+|  |  restart, partition rebalance). DB writes must be idempotent.     |  |
+|  |                                                                   |  |
+|  |  Pattern A: UNIQUE CONSTRAINT                                     |  |
+|  |    INSERT INTO notifications (notification_id, ...)               |  |
+|  |    VALUES (?, ...)                                                |  |
+|  |    ON CONFLICT (notification_id) DO NOTHING;                      |  |
+|  |                                                                   |  |
+|  |  Pattern B: CONDITIONAL UPDATE (state machine)                    |  |
+|  |    UPDATE notifications                                           |  |
+|  |    SET status = 'SENDING'                                         |  |
+|  |    WHERE notification_id = ? AND status = 'QUEUED';               |  |
+|  |    -- Only one worker can transition QUEUED -> SENDING            |  |
+|  |    -- if rows_affected = 0: someone else got it; SKIP             |  |
+|  |                                                                   |  |
+|  |  Pattern C: SEEN-CACHE                                            |  |
+|  |    Redis SET seen:{notification_id} EX 24h NX                     |  |
+|  |    If NX fails: already processed, skip.                          |  |
+|  |    (Cheap but loses safety if Redis flushes.)                     |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  IDEMPOTENCY LAYER 4: WORKER -> PROVIDER (APNs / FCM / etc.)            |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  APNs:                                                            |  |
+|  |    Header `apns-collapse-id`: provider collapses multiple pushes  |  |
+|  |    with the same id into ONE delivered push on the device.        |  |
+|  |    Header `apns-id`: unique per attempt; helps debugging but does |  |
+|  |    NOT dedup on Apple's side.                                     |  |
+|  |                                                                   |  |
+|  |  FCM:                                                             |  |
+|  |    `collapse_key`: same as APNs, last-write-wins on the device    |  |
+|  |    `message_id`: provider-assigned; can be used to query status   |  |
+|  |    FCM itself does NOT dedup retried sends.                       |  |
+|  |                                                                   |  |
+|  |  IMPLICATION:                                                     |  |
+|  |    Retrying the same notification = a SECOND push to the device   |  |
+|  |    unless collapse_id matches AND the first push wasn't displayed |  |
+|  |    yet. Collapse only helps for unread updates.                   |  |
+|  |                                                                   |  |
+|  |  Therefore: do NOT retry naively after a 200 OK. The provider     |  |
+|  |  succeeded; treat it as done even if your DB update failed.       |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  IDEMPOTENCY LAYER 5: CLIENT-SIDE                                       |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  Mobile / web client dedups by notification_id in the payload:    |  |
+|  |    if seen.contains(payload.notification_id): suppress            |  |
+|  |    else: display + add to seen (LRU of last 1000)                 |  |
+|  |                                                                   |  |
+|  |  In-app inbox: notification_id is PRIMARY KEY -- duplicate writes |  |
+|  |  are absorbed by INSERT ... ON CONFLICT DO NOTHING.               |  |
+|  |                                                                   |  |
+|  |  This is the FINAL safety net. With it, the at-least-once         |  |
+|  |  pipeline becomes "effectively-once" to the user.                 |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  THE "STUCK-IN-SENDING" SCENARIO  (mirror of the payments bug)          |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  What if the worker calls FCM (success), then dies before         |  |
+|  |  updating DB status from SENDING -> DELIVERED?                    |  |
+|  |                                                                   |  |
+|  |  On restart, the Kafka message is redelivered. The worker would   |  |
+|  |  re-send to FCM -> the user gets TWO pushes.                      |  |
+|  |                                                                   |  |
+|  |  SOLUTION (multi-layer):                                          |  |
+|  |   1. Conditional UPDATE before provider call:                     |  |
+|  |        UPDATE status='SENDING' WHERE status='QUEUED'.             |  |
+|  |      Only one worker wins; others SKIP.                           |  |
+|  |   2. Reconciliation job: scan SENDING > 5 min old. If stuck,      |  |
+|  |      query provider by message_id (if supported) or assume        |  |
+|  |      success and mark DELIVERED (idempotent on client).           |  |
+|  |   3. Client-side dedup by notification_id is the final guard.     |  |
+|  |                                                                   |  |
+|  |  Compare to PAYMENT SCENARIO 2: same shape (provider succeeded,   |  |
+|  |  DB failed). The difference: a duplicate push is annoying; a      |  |
+|  |  duplicate charge is dangerous. Notifications can tolerate more.  |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  ===================================================================    |
+|                                                                         |
+|  RECOMMENDED DEFAULTS                                                   |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |  - Pipeline guarantee:    AT-LEAST-ONCE                           |  |
+|  |  - User-visible behavior: EFFECTIVELY-ONCE                        |  |
+|  |  - Mechanisms:                                                    |  |
+|  |     * Idempotency-Key at API (Redis SETNX, 24h TTL)               |  |
+|  |     * Kafka idempotent producer (enable.idempotence=true)         |  |
+|  |     * Conditional UPDATE for state transitions (QUEUED->SENDING)  |  |
+|  |     * notification_id UNIQUE constraint on in-app inbox           |  |
+|  |     * Client-side dedup by notification_id (LRU cache)            |  |
+|  |     * Reconciliation sweeper for stuck SENDING rows               |  |
+|  |                                                                   |  |
+|  |  GOLDEN RULE                                                      |  |
+|  |    Don't chase exactly-once. Make every step idempotent and       |  |
+|  |    the user will perceive exactly-once delivery in practice.      |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+*+-------------------------------------------------------------------------+*
+
+## SECTION 18: WRAP-UP
 
 ```
 +-------------------------------------------------------------------------+
@@ -1555,7 +2500,7 @@ while respecting user preferences and minimizing notification fatigue.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 15: INTERVIEW QUICK REFERENCE
+## SECTION 19: INTERVIEW QUICK REFERENCE
 ```
 +-------------------------------------------------------------------------+
 |                                                                         |
