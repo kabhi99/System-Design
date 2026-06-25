@@ -382,6 +382,140 @@ producer.close();
 
 ## SECTION 3.2: CONSUMER INTERNALS
 
+### TOPIC vs PARTITION: WHERE A CONSUMER ACTUALLY READS FROM
+
+```
++---------------------------------------------------------------------------+
+|                                                                           |
+|  COMMON CONFUSION                                                         |
+|                                                                           |
+|  "Does a consumer read from a TOPIC or a PARTITION?"                      |
+|                                                                           |
+|  Both, but at different layers:                                           |
+|   - The consumer SUBSCRIBES to a topic (logical name).                    |
+|   - It READS from one or more PARTITIONS (physical, ordered logs).        |
+|                                                                           |
+|      Topic: orders             <- logical, not a file                     |
+|         |                                                                 |
+|         +-- Partition 0        <- ordered log file on a broker            |
+|         +-- Partition 1                                                   |
+|         +-- Partition 2                                                   |
+|         +-- ...                                                           |
+|         +-- Partition 31                                                  |
+|                                                                           |
+|  Each message lives in EXACTLY ONE partition (chosen by key hash or       |
+|  round-robin at produce time). So yes, "each partition has different      |
+|  data" -- but that doesn't mean a single consumer misses any of it.       |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  THE ASSIGNMENT RULE                                                      |
+|                                                                           |
+|  Within a consumer GROUP:                                                 |
+|   - Each PARTITION is read by AT MOST ONE consumer in the group.          |
+|   - A single CONSUMER can hold MANY partitions.                           |
+|   - Every partition is assigned to SOME consumer in the group             |
+|     (as long as consumers <= partitions).                                 |
+|                                                                           |
+|  So if there is only 1 consumer in the group, it is assigned              |
+|  ALL partitions. No data is missed.                                       |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  SCENARIOS  (topic with 4 partitions: P0, P1, P2, P3)                     |
+|                                                                           |
+|  Scenario A:  1 consumer in group                                         |
+|    consumer-1 -> [P0, P1, P2, P3]    <- gets ALL, reads everything        |
+|                                                                           |
+|  Scenario B:  2 consumers in group                                        |
+|    consumer-1 -> [P0, P1]                                                 |
+|    consumer-2 -> [P2, P3]            <- split 50/50                       |
+|                                                                           |
+|  Scenario C:  4 consumers in group                                        |
+|    consumer-1 -> [P0]                                                     |
+|    consumer-2 -> [P1]                                                     |
+|    consumer-3 -> [P2]                                                     |
+|    consumer-4 -> [P3]                <- max parallelism (1:1)             |
+|                                                                           |
+|  Scenario D:  6 consumers in group                                        |
+|    consumer-1 -> [P0]                                                     |
+|    consumer-2 -> [P1]                                                     |
+|    consumer-3 -> [P2]                                                     |
+|    consumer-4 -> [P3]                                                     |
+|    consumer-5 -> []   IDLE                                                |
+|    consumer-6 -> []   IDLE           <- extras wasted, NO data missed     |
+|                                                                           |
+|  In every case, every partition is being read by someone. The only        |
+|  thing that varies is parallelism.                                        |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  WHAT poll() ACTUALLY DOES                                                |
+|                                                                           |
+|    consumer = KafkaConsumer("orders", group_id="order-workers")           |
+|                                                                           |
+|    for message in consumer:        # poll() under the hood                |
+|        process(message)                                                   |
+|                                                                           |
+|  Under the hood:                                                          |
+|   1. Group coordinator assigns this consumer specific partitions.         |
+|   2. poll() fetches from ALL assigned partitions in ONE round-trip        |
+|      (fetch.max.bytes caps total bytes; max.poll.records caps count).     |
+|   3. You get an INTERLEAVED stream of messages from those partitions.     |
+|   4. Offsets are committed PER PARTITION                                  |
+|      (key: group_id, topic, partition -> offset).                         |
+|                                                                           |
+|  Order is preserved WITHIN a partition, NOT across partitions.            |
+|  If you need ordering for a logical entity, partition by its key          |
+|  (e.g. user_id) so its messages all land in the same partition.           |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  REBALANCING WHEN YOU ADD / REMOVE CONSUMERS                              |
+|                                                                           |
+|  Start:    1 consumer  -> holds all 32 partitions  (small load)           |
+|  Spike:    8 consumers -> each holds 4 partitions  (8x throughput)        |
+|  Bigger:  32 consumers -> each holds 1 partition   (max parallelism)      |
+|  Past max: 40 consumers -> 8 idle (partitions cap parallelism)            |
+|                                                                           |
+|  Kafka REBALANCES automatically when a consumer joins or leaves the       |
+|  group. During rebalance, fetching pauses, partitions are reassigned,     |
+|  and offsets resume from the last committed offset. No data is missed.    |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  HOW YOU CAN ACTUALLY "MISS" DATA  (avoid these)                          |
+|                                                                           |
+|  1. DIFFERENT group_id                                                    |
+|     Each consumer group has its OWN offset bookmark per partition.        |
+|     A new group_id starts fresh (default: at LATEST offset),              |
+|     skipping all historical data.                                         |
+|                                                                           |
+|  2. auto.offset.reset = "latest" with a new group                         |
+|     Skips everything before the consumer joined.                          |
+|     Use "earliest" to read from the beginning.                            |
+|                                                                           |
+|  3. More consumers than partitions                                        |
+|     Does NOT miss data -- but the extra consumers sit idle.               |
+|     Partition count caps your parallelism.                                |
+|                                                                           |
+|  4. Committing offsets BEFORE actually processing                         |
+|     Worker commits offset, then crashes -> next consumer skips msgs.      |
+|     Always commit AFTER successful processing.                            |
+|                                                                           |
+|  =======================================================================  |
+|                                                                           |
+|  ONE-LINER FOR INTERVIEWS                                                 |
+|                                                                           |
+|  "A consumer subscribes to a TOPIC, but reads from PARTITIONS. The        |
+|   topic is logical; the partition is the physical unit of parallelism,    |
+|   ordering, and offset tracking. With 1 consumer in a group, it gets      |
+|   all partitions; with more, they split. Each partition is read by        |
+|   at most one consumer in the group."                                     |
+|                                                                           |
++---------------------------------------------------------------------------+
+```
+
 ### CONSUMER LIFECYCLE
 
 ```
