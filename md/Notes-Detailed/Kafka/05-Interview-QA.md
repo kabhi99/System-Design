@@ -864,3 +864,107 @@ from fundamentals to advanced topics, with detailed answers.
 +-------------------------------------------------------------------------+
 ```
 
+### Q29: What is the difference between a Kafka consumer and a sink (sink connector)?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ONE-LINER:                                                             |
+|  Consumer  = custom application code you write to read from Kafka.      |
+|  Sink      = a pre-built Kafka Connect plugin that moves data from      |
+|              Kafka into an external system, configured via JSON.        |
+|                                                                         |
+|  BOTH read from Kafka. The difference is what you BUILD vs CONFIGURE.   |
+|                                                                         |
+|  +----------------------+--------------------+------------------------+ |
+|  | Aspect               | Consumer           | Sink (Connector)       | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Form                 | Application code   | Declarative config     | |
+|  |                      | (Java/Go/Python)   | (JSON via REST API)    | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Custom logic         | YES -- any code    | Limited (SMTs only)    | |
+|  |                      | transformations,   | for light transforms;  | |
+|  |                      | API calls, etc.    | logic = write a plugin | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Runs on              | Your service /     | Kafka Connect cluster  | |
+|  |                      | pods you manage    | (workers managed)      | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Offset management    | YOU handle commit, | Connect framework      | |
+|  |                      | retries, restart   | manages offsets/retries| |
+|  +----------------------+--------------------+------------------------+ |
+|  | Scaling              | Add pods with same | Set tasks.max in       | |
+|  |                      | group.id           | config; Connect splits | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Fault tolerance      | You implement it   | Built-in (rebalance,   | |
+|  |                      | (or framework)     | retry, dead-letter Q)  | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Schema handling      | You write          | Built-in converters    | |
+|  |                      | deserializers      | (Avro/JSON/Protobuf +  | |
+|  |                      |                    |  Schema Registry)      | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Time to build        | Days/weeks         | Minutes (just config)  | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Best for             | Business logic,    | Pure data movement     | |
+|  |                      | side effects, API  | Kafka -> DB / S3 / ES  | |
+|  |                      | calls, custom flow | / Snowflake / HDFS     | |
+|  +----------------------+--------------------+------------------------+ |
+|  | Under the hood       | Real KafkaConsumer | YES -- a sink connector| |
+|  |                      |                    | IS a managed consumer  | |
+|  +----------------------+--------------------+------------------------+ |
+|                                                                         |
+|  KEY INSIGHT:                                                           |
+|  A sink connector IS a Kafka consumer underneath -- it uses the         |
+|  KafkaConsumer client to read from topics. Kafka Connect just wraps     |
+|  that consumer with a standard framework so you don't have to code      |
+|  the boilerplate (offset commit, retry, scaling, schema, monitoring).   |
+|                                                                         |
+|  WHEN TO USE WHICH:                                                     |
+|                                                                         |
+|  Use a CONSUMER (write code) when:                                      |
+|  * You need custom business logic (e.g., send notifications, charge    |
+|    a card, call external API with retries and circuit breakers)         |
+|  * Routing decisions based on payload (filter, fan-out, enrich)         |
+|  * Stateful processing (use Kafka Streams or Flink for heavy state)     |
+|  * No ready-made connector exists for your target                       |
+|                                                                         |
+|  Use a SINK CONNECTOR (configure) when:                                 |
+|  * Pure ETL: move data Kafka -> S3/JDBC/Elastic/Snowflake/MongoDB/etc.  |
+|  * No transformation, or only light SMT-level transforms                |
+|  * You want at-least-once delivery without writing code                 |
+|  * Common destinations with existing connectors (Confluent Hub has 100+)|
+|                                                                         |
+|  EXAMPLE FROM A NOTIFICATION SYSTEM:                                    |
+|                                                                         |
+|  Producer (order-service)                                               |
+|         |                                                               |
+|         v                                                               |
+|  Kafka topic: "notifications"                                           |
+|         |                                                               |
+|         +-----> CONSUMER: notification-service (writes code)            |
+|         |         - reads message                                       |
+|         |         - personalizes content                                |
+|         |         - calls FCM/Twilio/SendGrid APIs                      |
+|         |         - retries with exponential backoff                    |
+|         |         - writes to delivery_log DB                           |
+|         |                                                               |
+|         +-----> SINK (configured, no code):                             |
+|                   - S3 Sink Connector  -> archives raw events to S3     |
+|                   - Elasticsearch Sink -> indexes for analytics search  |
+|                   - JDBC Sink          -> mirrors events to Postgres DW |
+|                                                                         |
+|  Each is its own consumer group under the hood; they all see every msg. |
+|                                                                         |
+|  RELATED: Source Connector = the OPPOSITE direction                     |
+|  * Source: external system -> Kafka (e.g., Debezium CDC from Postgres)  |
+|  * Sink:   Kafka -> external system                                     |
+|                                                                         |
+|  INTERVIEW TIP:                                                         |
+|  "We use Kafka Connect sinks for pure data movement to S3/Elastic       |
+|   because it's declarative, scales automatically, and handles offsets   |
+|   for us. We write custom consumers when we need business logic or      |
+|   side effects like API calls -- because those need code, error         |
+|   handling, and retry strategies a connector can't express."            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
