@@ -717,3 +717,150 @@ from fundamentals to advanced topics, with detailed answers.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## SECTION 5.4: PRACTICAL Q&A (Q26-Q28)
+
+### Q26: When do you create a Kafka consumer vs a consumer group?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KEY FACT: You DON'T explicitly "create" a consumer group.              |
+|  A group is auto-created the moment the first consumer joins with       |
+|  a given group.id. No API call like "createGroup()" exists.             |
+|                                                                         |
+|  CONSUMER vs GROUP:                                                     |
+|                                                                         |
+|  * Consumer  = a worker process/thread (one KafkaConsumer instance).    |
+|                Created in code: `new KafkaConsumer<>(props)`.           |
+|                One per pod/thread of your service.                      |
+|                                                                         |
+|  * Group     = a logical label shared by consumers (group.id).          |
+|                "Created" by simply choosing a new name in config.       |
+|                Removed by broker only after all consumers leave AND     |
+|                offsets.retention.minutes expires (default 7 days).      |
+|                                                                         |
+|  WHEN TO ADD A CONSUMER (same group.id):                                |
+|  * Scale throughput of an existing service                              |
+|  * Lag is growing; need more parallel readers                           |
+|  * Action: `kubectl scale --replicas=N`. Kafka rebalances automatically |
+|                                                                         |
+|  WHEN TO CREATE A NEW GROUP (new group.id):                             |
+|  * A DIFFERENT service / use-case needs the same topic                  |
+|  * You want independent offsets, independent progress                   |
+|  * Replay / debug a topic from offset 0 without disturbing prod         |
+|  * Reprocessing after a bug fix (fresh group from earliest)             |
+|                                                                         |
+|  NAMING CONVENTION:                                                     |
+|  * Name groups after the service that owns them                         |
+|    e.g., "notification-service", "audit-pipeline", "email-sender"       |
+|  * Keep them STABLE -- changing the name = starting from scratch        |
+|                                                                         |
+|  STANDALONE CONSUMER (rare, advanced):                                  |
+|  * Use consumer.assign(...) instead of subscribe(...)                   |
+|  * No group, no rebalancing, no shared offsets                          |
+|  * Use cases: monitoring tools, custom assignment, partition-pinned     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### Q27: In a consumer group, do all consumers belong to the same service?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  YES. Almost always, all consumers in one group are instances of the    |
+|  SAME service (same Docker image, same code, same group.id).            |
+|  They are horizontal replicas load-balancing the topic's partitions.    |
+|                                                                         |
+|  GUARANTEE: Each message in a partition is delivered to EXACTLY ONE     |
+|  consumer within a given group. So multiple pods of one service won't   |
+|  process the same message twice.                                        |
+|                                                                         |
+|  EXAMPLE (1 service, 2 pods, 4 partitions):                             |
+|                                                                         |
+|  Topic: notifications (P0, P1, P2, P3)                                  |
+|                                                                         |
+|  Group: "notification-service"                                          |
+|    pod-1 (consumer-1) -> [P0, P1]                                       |
+|    pod-2 (consumer-2) -> [P2, P3]                                       |
+|                                                                         |
+|  PUB/SUB FAN-OUT: To let MULTIPLE different services each see every     |
+|  message, give each service its OWN group.id:                           |
+|                                                                         |
+|  Group: "email-service"        -> sees all 4 partitions (own pace)      |
+|  Group: "sms-service"          -> sees all 4 partitions (own pace)      |
+|  Group: "analytics-service"    -> sees all 4 partitions (own pace)      |
+|                                                                         |
+|  Each group has independent offsets and independent rebalances.         |
+|                                                                         |
+|  RULE OF THUMB:                                                         |
+|  +--------------------------------------+--------------------------+    |
+|  | Goal                                 | Setup                    |    |
+|  +--------------------------------------+--------------------------+    |
+|  | Load-balance work in ONE service     | Same group.id, more pods |    |
+|  | Multiple services see all messages   | Different group.ids      |    |
+|  | One reader sees everything           | One group, one consumer  |    |
+|  +--------------------------------------+--------------------------+    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### Q28: What does "If ISR is empty and unclean=false -> partition offline" mean?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THE PIECES:                                                            |
+|                                                                         |
+|  * ISR (In-Sync Replicas): set of replicas that caught up to leader     |
+|    within replica.lag.time.max.ms (default 30s). Trusted copies of data.|
+|                                                                         |
+|  * unclean.leader.election.enable: controls WHO can become new leader   |
+|    when the current one dies.                                           |
+|     - false (default, recommended) -> ONLY ISR members can be elected   |
+|     - true                          -> ANY alive replica can be elected,|
+|                                        even out-of-sync ones            |
+|                                                                         |
+|  MEANING:                                                               |
+|  If every replica in the ISR has crashed AND unclean=false, no replica  |
+|  is eligible to become leader. The partition goes OFFLINE:              |
+|     - Producers get NOT_LEADER_FOR_PARTITION errors                     |
+|     - Consumers cannot fetch new data from it                           |
+|     - Partition stays offline until at least one ISR member recovers    |
+|                                                                         |
+|  WHY THIS DESIGN -- THE TRADE-OFF (CAP):                                |
+|                                                                         |
+|  Imagine 3 replicas: R1 (leader), R2 (ISR), R3 (lagging by 1000 msgs).  |
+|  Both R1 and R2 crash. Only R3 (out-of-sync) is alive.                  |
+|                                                                         |
+|  +--------------+-----------------------------+-----------------------+ |
+|  | Setting      | Behavior                    | Cost                  | |
+|  +--------------+-----------------------------+-----------------------+ |
+|  | unclean=false| Partition offline. Wait for | AVAILABILITY loss     | |
+|  | (CP)         | R1 or R2 to come back.      | (no data loss)        | |
+|  +--------------+-----------------------------+-----------------------+ |
+|  | unclean=true | R3 elected leader.          | DATA LOSS             | |
+|  | (AP)         | Partition stays online.     | (1000 msgs gone;      | |
+|  |              |                             |  R1/R2 truncate on    | |
+|  |              |                             |  rejoin to match R3)  | |
+|  +--------------+-----------------------------+-----------------------+ |
+|                                                                         |
+|  PRODUCTION DURABILITY CONFIG (financial-grade):                        |
+|  * replication.factor = 3                                               |
+|  * min.insync.replicas = 2                                              |
+|  * unclean.leader.election.enable = false                               |
+|  * acks = all (on producer)                                             |
+|                                                                         |
+|  WHEN TO FLIP TO unclean=true:                                          |
+|  * Telemetry/logs/metrics where losing some msgs is acceptable          |
+|  * Real-time dashboards (stale-but-available > unavailable)             |
+|  * NEVER for payments, orders, audit logs, financial events             |
+|                                                                         |
+|  MNEMONIC:                                                              |
+|  "Unclean = let the dirty (out-of-sync) replica be king.                |
+|   Clean = only the trusted ISR can rule, even if there's no king."      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
