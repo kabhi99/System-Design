@@ -968,3 +968,163 @@ from fundamentals to advanced topics, with detailed answers.
 +-------------------------------------------------------------------------+
 ```
 
+### Q30: How does the S3 Sink Connector work?
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  S3 Sink streams messages from Kafka topics to S3 as files              |
+|  (Parquet / Avro / JSON), partitioned by topic + time, with at-least-   |
+|  once delivery and idempotent uploads.                                  |
+|                                                                         |
+|  HIGH-LEVEL FLOW:                                                       |
+|                                                                         |
+|     Kafka Connect Cluster (S3 sink workers)                             |
+|     +---------------------------------------+                           |
+|     |  Worker 1   Worker 2   Worker 3       |                           |
+|     |   Task A     Task B     Task C        |                           |
+|     +-----^----------^----------^-----------+                           |
+|           |          |          | (group.id = connect-s3-sink)          |
+|     +-----+----------+----------+-----------+                           |
+|     |  Kafka topic: "orders" (12 partitions)|                           |
+|     +-----+----------+----------+-----------+                           |
+|           |          |          |                                       |
+|           v          v          v                                       |
+|     +----------------------------------------+                          |
+|     |  s3://my-bucket/topics/orders/         |                          |
+|     |   year=2026/month=06/day=28/hour=11/   |                          |
+|     |     orders+0+0000000000.parquet        |                          |
+|     |     orders+1+0000000000.parquet  ...   |                          |
+|     +----------------------------------------+                          |
+|                                                                         |
+|  STEP-BY-STEP:                                                          |
+|  1. Submit JSON config to Kafka Connect REST API (POST /connectors).    |
+|  2. Connect creates a connector and splits it into N tasks (tasks.max). |
+|  3. Each task is a managed KafkaConsumer with auto group.id =           |
+|     "connect-<connector-name>".                                         |
+|  4. Connect coordinator assigns Kafka partitions to tasks (like a       |
+|     normal consumer group rebalance).                                   |
+|  5. Each task poll()s messages, buffers them in memory.                 |
+|  6. When a ROTATION TRIGGER fires:                                      |
+|     - Serialize buffer to chosen format (Parquet/Avro/JSON)             |
+|     - Multipart upload to S3                                            |
+|     - Commit Kafka offset ONLY after S3 returns 200                     |
+|  7. On crash/restart: resume from last committed offset.                |
+|     Worst case: re-upload one batch (same filename = overwrite).        |
+|                                                                         |
+|  FILE ROTATION TRIGGERS (whichever hits first):                         |
+|  +----------------------+----------------------+-----------+            |
+|  | Trigger              | Config               | Default   |            |
+|  +----------------------+----------------------+-----------+            |
+|  | Message count        | flush.size           | 1000      |            |
+|  | Time elapsed         | rotate.interval.ms   | none      |            |
+|  | Time window change   | TimeBasedPartitioner | --        |            |
+|  | Schema change        | implicit             | always on |            |
+|  +----------------------+----------------------+-----------+            |
+|                                                                         |
+|  FILE NAMING (FIXED, gives idempotency):                                |
+|                                                                         |
+|     <topic>+<kafka_partition>+<starting_offset>.<format>                |
+|     e.g. orders+3+0000123456.parquet                                    |
+|                                                                         |
+|  Same name = byte-for-byte overwrite on retry => NO downstream dupes.   |
+|                                                                         |
+|  PARTITIONERS (S3 folder layout):                                       |
+|  +----------------------+---------------------------------------+       |
+|  | Partitioner          | S3 key pattern                        |       |
+|  +----------------------+---------------------------------------+       |
+|  | DefaultPartitioner   | topics/<topic>/partition=<N>/file     |       |
+|  | TimeBasedPartitioner | topics/<topic>/year=YYYY/month=MM/    |       |
+|  |                      |   day=DD/hour=HH/file (Hive-style)    |       |
+|  | FieldPartitioner     | topics/<topic>/<field>=<value>/file   |       |
+|  +----------------------+---------------------------------------+       |
+|  TimeBasedPartitioner is the production default for data lakes --       |
+|  Athena/Spark/Hive prune scans using year=/month=/day=/hour= folders.   |
+|                                                                         |
+|  FORMAT CONVERSION:                                                     |
+|                                                                         |
+|     Kafka topic (Avro bytes)                                            |
+|        |                                                                |
+|        v                                                                |
+|     [AvroConverter] ---- talks to ----> Schema Registry                 |
+|        |                                                                |
+|        v                                                                |
+|     Connect Record (in-memory)                                          |
+|        |                                                                |
+|        v                                                                |
+|     [Parquet writer + snappy codec]                                     |
+|        |                                                                |
+|        v                                                                |
+|     S3 Parquet file                                                     |
+|                                                                         |
+|  Parquet + snappy is the production default: columnar, ~5x smaller      |
+|  than JSON, natively read by Athena / Spark / Snowflake / Databricks.   |
+|                                                                         |
+|  PARALLELISM:                                                           |
+|  effective_tasks = min(tasks.max, num_partitions)                       |
+|  Best: tasks.max = num_partitions for 1:1 mapping.                      |
+|                                                                         |
+|  DELIVERY GUARANTEES:                                                   |
+|  * Default: AT-LEAST-ONCE (offset committed only after S3 200 OK).      |
+|  * Idempotent filenames make re-uploads safe -> downstream sees EXACTLY-|
+|    ONCE in practice for analytical queries.                             |
+|  * Bad messages -> DLQ topic (errors.tolerance=all +                    |
+|    errors.deadletterqueue.topic.name).                                  |
+|                                                                         |
+|  SAMPLE CONFIG (production):                                            |
+|  {                                                                      |
+|    "connector.class": "io.confluent.connect.s3.S3SinkConnector",        |
+|    "tasks.max": "12",                                                   |
+|    "topics": "orders",                                                  |
+|    "s3.bucket.name": "my-data-lake",                                    |
+|    "s3.region": "us-east-1",                                            |
+|    "s3.part.size": "5242880",                                           |
+|    "format.class":                                                      |
+|      "io.confluent.connect.s3.format.parquet.ParquetFormat",            |
+|    "parquet.codec": "snappy",                                           |
+|    "value.converter": "io.confluent.connect.avro.AvroConverter",        |
+|    "value.converter.schema.registry.url":                               |
+|      "http://schema-registry:8081",                                     |
+|    "partitioner.class":                                                 |
+|      "io.confluent.connect.storage.partitioner.TimeBasedPartitioner",   |
+|    "path.format": "'year'=YYYY/'month'=MM/'day'=dd/'hour'=HH",          |
+|    "partition.duration.ms": "3600000",                                  |
+|    "timestamp.extractor": "Record",                                     |
+|    "timezone": "UTC",                                                   |
+|    "flush.size": "100000",                                              |
+|    "rotate.interval.ms": "600000",                                      |
+|    "errors.tolerance": "all",                                           |
+|    "errors.deadletterqueue.topic.name": "s3-sink-dlq"                   |
+|  }                                                                      |
+|                                                                         |
+|  PRODUCTION TUNING CHECKLIST:                                           |
+|  +----------------------+------------------+-------------------------+  |
+|  | Setting              | Recommended      | Why                     |  |
+|  +----------------------+------------------+-------------------------+  |
+|  | s3.part.size         | 5-25 MB          | S3 multipart minimum 5MB|  |
+|  | flush.size           | 100k-1M          | Avoid tiny files        |  |
+|  | rotate.interval.ms   | 5-15 min         | Latency vs file size    |  |
+|  | format.class         | ParquetFormat    | 5x compression vs JSON  |  |
+|  | parquet.codec        | snappy           | Fast decode; gzip=smaller| |
+|  | timestamp.extractor  | Record           | Avoid clock skew on path|  |
+|  | errors.tolerance     | all + DLQ        | Bad msgs don't stall    |  |
+|  | tasks.max            | = num_partitions | Max parallelism         |  |
+|  +----------------------+------------------+-------------------------+  |
+|                                                                         |
+|  DOWNSTREAM CONSUMERS OF THE S3 OUTPUT:                                 |
+|  * Athena    -- ad-hoc SQL directly on S3                               |
+|  * Glue      -- catalog + ETL                                           |
+|  * Snowflake -- external tables / Snowpipe                              |
+|  * Spark/EMR -- batch jobs                                              |
+|  * Databricks-- Auto Loader / Delta Lake                                |
+|                                                                         |
+|  INTERVIEW TIP:                                                         |
+|  "S3 sink writes Parquet files partitioned by event time into Hive-     |
+|   style folders. It commits Kafka offsets only after S3 confirms the    |
+|   upload, and uses deterministic filenames (topic+partition+offset)     |
+|   so retries overwrite the same file -- giving us at-least-once on the  |
+|   Kafka side but effectively exactly-once on the data lake side."       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
