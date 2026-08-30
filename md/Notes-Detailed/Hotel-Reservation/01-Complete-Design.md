@@ -1689,3 +1689,74 @@ bookings, and flash-sale traffic spikes with strong consistency for the booking 
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  HOTEL RESERVATION -- WHAT TO SAY IN THE INTERVIEW                      |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Booking.com / hotel booking?"):     |
+|  * Inventory = count per (hotel, room_type, date); NOT specific         |
+|  rooms (rooms are fungible until check-in)                              |
+|  * Booking flow: HOLD (5-10 min) -> PAY -> CONFIRM; on hold,            |
+|  atomically decrement inventory count for each night                    |
+|  * Search: geo (S2 cells / Elasticsearch geo_point) + full-text         |
+|  + filters (price, stars, amenities); ranking = business logic          |
+|  * Pricing: cached price snapshots refreshed every ~15 min;             |
+|  price locked at hold time (not re-quoted at confirm)                   |
+|  * Cancellation flow with refund policy tiers + saga to release         |
+|  inventory and issue refund                                             |
+|                                                                         |
+|  IF ASKED "how do you prevent double-booking a night?":                 |
+|  * Row-level DB lock: UPDATE inventory SET available =                  |
+|  available - 1 WHERE hotel_id=? AND room_type=? AND                     |
+|  date=? AND available > 0 -- rely on WHERE clause                       |
+|  * Alternative: optimistic version column + retry                       |
+|  * For hot inventory (last few rooms): Redis atomic DECRBY              |
+|  with floor via Lua script, DB async catch-up                           |
+|  * Multi-night stay = N atomic decrements in one tx; on any             |
+|  failure, roll back all                                                 |
+|                                                                         |
+|  IF ASKED "overbooking? do hotels overbook?":                           |
+|  * Airlines yes (~15% overbook based on no-show rate); hotels           |
+|  usually no or very small margin (VIP inconvenience is huge)            |
+|  * If we do overbook: policy-driven, cap at 2-5%, walk to               |
+|  partner hotel with comp                                                |
+|  * Track no-show rate per hotel / channel to tune the margin            |
+|                                                                         |
+|  IF ASKED "search + ranking at scale?":                                 |
+|  * Elasticsearch cluster keyed by geo + facets; shard by region         |
+|  * Ranking: score = f(price fit, distance, stars, review score,         |
+|  personalization, promoted); computed at query time                     |
+|  * Cache result page for anonymous queries (5-15 min TTL);              |
+|  personalized results not cached                                        |
+|                                                                         |
+|  IF ASKED "how is this different from an airline system?":              |
+|  * Hotels: fungible room type inventory (a count per date)              |
+|  * Airlines: specific seat assignment graph (like BookMyShow)           |
+|  * Airlines overbook; hotels usually don't                              |
+|  * Airlines: multi-leg / connections; hotels: multi-night               |
+|  * Pricing: airlines yield-manage aggressively (dynamic per             |
+|  minute); hotels change less often (per day/segment)                    |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Booking.com: ~28M listings globally, 1.5M+ nights/day booked         |
+|  * Hold TTL: 5-10 minutes (industry standard)                           |
+|  * Search p99: < 300ms with geo + facets                                |
+|  * Cancellation window: 24h before check-in for free cancel             |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Booking.com: MySQL + Elasticsearch, Riak for session                 |
+|  * Airbnb: DynamoDB + Elasticsearch, Kafka for events                   |
+|  * Expedia: multi-supplier aggregation with fallback pricing            |
+|  * Marriott: PMS integration via channel manager (SiteMinder)           |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Count-per-night inventory with atomic DB decrement, hold-pay-       |
+|   confirm flow, price locked at hold time, and Elasticsearch            |
+|   for geo + full-text + facet search."                                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

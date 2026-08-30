@@ -796,3 +796,87 @@ latency and offloading origin servers.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  CDN AND EDGE COMPUTING -- WHAT TO SAY IN THE INTERVIEW                 |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design a CDN"):                            |
+|  * 200-300 PoPs (Points of Presence) worldwide                          |
+|  * User routed via Anycast (same IP from all PoPs) or                   |
+|    geo-DNS (resolver returns nearest PoP IP)                            |
+|  * Two-tier cache: edge PoP -> mid-tier / Origin Shield                 |
+|    -> origin; only origin shield talks to origin                        |
+|  * Cache-Control headers drive TTL, purge API + versioned               |
+|    URLs handle invalidation                                             |
+|  * Edge compute (V8 isolates, WASM) runs auth, A/B,                     |
+|    image resize, redirects without hitting origin                       |
+|                                                                         |
+|  IF ASKED "how are users routed to nearest PoP?":                       |
+|  * Anycast: one IP advertised from all PoPs via BGP; the                |
+|    internet routes to nearest (Cloudflare, Google)                      |
+|  * DNS-based: CDN resolver returns nearest PoP IP based                 |
+|    on client resolver + latency (Akamai, CloudFront)                    |
+|  * Client-side latency probe / HTTP 302 (rare)                          |
+|                                                                         |
+|  IF ASKED "cache invalidation strategies?":                             |
+|  * TTL expiry (passive, simplest)                                       |
+|  * Purge API (active, 1-30s to propagate globally)                      |
+|  * Versioned / content-hashed URLs (recommended for                     |
+|    immutable assets: /static/app.abc123.js)                             |
+|  * Soft purge with stale-while-revalidate                               |
+|                                                                         |
+|  IF ASKED "cache miss stampede at edge?":                               |
+|  * Request coalescing: single origin fetch fans out to                  |
+|    all concurrent misses at the edge                                    |
+|  * Origin Shield: one mid-tier PoP fronts the origin so                 |
+|    origin sees at most one miss per PoP                                 |
+|  * stale-while-revalidate serves stale during refresh                   |
+|                                                                         |
+|  IF ASKED "video / large file delivery?":                               |
+|  * HTTP Range requests, each byte-range cached separately               |
+|  * Adaptive segmented streaming: HLS / DASH, each segment               |
+|    is a small cacheable object                                          |
+|  * Pre-position hot content to PoPs (push, not just pull)               |
+|                                                                         |
+|  IF ASKED "edge computing use cases?":                                  |
+|  * JWT / auth validation before origin                                  |
+|  * A/B testing + feature flags at edge                                  |
+|  * Geo personalization (currency, language)                             |
+|  * Image resize + format negotiation (WebP/AVIF)                        |
+|  * Bot detection, rate limiting, DDoS mitigation                        |
+|                                                                         |
+|  IF ASKED "edge vs origin vs FaaS?":                                    |
+|  * Edge (V8 isolates): <5ms cold start, tiny compute,                   |
+|    limited data access; ideal for transform + route                     |
+|  * Origin: full logic + DB, high latency                                |
+|  * Serverless (Lambda): 100ms-2s cold start, medium                     |
+|                                                                         |
+|  IF ASKED "security at the edge?":                                      |
+|  * TLS termination at PoP; WAF rules at edge                            |
+|  * DDoS: anycast absorbs traffic + rate limit / SYN cookies             |
+|  * Bot management (fingerprinting, JS challenges)                       |
+|  * DNSSEC + DoH                                                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 200-300 PoPs (Cloudflare 300+ cities, CloudFront 400+)               |
+|  * Cache hit ratio target: >90%                                         |
+|  * Edge latency ~20ms vs ~300ms cross-continent                         |
+|  * V8 isolate cold start <5ms, Lambda@Edge ~100ms-2s                    |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Cloudflare Workers (V8 isolates, WASM)                               |
+|  * AWS CloudFront + Lambda@Edge / CloudFront Functions                  |
+|  * Fastly Compute@Edge (WASM-based)                                     |
+|  * Akamai (oldest / largest), Vercel Edge, Google Cloud CDN             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Anycast/geo-DNS to nearest PoP, cache-hit at edge else                |
+|   mid-tier / Origin Shield / origin, versioned URLs +                   |
+|   purge API for invalidation, V8/WASM at edge for logic."               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

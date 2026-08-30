@@ -893,4 +893,57 @@ CHAPTER 3: INTERVIEW Q&A AND DEEP DIVES
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  RATE LIMITER — WHAT TO SAY IN THE INTERVIEW                            |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Token bucket algorithm (allows burst, smooth long-run rate);         |
+|      keys = {api_key|user_id|ip}:{endpoint}                             |
+|  * Central store: Redis with a single Lua script for atomic             |
+|      refill + consume + TTL (avoids race, one round-trip)               |
+|  * Placement: at the API gateway (Kong/Envoy/NGINX) so bad              |
+|      traffic is dropped before hitting services                         |
+|  * Multi-tier rules: per-user AND per-endpoint AND global;              |
+|      all limits must pass                                               |
+|  * 429 Too Many Requests + Retry-After + X-RateLimit-* headers          |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * distributed accuracy across many gateway nodes? Redis is the         |
+|      shared source of truth; each node hits it per request              |
+|  * make rate-limiter itself HA? Redis Sentinel/Cluster; fail            |
+|      OPEN under Redis outage (accept requests, alarm loudly)            |
+|  * sliding vs fixed window? Fixed = boundary spikes; sliding            |
+|      log = accurate but O(N); sliding counter = compromise              |
+|  * hot key (celebrity account)? Local counter + periodic Redis          |
+|      sync; sacrifice a bit of accuracy for scale                        |
+|  * token bucket vs leaky bucket? Token = burst-friendly (APIs);         |
+|      leaky = smooth output rate (queues, video encoding)                |
+|                                                                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * < 1 ms per rate-check (Redis Lua)                                    |
+|  * Twitter API: 300 req / 15 min per user                               |
+|  * GitHub API: 5000 req/hour authenticated                              |
+|  * Stripe: 100 req/sec per key                                          |
+|  * AWS API Gateway default: 10K RPS burst / account                     |
+|  * One Redis node: ~100K rate checks/sec                                |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Stripe: token bucket + burst headroom, exposed via headers           |
+|  * Cloudflare: WAF-level limiter, per-IP + per-URL rules                |
+|  * Envoy: local + global (RLS gRPC) rate limits                         |
+|  * Kong: plugin uses Redis for cluster-wide counters                    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Token bucket in Redis behind an atomic Lua script, at the edge        |
+|   gateway, multi-tier rules, fail-open on Redis failure."               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+
 END OF CHAPTER 3 - RATE LIMITER SYSTEM DESIGN

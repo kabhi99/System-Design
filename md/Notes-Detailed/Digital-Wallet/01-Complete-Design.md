@@ -2165,3 +2165,79 @@ across distributed database shards.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DIGITAL WALLET -- WHAT TO SAY IN THE INTERVIEW                         |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Paytm / PhonePe / a wallet?"):      |
+|  * Double-entry ledger as source of truth: every txn = 2+ legs          |
+|  (debit + credit) that sum to zero; append-only, immutable              |
+|  * Balances are a materialized view: SUM(credits) - SUM(debits)         |
+|  per wallet, cached and periodically reconciled                         |
+|  * P2P transfer: single atomic tx across two wallet rows on same        |
+|  shard (co-locate related wallets when possible)                        |
+|  * Cross-shard / cross-bank: Saga (orchestrated) with reserve           |
+|  -> commit -> settle; compensations for reverse leg failure             |
+|  * Idempotency key on every write API (client-generated UUID)           |
+|  so retries can't double-credit or double-debit                         |
+|                                                                         |
+|  IF ASKED "how do you prevent double-spend?":                           |
+|  * SELECT ... FOR UPDATE on the source wallet row + check               |
+|  available_balance >= amount inside the same tx                         |
+|  * Or optimistic: UPDATE wallet SET balance = balance - amt,            |
+|  version = version + 1 WHERE id = ? AND version = ?                     |
+|  AND balance >= amt -- rely on WHERE                                    |
+|  * Ledger unique constraint on (idempotency_key, leg) catches           |
+|  any duplicate credit or debit                                          |
+|                                                                         |
+|  IF ASKED "how do you handle distributed transactions?":                |
+|  * Prefer local: shard by user_id or wallet_id so most transfers        |
+|  are single-shard (single ACID tx)                                      |
+|  * For cross-shard: Saga with compensations (reverse credit if          |
+|  debit rollbacks) OR 2PC only if latency is acceptable                  |
+|  * For UPI (cross-bank): NPCI switch coordinates; DEEMED state          |
+|  on timeout resolved via async reconciliation query                     |
+|                                                                         |
+|  IF ASKED "reconciliation with banks / partners?":                      |
+|  * Nightly diff: our ledger (per bank) vs bank settlement file          |
+|  (NACH / MIS files); auto-repair small mismatches                       |
+|  * Any anomaly -> pending resolution queue with human review            |
+|  * T+1 or T+2 settlement window for most methods; instant for UPI       |
+|                                                                         |
+|  IF ASKED "KYC, fraud, PCI-DSS?":                                       |
+|  * Tiered KYC: min-KYC (Rs 10K wallet) -> full-KYC (Rs 2L +             |
+|  bank transfer allowed) as per RBI rules                                |
+|  * PII encrypted at rest (AES-256, KMS-managed keys); PANs              |
+|  tokenized via network tokenization (Visa/Master)                       |
+|  * Fraud engine: velocity, device fingerprint, geo-anomaly,             |
+|  ML risk score before high-value txn                                    |
+|                                                                         |
+|  IF ASKED "cashback and rewards without breaking the ledger?":          |
+|  * Cashback = separate credit leg from a promo/pool account to          |
+|  user wallet; rules engine decides eligibility async                    |
+|  * Budget enforced via Redis atomic decrement on a campaign             |
+|  budget counter; overshoot prevented at reserve time                    |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * UPI: ~15B+ txns/month in India (2025), ~5K TPS peak per PSP          |
+|  * Wallet txn latency SLA: < 500ms p99 in-app                           |
+|  * Ledger write throughput: 10K+ TPS sharded                            |
+|  * Reconciliation SLA: T+1 morning close, > 99.99% match rate           |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * PhonePe/GPay: NPCI UPI switch, sharded MySQL wallets                 |
+|  * Paytm: Kafka event pipeline, Cassandra for txn history               |
+|  * Stripe Treasury: strict double-entry, Ledger service (Kraken)        |
+|  * PayPal: multi-currency ledger with FX booking as separate leg        |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Immutable double-entry ledger, single-shard ACID transfers          |
+|   where possible + Saga across shards/banks, idempotency-key            |
+|   on every write, and T+1 reconciliation to catch drift."               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

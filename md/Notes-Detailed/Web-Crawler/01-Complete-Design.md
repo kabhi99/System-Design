@@ -786,3 +786,56 @@ content aggregation, and data mining.
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WEB CRAWLER — WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * URL Frontier = priority queues sharded by hostname; ensures          |
+|      politeness (1 req/domain at a time) + priority ordering            |
+|  * Fetcher pool pulls URLs, respects robots.txt (cached), fetches       |
+|      HTML with polite user-agent + connection pooling                   |
+|  * Content parser extracts links + text; hash-of-content dedup          |
+|      in a bloom filter (URL bloom + content bloom)                      |
+|  * Storage: S3 for raw pages, HBase/BigTable for parsed docs            |
+|      keyed by URL hash; index feeds search or ML pipelines              |
+|  * DNS resolver cache + local recursive resolver -> avoid DNS DoS       |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * URL dedup at web scale? Bloom filter (10 B URLs at ~1 GB             |
+|      per 1B with 1% FP) + fallback to sharded set in HBase              |
+|  * politeness? Per-host queue with min crawl-delay from robots.txt      |
+|      (default 1s); back off on 429/503 with exponential delay           |
+|  * freshness / re-crawl? Score URLs by change-frequency (last           |
+|      seen delta) + PageRank; frequently-changed news = daily            |
+|  * JavaScript-heavy pages? Two-pass: static fetch first; if             |
+|      content thin, requeue for headless Chrome pool                     |
+|  * spider traps (infinite calendars, session URLs)? Depth cap,          |
+|      URL normalization, per-host page cap, filter query params          |
+|  * distributed crawling? Consistent-hash URLs to workers by             |
+|      host to preserve per-host politeness locality                      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Target: crawl 1 B pages/day (~11K pages/sec)                         |
+|  * Avg page ~100 KB compressed; 100 TB/day raw = 30 PB/year             |
+|  * URL frontier: ~10 B URLs known, ~1 B queued                          |
+|  * Bloom filter: 10 B URLs, 1% FP -> ~12 GB memory                      |
+|  * Per-host politeness: 1 req/sec default (robots.txt overrides)        |
+|  * Google index: 100+ B pages; recrawl top pages daily                  |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google: MapReduce-era crawler + BigTable + WebTable                  |
+|  * Common Crawl: open crawl, ~3B pages/month, WARC on S3                |
+|  * Bing: distributed frontier + adaptive scheduling                     |
+|  * Apache Nutch: open-source reference (Hadoop-based)                   |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Sharded URL frontier with per-host politeness, bloom-filter dedup,    |
+|   adaptive re-crawl by change frequency + PageRank."                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

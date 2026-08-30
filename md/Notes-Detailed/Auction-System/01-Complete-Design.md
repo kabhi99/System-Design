@@ -1313,3 +1313,81 @@
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  AUCTION SYSTEM -- WHAT TO SAY IN THE INTERVIEW                         |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design eBay auctions?"):                   |
+|  * Auction state = LIVE / EXTENDED / ENDED; managed by a timer          |
+|  service (distributed cron with sharded queues)                         |
+|  * Bid path: validate (amount > current + increment, deposit            |
+|  ok, not seller) -> serialize per auction -> update state               |
+|  -> broadcast to watchers                                               |
+|  * Concurrency: single-writer per auction (Redis lock or Kafka          |
+|  partition keyed by auction_id) so bids are totally ordered             |
+|  * WebSocket + Redis Pub/Sub for real-time price + countdown            |
+|  updates to thousands of watchers                                       |
+|  * Anti-sniping: extend end time by 5 min if a bid arrives in           |
+|  the last N seconds                                                     |
+|                                                                         |
+|  IF ASKED "how do you handle concurrent bids?":                         |
+|  * All bids for an auction go through the same Kafka partition          |
+|  (partition key = auction_id) -> single consumer serializes             |
+|  * Alternatively: Redis distributed lock per auction + DB               |
+|  optimistic version                                                     |
+|  * Never allow parallel bid processing on same auction --               |
+|  guarantees strict ordering + no lost update                            |
+|                                                                         |
+|  IF ASKED "how does proxy bidding work?":                               |
+|  * User sets max_bid; system auto-bids the minimum needed to            |
+|  stay leader when someone else bids                                     |
+|  * Store max_bid encrypted, visible only to system; visible bid         |
+|  = current + increment (not the max)                                    |
+|  * Tie-breaking: earlier max_bid timestamp wins if two proxies          |
+|  set same max                                                           |
+|                                                                         |
+|  IF ASKED "anti-sniping and timer service reliability?":                |
+|  * Soft-close: last-N-second bid extends the auction by 5 min           |
+|  (repeats until quiet period)                                           |
+|  * Timer service is sharded by auction_id % N with a Raft-              |
+|  replicated schedule; on leader failure, replica takes over             |
+|  * Persist scheduled_end_time in DB; on service restart, replay         |
+|  active auctions and reschedule                                         |
+|                                                                         |
+|  IF ASKED "how do you scale WebSockets to a hot auction?":              |
+|  * Sticky gateway routing; fanout via Redis Pub/Sub channel per         |
+|  auction so any gateway pod can push updates                            |
+|  * Hot auction with 100K+ watchers: replicate the pub/sub               |
+|  channel across shards; batch updates (10-20 updates/sec max)           |
+|  * Throttle non-leader-changing updates on client side                  |
+|                                                                         |
+|  IF ASKED "anti-fraud (shill bidding, fake accounts)?":                 |
+|  * Detect shill bidding: bidder history with seller, IP + device        |
+|  overlap, bid patterns (always second-highest)                          |
+|  * Require ID/payment verification for high-value bids; block           |
+|  new accounts from bidding on their own seller's items                  |
+|  * Rate limit bids per account + per IP; CAPTCHA on suspicion           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * eBay: ~1.5B live listings, ~100M bids/day peak                       |
+|  * Hot auction: 100K+ concurrent WebSocket watchers possible            |
+|  * Timer service tick: ~1s resolution acceptable                        |
+|  * Bid processing SLA: < 200ms end-to-end                               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * eBay: MySQL sharded by seller_id, hot auctions cached in Redis       |
+|  * Sotheby's: hybrid live + online with human auctioneer                |
+|  * StockX: fixed-price + ask/bid order book (like an exchange)          |
+|  * Google Ad Auctions: real-time bid ranking (different tradeoffs)      |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Partition bids per auction so they're serialized, use a             |
+|   Raft-backed sharded timer for end times with soft-close,              |
+|   and WebSocket + Redis Pub/Sub for real-time watchers."                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

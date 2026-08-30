@@ -966,3 +966,81 @@ CHAPTER 6: SERVICE MESH, SECURITY, TESTING, ANTI-PATTERNS & MORE
 ```
 
 END OF ADVANCED TOPICS
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  MICROSERVICES ARCHITECTURE -- WHAT TO SAY IN THE INTERVIEW             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design microservices"):                    |
+|  * Decompose by bounded context (DDD), one DB per service               |
+|  * Sync comms: REST for external, gRPC for internal                     |
+|  * Async comms: Kafka / RabbitMQ for events + decoupling                |
+|  * API gateway (auth, rate-limit, TLS) at the edge                      |
+|  * Service mesh (Istio / Envoy) for mTLS, retries, circuit              |
+|    breaking, observability                                              |
+|  * Distributed tracing + centralized logging + metrics                  |
+|                                                                         |
+|  IF ASKED "distributed transactions across services?":                  |
+|  * Avoid 2PC / XA in microservices                                      |
+|  * Saga pattern: choreography (event-driven) or                         |
+|    orchestration (workflow engine like Temporal)                        |
+|  * Compensating transactions for rollback                               |
+|  * Eventual consistency + idempotent handlers                           |
+|                                                                         |
+|  IF ASKED "how do you keep event log + DB consistent?":                 |
+|  * Transactional Outbox: write domain change + event row                |
+|    in same DB transaction                                               |
+|  * Poller / CDC (Debezium) tails outbox -> Kafka                        |
+|  * Prevents dual-write inconsistency (LinkedIn pattern)                 |
+|                                                                         |
+|  IF ASKED "resilience patterns?":                                       |
+|  * Circuit breaker (Hystrix, Resilience4j): open on high                |
+|    failure rate, half-open probe, close on recovery                     |
+|  * Timeouts + bounded retries with exponential backoff                  |
+|  * Bulkhead: isolated thread / connection pools                         |
+|  * Fallback + graceful degradation                                      |
+|                                                                         |
+|  IF ASKED "service discovery + secure comms?":                          |
+|  * K8s DNS or client-side (Consul / Eureka)                             |
+|  * Service mesh (Envoy sidecar) for mTLS + traffic policy               |
+|  * JWT propagation for user identity                                    |
+|                                                                         |
+|  IF ASKED "API versioning?":                                            |
+|  * URL path (/v1, /v2), backward-compatible additive changes            |
+|  * Deprecation window 6-12 months with observability                    |
+|  * Consumer-driven contract tests (Pact) beats brittle E2E              |
+|                                                                         |
+|  IF ASKED "gRPC vs REST?":                                              |
+|  * gRPC internal: Protobuf, HTTP/2, streaming, strong types,            |
+|    ~5-10x smaller / faster                                              |
+|  * REST external: browser-friendly, cacheable, human-readable           |
+|                                                                         |
+|  IF ASKED "when NOT to use microservices?":                             |
+|  * Small team, simple domain, tight deadlines                           |
+|  * Early-stage startup: start with modular monolith                     |
+|  * Extract services when a scaling / team pain appears                  |
+|  * Beware distributed monolith anti-pattern (shared DB,                 |
+|    coupled deploys, chatty sync calls)                                  |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Circuit breaker: open at ~50% failures over 10s window               |
+|  * ~1 team per 5-10 services (Conway's law)                             |
+|  * mTLS + JWT overhead ~1-5ms per hop                                   |
+|  * Deploy frequency 10-100x higher than monolith                        |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: Eureka + Hystrix + Zuul + Chaos Monkey                      |
+|  * Uber: Cadence/Temporal + own service mesh                            |
+|  * Amazon: two-pizza teams, APIs mandated (Bezos memo)                  |
+|  * Google / Envoy + Istio, LinkedIn: Kafka + Samza + CDC                |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "One service per bounded context with its own DB, sync                 |
+|   REST/gRPC + async Kafka events, sagas + outbox for                    |
+|   consistency, service mesh for cross-cutting concerns."                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

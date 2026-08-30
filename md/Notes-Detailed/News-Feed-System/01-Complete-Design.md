@@ -1914,3 +1914,55 @@ activity, and likes from people, pages, and groups that a user follows.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  NEWS FEED SYSTEM — WHAT TO SAY IN THE INTERVIEW                        |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Hybrid fan-out: PUSH to normal users' feed cache on write;           |
+|      PULL celebrity posts at read time (celeb = >1M followers)          |
+|  * Per-user feed cache in Redis (ZSET, ~200 recent post_ids)            |
+|  * Post service writes to Cassandra + emits to Kafka -> fan-out         |
+|      worker copies post_id to each follower's feed key                  |
+|  * Feed read = ZRANGE feed:{user} + hydrate posts from cache/DB         |
+|      + merge in celeb pull results + apply ML ranking                   |
+|  * ML ranker (Flink features + LightGBM/DNN) scores candidates          |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * the celebrity problem? Detect via follower count threshold;          |
+|      their posts skip fan-out; readers pull-merge on request            |
+|  * cursor pagination? Cursor = (rank_score, post_id); avoids            |
+|      offset drift as new posts arrive                                   |
+|  * post deletion? Tombstone in posts table; feed cache lazy-            |
+|      cleans on read (skip missing post_ids)                             |
+|  * thundering herd on cache miss? Distributed lock (SETNX) so           |
+|      only one worker rebuilds; others wait or serve stale               |
+|  * read-after-write? Write-through user's own feed cache                |
+|      synchronously so author sees their own post immediately            |
+|  * trending topics? Count-Min Sketch + top-K in Redis, refreshed        |
+|      every N minutes; sliding window over 1h                            |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 500M DAU, 2B users total                                             |
+|  * 1B posts/day (~11K/s avg, 50K/s peak)                                |
+|  * 10 feed reads per user per day = 5B reads/day (~60K/s)               |
+|  * Fan-out amplification: avg follower count 200; celeb 100M+           |
+|  * Feed cache: 200 post_ids x 8 B x 500M users = 800 GB in Redis        |
+|  * Feed read p99 < 200 ms; post p99 < 500 ms                            |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Twitter: pull-based (redis timelines) for celebs, push for rest      |
+|  * Facebook: TAO (graph cache) + write-fanout to Haystack               |
+|  * Instagram: Cassandra + Redis + ML ranking (Prophet features)         |
+|  * LinkedIn: Kafka + Samza for ranking pipeline                         |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Hybrid fan-out (push for normal, pull for celebs), Redis feed cache,  |
+|   Cassandra posts, ML rank at read time."                               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

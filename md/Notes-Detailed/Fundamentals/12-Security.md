@@ -519,5 +519,79 @@ authorization, encryption, and defense against common attacks.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SECURITY -- WHAT TO SAY IN THE INTERVIEW                               |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how do you secure the API?"):              |
+|  * AuthN: OAuth 2.0 for external, short-lived JWT / mTLS internally     |
+|  * AuthZ: RBAC as the default, ABAC when policies get contextual        |
+|  * Encrypt in transit (TLS) AND at rest (KMS-managed keys)              |
+|  * Rate limit + WAF + input validation on every endpoint                |
+|  * Never trust the client -- validate server-side, always               |
+|                                                                         |
+|  IF ASKED "session vs JWT?":                                            |
+|  * Session (server-side): easy to revoke, stateful, needs sticky/Redis  |
+|  * JWT: stateless, scales, but revocation is hard -- use short TTL      |
+|  * Standard combo: short-lived access JWT (~15 min) + refresh token     |
+|    (long-lived, revocable, stored server-side)                          |
+|                                                                         |
+|  IF ASKED "OAuth 2.0 -- which flow?":                                   |
+|  * Web apps with a backend: Authorization Code + PKCE                   |
+|  * SPAs / mobile: Authorization Code + PKCE (NOT implicit anymore)      |
+|  * Service-to-service: Client Credentials                               |
+|  * OIDC = OAuth + ID token (for authentication, not just authz)         |
+|                                                                         |
+|  IF ASKED "how do you store passwords?":                                |
+|  * NEVER plaintext, NEVER MD5/SHA1, NEVER a fast hash                   |
+|  * Use bcrypt (cost 10-12), argon2id, or scrypt                         |
+|  * Per-user salt is automatic in these algorithms                       |
+|  * Add MFA / TOTP for anything sensitive                                |
+|                                                                         |
+|  IF ASKED "RBAC vs ABAC?":                                              |
+|  * RBAC: user -> role -> permissions (simple, ~90% of apps)             |
+|  * ABAC: policies on attributes (role, resource, time, IP, department)  |
+|  * ReBAC (Google Zanzibar): permissions as a graph (relationships)      |
+|                                                                         |
+|  IF ASKED "encryption -- in transit vs at rest?":                       |
+|  * In transit: TLS 1.2/1.3 everywhere, HSTS, cert pinning for mobile    |
+|  * At rest: AES-256, database TDE, disk-level for infra                 |
+|  * Keys in KMS / Vault -- rotate, never in code or env dumps            |
+|  * Field-level encryption for PII (SSN, card) if the DB is shared       |
+|                                                                         |
+|  IF ASKED "OWASP top attacks?":                                         |
+|  * SQL Injection -> parameterized queries, ORMs, no string concat       |
+|  * XSS -> escape output, Content-Security-Policy headers                |
+|  * CSRF -> CSRF tokens + SameSite=Lax/Strict cookies                    |
+|  * SSRF -> allow-list outbound destinations, block metadata endpoints   |
+|  * DDoS -> CDN + rate limiting + connection limits                      |
+|                                                                         |
+|  IF ASKED "how do you handle secrets?":                                 |
+|  * Never in code or git -- use Vault / AWS Secrets Manager / KMS        |
+|  * Short-lived credentials, rotate on schedule + on incident            |
+|  * Audit access; alert on unusual reads                                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * bcrypt cost 12: ~250 ms per hash (intentionally slow)                |
+|  * JWT access token TTL: 5-15 min; refresh: 7-30 days                   |
+|  * TLS 1.3 handshake: 1-RTT, 0-RTT resumption                           |
+|  * AES-256 at rest is effectively unbreakable this decade               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google Zanzibar: relationship-based auth for Drive / YouTube         |
+|  * Okta / Auth0: managed OAuth 2.0 + OIDC providers                     |
+|  * Cloudflare / AWS Shield: DDoS absorption at the edge                 |
+|  * HashiCorp Vault: secrets + dynamic credentials in production         |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "OAuth 2.0 + short-lived JWT + RBAC + TLS everywhere + secrets in      |
+|     Vault -- and always validate input on the server."                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 12
 

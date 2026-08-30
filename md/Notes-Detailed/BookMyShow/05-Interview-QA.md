@@ -494,3 +494,71 @@ with detailed answers and talking points.
 
 ## END OF CHAPTER 5
 
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  BOOKMYSHOW -- WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design BookMyShow / Ticketmaster?"):       |
+|  * Show catalog + search behind CDN; SHOW_SEATS table is the            |
+|  concurrency hotspot (one row per seat per show)                        |
+|  * Reservation model: SELECT seats -> reserve for ~5-10 min ->          |
+|  pay -> confirm; state = AVAILABLE/RESERVED/BOOKED/BLOCKED              |
+|  * Two-layer locking: Redis SETNX (fast path, TTL = hold window)        |
+|  + DB row lock or optimistic version on confirm                         |
+|  * Payment via Saga with idempotency key = reservation_id; on           |
+|  payment success -> mark BOOKED + fire booking_confirmed event          |
+|  * WebSocket + Redis Pub/Sub for live seat map updates                  |
+|                                                                         |
+|  IF ASKED "how do you prevent double-booking?":                         |
+|  * Atomic multi-seat reserve in a Lua script: check ALL seats           |
+|  AVAILABLE, then SETNX all with a hold TTL; else rollback               |
+|  * Backing DB uses SELECT ... FOR UPDATE or version column              |
+|  (optimistic locking): UPDATE ... WHERE version = X                     |
+|  * Redlock across N Redis nodes only if a single Redis cluster          |
+|  isn't safe enough; usually one Redis + DB is enough                    |
+|                                                                         |
+|  IF ASKED "how do you handle flash sales / IPL final?":                 |
+|  * Virtual waiting room in front (queue-it style): admit N              |
+|  users/sec into the seat picker; others see a queue page                |
+|  * Pre-warm caches (show + seat map) and scale-up 30 min before         |
+|  sale; disable non-critical writes                                      |
+|  * Rate limit at gateway per user + per IP; CAPTCHA on abuse            |
+|  * Async payment confirmation via events, not sync round-trip           |
+|                                                                         |
+|  IF ASKED "payment ok but confirmation write failed?":                  |
+|  * Reservation stays in PAID_PENDING state; a reconciliation            |
+|  worker retries the finalize step (idempotent by resv_id)               |
+|  * If seats got released before the fix, refund via saga                |
+|  compensation; user gets email + auto-refund SLA (24-48h)               |
+|  * Never delete the reservation on failure -- move to a retry           |
+|  queue with exponential backoff                                         |
+|                                                                         |
+|  IF ASKED "what if Redis dies?":                                        |
+|  * Fall back to DB pessimistic locking (SELECT FOR UPDATE);             |
+|  throughput drops but correctness holds                                 |
+|  * Sentinel/Cluster mode with replica + auto-failover (~30s)            |
+|  * In-flight holds survive because DB is source of truth                |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Hold TTL: 5-10 minutes (industry standard)                           |
+|  * IPL/BTS peak: 100K+ concurrent booking attempts, 10K writes/s        |
+|  * Redis lock latency: < 1ms; DB row lock: 5-20ms                       |
+|  * Seat map cache hit rate target: > 95%                                |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * BookMyShow: Redis-backed seat holds, Kafka for downstream            |
+|  * Ticketmaster: virtual waiting room (queue-it), pre-reg               |
+|  * IRCTC Tatkal: pessimistic DB locking + strict rate limits            |
+|  * Redlock (antirez) for cross-shard locks                              |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Reserve-then-confirm with Redis SETNX + TTL as the hot lock,        |
+|   DB row lock as the source of truth, and Saga + idempotency            |
+|   on payment so we never double-book or double-charge."                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

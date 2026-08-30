@@ -527,5 +527,76 @@ to WebSocket connections, every system depends on the network.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  NETWORKING -- WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "walk me up the stack?"):                   |
+|  * DNS resolves domain -> IP (cache with TTL)                           |
+|  * TCP for reliable ordered bytes (HTTP, DB); UDP for fast + lossy      |
+|  * HTTP/2 or HTTP/3 for modern web -- multiplexing, no HOL blocking     |
+|  * WebSocket for real-time bidirectional; CDN for anything static       |
+|                                                                         |
+|  IF ASKED "DNS -- how does it scale / balance load?":                   |
+|  * Recursive resolver -> root -> TLD -> authoritative                   |
+|  * Multiple A records = simple round-robin load balancing               |
+|  * GSLB via Route53 latency/geo routing                                 |
+|  * Watch TTL -- long TTL = fast, bad failover; short = slow, agile      |
+|                                                                         |
+|  IF ASKED "TCP vs UDP?":                                                |
+|  * TCP: 3-way handshake, ordered, retransmit, congestion control        |
+|  * UDP: fire-and-forget, no ordering, no retry -- app handles it        |
+|  * Use TCP: HTTP, gRPC, DB. Use UDP: DNS, video, gaming, QUIC           |
+|                                                                         |
+|  IF ASKED "HTTP/1.1 vs 2 vs 3?":                                        |
+|  * HTTP/1.1: text, 1 req at a time per conn, head-of-line blocking      |
+|  * HTTP/2: binary, multiplexed streams over 1 TCP conn, server push     |
+|  * HTTP/3: same as HTTP/2 but over QUIC (UDP) -- no HOL blocking        |
+|    at TCP level, 0-RTT reconnect, better on lossy mobile networks       |
+|                                                                         |
+|  IF ASKED "real-time -- WebSocket, SSE, or polling?":                   |
+|  * Long polling: works everywhere, wasteful                             |
+|  * SSE: server -> client only, works over HTTP/1.1, auto-reconnect      |
+|  * WebSocket: full duplex, lowest latency (chat, trading, games)        |
+|  * Trade-off: WS needs sticky routing / dedicated gateway               |
+|                                                                         |
+|  IF ASKED "TLS -- how does it work in one breath?":                     |
+|  * Client hello -> server cert -> key exchange -> symmetric key         |
+|  * TLS 1.3: 1-RTT handshake, 0-RTT resumption                           |
+|  * Terminate TLS at the LB / CDN for perf; mTLS for service-to-service  |
+|                                                                         |
+|  IF ASKED "CDN -- when and how?":                                       |
+|  * Static assets (JS/CSS/images), video, anything cacheable             |
+|  * Push cache-control headers: max-age, s-maxage, stale-while-revalidate|
+|  * Invalidation is the hard part -- version filenames or use purge API  |
+|  * Edge functions push logic close to the user (Cloudflare Workers)     |
+|                                                                         |
+|  IF ASKED "how does the internet handle failures?":                     |
+|  * BGP for global routing, anycast for one-IP-many-locations            |
+|  * TCP retransmit for lost packets, exponential backoff                 |
+|  * Client retries with jitter to avoid thundering herd                  |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * DNS lookup: 20-120 ms (cold), <1 ms (cached)                         |
+|  * Cross-continent RTT: ~150-300 ms; same-region: 1-5 ms                |
+|  * TLS handshake: 1-RTT (TLS 1.3), 2-RTT (TLS 1.2)                      |
+|  * CDN cache hit: ~20 ms edge vs 200-300 ms origin                      |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Cloudflare: anycast + edge workers, ~50 ms to 95% of internet        |
+|  * Google / YouTube: pushed QUIC (HTTP/3) into mainstream               |
+|  * Netflix: Open Connect appliances inside ISP networks                 |
+|  * AWS CloudFront + Route53 latency routing at the edge                 |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "DNS + TCP + HTTP/2 for most traffic, WebSocket for real-time,         |
+|     CDN for static -- and know your RTTs cold."                         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 11
 

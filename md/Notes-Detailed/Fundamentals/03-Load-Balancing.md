@@ -1234,5 +1234,70 @@ How do load balancers and services find each other?
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  LOAD BALANCING -- WHAT TO SAY IN THE INTERVIEW                         |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how do you load balance?"):                |
+|  * L7 (HTTP-aware) in front of app tier: managed AWS ALB or Nginx       |
+|  * L4 (TCP) for databases, gRPC hot paths, or millions of conns/sec     |
+|  * Algorithm: LEAST CONNECTIONS by default (adapts to req duration)     |
+|  * Health checks on /health, fail fast, drain in-flight requests        |
+|  * Make apps stateless so any LB decision is safe                       |
+|                                                                         |
+|  IF ASKED "L4 vs L7?":                                                  |
+|  * L4: fast, protocol-agnostic, no visibility into HTTP                 |
+|  * L7: routes by path/host/header, TLS termination, rate limits, WAF    |
+|  * Real systems: L4 at the edge, L7 for app routing                     |
+|                                                                         |
+|  IF ASKED "which algorithm?":                                           |
+|  * Round Robin: simplest, uniform load, ignores instance health         |
+|  * Weighted RR: mixed instance sizes (large/small boxes)                |
+|  * Least Connections: best default -- adapts to slow requests           |
+|  * Consistent Hash / IP Hash: sticky routing, cache locality            |
+|  * Power of Two Choices: near-optimal with tiny overhead                |
+|                                                                         |
+|  IF ASKED "sticky sessions?":                                           |
+|  * Prefer STATELESS -- push session to Redis / JWT, drop stickiness     |
+|  * If forced (WebSockets, legacy): cookie-based, short TTL              |
+|  * Downsides: uneven load, breaks on instance replacement               |
+|                                                                         |
+|  IF ASKED "health checks?":                                             |
+|  * HTTP GET /health -- app-aware, checks DB + downstream reachability   |
+|  * Shallow (TCP) checks miss app-level failures                         |
+|  * Deep checks (call all deps) are for monitoring, NOT the LB           |
+|  * Fail-open vs fail-closed: pick based on blast radius                 |
+|                                                                         |
+|  IF ASKED "how do you make the LB itself HA?":                          |
+|  * Use cloud managed (ALB/NLB/GCLB) -- inherently HA, multi-AZ          |
+|  * Self-hosted: Active-Passive with VRRP/keepalived + floating IP       |
+|  * Or Active-Active with anycast IPs (BGP)                              |
+|                                                                         |
+|  IF ASKED "global / multi-region?":                                     |
+|  * GSLB via DNS (Route53 latency/geo routing) -- but respects TTL       |
+|  * Anycast for true single-IP global routing (Cloudflare, GCLB)         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * AWS NLB: millions of req/sec, ~100us added latency                   |
+|  * AWS ALB: hundreds of thousands of req/sec                            |
+|  * Nginx: 10k-100k concurrent conns per instance                        |
+|  * HAProxy: 2M+ req/sec on modern hardware                              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: Zuul (L7) + Eureka for service discovery                    |
+|  * Google: Maglev consistent hashing at edge                            |
+|  * Cloudflare: anycast global LB, DDoS absorption                       |
+|  * AWS: ALB (L7) + NLB (L4) + Route53 (GSLB)                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "L7 for HTTP, L4 for TCP, least-connections by default, health         |
+|     checks on /health, and keep the app stateless."                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 3
 

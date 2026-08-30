@@ -1387,3 +1387,79 @@
 |    minimal regardless of viewer count.                                   |
 +--------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ONLINE CODE JUDGE -- WHAT TO SAY IN THE INTERVIEW                      |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design LeetCode/Codeforces"):              |
+|  * API accepts submission (code + problem_id + language)                |
+|  * Submissions go into a priority queue (contest > practice)            |
+|  * Stateless sandboxed judge workers pop from queue and                 |
+|    execute inside Docker or Firecracker microVM                         |
+|  * Verdict (AC/WA/TLE/MLE/RE/CE) written to DB + pushed                 |
+|    to user via WebSocket / long-poll                                    |
+|  * Test cases stored in S3, cached on workers by problem_id             |
+|                                                                         |
+|  IF ASKED "how do you safely run untrusted code?":                      |
+|  * Fresh Docker container OR Firecracker microVM per run                |
+|  * seccomp-bpf syscall whitelist (block execve after start,             |
+|    ptrace, socket, mount, ...)                                          |
+|  * cgroups v2: cpu.max, memory.max (OOM), pids.max=1-5                  |
+|    (fork-bomb block), io.max                                            |
+|  * --network=none (no exfil, no help fetching)                          |
+|  * Read-only rootfs + tmpfs for /tmp with size cap                      |
+|  * AppArmor / SELinux profile for file paths                            |
+|                                                                         |
+|  IF ASKED "Docker vs Firecracker?":                                     |
+|  * Docker: ~50ms start, shared kernel, weaker isolation                 |
+|  * Firecracker: microVM with KVM, ~125ms boot, kernel-                  |
+|    level isolation, ~5 MB overhead, immune to container                 |
+|    escape; keep a pre-warmed pool of microVMs                           |
+|                                                                         |
+|  IF ASKED "enforce time / memory limits precisely?":                    |
+|  * CPU time: cgroups cpu.max + SIGXCPU via setrlimit                    |
+|  * Wall-clock: external timer kills the container                       |
+|  * Memory: cgroups memory.max triggers OOM-kill                         |
+|  * Output: monitor stdout, kill at 64 MB                                |
+|                                                                         |
+|  IF ASKED "multiple valid answers per problem?":                        |
+|  * Special judge (checker) program: receives input,                     |
+|    expected output, user output; returns AC/WA/PE                       |
+|  * Interactive problems: judge acts as adversary via pipes              |
+|                                                                         |
+|  IF ASKED "contest system?":                                            |
+|  * ICPC (penalty minutes + AC) or IOI (partial credit)                  |
+|  * Live scoreboard via Kafka + Redis + WebSocket push                   |
+|  * Freeze scoreboard last hour to keep drama                            |
+|  * Anti-cheat: MOSS for plagiarism, IP rate-limiting,                   |
+|    optional webcam / screen share for on-site rounds                    |
+|                                                                         |
+|  IF ASKED "scale to a live contest spike?":                             |
+|  * K8s HPA + KEDA scaling on queue depth                                |
+|  * Priority queue: contest submissions ahead of practice                |
+|  * Result cache: same (code_hash, problem_id) reuses verdict            |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Typical limits: 1-10s CPU, 256 MB RAM, 64 MB stdout                  |
+|  * Firecracker boot ~125ms, Docker start ~50ms                          |
+|  * Contest peak: 10-50K submissions/hour                                |
+|  * 10-50 hidden test cases per problem                                  |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * AWS Lambda / Fargate: Firecracker under the hood                     |
+|  * LeetCode: containerized judge, per-language images                   |
+|  * Codeforces: custom Windows sandbox, then Linux                       |
+|  * Google Kaggle: notebook-based, Docker                                |
+|  * MOSS (Stanford) for plagiarism detection                             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Priority queue + stateless sandbox workers (Firecracker               |
+|   + seccomp + cgroups + no network), fetch test cases from              |
+|   S3, emit verdicts via WebSocket with result caching."                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

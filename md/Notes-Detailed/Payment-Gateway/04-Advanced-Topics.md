@@ -476,3 +476,72 @@
 
 ## END OF PAYMENT GATEWAY HLD
 
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PAYMENT GATEWAY -- WHAT TO SAY IN THE INTERVIEW                        |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Stripe / Razorpay?"):               |
+|  * Merchant -> our API -> processor (Visa/Mastercard/UPI) ->            |
+|  issuing bank; we're the abstraction + risk + reconciliation            |
+|  * Every request MUST carry an Idempotency-Key; store request           |
+|  hash + response for 24h, return same response on replay                |
+|  * Card data NEVER touches our DB: PCI-DSS tokenization at              |
+|  edge (HSM/vault); services use tokens only                             |
+|  * Double-entry ledger (append-only, immutable) is source of            |
+|  truth for money; balances are a materialized view                      |
+|  * Async webhook delivery to merchants with retries + HMAC              |
+|  signatures; exactly-once at merchant via idempotency                   |
+|                                                                         |
+|  IF ASKED "how do you guarantee exactly-once charging?":                |
+|  * Idempotency key on the API: first request commits, replays           |
+|  return the cached result                                               |
+|  * Ledger uses INSERT with unique constraint on                         |
+|  (idempotency_key, leg); duplicate = no-op                              |
+|  * Reconciliation with processor: nightly compare our ledger            |
+|  vs their settlement file; auto-repair discrepancies                    |
+|                                                                         |
+|  IF ASKED "how do you deliver webhooks reliably?":                      |
+|  * Persist event on write (transactional outbox); worker picks          |
+|  up and POSTs with exponential backoff (1s, 5s, 30s, ...)               |
+|  * Sign with HMAC-SHA256 over body + timestamp; merchant verifies       |
+|  * Dead-letter after N attempts (~24h retry window); allow              |
+|  manual replay from dashboard                                           |
+|                                                                         |
+|  IF ASKED "how do you detect fraud?":                                   |
+|  * Real-time rules engine: velocity checks, device fingerprint,         |
+|  BIN + geo mismatch, amount thresholds                                  |
+|  * ML scoring in-line (< 100ms) with features from feature store        |
+|  (Redis) + rules -> decision: allow / step-up (3DS) / block             |
+|  * Step-up to 3DS 2.0 (frictionless via risk data OR OTP                |
+|  challenge) shifts liability to issuer                                  |
+|                                                                         |
+|  IF ASKED "handle processor down / partial failure?":                   |
+|  * Circuit breaker + retries on idempotent OP; fail-over to             |
+|  secondary processor (smart routing / cascading)                        |
+|  * Ambiguous state (network timeout after auth) -> status query         |
+|  API + reconciliation job; never assume failed                          |
+|  * Payment stays in PENDING; poll processor until terminal state        |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Stripe: 250M+ API calls/day, > 99.999% uptime target                 |
+|  * Auth latency SLA: < 2s p99 end-to-end                                |
+|  * Webhook retry window: 3 days, 15+ attempts                           |
+|  * 3DS 2.0 friction rate target: < 5% (rest frictionless)               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Stripe: Idempotency-Key header, transactional outbox for events      |
+|  * Razorpay: smart routing across 3+ acquirers for fail-over            |
+|  * Adyen: single-processor global platform, RiskShield ML fraud         |
+|  * PayPal: Kraken (ledger service) with strict double-entry             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Idempotency-Key on every request, tokenized card data,              |
+|   double-entry ledger + reconciliation, and retry-safe                  |
+|   webhooks with HMAC -- so we're exactly-once and PCI-safe."            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

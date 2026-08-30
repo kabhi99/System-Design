@@ -883,5 +883,76 @@ neighboring keys are reshuffled — not everything.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SHARDING & REPLICATION -- WHAT TO SAY IN THE INTERVIEW                 |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "scale beyond one DB?"):                    |
+|  * First: READ REPLICAS (async) -- solves read-heavy workloads          |
+|  * Then: SHARD by a good key when writes or storage exceed one box      |
+|  * Combine: shard the writes, replicate each shard for HA + reads       |
+|  * Never shard prematurely -- it's a one-way door operationally         |
+|                                                                         |
+|  IF ASKED "sharding strategy?":                                         |
+|  * HASH(key): even distribution, but no range queries                   |
+|  * RANGE: efficient range scans, but risk hot shards (recent data)      |
+|  * CONSISTENT HASHING: minimal data movement on resharding              |
+|  * DIRECTORY-BASED: lookup service maps key -> shard (flexible, adds    |
+|    a hop and a SPOF -- cache the map)                                   |
+|                                                                         |
+|  IF ASKED "how do you pick a shard key?":                               |
+|  * HIGH CARDINALITY (millions of distinct values)                       |
+|  * EVEN distribution of load and storage                                |
+|  * MATCHES the dominant query pattern (co-locate related data)          |
+|  * AVOID: timestamps (hot shard), tenant_id if one tenant is huge       |
+|  * Good picks: user_id, order_id, hash(email)                           |
+|                                                                         |
+|  IF ASKED "what about hot shards?":                                     |
+|  * Salt the key: append random suffix to spread writes                  |
+|  * Split the hot shard further, or replicate it for reads               |
+|  * Move the big tenant onto a dedicated shard                           |
+|                                                                         |
+|  IF ASKED "cross-shard queries / JOINs?":                               |
+|  * Denormalize at write time (duplicate to co-locate)                   |
+|  * Scatter-gather + merge in app (slow, avoid on hot path)              |
+|  * Precompute in a read model (CQRS) or a warehouse (BigQuery)          |
+|                                                                         |
+|  IF ASKED "sync vs async replication?":                                 |
+|  * SYNC: zero data loss, but write latency = slowest replica            |
+|  * ASYNC: fast writes, but replica lag -> stale reads / lost writes     |
+|  * SEMI-SYNC: wait for one replica, best of both (MySQL, Postgres)      |
+|                                                                         |
+|  IF ASKED "how do you reshard live?":                                   |
+|  * Consistent hashing minimizes moved data                              |
+|  * Double-write to old + new shards, backfill, switch reads, drop       |
+|  * Vitess-style: online resharding with zero-downtime cutover           |
+|                                                                         |
+|  IF ASKED "leader election / failover?":                                |
+|  * Consensus-based (Raft) -- etcd, Consul manage the leader lease       |
+|  * Auto-promote replica on primary failure (Patroni for Postgres)       |
+|  * Watch out for split-brain: fence the old primary                     |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Sharded Postgres: 100s of TB, 100k+ writes/sec across shards         |
+|  * Async replica lag: sub-second typical, seconds under load            |
+|  * Consistent hashing: ~1/N keys move on adding one node                |
+|  * Vitess (YouTube): 10k+ shards in production                          |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Instagram: Postgres sharded by user_id, logical shards per host      |
+|  * YouTube: Vitess (MySQL sharding) at global scale                     |
+|  * Discord: Cassandra with consistent hashing for messages              |
+|  * Figma: shard-per-tenant on Postgres for isolation                    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Replicate for HA and reads, shard for writes and storage --           |
+|     pick a high-cardinality key that matches your access pattern."      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 6
 

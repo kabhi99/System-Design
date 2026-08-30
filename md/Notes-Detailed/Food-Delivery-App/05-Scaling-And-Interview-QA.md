@@ -792,3 +792,75 @@ PART 5: SCALING, RELIABILITY & INTERVIEW Q&A
 ```
 
 END OF FOOD DELIVERY PLATFORM SYSTEM DESIGN
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  FOOD DELIVERY -- WHAT TO SAY IN THE INTERVIEW                          |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Swiggy / DoorDash / Zomato?"):      |
+|  * Three actors: customer, restaurant, delivery partner; order          |
+|  service is the source of truth for state machine                       |
+|  * Location service takes DP pings via WebSocket every 3-5s,            |
+|  stores current location in Redis GEO / geohash index                   |
+|  * Assignment via batched dispatch: every ~5s pick best DP for          |
+|  each pending order using Hungarian or greedy on cost matrix            |
+|  * Order state machine: PLACED -> ACCEPTED -> PREPARING ->              |
+|  READY -> PICKED -> DELIVERED; each transition on Kafka                 |
+|  * Live tracking: DP -> Location svc -> WebSocket fanout to             |
+|  customer via Redis Pub/Sub                                             |
+|                                                                         |
+|  IF ASKED "how do you assign a delivery partner?":                      |
+|  * Query Redis GEORADIUS (or S2/H3 cell lookup) for DPs within          |
+|  3-5 km of restaurant that are FREE                                     |
+|  * Score each candidate: distance + prep time + DP rating +             |
+|  batching potential; pick top score                                     |
+|  * Batching: assign 2-3 orders to same DP if pickup + delivery          |
+|  detour cost < threshold (saves 30-40% on ops cost)                     |
+|  * Two-phase assignment: reserve DP for 30s (accept/decline);           |
+|  on decline or timeout, re-run dispatch                                 |
+|                                                                         |
+|  IF ASKED "how do you scale live tracking?":                            |
+|  * WebSocket gateway with sticky routing; hundreds of thousands         |
+|  of connections per pod (Node/Go); horizontal scale                     |
+|  * Only push updates when position delta > 50m or every 10s             |
+|  (throttle); use Redis Pub/Sub for gateway->client fanout               |
+|  * ETA computed periodically from routing service + traffic;            |
+|  smoothed with Kalman filter, cache for 15-30s                          |
+|                                                                         |
+|  IF ASKED "how do you compute surge pricing?":                          |
+|  * Per-hexagon (H3 res 8-9) supply-demand ratio computed every          |
+|  1-2 min; publish multipliers to a Redis hash                           |
+|  * Read at cart step; lock the price once user hits checkout            |
+|  (price freeze for 5 min)                                               |
+|  * Cap surge at a policy limit; explain to user (bad weather /          |
+|  peak hour) for trust                                                   |
+|                                                                         |
+|  IF ASKED "handle payment or restaurant reject after order?":           |
+|  * Saga: payment_authorized before order goes to restaurant;            |
+|  if restaurant rejects -> auto-refund via compensation                  |
+|  * For COD, auth is a soft check; capture on delivery                   |
+|  * Idempotency key = order_id ensures duplicate payment webhooks        |
+|  don't double-charge                                                    |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Zomato/Swiggy peak: ~10K orders/min at dinner time                   |
+|  * DP location ping: every 3-5s per active DP                           |
+|  * Assignment SLA: dispatch within 30s of order placement               |
+|  * Delivery radius: 3-5 km typical, 7-10 km max                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * DoorDash: DeepRed dispatch (batched, ML-scored)                      |
+|  * Uber Eats: H3 hexagonal grid for supply-demand                       |
+|  * Swiggy: Kafka pipeline for order events, Redis for hot state         |
+|  * Zomato: Cassandra for order history, Elasticsearch for search        |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Redis-GEO + H3 for supply, batched dispatch every few seconds,      |
+|   Kafka-driven order state machine, and WebSocket + Pub/Sub             |
+|   for live tracking -- with a Saga around payment."                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

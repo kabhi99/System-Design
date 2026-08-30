@@ -1066,5 +1066,66 @@ With eventual consistency, conflicts will happen. How do we resolve them?
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  CAP & CONSISTENCY -- WHAT TO SAY IN THE INTERVIEW                      |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "which consistency model?"):                |
+|  * Partitions WILL happen, so I'm really choosing C vs A under one      |
+|  * AP by default (social feeds, likes, analytics) -- serve stale, heal  |
+|  * CP for money / inventory / seats -- refuse rather than double-book   |
+|  * State the model explicitly: linearizable, causal, or eventual        |
+|                                                                         |
+|  IF ASKED "CAP vs PACELC?":                                             |
+|  * CAP only says what to do DURING a partition                          |
+|  * PACELC adds: even without partitions, trade Latency vs Consistency   |
+|  * Cassandra: AP + EL (fast, eventual). Spanner: CP + EC (slow, strong) |
+|                                                                         |
+|  IF ASKED "tunable consistency?":                                       |
+|  * Quorum rule: W + R > N gives strong consistency on that key          |
+|  * Cassandra/Dynamo: pick per query (ONE / QUORUM / ALL)                |
+|  * Cheap knob to move on the C-vs-latency curve                         |
+|                                                                         |
+|  IF ASKED "how do nodes agree on a value?":                             |
+|  * Consensus algorithms: Raft (understandable) or Paxos (older)         |
+|  * Used by: etcd, Consul, ZooKeeper (ZAB), CockroachDB, Spanner         |
+|  * Needs a MAJORITY quorum -- (N/2)+1 nodes must agree                  |
+|                                                                         |
+|  IF ASKED "how do you order events across servers?":                    |
+|  * Wall-clock time is UNSAFE -- clocks drift, NTP is not enough         |
+|  * Lamport clocks: total order, no causality detection                  |
+|  * Vector clocks: detect concurrent updates -> conflict                 |
+|  * Spanner's TrueTime: physical time + bounded uncertainty (GPS+atomic) |
+|                                                                         |
+|  IF ASKED "how do you resolve conflicting writes?":                     |
+|  * LWW (last-write-wins): simple, silently loses writes                 |
+|  * Vector clocks: surface conflict to the app (Dynamo, Riak)            |
+|  * CRDTs: mathematically merge without conflict (counters, sets)        |
+|                                                                         |
+|  IF ASKED "read-your-own-writes?":                                      |
+|  * Route that user's reads to the primary for a short window            |
+|  * Or track a version token client-side, replicas wait for it           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Cross-region strong consistency: ~50-150ms extra per write           |
+|  * Raft/Paxos quorum: needs 3 or 5 nodes for tolerance of 1 or 2        |
+|  * NTP drift: ~1-10ms typical, spikes to 100ms+ under load              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Spanner: TrueTime + Paxos = global strong consistency                |
+|  * DynamoDB: eventual by default, strongly-consistent read as opt-in    |
+|  * Cassandra: tunable per-query consistency, AP-leaning                 |
+|  * etcd / Consul: Raft for config + service discovery                   |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "CP for money, AP for feeds -- name the model, name the quorum,        |
+|     and never trust wall-clock time for ordering."                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 2
 

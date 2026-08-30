@@ -1977,3 +1977,59 @@ A COMPLETE CONCEPTUAL GUIDE
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SOCIAL MEDIA PLATFORM — WHAT TO SAY IN THE INTERVIEW                   |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Post service writes to Cassandra + emits to Kafka; media             |
+|      goes to S3, transcoded async into multiple variants                |
+|  * Feed uses HYBRID fan-out: push post_ids to followers'                |
+|      Redis feed cache; celebs pull-merge at read time                   |
+|  * Social graph in a dedicated service (custom graph DB or              |
+|      Cassandra with adjacency lists); followers/following               |
+|  * Notification service (Kafka topic) triggers on likes,                |
+|      comments, mentions, follows                                        |
+|  * Media pipeline: upload -> S3 -> transcode workers -> CDN;            |
+|      generate multiple resolutions + thumbnails on write                |
+|  * Search / trending via Elasticsearch + Count-Min Sketch               |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * the celebrity fan-out problem (100M followers)? Skip push;           |
+|      readers pull celeb posts at read time and merge                    |
+|  * feed ranking? ML features from Flink; LightGBM/DNN scoring;          |
+|      time decay + engagement signals + affinity to author               |
+|  * media handling at scale? Async transcoding to HLS + multi-           |
+|      res JPEG/WebP; store variants on CDN; lazy on-the-fly for          |
+|      rare formats                                                       |
+|  * follow/unfollow storm? Fire-and-forget writes to graph +             |
+|      Kafka event; feed rebuild is lazy on next read                     |
+|  * notifications? Batched digest for low-priority; real-time            |
+|      push (APNs/FCM) for mentions/DMs                                   |
+|  * spam / abuse? ML classifier at write time + shadow-ban;              |
+|      rate-limit posts and follows per account                           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 2 B users, 500 M DAU, 5B posts/day (~60K/s peak)                     |
+|  * Avg followers: 200; celebs 10M-500M (long tail)                      |
+|  * Feed reads: 10 per user/day = 5 B/day (~60K/s)                       |
+|  * Media storage growth: 100+ PB/year (mostly video)                    |
+|  * Feed cache p99 < 100 ms; write path p99 < 500 ms                     |
+|  * CDN egress dominates cost: multiple $ per GB served                  |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Instagram: Cassandra + Redis feed + ML ranking                       |
+|  * Twitter: pull for celebs (rockstar timelines), push for rest         |
+|  * Facebook: TAO graph cache + Haystack for photos                      |
+|  * TikTok: ML-first feed (For You), retrieval + ranking model           |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Hybrid fan-out feed, S3 + CDN media pipeline, graph service,          |
+|   Kafka-driven notifications, ML ranking at read time."                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

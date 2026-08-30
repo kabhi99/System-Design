@@ -1793,3 +1793,61 @@ instances (typically N=5) to achieve stronger safety guarantees.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED LOCK SERVICE — WHAT TO SAY IN THE INTERVIEW                |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Choose consensus store: ZooKeeper or etcd (CP, correct) for          |
+|      correctness-critical; Redis (AP, fast) for performance-            |
+|      critical with acceptable rare double-holder risk                   |
+|  * Redis: SET key value NX PX ttl; release via Lua script that          |
+|      checks value == owner (avoid releasing another's lock)             |
+|  * Redlock across N Redis instances (Antirez); Kleppmann's              |
+|      critique = clocks + GC pauses can violate safety                   |
+|  * ZooKeeper: ephemeral + sequential znodes; client watches             |
+|      predecessor -> no herd effect; ephemeral auto-releases             |
+|      on session loss                                                    |
+|  * ALWAYS use FENCING TOKENS: monotonic counter passed to the           |
+|      protected resource; resource rejects stale tokens                  |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * lock holder crashes without releasing? Redis: PX TTL                 |
+|      auto-expires; ZK: session ephemeral disappears                     |
+|  * GC pause > TTL? Fencing tokens save you: even if two                 |
+|      clients think they hold the lock, resource rejects stale           |
+|  * clock skew (Redlock issue)? Assume bounded skew; ZK/etcd             |
+|      avoid the problem via consensus rather than TTL                    |
+|  * network partition (split brain)? CP systems refuse writes            |
+|      in minority partition; AP may create two holders                   |
+|  * herd effect on release? ZK sequential + watch predecessor            |
+|      (only next client wakes)                                           |
+|  * re-entrancy? Store (owner_id, count); release decrements;            |
+|      deletes at 0                                                       |
+|  * read-write locks? Two sequential z-node paths (read-*/write-         |
+|      *); readers proceed if no earlier write znode                      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis lock: ~1 ms acquire (single-node), 5-10 ms Redlock             |
+|  * ZooKeeper: 10-50 ms (5-node ensemble, quorum write)                  |
+|  * etcd: 10-30 ms (Raft, similar to ZK)                                 |
+|  * Lease TTL: 5-30 s typical; longer = more risk on crash               |
+|  * Fencing token: 64-bit monotonic counter                              |
+|  * ZK ephemeral session timeout: 6-40 s tunable                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google Chubby: original consensus-based lock service (Paxos)         |
+|  * Apache ZooKeeper: Yahoo's Chubby-inspired open-source                |
+|  * etcd: Raft-based; used by Kubernetes for leader election             |
+|  * Redis Redlock: fast but controversial (Kleppmann's paper)            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "ZK/etcd for correctness, Redis for speed, ALWAYS use fencing tokens,  |
+|   short TTLs; consensus > TTL under GC pauses."                         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

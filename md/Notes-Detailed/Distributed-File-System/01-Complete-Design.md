@@ -709,3 +709,64 @@ the most influential designs.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED FILE SYSTEM (GFS/HDFS) — WHAT TO SAY IN THE INTERVIEW      |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Files split into large CHUNKS (GFS: 64 MB; HDFS: 128 MB);            |
+|      large chunks amortize metadata + optimize sequential IO            |
+|  * Single MASTER (namenode) holds all metadata in memory:               |
+|      filename -> chunk_ids; chunk_id -> replica locations               |
+|  * CHUNK SERVERS (datanodes) hold the actual bytes on local             |
+|      disks; heartbeat to master every few seconds                       |
+|  * Replication factor 3 by default: rack-aware placement (2             |
+|      same rack + 1 different rack) survives node + rack loss            |
+|  * Consistency: PRIMARY-SECONDARY LEASES for concurrent                 |
+|      writers; master grants 60 s lease to one replica                   |
+|      (primary) which orders writes; secondaries follow                  |
+|  * Optimized for LARGE FILES + APPEND + SEQUENTIAL READ                 |
+|      (not for small-file, low-latency workloads)                        |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * master failure? Shadow master with checkpoint + operation            |
+|      log; hot standby via ZooKeeper (HDFS HA namenode)                  |
+|  * small file problem? Metadata explodes (all in namenode RAM);         |
+|      solution = HAR/SequenceFile or object store (S3)                   |
+|  * hot chunk (viral file)? Increase replication factor;                 |
+|      read from any replica; front with a CDN                            |
+|  * data corruption? CRC-32 checksum per 4KB block; verify on            |
+|      read; auto-heal from another replica if bad                        |
+|  * replica placement? Rack-aware: 2 replicas same rack (fast            |
+|      writes), 1 different rack (rack failure survival)                  |
+|  * erasure coding? RS(6,3) = 6 data + 3 parity, tolerate 3              |
+|      failures at 50% storage overhead vs 3x replication                 |
+|  * consistency model? Relaxed: atomic record append + at-               |
+|      least-once; app dedups; not full POSIX                             |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Chunk size: 64 MB (GFS), 128 MB (HDFS 3.x default)                   |
+|  * Replication factor: 3 (default); EC RS(6,3) for cold data            |
+|  * Metadata per chunk: ~64 B in master RAM                              |
+|  * 1 PB storage / 64 MB chunks = 16 M chunks = ~1 GB metadata           |
+|  * HDFS namenode: 100s of millions of files at 100+ GB RAM              |
+|  * Sequential read throughput: 100+ MB/s per disk, 1+ GB/s              |
+|      aggregated per chunkserver                                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google GFS (2003): the original blueprint for chunk stores           |
+|  * HDFS: Hadoop's open GFS port; namenode + datanodes                   |
+|  * Google Colossus: GFS successor; distributed metadata                 |
+|  * Amazon S3: object store (different model, but similar goals)         |
+|  * Facebook Haystack: photo store optimized for immutable blobs         |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Chunk large files (64-128 MB), single master for metadata, 3x         |
+|   rack-aware replicas, primary-secondary lease for writes."             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

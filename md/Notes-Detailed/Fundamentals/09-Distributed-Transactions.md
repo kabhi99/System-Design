@@ -572,5 +572,72 @@ transactions across distributed systems.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED TRANSACTIONS -- WHAT TO SAY IN THE INTERVIEW               |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "commit across services?"):                 |
+|  * Avoid distributed transactions if you can -- redesign boundaries     |
+|  * If not: use a SAGA with an ORCHESTRATOR (Temporal / Cadence)         |
+|  * Each step is a local tx + a compensating tx for rollback             |
+|  * Every step MUST be idempotent (retries will happen)                  |
+|                                                                         |
+|  IF ASKED "why not just 2PC?":                                          |
+|  * 2PC is BLOCKING -- if the coordinator dies mid-commit, locks stick   |
+|  * Slow: every write waits for every participant across the network     |
+|  * Ok inside one datacenter with few participants (XA, some DBs)        |
+|  * Not ok across microservices / regions                                |
+|                                                                         |
+|  IF ASKED "saga orchestration vs choreography?":                        |
+|  * CHOREOGRAPHY: services react to each other's events (Kafka)          |
+|    - Pro: decoupled. Con: hard to debug, no central view                |
+|  * ORCHESTRATION: one workflow calls each service in order              |
+|    - Pro: visible state, easy retries. Con: central component           |
+|  * Recommend ORCHESTRATION for anything non-trivial                     |
+|                                                                         |
+|  IF ASKED "how do you avoid dual-write bugs?":                          |
+|  * Classic problem: write to DB THEN publish to Kafka -- can diverge    |
+|  * Fix with TRANSACTIONAL OUTBOX:                                       |
+|    1. Write business row + outbox row in ONE local DB tx                |
+|    2. Relay / CDC (Debezium) tails the outbox and publishes             |
+|  * Guarantees: local ACID + at-least-once to the queue                  |
+|                                                                         |
+|  IF ASKED "TCC (Try-Confirm-Cancel)?":                                  |
+|  * TRY: reserve resources (hold inventory, freeze funds)                |
+|  * CONFIRM: commit the reservation                                      |
+|  * CANCEL: release the reservation on failure                           |
+|  * Good for reservations (flights, hotels, payments)                    |
+|                                                                         |
+|  IF ASKED "idempotency in sagas?":                                      |
+|  * Include idempotency_key in every step call                           |
+|  * Store (key -> result) so retries return the cached response          |
+|  * Compensations must also be idempotent (safe to run twice)            |
+|                                                                         |
+|  IF ASKED "what about long-running workflows?":                         |
+|  * Use a durable workflow engine: Temporal, Cadence, Step Functions     |
+|  * State persisted, timers survive restarts, retries built in           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 2PC: 4 network round-trips minimum per commit                        |
+|  * Saga step latency: sum of local tx + queue hop (~10s of ms each)     |
+|  * Outbox lag: sub-second with CDC (Debezium + Kafka)                   |
+|  * Temporal: millions of concurrent workflows in production             |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Uber: Cadence (now Temporal) for trip / payment workflows            |
+|  * Netflix: Conductor orchestration for video pipelines                 |
+|  * Stripe: idempotency keys + retry-safe payment API                    |
+|  * LinkedIn / Debezium: CDC-based outbox at scale                       |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Skip 2PC. Use a Saga with an orchestrator, transactional outbox       |
+|     for the queue, and make every step idempotent."                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 9
 

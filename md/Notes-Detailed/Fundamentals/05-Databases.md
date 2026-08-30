@@ -1710,5 +1710,79 @@ loads, sharding for write-heavy loads, and connection pooling to reduce overhead
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DATABASES -- WHAT TO SAY IN THE INTERVIEW                              |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "SQL or NoSQL?"):                           |
+|  * Start with POSTGRES unless there's a reason not to -- ACID, JOINs,   |
+|    mature ops, JSON columns cover semi-structured cases                 |
+|  * Move to NoSQL when: >>100k writes/sec, huge scale-out, or the        |
+|    access pattern is truly key-value / time-series / graph              |
+|  * Pick by ACCESS PATTERN, not by hype:                                 |
+|    - KV lookups -> DynamoDB / Redis                                     |
+|    - Time-series metrics -> Cassandra / InfluxDB                        |
+|    - Doc / flexible schema -> MongoDB                                   |
+|    - Deep relationships -> Neo4j                                        |
+|                                                                         |
+|  IF ASKED "which isolation level?":                                     |
+|  * READ COMMITTED is the Postgres default -- fine for most APIs         |
+|  * REPEATABLE READ / SNAPSHOT for reports (no phantoms)                 |
+|  * SERIALIZABLE only when you truly need it -- big perf cost            |
+|  * Know the anomalies: dirty read, non-repeatable read, phantom,        |
+|    write skew (only serializable prevents write skew)                   |
+|                                                                         |
+|  IF ASKED "how do you handle concurrent updates?":                      |
+|  * Optimistic (version column / CAS) -- best for low-contention         |
+|  * Pessimistic (SELECT FOR UPDATE) -- for hot rows, short critical sec  |
+|  * MVCC: readers don't block writers, writers don't block readers       |
+|                                                                         |
+|  IF ASKED "how do you speed up a slow query?":                          |
+|  * EXPLAIN ANALYZE first -- confirm the plan, don't guess               |
+|  * Add a composite index that matches WHERE + ORDER BY                  |
+|  * Kill functions on indexed columns (WHERE lower(email) = ...)         |
+|  * Use KEYSET pagination (WHERE id > ?) instead of OFFSET               |
+|  * Fix N+1 with eager joins or IN (...) batching                        |
+|                                                                         |
+|  IF ASKED "why does OFFSET pagination get slow?":                       |
+|  * DB has to scan and skip N rows -- O(N) per page                      |
+|  * Page 10000 scans 10000 rows before returning 20                      |
+|  * Keyset: WHERE id > last_id is O(log N) index seek                    |
+|                                                                         |
+|  IF ASKED "indexing trade-offs?":                                       |
+|  * B-tree: default -- range + equality + ORDER BY                       |
+|  * Hash: equality only, no range                                        |
+|  * Covering index: includes all SELECT cols -> skip heap read           |
+|  * Every index makes writes slower and takes disk                       |
+|                                                                         |
+|  IF ASKED "how do you scale the DB?":                                   |
+|  * 1. Read replicas (async) -- offload reads, watch replica lag         |
+|  * 2. Connection pooling (PgBouncer) before adding hardware             |
+|  * 3. Vertical scale (bigger primary) -- fast, expensive                |
+|  * 4. Shard by tenant_id / user_id once you're at multi-TB              |
+|  * 5. Consider NewSQL (Spanner, CockroachDB) for SQL + horizontal       |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Postgres: 10k-50k TPS on good hardware                               |
+|  * B-tree index: ~O(log N), ~4-5 hops for billion rows                  |
+|  * Replica lag: sub-second typical, seconds under load                  |
+|  * Connection cost: ~10MB RAM each -> pool aggressively                 |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Instagram: Postgres sharded by user_id, PgBouncer pooling            |
+|  * Discord: Cassandra for messages, per-channel time-series             |
+|  * Uber: Schemaless (MySQL under the hood, KV on top)                   |
+|  * Figma: sharded Postgres, tenant per shard                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Postgres until proven wrong. Index the query, not the table.          |
+|     Read Committed + MVCC + read replicas gets you very far."           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 5
 

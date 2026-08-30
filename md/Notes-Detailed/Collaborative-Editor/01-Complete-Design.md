@@ -1662,3 +1662,76 @@ and persist every version of the document - all with sub-100ms latency.
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  COLLABORATIVE EDITOR (GOOGLE DOCS) -- WHAT TO SAY IN THE INTERVIEW     |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Google Docs"):                      |
+|  * WebSocket gateway per doc session (session affinity)                 |
+|  * Doc service holds canonical state in memory + OT engine              |
+|    (or CRDT merge); assigns monotonic version numbers                   |
+|  * Client applies local edits optimistically, buffers                   |
+|    unacked ops, transforms remote ops against them                      |
+|  * Append-only operation log + periodic snapshots for                   |
+|    storage and version history                                          |
+|  * Presence and cursors via Redis pub/sub (ephemeral)                   |
+|                                                                         |
+|  IF ASKED "OT vs CRDT?":                                                |
+|  * OT (Operational Transformation): needs central server                |
+|    to serialize + transform ops; smaller payload; used by               |
+|    Google Docs; hard to prove correctness                               |
+|  * CRDT (e.g., Yjs, Automerge, RGA, Logoot): commutative,               |
+|    no central coordinator, easier peer-to-peer + offline;               |
+|    larger metadata (tombstones, position IDs)                           |
+|                                                                         |
+|  IF ASKED "how do concurrent edits at same pos converge?":              |
+|  * OT: transform(insert@5, insert@5) shifts one to pos 6                |
+|  * CRDT: fractional position IDs; each insert has a unique              |
+|    ID, ordering is total, tombstones for deletes                        |
+|  * Server-serialized version numbers guarantee causal order             |
+|                                                                         |
+|  IF ASKED "presence and remote cursors?":                               |
+|  * Ephemeral, not durable; broadcast every 50-100 ms                    |
+|  * Cursor anchored to op ID (CRDT) or transformed via OT                |
+|  * Redis pub/sub or dedicated presence service                          |
+|                                                                         |
+|  IF ASKED "storage and version history?":                               |
+|  * Snapshot every N ops (e.g. 1000) + tail op log                       |
+|  * Load = latest snapshot + replay ops since snapshot                   |
+|  * Named versions (user-marked); attribution per op                     |
+|  * Compact old ops to keep log short                                    |
+|                                                                         |
+|  IF ASKED "offline editing?":                                           |
+|  * CRDTs merge natively on reconnect                                    |
+|  * OT replays local buffer, server transforms against                   |
+|    interleaved ops and rebroadcasts                                     |
+|                                                                         |
+|  IF ASKED "scale to 100+ editors on a hot doc?":                        |
+|  * Route all editors of a doc to same gateway/doc instance              |
+|    (consistent hashing on doc_id)                                       |
+|  * Hot doc: shard by document region/section, or shift to               |
+|    CRDT to allow multiple writers                                       |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Remote edit visible in <100ms, cursor updates <50ms                  |
+|  * ~50M ops/sec at peak, ~75M concurrent WebSockets                     |
+|  * Op size ~100 bytes, doc snapshot ~50 KB avg                          |
+|  * Ops log ~500 KB/doc uncompacted, ~50 KB compacted                    |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google Docs: OT + central server                                     |
+|  * Figma: multiplayer CRDT + custom sync engine                         |
+|  * Notion: OT-lite + transactional API                                  |
+|  * Yjs / Automerge: production-grade CRDT libraries                     |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "WebSocket + session affinity per doc, OT (server-                     |
+|   serialized) or CRDT (peer-mergeable), append-only op                  |
+|   log + periodic snapshots, Redis pub/sub for presence."                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

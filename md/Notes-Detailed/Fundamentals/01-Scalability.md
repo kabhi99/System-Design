@@ -1183,5 +1183,66 @@ Defining and measuring reliability and performance.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALABILITY -- WHAT TO SAY IN THE INTERVIEW                            |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you scale this?"):               |
+|  * Scale HORIZONTALLY, not vertically (vertical hits a wall fast)       |
+|  * Make services STATELESS -- state in Redis / DB, any box any req      |
+|  * Apply the SCALE CUBE:                                                |
+|    - X: clone the service behind a load balancer                        |
+|    - Y: split by function (microservices)                               |
+|    - Z: split by data (shard on user_id / tenant_id)                    |
+|  * Cache aggressively, push static to CDN, async the rest via queues    |
+|                                                                         |
+|  IF ASKED "how do you know you need to scale?":                         |
+|  * Watch the FOUR GOLDEN SIGNALS: latency, traffic, errors, saturation  |
+|  * Track p95/p99 latency vs your SLO, not averages                      |
+|  * Use Little's Law to size the pool: L = A x W                         |
+|    (e.g. 1000 rps x 200ms = 200 in-flight -> pool >= 200)               |
+|                                                                         |
+|  IF ASKED "vertical vs horizontal?":                                    |
+|  * Vertical: simple, no code changes, but bounded by 1 box + $$$        |
+|  * Horizontal: unlimited scale, but need statelessness + LB + sharding  |
+|  * Real answer: vertical for the DB primary, horizontal for app tier    |
+|                                                                         |
+|  IF ASKED "how do you find the bottleneck?":                            |
+|  * Rank suspects: DB > app CPU > network > disk I/O > downstream API    |
+|  * Confirm with metrics before optimizing -- don't guess                |
+|  * Fixes in order: add index, cache, read replicas, async, then shard   |
+|                                                                         |
+|  IF ASKED "SLI vs SLO vs SLA?":                                         |
+|  * SLI = what you measure (p99 latency, availability %)                 |
+|  * SLO = your internal target (99.9% avail, p99 < 300ms)                |
+|  * SLA = customer-facing promise with $$ penalties (looser than SLO)    |
+|  * Error budget = 100% - SLO; spend it on releases, not on incidents    |
+|                                                                         |
+|  IF ASKED "how many users can 1 server handle?":                        |
+|  * Give a range with assumptions: I/O bound ~10-50k rps, CPU ~1-5k      |
+|  * Then say: I'd load test to confirm, not guess                        |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 1 app server: ~1k-10k rps depending on workload                      |
+|  * Redis: 100k+ ops/sec/node, sub-ms latency                            |
+|  * Postgres: 10k-50k TPS on beefy hardware                              |
+|  * Common SLO: 99.9% avail = 43 min downtime / month                    |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: cell-based architecture, stateless services + EVCache       |
+|  * Uber: geo-sharded ringpop, city-level partitioning                   |
+|  * Twitter: fanout-on-write timelines, Redis-backed                     |
+|  * Amazon: Little's Law-driven capacity planning per service            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Stateless + horizontal + cache + async queue -- and prove it with     |
+|     p99 latency against an SLO backed by an error budget."              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 1
 

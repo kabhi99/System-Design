@@ -1361,5 +1361,77 @@ REST (Representational State Transfer) is the most common API style.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  API DESIGN -- WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "REST, GraphQL, or gRPC?"):                 |
+|  * REST for public / external APIs -- simple, cacheable, everywhere     |
+|  * GraphQL for mobile / rich UIs -- client picks the fields, one call   |
+|  * gRPC for INTERNAL microservices -- HTTP/2 + protobuf, ~10x faster    |
+|  * Whatever the style: version it, paginate lists, rate limit, HTTPS    |
+|                                                                         |
+|  IF ASKED "how do you version an API?":                                 |
+|  * URL path (/v1/, /v2/) -- most common, easy to debug in logs          |
+|  * Header (Accept: application/vnd.api+json;v=1) -- cleaner             |
+|  * Never break v1 while it's in use -- deprecate with Sunset header     |
+|  * Support 2 major versions in parallel, 6-12 month deprecation window  |
+|                                                                         |
+|  IF ASKED "how do you paginate?":                                       |
+|  * OFFSET/LIMIT: easy but O(N) on deep pages, and skips on new inserts  |
+|  * CURSOR / keyset: opaque token, stable + fast (Twitter, Stripe)       |
+|  * Return next_cursor + has_more; never expose raw DB IDs as cursor     |
+|                                                                         |
+|  IF ASKED "how do you rate limit?":                                     |
+|  * TOKEN BUCKET: bursty-friendly, refills at steady rate (default pick) |
+|  * SLIDING WINDOW: more accurate, more expensive to track               |
+|  * Return 429 + X-RateLimit-* + Retry-After headers                     |
+|  * Rate-limit by API KEY, not IP alone (NAT / mobile carriers)          |
+|                                                                         |
+|  IF ASKED "how do you authenticate?":                                   |
+|  * External: OAuth 2.0 (Authorization Code + PKCE for SPAs / mobile)    |
+|  * Service-to-service: short-lived JWT or mTLS                          |
+|  * Never put secrets in URLs -- always Authorization header             |
+|                                                                         |
+|  IF ASKED "webhooks -- how do you make them reliable?":                 |
+|  * Retry with exponential backoff on 5xx / timeout                      |
+|  * SIGN payloads (HMAC-SHA256) so receiver can verify authenticity      |
+|  * Include event_id so receivers can dedupe (idempotency)               |
+|  * Provide a replay / event-history endpoint                            |
+|                                                                         |
+|  IF ASKED "REST status codes?":                                         |
+|  * 200 ok, 201 created, 204 no content                                  |
+|  * 400 bad request, 401 unauthenticated, 403 forbidden, 404 not found   |
+|  * 409 conflict, 422 unprocessable, 429 rate limited                    |
+|  * 500 server error, 502/503/504 upstream problems                      |
+|  * NEVER return 200 with an error body                                  |
+|                                                                         |
+|  IF ASKED "GraphQL trade-offs?":                                        |
+|  * Great flexibility, but caching + rate limiting get harder            |
+|  * Watch for N+1 -- use dataloader batching                             |
+|  * Query depth / complexity limits to prevent abuse                     |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * gRPC ~5-10x faster than JSON REST on the wire                        |
+|  * Typical public API rate limit: 60-1000 req/min per key               |
+|  * JWT size: keep < 1KB (cookies cap at 4KB)                            |
+|  * Payload compression: gzip cuts JSON ~70-80%                          |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Stripe: REST with cursor pagination + idempotency keys               |
+|  * GitHub: REST v3 + GraphQL v4 side by side                            |
+|  * Google: gRPC internally, REST at the edge                            |
+|  * Slack: signed webhooks + event replay dashboard                      |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "REST outside, gRPC inside, GraphQL for rich clients -- version,       |
+|     paginate with cursors, rate limit, and sign your webhooks."         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 8
 

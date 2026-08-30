@@ -1698,3 +1698,76 @@ times or intervals with high availability and exactly-once semantics.
 ```
 
 END OF DISTRIBUTED JOB SCHEDULER SYSTEM DESIGN
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED JOB SCHEDULER -- WHAT TO SAY IN THE INTERVIEW              |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design a job scheduler"):                  |
+|  * API service accepts jobs (one-time, delayed, cron)                   |
+|  * MySQL/Postgres job store as source of truth                          |
+|  * Scheduler service: leader-elected OR partitioned,                    |
+|    scans (status, next_run_time) index for due jobs                     |
+|  * Ready queue: Redis sorted set or Kafka                               |
+|  * Stateless worker fleet, heartbeat every ~10s                         |
+|  * Retry with backoff + jitter, DLQ on exhaustion                       |
+|                                                                         |
+|  IF ASKED "how do you find due jobs efficiently?":                      |
+|  * B-tree index on (status, next_run_time), poll every 1s               |
+|  * Or Redis ZADD next_run_time as score, ZRANGEBYSCORE                  |
+|  * Time-bucketed queues partition load by minute                        |
+|                                                                         |
+|  IF ASKED "scheduler HA without duplicate execution?":                  |
+|  * Leader election via ZooKeeper / etcd / Redis lease                   |
+|    (standby detects loss, takes over in ~10s)                           |
+|  * Or partitioned: hash(job_id) % N, no leader needed,                  |
+|    consistent hashing on failure                                        |
+|  * Or DB coordination: SELECT FOR UPDATE SKIP LOCKED                    |
+|                                                                         |
+|  IF ASKED "exactly-once execution?":                                    |
+|  * Distributed lock on (job_id, scheduled_time) via                     |
+|    Redis SETNX or DB row lock; only first worker wins                   |
+|  * Handlers idempotent as defense-in-depth                              |
+|  * Fencing tokens for downstream side effects                           |
+|                                                                         |
+|  IF ASKED "worker crashes mid-execution?":                              |
+|  * Heartbeat every 10s to jobs.heartbeat_at column                      |
+|  * Monitor marks jobs stale (heartbeat > 60s) as FAILED                 |
+|  * Retry with exponential backoff; per-job timeout                      |
+|                                                                         |
+|  IF ASKED "scheduler down, missed schedules?":                          |
+|  * Per-job misfire policy: SKIP_MISSED (default),                       |
+|    RUN_ONCE (single catch-up), RUN_ALL (all missed)                     |
+|                                                                         |
+|  IF ASKED "cron + timezones + DST?":                                    |
+|  * Store user timezone, cron expression in original TZ                  |
+|  * Compute next_run_time in UTC using tz library                        |
+|  * Handle DST spring-forward (skip) and fall-back (dupe)                |
+|                                                                         |
+|  IF ASKED "scale to millions of jobs?":                                 |
+|  * Time-bucket partitioning of job store                                |
+|  * Partitioned scheduling with consistent hashing                       |
+|  * Read replicas for reporting queries                                  |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * ~100M jobs stored, ~10K executions/second                            |
+|  * Failover time: ~10 seconds with leader election                      |
+|  * Heartbeat interval 10s, stuck detection at 60s                       |
+|  * Index lookup O(log N), lock O(1)                                     |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Quartz (Java) cluster mode with DB coordination                      |
+|  * Chronos on Mesos, K8s CronJob (controller + etcd)                    |
+|  * Airflow scheduler (DAG-focused)                                      |
+|  * AWS EventBridge Scheduler, Google Cloud Scheduler                    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "MySQL job store + Redis sorted set ready queue +                      |
+|   leader-elected (or SKIP LOCKED) scheduler + heartbeating              |
+|   stateless workers with retry, DLQ, and misfire policy."               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

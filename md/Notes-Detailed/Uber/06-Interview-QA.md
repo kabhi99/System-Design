@@ -571,5 +571,60 @@ A: Log and analyze, retrain ML models, update traffic data.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  UBER / RIDE-HAILING — WHAT TO SAY IN THE INTERVIEW                     |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Geospatial index: S2 cells (Google) or H3 hexagons (Uber);           |
+|      hierarchical, so 'nearby drivers' = scan a few cells               |
+|  * Location service: Redis GEO (last position) + Kafka stream           |
+|      of updates for history/analytics; TTL on stale drivers             |
+|  * Matching service does BATCHED matching every ~2 s per cell           |
+|      (Hungarian algorithm) -> better global assignments than            |
+|      greedy nearest-first                                               |
+|  * Distributed lock (Redis SETNX / ZK) on driver_id to prevent          |
+|      double-assignment; fencing token protects against GC pause         |
+|  * ETA: contraction-hierarchies precomputed + live traffic overlay      |
+|  * Surge pricing: demand/supply ratio per hex zone, updated ~30 s       |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * 250K location updates/sec? Redis GEO sharded by city; updates        |
+|      are last-write-wins; Kafka fanout for downstream consumers         |
+|  * prevent two riders matching the same driver? Optimistic              |
+|      compare-and-set on driver.status + distributed lock                |
+|  * driver rejection or timeout? Push to next-best candidate;            |
+|      10-second driver decision window; expanding search radius          |
+|  * data-center failure? Multi-region active-active with async           |
+|      cross-region Kafka mirror; DNS shift + city-affinity routing       |
+|  * surge pricing loop? Rider raises price -> more drivers online        |
+|      -> supply catches up -> multiplier decays; smoothing window        |
+|  * why S2/H3 over lat/lng? Fixed-cell queries beat radius scans;        |
+|      hex has uniform neighbor distance (better than square/geohash)     |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 100M MAU, 5M drivers, 1M concurrent online at peak                   |
+|  * 20M rides/day (~230/s avg, 1000/s peak)                              |
+|  * Location updates every 4 s => 250K writes/sec                        |
+|  * Location update record ~100 B; 21.6 B updates/day = 2.2 TB           |
+|  * Match latency budget: p99 < 1 s (ride request -> driver ping)        |
+|  * ETA p99 < 500 ms; typical 5-10% error vs actual arrival              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Uber: H3 hex grid + Ringpop consistent hashing for matching          |
+|  * Lyft: quadtrees + custom dispatch service in Go                      |
+|  * DoorDash / Instacart: same geo-matching pattern, different SLA       |
+|  * Grab: S2 cells + region-local matching; multi-country failover       |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "S2/H3 cells + Redis GEO for location, batched Hungarian matching every|
+|   2 s, distributed lock + fencing on driver claim."                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 6
 

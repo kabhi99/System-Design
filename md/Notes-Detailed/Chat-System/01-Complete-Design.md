@@ -2255,3 +2255,55 @@ group conversations, and deliver messages reliably even when recipients are offl
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  CHAT SYSTEM — WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Persistent WebSocket (bi-directional, low overhead) from client      |
+|      to a Connection Gateway that holds the session                     |
+|  * Message Service writes to Cassandra (partition by conversation_id)   |
+|      then produces to Kafka; consumers fan out to online recipients     |
+|  * Presence Service in Redis (heartbeats + pub/sub); TTL-based online   |
+|      status; typing indicators over the same WebSocket                  |
+|  * Offline delivery: message written first, pushed via APNs/FCM later   |
+|  * MySQL for metadata (users, group members); Cassandra for messages    |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * message ordering? Per-conversation partition key + Cassandra         |
+|      clustering by ts; hybrid logical clocks for cross-region ties      |
+|  * group fan-out (10K members)? Write once, iterate members; async      |
+|      worker pool + Kafka partitioned by user_id for delivery            |
+|  * read receipts? Bitmap per (conv, user) in Redis; batch flush to      |
+|      Cassandra; broadcast 'read up to msg_id' event                     |
+|  * message dedup? Client-generated msg_uuid + INSERT IF NOT EXISTS      |
+|      in Cassandra; retries safe                                         |
+|  * E2E encryption? Signal protocol / double-ratchet; server sees        |
+|      ciphertext only; no server-side search; keys per device            |
+|  * unread count? Per-conversation counter in Redis, decrement on        |
+|      read; total unread = SUM per user (cached)                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 500M DAU, 100M concurrent WebSockets at peak                         |
+|  * 60B messages/day (avg 700K/s, peak ~2M/s)                            |
+|  * Message record ~500 B; 30 TB/day; 90 days hot in Cassandra           |
+|  * WebSocket connection budget: ~100K per gateway node                  |
+|  * Presence heartbeat every 30s; TTL 90s for online status              |
+|  * E2E: X25519 keys, AES-GCM messages; keys rotated per session         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * WhatsApp: Erlang + XMPP-derived, 2B users on modest servers          |
+|  * Slack: MySQL sharded by team, WebSocket + Kafka                      |
+|  * Signal: full E2E with double-ratchet + sealed sender                 |
+|  * Facebook Messenger: MyRocks + Iris (custom presence service)         |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "WebSocket to gateway, Kafka fan-out, Cassandra by conversation_id,    |
+|   Redis presence, per-conversation ordering."                           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

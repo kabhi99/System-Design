@@ -853,3 +853,58 @@ across varying network conditions and devices.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  VIDEO STREAMING (NETFLIX/YOUTUBE) — WHAT TO SAY IN THE INTERVIEW       |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Upload -> S3/GCS raw bucket -> transcode farm produces               |
+|      multiple bitrate ladders (240p to 4K) in HLS/DASH                  |
+|  * Each rendition split into 2-10 s segments (.ts / .mp4) with          |
+|      a manifest (.m3u8 / .mpd); player switches bitrate per             |
+|      segment based on measured bandwidth (ABR)                          |
+|  * Segments pushed to CDN (multi-CDN: Akamai + Cloudfront +             |
+|      own POPs like Netflix Open Connect); origin shielded               |
+|  * Metadata + catalog in MySQL/Cassandra; recommendation in             |
+|      a separate ML service                                              |
+|  * Live streaming: RTMP/WebRTC ingest -> transcode with low-            |
+|      latency HLS (LL-HLS) or CMAF chunks; 3-8 s glass-to-glass          |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * adaptive bitrate? Player measures throughput + buffer level,         |
+|      requests next segment at appropriate bitrate; smooth switch        |
+|  * startup latency? Prefetch first 2 segments + low-res quick           |
+|      start; DNS + CDN edge peering                                      |
+|  * storage cost? Store source once + N renditions; per-title            |
+|      encoding (Netflix): tune ladder to content complexity              |
+|  * DRM? Widevine / FairPlay / PlayReady; keys served via                |
+|      license server after playback authorization                        |
+|  * live streaming latency? LL-HLS/CMAF (3-8 s), WebRTC (< 1 s)          |
+|      for interactive; RTMP still common for ingest                      |
+|  * hot content (viral video)? CDN + prewarm popular regions;            |
+|      origin protected by shielding tier                                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 500 M DAU, 1 B hours watched/day (Netflix/YouTube scale)             |
+|  * Bitrate ladder: 400 kbps (240p) to 15 Mbps (4K HDR)                  |
+|  * 1 hour of source ~ 1 GB; 5-8 renditions => 3-5 GB stored             |
+|  * Segment size: 2-10 s (short = agility, long = compression)           |
+|  * CDN egress: >1 Tbps at prime time (Netflix)                          |
+|  * Startup latency target: < 2 s to first frame                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: Open Connect (custom CDN in ISPs) + per-title encode        |
+|  * YouTube: VP9/AV1 encoding + adaptive DASH + global CDN               |
+|  * Twitch: LL-HLS + WebRTC for < 3 s live; HAProxy origins              |
+|  * Disney+: multi-CDN + BAMTech player + Widevine DRM                   |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Transcode to HLS/DASH bitrate ladder, push to multi-CDN, player picks |
+|   bitrate per segment based on bandwidth."                              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

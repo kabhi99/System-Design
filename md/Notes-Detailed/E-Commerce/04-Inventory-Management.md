@@ -478,3 +478,73 @@ handling race conditions during flash sales.
 
 ## END OF CHAPTER 4
 
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  E-COMMERCE -- WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Amazon / an e-commerce site?"):     |
+|  * Microservices split by bounded context: catalog, search,             |
+|  cart, inventory, order, payment, fulfillment, notifications            |
+|  * Catalog in a NoSQL store (DynamoDB/Cassandra) fronted by             |
+|  Elasticsearch for search; images/media in S3 + CDN                     |
+|  * Cart in Redis (per-user hash) with DB persistence for logged-in      |
+|  users; anonymous carts by cookie/session id                            |
+|  * Checkout as a Saga (orchestrated): reserve inventory -> auth         |
+|  payment -> create order -> ship; each step idempotent                  |
+|  * Inventory service is the concurrency hotspot -- reserve model        |
+|  with holds + TTL, confirmed on payment success                         |
+|                                                                         |
+|  IF ASKED "how do you prevent overselling?":                            |
+|  * available = on_hand - reserved - sold; reserve first, don't          |
+|  decrement on_hand until fulfilled                                      |
+|  * Atomic Redis DECRBY with a floor check via Lua script; DB            |
+|  is source of truth with optimistic version + UPDATE ...                |
+|  WHERE available >= qty                                                 |
+|  * Flash sale: pre-load stock into Redis, atomic reserves, later        |
+|  drain to DB in batches (write-behind)                                  |
+|                                                                         |
+|  IF ASKED "multi-warehouse / split shipment?":                          |
+|  * Inventory sharded by SKU + warehouse_id; each row locked             |
+|  independently                                                          |
+|  * Allocation service picks nearest warehouse(s) that satisfy           |
+|  the cart -> may split into multiple shipments                          |
+|  * Rebalance stock across warehouses via async ETL; hot SKUs            |
+|  pinned to multiple regional warehouses                                 |
+|                                                                         |
+|  IF ASKED "how does the checkout saga work?":                           |
+|  * Orchestrator writes saga state to DB per step; on failure it         |
+|  runs compensating actions in reverse (release seat, refund)            |
+|  * Every service exposes idempotent APIs keyed by order_id +            |
+|  operation_id                                                           |
+|  * Kafka carries events: order_created, inventory_reserved,             |
+|  payment_authorized, order_confirmed, order_shipped                     |
+|                                                                         |
+|  IF ASKED "consistency between cache and DB?":                          |
+|  * Cache-aside on reads; on write, update DB then DELETE key            |
+|  * For invalidations we can't lose: transactional outbox + CDC          |
+|  (Debezium) -> Kafka -> cache invalidator                               |
+|  * TTL as safety net (5-60 min); jitter to avoid stampede               |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Amazon Prime Day: 300M+ items sold, ~10M orders/hour peak            |
+|  * Cart abandonment ~70%; conversion 2-3%                               |
+|  * Inventory reserve TTL: 15-30 minutes                                 |
+|  * Search p99 target: < 200ms with fuzzy + facets                       |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Amazon: DynamoDB single-table, S2 for warehouse geo, SQS+SNS         |
+|  * Shopify: MySQL sharded per shop, Kafka for downstream                |
+|  * Flipkart Big Billion Day: pre-book + queued checkout                 |
+|  * eBay: Cassandra for cart, Elasticsearch for catalog search           |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Microservices + orchestrated Saga for checkout, inventory           |
+|   with reserve/confirm/release + Redis-backed atomic decrement,         |
+|   and idempotent APIs so retries never oversell or double-charge."      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

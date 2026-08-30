@@ -1486,4 +1486,74 @@ distributed applications.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  MESSAGE QUEUES -- WHAT TO SAY IN THE INTERVIEW                         |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "why a queue here?"):                       |
+|  * DECOUPLE producer from consumer -- deploy independently              |
+|  * Absorb TRAFFIC SPIKES (queue is a shock absorber)                    |
+|  * Move slow work off the request path (email, thumbnail, index)        |
+|  * Enable retry / DLQ for failed work without blocking users            |
+|                                                                         |
+|  IF ASKED "which delivery guarantee?":                                  |
+|  * At-least-once is the default in Kafka / SQS / RabbitMQ               |
+|  * Consumers MUST be IDEMPOTENT -- dedupe by message_id / event_id      |
+|  * Exactly-once is possible (Kafka transactions) but adds cost          |
+|  * At-most-once only for metrics / fire-and-forget                      |
+|                                                                         |
+|  IF ASKED "how do you preserve ordering?":                              |
+|  * Order is guaranteed only WITHIN a partition, not across              |
+|  * Pick a partition key that groups related events (user_id, order_id)  |
+|  * Global ordering kills throughput -- avoid if you can                 |
+|                                                                         |
+|  IF ASKED "Kafka vs RabbitMQ vs SQS?":                                  |
+|  * Kafka: high-throughput log, replay, streaming, big data pipelines    |
+|  * RabbitMQ: rich routing (topics, exchanges), task queues, low latency |
+|  * SQS: fully managed, simple, no ordering (FIFO SQS if needed)         |
+|  * Kinesis / PubSub: cloud-managed Kafka-alikes                         |
+|                                                                         |
+|  IF ASKED "how do you make consumers idempotent?":                      |
+|  * Store processed message_ids in Redis / DB (dedupe table with TTL)    |
+|  * Or design the operation to be naturally idempotent (upserts, SET)    |
+|  * Use conditional writes (version / etag) for state changes            |
+|                                                                         |
+|  IF ASKED "what about slow consumers / backpressure?":                  |
+|  * Kafka: pull-based -- consumers set their own pace                    |
+|  * RabbitMQ: prefetch limit + ack pacing                                |
+|  * Add more consumers in the group (each partition -> 1 consumer)       |
+|  * Shed load or drop non-critical messages if the queue backs up        |
+|                                                                         |
+|  IF ASKED "what happens to bad messages?":                              |
+|  * Retry with exponential backoff (a few times)                         |
+|  * Then move to a DEAD LETTER QUEUE (DLQ) for manual inspection         |
+|  * Never block the whole partition on one poison pill                   |
+|                                                                         |
+|  IF ASKED "event sourcing / CQRS?":                                     |
+|  * Event Sourcing: store events as source of truth, derive state        |
+|  * CQRS: separate write model (commands) from read model (queries)      |
+|  * Adds complexity -- only use when audit / temporal queries matter     |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Kafka: 1M+ msg/sec per broker, retains days/weeks of data            |
+|  * RabbitMQ: 20k-50k msg/sec per node, low ms latency                   |
+|  * SQS: 3000 msg/sec per queue (Standard), FIFO caps at 300             |
+|  * Typical DLQ threshold: 3-5 retries with backoff                      |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * LinkedIn: invented Kafka, uses it for everything (activity, CDC)     |
+|  * Uber: Kafka for trip events + geo-index updates                      |
+|  * Netflix: Kafka + Flink for real-time recommendations                 |
+|  * Slack: RabbitMQ for message fanout to WebSocket gateways             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Kafka for logs and replay, RabbitMQ for routing, SQS for managed --   |
+|     at-least-once + idempotent consumers + DLQ is the recipe."          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 7

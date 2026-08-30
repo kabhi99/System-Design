@@ -548,3 +548,74 @@
 ```
 
 END OF ZOOM HLD
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  VIDEO CONFERENCING (ZOOM) -- WHAT TO SAY IN THE INTERVIEW              |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Zoom"):                             |
+|  * Signaling over WebSocket + media over WebRTC (RTP/SRTP/UDP)          |
+|  * SFU as the media server: client sends 1 stream up, SFU               |
+|    fans out selectively (low CPU, low latency)                          |
+|  * Simulcast: sender encodes 3 layers, SFU picks best per               |
+|    receiver; adaptive bitrate via REMB / transport-cc                   |
+|  * STUN + TURN for NAT traversal; Postgres for meeting/user             |
+|    metadata; Redis for presence + meeting-to-SFU mapping                |
+|  * Regional SFUs, cascade SFUs for global meetings                      |
+|                                                                         |
+|  IF ASKED "SFU vs MCU vs P2P mesh?":                                    |
+|  * P2P mesh: OK for 1:1 or <=4 users, bandwidth is N^2                  |
+|  * SFU: default choice, forwards streams selectively                    |
+|  * MCU: decode + mix + re-encode; only for PSTN dial-in or              |
+|    very weak clients (CPU-heavy, higher latency)                        |
+|                                                                         |
+|  IF ASKED "how do 1000+ participant meetings scale?":                   |
+|  * SFU cascade: each SFU handles ~100-200 users, SFUs in                |
+|    mesh/star exchange active-speaker streams                            |
+|  * Forward video only for active speaker + a few recent                 |
+|    speakers; thumbnails / no video for the rest                         |
+|  * For 50K+ view-only webinars: transcode to HLS/DASH and               |
+|    fan out via CDN (higher latency, near-infinite scale)                |
+|                                                                         |
+|  IF ASKED "how do you keep global latency low?":                        |
+|  * Anycast or geo-DNS to nearest region; media stays regional           |
+|    when all participants are in one region                              |
+|  * SFU cascading only across regions for mixed meetings                 |
+|  * UDP with congestion control (REMB, transport-cc), jitter             |
+|    buffer, NACK + PLI for video, FEC + PLC for audio                    |
+|                                                                         |
+|  IF ASKED "end-to-end encryption with an SFU?":                         |
+|  * Use Insertable Streams: encrypt payload before RTP                   |
+|  * SFU forwards encrypted packets, cannot decrypt content               |
+|  * AES-256-GCM per-meeting key, distributed via signaling               |
+|  * Cost: no server recording, no PSTN dial-in, no efficient             |
+|    simulcast layer selection                                            |
+|                                                                         |
+|  IF ASKED "how do you survive bad networks?":                           |
+|  * Simulcast + SFU picks lower layer for slow receiver                  |
+|  * Graceful degrade: 1080p -> 720p -> 360p -> audio-only,               |
+|    never drop the call entirely                                         |
+|  * Opus FEC + PLC for audio, NACK / PLI for video loss                  |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Target E2E latency: <150ms ideal, <400ms acceptable                  |
+|  * 720p ~1.5 Mbps, 1080p ~3 Mbps, Opus 64-128 kbps                      |
+|  * SFU capacity ~100-200 participants per server                        |
+|  * Zoom scale: 300M+ daily meeting participants                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Zoom: proprietary desktop protocol + SFU + cascading                 |
+|  * Google Meet: WebRTC + SFU + VP9 simulcast                            |
+|  * Microsoft Teams: SFU with custom H.264 optimizations                 |
+|  * Twitch / YouTube Live: HLS/DASH + CDN for view-only                  |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "WebRTC + SFU with simulcast and adaptive bitrate, cascade             |
+|   SFUs regionally for global scale, and Insertable Streams              |
+|   for optional per-meeting E2E encryption."                             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

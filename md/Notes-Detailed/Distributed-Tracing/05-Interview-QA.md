@@ -511,3 +511,79 @@ SECTION 5.5: QUICK REFERENCE CHEAT SHEET
 *+-------------------------------------------------------------------------+*
 
 END OF CHAPTER 5 - DISTRIBUTED TRACING SYSTEM DESIGN
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED TRACING (JAEGER) -- WHAT TO SAY IN THE INTERVIEW           |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design distributed tracing"):              |
+|  * OpenTelemetry SDK in each service emits spans                        |
+|  * Local agent (sidecar / DaemonSet) receives via UDP,                  |
+|    batches, forwards over gRPC                                          |
+|  * Stateless collectors validate, enrich, sample, then                  |
+|    write to Kafka (buffer) -> ingester -> storage                       |
+|  * Storage: Cassandra for spans (partition by trace_id)                 |
+|    + Elasticsearch for tag/service search + object store                |
+|  * Query service + UI for waterfall and service graphs                  |
+|                                                                         |
+|  IF ASKED "context propagation across services?":                       |
+|  * W3C traceparent header:                                              |
+|    00-<trace_id>-<span_id>-<flags>                                      |
+|  * Passed via HTTP headers, gRPC metadata, Kafka headers                |
+|  * Baggage carries key-value context across spans                       |
+|                                                                         |
+|  IF ASKED "head vs tail sampling?":                                     |
+|  * Head: decide at root span, propagate flag; simple, low               |
+|    overhead, but can't sample based on error/latency                    |
+|  * Tail: buffer all spans of a trace, decide after complete;            |
+|    captures 100% of errors + slow traces, memory-heavy                  |
+|  * Mix: head-sample errors 100%, random 1% otherwise                    |
+|                                                                         |
+|  IF ASKED "sampling strategies?":                                       |
+|  * Probabilistic (constant rate, e.g. 1%)                               |
+|  * Rate-limiting (max N traces/sec, token bucket)                       |
+|  * Adaptive (target constant sample volume as load varies)              |
+|  * Per-operation (100% payment, 0.01% healthcheck)                      |
+|  * Force-sample via sampling.priority tag (VIP, debug user)             |
+|                                                                         |
+|  IF ASKED "tail sampling in a distributed collector?":                  |
+|  * Route all spans of same trace_id to same collector via               |
+|    consistent hashing at the LB                                         |
+|  * Buffer up to `decision_wait` seconds per trace                       |
+|  * Policies: error, latency > threshold, string_attribute               |
+|                                                                         |
+|  IF ASKED "how do you keep overhead low?":                              |
+|  * <1% CPU, <5% latency budget in the SDK                               |
+|  * Fire-and-forget UDP from app to agent                                |
+|  * Async batched writes; drop-on-full over blocking                     |
+|  * Sampling to reduce volume before storage                             |
+|                                                                         |
+|  IF ASKED "storage schema and retention?":                              |
+|  * Cassandra: partition by trace_id, clustering by span_id              |
+|    (fast trace-by-ID lookup) with TTL for retention                     |
+|  * Elasticsearch: secondary index for search by service /               |
+|    operation / tags, time-bucketed indices                              |
+|  * Grafana Tempo alternative: object storage (S3), cheap                |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 100K req/s * 20 spans = 2M spans/sec generated                       |
+|  * At 10% sampling: 200K spans/s, ~100 MB/s writes                      |
+|  * Compressed storage ~1.7 TB/day; ~12 TB for 7 days                    |
+|  * Single collector ~50-100K spans/sec, 2-4 CPU cores                   |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Jaeger (Uber, CNCF graduated)                                        |
+|  * Zipkin (Twitter, simpler, mature)                                    |
+|  * Grafana Tempo (object storage, cost-effective)                       |
+|  * AWS X-Ray, Google Cloud Trace, Datadog APM, Lightstep                |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "OpenTelemetry SDK -> agent -> stateless collector ->                  |
+|   Kafka -> Cassandra + Elasticsearch, with head sampling                |
+|   by default and tail sampling for errors and slow traces."             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

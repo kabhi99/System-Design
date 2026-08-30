@@ -485,5 +485,62 @@ A: Use Sentinel-aware client, handle connection errors, implement retry logic.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED CACHE — WHAT TO SAY IN THE INTERVIEW                       |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design X?"):                 |
+|  * Data distribution via CONSISTENT HASHING (virtual nodes to           |
+|      smooth load); node add/remove moves only 1/N of keys               |
+|  * Redis Cluster: 16,384 hash slots, gossip protocol, each              |
+|      master has async replicas; CRC16(key) % 16384 -> slot              |
+|  * Replication: primary-replica async (fast, may lose <1s of            |
+|      writes on failover); can add semi-sync for critical data           |
+|  * Cache-aside is the default pattern: app reads cache, on              |
+|      miss reads DB and populates cache; write = update DB +             |
+|      DELETE cache key                                                   |
+|  * TTL on every key as safety net; jitter TTLs to avoid mass            |
+|      expiry (cache avalanche)                                           |
+|                                                                         |
+|  IF ASKED "how do you handle X?" (~3-5 common follow-ups):              |
+|  * cache stampede? SETNX lock so only one rebuilder; early              |
+|      refresh at 80% TTL; jitter                                         |
+|  * hot key (celebrity)? 2-tier cache (local LRU in-app +                |
+|      Redis); replicate hot key across shards + random pick              |
+|  * cache penetration (bots probing missing keys)? Cache NULL            |
+|      with short TTL; bloom filter in front for hard 404                 |
+|  * consistency with DB? Cache-aside + delete-on-write + TTL;            |
+|      transactional outbox for invalidations you must not lose           |
+|  * cluster vs sentinel? Sentinel = HA only (single dataset);            |
+|      Cluster = HA + sharding (16K slots)                                |
+|  * RDB vs AOF? RDB = periodic snapshot (fast restart, some              |
+|      loss); AOF = append-only log (durable, larger disk)                |
+|  * why single-threaded Redis? Avoids locks; scale via cluster           |
+|      + pipelining; still 100K+ ops/sec per node                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis: 100K+ ops/sec/node, < 1 ms latency                            |
+|  * Target hit rate: 80-99% (< 80% = redesign)                           |
+|  * Redis Cluster: 16,384 slots, up to 1000 nodes practical              |
+|  * CDN edge: ~20 ms vs origin ~300 ms cross-continent                   |
+|  * Consistent hashing: 100-200 virtual nodes per physical               |
+|  * Cache-aside miss cost: 10-100 ms (DB) vs 1 ms (hit)                  |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Facebook: memcached + TAO (cache-aside at scale)                     |
+|  * Twitter: Redis for timelines (write-fanout to cache)                 |
+|  * Netflix: EVCache (memcached-based, multi-region replicate)           |
+|  * Instagram: Redis + memcached 2-tier                                  |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Consistent hashing + Redis Cluster (16K slots) + cache-aside with TTL |
+|   + jitter, replicate hot keys, bloom for penetration."                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 5
 

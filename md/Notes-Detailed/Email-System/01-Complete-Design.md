@@ -1560,3 +1560,83 @@ guaranteeing that no legitimate email is ever lost.
 ```
 
 *End of Email System Design*
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  EMAIL SYSTEM (GMAIL-LIKE) -- WHAT TO SAY IN THE INTERVIEW              |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Gmail"):                            |
+|  * SMTP for send/relay (25 server-to-server, 587 auth)                  |
+|  * IMAP (993) for read; POP3 legacy                                     |
+|  * Postgres for user + mailbox metadata, sharded by user_id             |
+|  * Emails as immutable blobs in object storage (S3)                     |
+|  * Folders/labels as views over the same messages                       |
+|  * Elasticsearch for search, async-indexed via Kafka                    |
+|  * Outbound queue with retry, spam pipeline on receive                  |
+|                                                                         |
+|  IF ASKED "email authentication (anti-spoofing)?":                      |
+|  * SPF: DNS TXT of authorized sending IPs                               |
+|  * DKIM: sender signs headers+body with private key,                    |
+|    receiver verifies via public key in DNS                              |
+|  * DMARC: policy layer on top -- none / quarantine /                    |
+|    reject if SPF or DKIM fails; aggregate reports                       |
+|                                                                         |
+|  IF ASKED "how does a send actually work?":                             |
+|  * Client -> API validates + saves to Sent                              |
+|  * Push to outbound Kafka queue (durability)                            |
+|  * Worker does DNS MX lookup for recipient domain                       |
+|  * SMTP conversation to highest-priority MX host                        |
+|  * On 4xx: retry with exponential backoff up to 48-72h                  |
+|  * On 5xx: hard bounce, DSN to sender + suppression list                |
+|                                                                         |
+|  IF ASKED "spam filtering pipeline?":                                   |
+|  * SPF/DKIM/DMARC check                                                 |
+|  * IP + domain + user reputation score                                  |
+|  * Bayesian filter on tokens                                            |
+|  * ML classifier trained on user "mark as spam" signal                  |
+|  * Content rules (URLs, attachments, headers)                           |
+|  * User feedback loop retrains models                                   |
+|                                                                         |
+|  IF ASKED "mailbox storage model?":                                     |
+|  * Emails immutable objects; label/folder is metadata,                  |
+|    not a physical copy (Gmail label model)                              |
+|  * Attachment deduplication by SHA-256 hash                             |
+|  * Threading via References / In-Reply-To headers                       |
+|                                                                         |
+|  IF ASKED "how do you shard mailboxes?":                                |
+|  * Consistent hashing by user_id -> mailbox shard                       |
+|  * Cross-shard search via distributed query aggregation                 |
+|  * Read replicas per shard for search-heavy workloads                   |
+|                                                                         |
+|  IF ASKED "search at scale?":                                           |
+|  * Elasticsearch index per shard, indexed async from Kafka              |
+|  * Time-bucketed indices for retention (rotate old ones)                |
+|  * Cache recent searches per user in Redis                              |
+|                                                                         |
+|  IF ASKED "IMAP vs POP3?":                                              |
+|  * IMAP: server-side storage, multi-device sync, folders,               |
+|    partial fetch, flags (\Seen, \Flagged)                               |
+|  * POP3: download-and-delete, no sync, legacy only                      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Attachment dedup: 50-70% storage saved                               |
+|  * SMTP retry window: 48-72 hours                                       |
+|  * Gmail scale: ~1.5B users, billions of msgs/day                       |
+|  * 99.9% inbox delivery targets for reputable senders                   |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Gmail: Bigtable + custom SMTP + spam ML                              |
+|  * Outlook / Exchange, Yahoo Mail                                       |
+|  * SendGrid / Postmark / AWS SES for transactional                      |
+|  * Postfix + Dovecot + SpamAssassin (open source stack)                 |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "SMTP + IMAP with SPF/DKIM/DMARC, immutable email                      |
+|   objects with label-based folders, sharded mailboxes,                  |
+|   async ES indexing, and a spam pipeline on ingress."                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

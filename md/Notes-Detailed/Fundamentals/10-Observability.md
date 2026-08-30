@@ -483,5 +483,74 @@ by examining its outputs. The three pillars: Metrics, Logs, and Traces.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  OBSERVABILITY -- WHAT TO SAY IN THE INTERVIEW                          |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how do you observe this?"):                |
+|  * THREE PILLARS: metrics, logs, traces -- correlated by trace_id       |
+|  * Metrics: FOUR GOLDEN SIGNALS = latency, traffic, errors, saturation  |
+|  * Logs: STRUCTURED (JSON) with trace_id, user_id, request_id           |
+|  * Traces: OpenTelemetry, propagate context via headers                 |
+|  * Alert on SYMPTOMS (SLO burn), not on causes (CPU spike)              |
+|                                                                         |
+|  IF ASKED "metrics -- what do you track?":                              |
+|  * RED for services: Rate, Errors, Duration (p50/p95/p99)               |
+|  * USE for resources: Utilization, Saturation, Errors                   |
+|  * Track p99, not averages -- averages hide tail latency                |
+|  * Business metrics too: signups/min, checkout success rate             |
+|                                                                         |
+|  IF ASKED "how do you debug a latency spike?":                          |
+|  * Start with SLO dashboards -- which service is burning budget?        |
+|  * Drill into TRACES for slow requests -- find the slow span            |
+|  * Correlate LOGS by trace_id at the slow span                          |
+|  * Check saturation (CPU / DB pool / GC) around the same time           |
+|                                                                         |
+|  IF ASKED "logging best practices?":                                    |
+|  * STRUCTURED JSON -- searchable in ELK / Loki / Datadog                |
+|  * Always include trace_id + request_id + user_id                       |
+|  * NEVER log secrets, PII, full payloads by default                     |
+|  * Log LEVELS: debug (off in prod), info, warn, error                   |
+|  * Sample high-volume logs to control cost                              |
+|                                                                         |
+|  IF ASKED "how does tracing actually work?":                            |
+|  * Assign a trace_id at the edge (LB / gateway)                         |
+|  * Propagate via W3C traceparent header through every hop               |
+|  * Each service emits SPANS (start, end, tags) to a collector           |
+|  * Sample (e.g. 1-10%) to keep cost sane; always sample errors          |
+|                                                                         |
+|  IF ASKED "alerting -- how to avoid fatigue?":                          |
+|  * Alert on SLO burn rate, not on raw thresholds                        |
+|  * Two-tier: FAST-burn (page in minutes) + SLOW-burn (ticket in hours)  |
+|  * Every page needs a runbook + a dashboard link                        |
+|  * If an alert fires with no action -> delete it                        |
+|                                                                         |
+|  IF ASKED "observability at scale / cost?":                             |
+|  * Metrics: cheap (pre-aggregated), keep years                          |
+|  * Logs: expensive, sample + retention tiers                            |
+|  * Traces: sample aggressively (1-10%), keep errors + slow requests     |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Typical trace sampling: 1-10% of requests, 100% of errors            |
+|  * Prometheus: 1M samples/sec per node with remote write                |
+|  * SLO burn budget: 99.9% avail = 43 min/month; alert at 2%/hour burn   |
+|  * Log volume: 1-10 KB per request in structured JSON                   |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google: Dapper (original distributed tracing paper)                  |
+|  * Netflix: Atlas (metrics) + Mantis (streaming observability)          |
+|  * Uber: Jaeger (open-sourced tracing)                                  |
+|  * Standard stack today: OpenTelemetry + Prometheus + Grafana + Loki    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Metrics + logs + traces, correlated by trace_id, alerting on SLO      |
+|     burn rate -- and every page ships with a runbook."                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 10
 

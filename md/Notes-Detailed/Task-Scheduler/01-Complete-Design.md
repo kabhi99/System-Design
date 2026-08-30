@@ -2254,3 +2254,76 @@
 ```
 
 *End of Distributed Task Scheduler System Design*
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TASK SCHEDULER -- WHAT TO SAY IN THE INTERVIEW                         |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design a task scheduler"):                 |
+|  * API + sharded Postgres task store as durable record                  |
+|  * Scheduler service moves due tasks to a priority queue                |
+|  * Ready queue: Redis sorted set (near-term) or Kafka                   |
+|  * Stateless workers grouped by task type, K8s + KEDA                   |
+|  * Idempotency key + DB CAS for effective exactly-once                  |
+|  * Retry queue with backoff + jitter, DLQ for exhausted                 |
+|                                                                         |
+|  IF ASKED "how do you find millions of due tasks?":                     |
+|  * Tier 1 (minutes away): Redis sorted set, ZRANGEBYSCORE               |
+|    every second; O(log N), millions of tasks fit                        |
+|  * Tier 2 (hours): indexed DB scan every ~1 min                         |
+|  * Tier 3 (days+): cold DB, hourly promotion to tier 2                  |
+|                                                                         |
+|  IF ASKED "scheduler HA without duplicate firing?":                     |
+|  * Option A: leader election via etcd / ZooKeeper leases                |
+|    (~5-10s failover, but standby wastes capacity)                       |
+|  * Option B: partitioned active-active, hash(task_id) % N               |
+|    (higher throughput, consistent hashing on failure)                   |
+|  * Option C: DB coordination via SELECT ... FOR UPDATE                  |
+|    SKIP LOCKED (simplest, DB is bottleneck at extreme scale)            |
+|                                                                         |
+|  IF ASKED "exactly-once execution?":                                    |
+|  * True exactly-once is impossible; go for at-least-once                |
+|    delivery + idempotent handlers                                       |
+|  * CAS: UPDATE tasks SET status='RUNNING'                               |
+|    WHERE id=? AND status='QUEUED' -- only one worker wins               |
+|  * Store idempotency_key in DB, skip if already processed               |
+|  * Fencing tokens for downstream side-effects                           |
+|                                                                         |
+|  IF ASKED "priority without starvation?":                               |
+|  * Weighted Fair Queueing (CRITICAL 50%, HIGH 30%, ...)                 |
+|  * Aging: effective_priority = base - (age_secs / 60)                   |
+|  * Reserved capacity per class + separate SLAs                          |
+|                                                                         |
+|  IF ASKED "DAG / workflow support?":                                    |
+|  * task_dependencies table (task_id, depends_on_id)                     |
+|  * On completion, enqueue dependents where all deps met                 |
+|  * Topological sort at submission to reject cycles                      |
+|                                                                         |
+|  IF ASKED "cron job runs longer than its interval?":                    |
+|  * ALLOW_CONCURRENT=false (default): skip next fire if                  |
+|    previous still RUNNING; alert when overlaps persist                  |
+|  * QUEUE_NEXT: at most 1 queued + 1 running                             |
+|  * ALLOW_PARALLEL: only for idempotent-by-design tasks                  |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 100K task TPS (peak 300K), 200K concurrent executions                |
+|  * ~8.6B tasks/day, retention 30 days ~ 260B records                    |
+|  * Dispatch latency <100ms, scheduling accuracy <1s                     |
+|  * ~15K worker machines, ~10-15 scheduler nodes                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Celery: Redis / RabbitMQ + workers, at-least-once                    |
+|  * Temporal / Cadence: durable workflow with event sourcing             |
+|  * Airflow: DAG-first, Python-native, DB-polled                         |
+|  * AWS Step Functions, Google Cloud Tasks / Cloud Scheduler             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Sharded Postgres for durable task state + Redis sorted                |
+|   set for near-term timers + Kafka for retry/DLQ, with                  |
+|   idempotent handlers behind DB CAS for exactly-once."                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

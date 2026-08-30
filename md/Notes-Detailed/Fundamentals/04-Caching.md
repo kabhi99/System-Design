@@ -1850,5 +1850,68 @@ Redis is the most popular distributed cache. Know it well.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  CACHING — WHAT TO SAY IN THE INTERVIEW                                 |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you add caching?"):              |
+|  * Cache-aside (lazy loading) on reads: check cache -> miss -> DB ->    |
+|    populate cache with TTL                                              |
+|  * Write-around + invalidate on writes: update DB, then DELETE the      |
+|    cache key (never overwrite)                                          |
+|  * TTL on every key as a safety net (e.g. 5-60 min)                     |
+|  * Redis as the cache store (100K+ ops/sec, sub-ms latency)             |
+|                                                                         |
+|  IF ASKED "how do you keep cache and DB consistent?":                   |
+|  * Say clearly: there is NO atomic transaction across cache + DB        |
+|  * Default: cache-aside + invalidate + TTL (eventual, seconds)          |
+|  * If invalidations must not be lost: TRANSACTIONAL OUTBOX -- write     |
+|    the invalidation intent inside the DB tx, worker replays it          |
+|  * At large scale: CDC via Debezium tails binlog -> Kafka -> cache      |
+|    invalidator (Netflix, LinkedIn pattern)                              |
+|                                                                         |
+|  IF ASKED "what about hot keys?" (celebrity users, viral posts):        |
+|  * Add a small LOCAL cache in the app in front of Redis (2-tier)        |
+|  * Replicate the hot key across multiple Redis shards, pick randomly    |
+|  * Read from a replica set for that key                                 |
+|                                                                         |
+|  IF ASKED "cache stampede / thundering herd?":                          |
+|  * Distributed lock (SETNX with TTL) so only ONE request rebuilds       |
+|  * Early refresh: recompute at ~80% of TTL in the background            |
+|  * Add random JITTER to TTLs so keys don't expire together              |
+|                                                                         |
+|  IF ASKED "cache penetration" (queries for non-existent keys):          |
+|  * Cache the NULL result with a short TTL (30-60s)                      |
+|  * Or put a BLOOM FILTER in front: "definitely not" -> skip DB          |
+|                                                                         |
+|  IF ASKED "cache avalanche" (mass expiry):                              |
+|  * Jitter TTLs, warm cache on deploy, multi-tier caching                |
+|                                                                         |
+|  EVICTION -- pick based on access pattern:                              |
+|  * LRU: default choice, recency-based                                   |
+|  * LFU: skewed access where popular items dominate                      |
+|  * TTL: time-sensitive data (sessions, OTPs)                            |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis: 100K+ ops/sec/node, <1ms latency                              |
+|  * Target cache hit rate: 80-99%                                        |
+|  * CDN edge: ~20ms vs ~300ms cross-continent                            |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Twitter: timelines in Redis (write-fanout to followers' caches)      |
+|  * Facebook: Memcached + TAO (cache-aside)                              |
+|  * Instagram: Redis + Memcached (2-tier)                                |
+|  * Netflix: EVCache (Memcached-based, multi-region replication)         |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Cache-aside + write-around + invalidate + TTL, backed by Redis,       |
+|   with transactional-outbox for invalidations we can't afford to lose." |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 4
 

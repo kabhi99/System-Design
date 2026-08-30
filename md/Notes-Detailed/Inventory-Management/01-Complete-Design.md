@@ -1425,3 +1425,79 @@
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INVENTORY MANAGEMENT -- WHAT TO SAY IN THE INTERVIEW                   |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Walmart / Amazon inventory?"):      |
+|  * Per-SKU per-warehouse counters: on_hand, reserved, available         |
+|  = on_hand - reserved; NEVER decrement on_hand until                    |
+|  shipment leaves                                                        |
+|  * Reserve model: RESERVE (hold, TTL) -> CONFIRM (on ship) OR           |
+|  RELEASE (on cancel/timeout); state machine per line item               |
+|  * Inventory ledger (append-only): every movement (receive,             |
+|  reserve, ship, return, adjustment) as an immutable row                 |
+|  * Multi-channel: virtual pools per channel (web/store/marketplace)     |
+|  or shared pool with priority tiers                                     |
+|  * Warehouse ops: bin/shelf tracking, pick-pack-ship workflow,          |
+|  cycle counting to reconcile physical vs logical                        |
+|                                                                         |
+|  IF ASKED "how do you prevent overselling in a flash sale?":            |
+|  * Pre-load stock into Redis (per SKU counter); atomic DECRBY           |
+|  with floor check via Lua script -- 100K+ ops/sec/node                  |
+|  * Later write-behind to DB in batches; DB has authoritative            |
+|  ledger with unique constraint on (sku, txn_id)                         |
+|  * Virtual queue at gateway if demand >> supply                         |
+|  * Cap reserve TTL to 5-10 min so abandoned carts free stock fast       |
+|                                                                         |
+|  IF ASKED "multi-warehouse allocation?":                                |
+|  * Available_to_promise (ATP) view aggregates across warehouses         |
+|  for search / product page                                              |
+|  * Allocation service picks warehouse(s): nearest + cheapest +          |
+|  in-stock; may split into multiple shipments                            |
+|  * Rebalance stock across warehouses via async ETL; hot SKUs            |
+|  pinned to multiple regions                                             |
+|                                                                         |
+|  IF ASKED "Redis and DB disagree -- what do you do?":                   |
+|  * DB (ledger) is source of truth; Redis is a cache/counter             |
+|  * Periodic reconciliation: recompute Redis from ledger                 |
+|  every ~5 min per hot SKU + on-demand on discrepancy alert              |
+|  * Small drift is fine; hard divergence -> quarantine SKU, alert        |
+|                                                                         |
+|  IF ASKED "how do you sync with offline POS?":                          |
+|  * Store-level buffer: POS writes to local queue if offline;            |
+|  batch-sync on reconnect (last-write-wins per SKU + delta)              |
+|  * For overselling risk offline, keep a small per-store reserve         |
+|  buffer that doesn't oversell shared pools                              |
+|  * Reconcile via cycle counts weekly + full physical count yearly       |
+|                                                                         |
+|  IF ASKED "how do you handle 1M+ SKUs?":                                |
+|  * Shard inventory by sku_hash or category; each shard = its            |
+|  own DB + Redis cluster                                                 |
+|  * Hot SKUs (top 1%) in dedicated Redis cluster with replicas           |
+|  * Time-series history in a TSDB (Timescale/Influx) for trends,         |
+|  not the transactional path                                             |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Amazon: > 350M SKUs, 175+ fulfillment centers                        |
+|  * Walmart: > 100M SKUs across ~11K stores                              |
+|  * Reserve TTL: 15-30 min (checkout), 5-10 min (flash sale)             |
+|  * Cycle count target: 99.9% accuracy on top-1000 SKUs weekly           |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Amazon: DynamoDB single-table, per-FC counters, S2 for geo           |
+|  * Walmart: Cassandra + Kafka pipeline for real-time inventory          |
+|  * Shopify: MySQL sharded by shop, InventoryItem model                  |
+|  * Zara: RFID-tagged items for near-real-time store inventory           |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Available = on_hand - reserved, atomic reserve-confirm-release      |
+|   with an append-only ledger as truth, Redis for hot SKUs,              |
+|   and cycle counts to keep physical and logical in sync."               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

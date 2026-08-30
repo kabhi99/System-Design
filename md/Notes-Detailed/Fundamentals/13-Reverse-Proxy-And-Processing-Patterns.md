@@ -926,5 +926,71 @@ USE CASES
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX -- SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  REVERSE PROXY + EDA + STREAM/BATCH -- WHAT TO SAY IN INTERVIEW          |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how does the edge tier work?"):             |
+|  * Put a REVERSE PROXY (Nginx/Envoy) in front: TLS termination,          |
+|    compression, caching, WAF, request routing                            |
+|  * Behind it: an API GATEWAY handles auth, rate limits, quotas,          |
+|    request/response transformation, per-tenant policies                  |
+|  * Load balancer distributes across app pods; reverse proxy is           |
+|    L7 (path/host-based), LB is often L4 (TCP/IP)                         |
+|                                                                         |
+|  IF ASKED "reverse proxy vs API gateway vs LB?":                         |
+|  * Reverse proxy = infra concern (TLS, caching, static assets)           |
+|  * API gateway = product concern (auth, quotas, versioning)              |
+|  * LB = health checks + traffic distribution (L4 or L7)                  |
+|  * In practice they overlap -- Envoy/Nginx can play all 3 roles          |
+|                                                                         |
+|  IF ASKED "why event-driven architecture?":                              |
+|  * Decouples producers from consumers -- add subscribers without         |
+|    touching the producer                                                 |
+|  * Async by default: producer returns fast, consumers catch up           |
+|  * Natural fan-out: one event -> many downstream reactions               |
+|  * Buffer against traffic spikes (queue absorbs the burst)               |
+|                                                                         |
+|  EDA PATTERNS TO NAME:                                                   |
+|  * Event notification (thin event, consumers refetch)                    |
+|  * Event-carried state transfer (fat event with payload)                 |
+|  * Event sourcing (event log IS the source of truth)                     |
+|  * CQRS (separate read model built from events)                          |
+|                                                                         |
+|  IF ASKED "stream vs batch?":                                            |
+|  * Batch: high throughput, high latency, periodic (Spark, Hive)          |
+|    -- reports, ETL, ML training                                          |
+|  * Stream: low latency, continuous (Flink, Kafka Streams)                |
+|    -- fraud detection, live dashboards, alerts                           |
+|  * Lambda arch = both (batch for accuracy + stream for freshness)        |
+|  * Kappa arch = stream-only, replay from Kafka for reprocessing          |
+|                                                                         |
+|  STREAM PROCESSING GOTCHAS TO MENTION:                                   |
+|  * Event time vs processing time (use watermarks)                        |
+|  * Exactly-once needs idempotent sinks or transactional writes           |
+|  * Windowing: tumbling, sliding, session windows                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                        |
+|  * Nginx: 50K+ concurrent connections/core                               |
+|  * Kafka: 1M+ msgs/sec/broker, ms-level latency                          |
+|  * Flink: sub-second end-to-end at millions of events/sec                |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                       |
+|  * Netflix: Zuul (gateway) + Envoy sidecars                              |
+|  * Uber: Kafka + Flink for real-time pricing/ETA                         |
+|  * LinkedIn: Kafka as the central nervous system                         |
+|  * Stripe: event-driven ledger, everything is an event                   |
+|                                                                         |
+|  ONE-LINE CRUX:                                                          |
+|  "Reverse proxy at the edge, API gateway for product policy,             |
+|   events on Kafka for decoupling, Flink for real-time and                |
+|   Spark for accuracy -- Lambda when you need both."                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 13
 

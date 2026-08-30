@@ -1843,3 +1843,87 @@ ARCHITECTURE DIAGRAM
 *+-------------------------------------------------------------------------+*
 
 END OF FILE STORAGE SYSTEM DESIGN
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  FILE STORAGE SYSTEM (DROPBOX / DRIVE) -- WHAT TO SAY IN THE INTERVIEW  |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "design Dropbox / Drive"):                  |
+|  * Client splits files into 4 MB blocks, content-addressed              |
+|    by SHA-256 (block_id = hash)                                         |
+|  * Only changed blocks uploaded on edit (delta sync)                    |
+|  * Metadata in sharded Postgres (files, folders, ACLs,                  |
+|    block references)                                                    |
+|  * Blocks in S3 / GCS (11 nines durability)                             |
+|  * Sync notifications via WebSocket + Kafka                             |
+|  * Deduplication saves 50-70% via block reference counting              |
+|                                                                         |
+|  IF ASKED "how do you upload large (multi-GB) files?":                  |
+|  * Chunked + resumable upload with presigned URLs                       |
+|  * Parallel upload of 5-10 chunks concurrently                          |
+|  * S3 multipart upload (initiate, upload parts, complete)               |
+|  * Client tracks completed chunks, resumes from last one                |
+|                                                                         |
+|  IF ASKED "how do you save bandwidth on sync?":                         |
+|  * Rsync-style algorithm: rolling weak hash + strong                    |
+|    SHA-256 to detect matching blocks                                    |
+|  * Send only new/changed blocks + references for the rest               |
+|  * Typical result: 90%+ bandwidth reduction on small edits              |
+|                                                                         |
+|  IF ASKED "conflict resolution when both edit offline?":                |
+|  * Dropbox style: keep both versions, create a                          |
+|    "file (conflicted copy).ext" file for user to resolve                |
+|  * For structured docs use CRDT/OT (see Collab Editor)                  |
+|                                                                         |
+|  IF ASKED "deduplication mechanics?":                                   |
+|  * Block table with (block_id, ref_count, size)                         |
+|  * Uploads increment ref_count; deletes decrement                       |
+|  * Nightly GC deletes blocks with ref_count = 0 + 24h                   |
+|  * Cross-user dedup: identical block stored once globally               |
+|                                                                         |
+|  IF ASKED "durability + disaster recovery?":                            |
+|  * S3/GCS gives 11 nines durability out of the box                      |
+|  * Cross-region replication (CRR) for blocks + metadata                 |
+|  * RPO ~1h, RTO ~4h via DNS failover + async replica                    |
+|  * Trash: soft-delete kept 30 days                                      |
+|                                                                         |
+|  IF ASKED "ransomware / accidental delete protection?":                 |
+|  * Version history + 30-day trash retention                             |
+|  * Anomaly detection: mass modifications (1000+/min),                   |
+|    extension changes, high-entropy content -> pause sync                |
+|  * Immutable / WORM snapshots for enterprise                            |
+|                                                                         |
+|  IF ASKED "sharing and permissions?":                                   |
+|  * ACL per file / folder in metadata DB                                 |
+|  * Presigned URLs for direct S3 access (short-lived)                    |
+|  * Link sharing with password, expiry, download cap                     |
+|  * Rate limit + captcha on viral links                                  |
+|                                                                         |
+|  IF ASKED "cold storage / cost control?":                               |
+|  * Tier by last_accessed_at: Hot (S3 Std <30d) -> Warm                  |
+|    (S3 IA 30-90d) -> Cold (Glacier >90d) -> Archive                     |
+|  * S3 Intelligent Tiering auto-moves objects                            |
+|  * On access from cold: async restore, show "restoring"                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Block size: 4 MB (sweet spot for delta sync)                         |
+|  * Deduplication savings: 50-70%                                        |
+|  * Durability: 99.999999999% (11 nines) via S3/GCS                      |
+|  * Metadata per file ~500 bytes                                         |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Dropbox: rsync-based delta sync, Magic Pocket storage                |
+|  * Google Drive: BigTable + Colossus                                    |
+|  * Microsoft OneDrive, Box, Apple iCloud                                |
+|  * Backblaze B2 for cheap cold storage                                  |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Split into 4 MB content-addressed blocks in S3, metadata              |
+|   in sharded Postgres, delta sync via rsync + WebSocket                 |
+|   notifications, and reference-counted dedup + versioning."             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

@@ -592,3 +592,73 @@
 
 ## END OF API GATEWAY HLD
 
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  API GATEWAY -- WHAT TO SAY IN THE INTERVIEW                            |
+|                                                                         |
+|  DEFAULT ANSWER (when asked "how would you design an API gateway?"):    |
+|  * Single entry point in front of microservices: routing, auth,         |
+|  rate limiting, TLS termination, request/response transform             |
+|  * Stateless data-plane pods behind an L4 LB; horizontal scale by       |
+|  request rate; sticky sessions only if you keep WebSockets              |
+|  * Config from a control plane (etcd/Consul) hot-reloaded into          |
+|  the data plane; no restarts on route change                            |
+|  * Pull services from service discovery (Consul/Eureka/K8s DNS)         |
+|  with health checks; wrap each upstream in a circuit breaker            |
+|                                                                         |
+|  IF ASKED "how do you do auth at the gateway?":                         |
+|  * Verify JWT at the edge (RS256, cache JWKS ~1h) so services           |
+|  trust an internal claim header; mTLS between gateway <-> svc           |
+|  * OAuth2 for third-party APIs; API keys hashed in a KV store           |
+|  with per-key rate limits; short-lived tokens (5-15 min)                |
+|  * Do RBAC/ABAC at the gateway for coarse checks, fine-grained          |
+|  authz stays inside the owning service                                  |
+|                                                                         |
+|  IF ASKED "how do you rate limit?":                                     |
+|  * Token bucket in Redis via a Lua script (atomic INCR + EXPIRE)        |
+|  keyed by user/API-key/IP; sliding window for accuracy                  |
+|  * Hybrid: per-pod local counter + periodic sync to Redis to cut        |
+|  Redis round-trips on hot keys                                          |
+|  * Return 429 with Retry-After; separate quotas for auth'd vs           |
+|  anon traffic and per-endpoint tiers (free/pro/enterprise)              |
+|                                                                         |
+|  IF ASKED "how do you handle a slow/failing upstream?":                 |
+|  * Circuit breaker (Hystrix/resilience4j): CLOSED -> OPEN on            |
+|  failure rate > 50%, HALF_OPEN probe after cool-down                    |
+|  * Bulkheads: separate thread pools/connection pools per upstream       |
+|  so one bad service can't drain the gateway                             |
+|  * Timeouts everywhere (connect 1s, read 3-5s); retries only on         |
+|  idempotent verbs with exponential backoff + jitter                     |
+|                                                                         |
+|  IF ASKED "caching, aggregation, versioning?":                          |
+|  * Response cache at the gateway keyed on (method+path+headers)         |
+|  with short TTL (5-60s); Cache-Control passthrough                      |
+|  * BFF/aggregation endpoint fans out to N services in parallel,         |
+|  merges responses -> one round trip for mobile clients                  |
+|  * Versioning via URL (/v1, /v2), header, or content negotiation;       |
+|  run N-1 and N in parallel, canary + shadow traffic to N+1              |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Kong/Envoy/NGINX: 50-100K RPS per pod, p99 ~5-10ms overhead          |
+|  * JWKS cache TTL: ~1h; JWT verify < 1ms after cache warm               |
+|  * Circuit breaker trip threshold: 50% errors over 20 requests          |
+|  * Rate limit tiers: free 100/min, pro 10K/min, enterprise 1M/min       |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: Zuul (Java) at the edge, routes to hundreds of svcs         |
+|  * Lyft/Envoy: L7 proxy with dynamic xDS config plane                   |
+|  * Kong: Nginx + Lua plugins, DB-less mode with declarative YAML        |
+|  * AWS API Gateway: Lambda authorizers, WAF integration, usage          |
+|  plans with API keys                                                    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  * "Stateless data plane doing routing + JWT auth + token-bucket        |
+|   rate limiting + circuit-breaking, with hot-reload config              |
+|   from a control plane -- everything else lives in services."           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
