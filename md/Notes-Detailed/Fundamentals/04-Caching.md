@@ -431,17 +431,17 @@ Write only to database, let cache expire naturally.
 |  CACHE WRITE STRATEGY COMPARISON                                        |
 |                                                                         |
 |  +----------------+------------+------------+------------------------+  |
-|  | Strategy       | Write      | Consistency| Use Case              |   |
+|  | Strategy       | Write      | Consistency| Use Case               |  |
 |  |                | Latency    |            |                        |  |
 |  +----------------+------------+------------+------------------------+  |
-|  | Write-through  | High       | Strong     | Critical data,        |   |
-|  |                |            |            | frequent reads        |   |
+|  | Write-through  | High       | Strong     | Critical data,         |  |
+|  |                |            |            | frequent reads         |  |
 |  +----------------+------------+------------+------------------------+  |
-|  | Write-behind   | Low        | Eventual   | High throughput,      |   |
-|  |                |            |            | loss acceptable       |   |
+|  | Write-behind   | Low        | Eventual   | High throughput,       |  |
+|  |                |            |            | loss acceptable        |  |
 |  +----------------+------------+------------+------------------------+  |
-|  | Write-around   | Medium     | Eventual   | Write-heavy,          |   |
-|  | + invalidate   |            | (brief)    | read-sometimes        |   |
+|  | Write-around   | Medium     | Eventual   | Write-heavy,           |  |
+|  | + invalidate   |            | (brief)    | read-sometimes         |  |
 |  +----------------+------------+------------+------------------------+  |
 |                                                                         |
 |  MOST COMMON COMBINATION:                                               |
@@ -509,7 +509,270 @@ Write only to database, let cache expire naturally.
 +--------------------------------------------------------------------------+
 ```
 
-## SECTION 4.4: CACHE INVALIDATION
+## SECTION 4.4: DUAL-WRITE PROBLEM (CACHE + DB IN SAME TRANSACTION)
+
+"How do I update the cache and the database in a single transaction?"
+The honest answer: **you can't**. This section explains why, and what you
+do instead.
+
+### THE PREMISE IS BROKEN
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  WHY "ONE ATOMIC TRANSACTION" DOES NOT EXIST                            |
+|                                                                         |
+|  A DB transaction (BEGIN..COMMIT) is coordinated by ONE system --       |
+|  the database. Redis / Memcached / any external cache is a              |
+|  SEPARATE system with its own protocol and no shared transaction        |
+|  coordinator. There is no BEGIN..COMMIT that spans both.                |
+|                                                                         |
+|  Naive two-step code has an unavoidable crash window:                   |
+|                                                                         |
+|    db.update(x)      <-- succeeds                                       |
+|    cache.set(x)      <-- network fails, process dies, GC pause...       |
+|                                                                         |
+|  Now DB has new data, cache has stale data, and there is NO             |
+|  built-in rollback. Same failure the other way around.                  |
+|                                                                         |
+|  ALL solutions boil down to: how do you handle this crash window?       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 1: CACHE-ASIDE + INVALIDATE (Most Common)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  THE RULE: Update DB, then DELETE the cache key. Never "update" it.     |
+|                                                                         |
+|  def update_user(user_id, data):                                        |
+|      db.update("UPDATE users SET ... WHERE id = ?", user_id)            |
+|      cache.delete(f"user:{user_id}")   # invalidate, don't overwrite    |
+|                                                                         |
+|  Next read = cache miss -> read DB -> repopulate cache.                 |
+|                                                                         |
+|  WHY DELETE INSTEAD OF OVERWRITE?                                       |
+|  * Deleting is idempotent -- safe to retry                              |
+|  * Two racing writers can't put a stale value into the cache            |
+|  * Simpler mental model: cache is a read-through side-effect            |
+|                                                                         |
+|  FAILURE MODE:                                                          |
+|  * If cache.delete() fails, cache stays stale until TTL                 |
+|  * MITIGATION: always set a TTL as a safety net                         |
+|                                                                         |
+|  RACE CONDITION -- "Stale read repopulates the cache":                  |
+|                                                                         |
+|    T1: reads cache (miss) -> reads DB (OLD value)                       |
+|    T2: writes DB (NEW value)                                            |
+|    T2: deletes cache                                                    |
+|    T1: writes OLD value into cache   <-- stale forever                  |
+|                                                                         |
+|  FIXES:                                                                 |
+|  * Double-delete: delete before write AND ~500ms after write            |
+|  * Short TTL (e.g. 30-60s) so staleness self-heals                      |
+|  * Versioned keys (include monotonic version in cache key)              |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 2: TRANSACTIONAL OUTBOX (Best for Correctness)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  IDEA: Put the cache-invalidation INTENT inside the DB transaction,     |
+|        then let a worker replay it reliably.                            |
+|                                                                         |
+|  BEGIN TX                                                               |
+|    UPDATE users SET name = 'A' WHERE id = 5                             |
+|    INSERT INTO outbox (event) VALUES ('invalidate cache:user:5')        |
+|  COMMIT TX                                                              |
+|                                                                         |
+|  +-------------------------------------------------------------------+  |
+|  |                                                                   |  |
+|  |     App                Database                Worker             |  |
+|  |      |                     |                     |                |  |
+|  |      |  BEGIN TX           |                     |                |  |
+|  |      +-------------------->|                     |                |  |
+|  |      |  UPDATE + INSERT    |                     |                |  |
+|  |      |     outbox row      |                     |                |  |
+|  |      +-------------------->|                     |                |  |
+|  |      |  COMMIT             |                     |                |  |
+|  |      +-------------------->|                     |                |  |
+|  |                            |                     |                |  |
+|  |                            |<-------- poll ------+                |  |
+|  |                            +----> outbox row --->|                |  |
+|  |                                                  |                |  |
+|  |                                                  +--> cache.del() |  |
+|  |                                                  +--> mark done   |  |
+|  |                                                                   |  |
+|  +-------------------------------------------------------------------+  |
+|                                                                         |
+|  GUARANTEES:                                                            |
+|  Y "Did the DB update happen?"       -> atomic (yes/no)                 |
+|  Y "Did the cache get invalidated?"  -> eventually yes, retryable       |
+|  Y Worker crash = safe (outbox row still there, will retry)             |
+|  Y App has zero direct dependency on cache availability                 |
+|                                                                         |
+|  This is what most large systems actually use in some form.             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 3: CHANGE DATA CAPTURE (CDC)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  IDEA: Tail the DB's binlog / WAL and turn every row change into an     |
+|        event. A separate service invalidates the cache. App code        |
+|        doesn't even know the cache exists.                              |
+|                                                                         |
+|    App ---> DB                                                          |
+|              |                                                          |
+|              +--(binlog/WAL)--> Debezium --> Kafka --> Cache-invalidator|
+|                                                              |          |
+|                                                              v          |
+|                                                        cache.delete()   |
+|                                                                         |
+|  PROS:                                                                  |
+|  Y Zero coupling between app and cache                                  |
+|  Y Multiple downstream consumers (cache, search index, analytics)       |
+|  Y Guaranteed delivery via Kafka retention                              |
+|                                                                         |
+|  CONS:                                                                  |
+|  X Infra-heavy (Debezium + Kafka + consumer)                            |
+|  X Small propagation delay (typically 10-500ms)                         |
+|  X Overkill for small systems                                           |
+|                                                                         |
+|  USED BY: LinkedIn, Netflix, Airbnb, Shopify                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 4: WRITE-THROUGH (App -> Cache -> DB)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  App writes to the cache; the cache library synchronously writes to     |
+|  the DB before returning. Cache is on the WRITE path.                   |
+|                                                                         |
+|    app -> cache.put(k, v)                                               |
+|             +--> cache stores it                                        |
+|             +--> cache library commits to DB                            |
+|             <--- returns only after BOTH succeed                        |
+|                                                                         |
+|  PROS:                                                                  |
+|  Y From the app's view, cache and DB always agree                       |
+|  Y No dual-write logic in application code                              |
+|                                                                         |
+|  CONS:                                                                  |
+|  X Every write pays cache latency + DB latency                          |
+|  X Cache eviction can lose non-DB metadata                              |
+|  X Rare outside specific cache products (Ehcache CacheWriter, some      |
+|    enterprise caches). Redis/Memcached do NOT do this natively.         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 5: WRITE-BEHIND (Fast but Risky)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  App writes to cache only. Cache asynchronously flushes to DB.          |
+|                                                                         |
+|  PROS:                                                                  |
+|  Y Blazing-fast writes                                                  |
+|  Y Absorbs write spikes                                                 |
+|                                                                         |
+|  CONS:                                                                  |
+|  X If cache node dies before flushing = COMMITTED DATA LOST             |
+|  X Almost never acceptable for anything important                       |
+|                                                                         |
+|  USE ONLY FOR: counters, metrics, view-counts -- data where loss is OK  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN 6: TWO-PHASE COMMIT (Almost Never)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  Enroll the cache in an XA distributed transaction with the DB.         |
+|                                                                         |
+|  Technically possible with some enterprise caches. Almost never done:   |
+|  X Redis / Memcached do NOT support XA                                  |
+|  X 2PC is slow + has coordinator-crash failure modes (locks stuck)      |
+|  X Defeats the purpose of caching (speed)                               |
+|                                                                         |
+|  Mention only to acknowledge you know it exists.                        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### PATTERN COMPARISON
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DUAL-WRITE PATTERN COMPARISON                                          |
+|                                                                         |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | Pattern              |Consistency| Latency | Complexity | Default?|  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | Cache-aside +        | Eventual  |  Low    |  Low       |  YES    |  |
+|  |   invalidate + TTL   | (seconds) |         |            |         |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | Transactional Outbox | Eventual, |  Low    |  Medium    |  When   |  |
+|  |                      | guaranteed|         |            |  losing |  |
+|  |                      |           |         |            |  invali-|  |
+|  |                      |           |         |            |  dation |  |
+|  |                      |           |         |            |  hurts  |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | CDC (Debezium)       | Eventual, |  Low    |  High      |  Large  |  |
+|  |                      | guaranteed|         |            |  scale  |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | Write-through        | Strong    |  High   |  Medium    |  Rare   |  |
+|  |                      | per-write |         |            |         |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | Write-behind         | Weak      |  V.low  |  Medium    |  Metrics|  |
+|  |                      | (loss)    |         |            |  only   |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|  | 2PC / XA             | Strong    |  V.high |  V.high    |  Never  |  |
+|  +----------------------+-----------+---------+------------+---------+  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### INTERVIEW ANSWER (SAY THIS)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  "You can't atomically update both -- they're separate systems with     |
+|   no shared transaction coordinator. So you pick one as source of       |
+|   truth (the DB) and update the other with a reliable pattern.          |
+|                                                                         |
+|   For most systems: CACHE-ASIDE + INVALIDATE + TTL.                     |
+|                                                                         |
+|   If we need guarantees against lost invalidations (e.g. cache node     |
+|   unreachable at write time), I'd add the TRANSACTIONAL OUTBOX --       |
+|   the invalidation intent commits atomically with the DB write and a    |
+|   worker replays it. For very large systems, CDC via Debezium removes   |
+|   the coupling entirely.                                                |
+|                                                                         |
+|   Write-through works but couples app latency to two systems, and       |
+|   write-behind risks data loss -- only for tolerate-loss data."         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+## SECTION 4.5: CACHE INVALIDATION
 
 "There are only two hard things in Computer Science: cache invalidation
 and naming things." - Phil Karlton
@@ -605,7 +868,7 @@ and naming things." - Phil Karlton
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.5: CACHE PROBLEMS AND SOLUTIONS
+## SECTION 4.6: CACHE PROBLEMS AND SOLUTIONS
 
 ### CACHE STAMPEDE (THUNDERING HERD)
 
@@ -885,7 +1148,7 @@ One key is accessed much more than others.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.6: CACHE EVICTION POLICIES
+## SECTION 4.7: CACHE EVICTION POLICIES
 
 When cache is full, which items do we remove?
 
@@ -974,7 +1237,7 @@ When cache is full, which items do we remove?
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.7: REDIS DEEP DIVE
+## SECTION 4.8: REDIS DEEP DIVE
 
 Redis is the most popular distributed cache. Know it well.
 
@@ -1146,7 +1409,7 @@ Redis is the most popular distributed cache. Know it well.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.8: CONTENT DELIVERY NETWORKS (CDN)
+## SECTION 4.9: CONTENT DELIVERY NETWORKS (CDN)
 
 ```
 +-------------------------------------------------------------------------+
@@ -1241,7 +1504,7 @@ Redis is the most popular distributed cache. Know it well.
 +-------------------------------------------------------------------------+
 ```
 
-## SECTION 4.9: BLOOM FILTERS
+## SECTION 4.10: BLOOM FILTERS
 
 ```
 +-------------------------------------------------------------------------+
@@ -1514,6 +1777,14 @@ Redis is the most popular distributed cache. Know it well.
 |  * Write-Through: Sync to cache + DB (consistent)                       |
 |  * Write-Behind: Async DB write (fast but risky)                        |
 |  * Write-Around: Only DB, invalidate cache (common)                     |
+|                                                                         |
+|  DUAL-WRITE (CACHE + DB)                                                |
+|  -----------------------                                                |
+|  * NO true atomic transaction across cache and DB                       |
+|  * Default: Cache-aside + invalidate + TTL                              |
+|  * Guaranteed: Transactional Outbox (invalidation intent in DB tx)      |
+|  * Large scale: CDC (Debezium tails binlog -> cache invalidator)        |
+|  * Avoid: Write-behind for anything you can't afford to lose            |
 |                                                                         |
 |  INVALIDATION                                                           |
 |  ------------                                                           |
