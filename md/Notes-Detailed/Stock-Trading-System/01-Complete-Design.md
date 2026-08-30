@@ -867,3 +867,68 @@ with strict latency and consistency requirements.
 |                                                                          |
 +--------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  STOCK TRADING SYSTEM — WHAT TO SAY                                     |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Core is the MATCHING ENGINE: single-threaded per symbol, order       |
+|      book in memory                                                     |
+|  * Order book = two heaps (bids max-heap, asks min-heap) with           |
+|      price-time priority                                                |
+|  * Client -> gateway (auth, risk) -> matching engine (per symbol)       |
+|      -> post-trade (settlement, ledger)                                 |
+|  * Ultra-low latency: colocated servers, kernel bypass (DPDK), all      |
+|      in-memory, no locks per symbol                                     |
+|  * Real-time market data: fan-out via multicast (UDP) or WebSocket      |
+|                                                                         |
+|  IF ASKED "why single-threaded matching?":                              |
+|  * Order book state is trivially serializable with one thread per       |
+|      symbol                                                             |
+|  * Removes locking overhead -- can hit microsecond latencies            |
+|  * Scale horizontally by symbol (shard)                                 |
+|                                                                         |
+|  IF ASKED "how do you get exchange-grade latency?":                     |
+|  * Colocation with exchange (same rack)                                 |
+|  * Kernel bypass (DPDK, Solarflare) for network I/O                     |
+|  * In-memory everything, no GC (C++/Rust), lock-free data               |
+|      structures                                                         |
+|                                                                         |
+|  IF ASKED "risk checks?":                                               |
+|  * Pre-trade: buying power, position limits, self-cross prevention      |
+|  * Kill switches on velocity anomalies (10K orders/sec from one         |
+|      client)                                                            |
+|  * Post-trade: real-time P&L, VaR, margin call triggers                 |
+|                                                                         |
+|  IF ASKED "settlement?":                                                |
+|  * T+2 settlement traditionally (moving to T+0)                         |
+|  * Immutable trade log to Kafka; downstream: clearing, custody,         |
+|      ledger                                                             |
+|                                                                         |
+|  IF ASKED "market data fan-out?":                                       |
+|  * Level-1 (top of book) to all users; Level-2 (full depth) to pro      |
+|      users                                                              |
+|  * Multicast UDP inside data center; WebSocket to browser               |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Modern exchange matching latency: 1-10 microseconds                  |
+|  * NYSE / Nasdaq peak: 100K+ orders/sec per symbol                      |
+|  * Market data feed: 10M+ msgs/sec at peak                              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * NYSE, Nasdaq: colocated C++ matching engines                         |
+|  * LMAX Disruptor: lock-free ring buffer, 6M orders/sec on 1            |
+|      thread                                                             |
+|  * Coinbase, Binance: crypto exchanges with similar architecture        |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Single-threaded in-memory matching per symbol, order-book heaps       |
+|      with price-time priority, kernel-bypass networking, and an         |
+|      immutable trade log for post-trade."                               |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

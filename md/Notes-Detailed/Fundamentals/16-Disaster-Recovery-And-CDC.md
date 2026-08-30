@@ -595,5 +595,62 @@
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DR & CDC — WHAT TO SAY IN THE INTERVIEW                                |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Pick a DR tier by RPO (data loss tolerance) and RTO (downtime        |
+|      tolerance)                                                         |
+|  * Backup + restore for cost-sensitive workloads (RPO hours, RTO        |
+|      hours)                                                             |
+|  * Warm standby with async replication for critical services (RPO       |
+|      seconds, RTO minutes)                                              |
+|  * Multi-region active-active for tier-0 systems (RPO ~0, RTO           |
+|      seconds)                                                           |
+|  * For syncing DB -> search / cache / analytics: Change Data            |
+|      Capture (CDC) via binlog tail (Debezium) into Kafka                |
+|                                                                         |
+|  IF ASKED "how do you keep the search index / cache / analytics in      |
+|  sync with DB?":                                                        |
+|  * CDC: tail DB binlog/WAL with Debezium                                |
+|  * Publish row-level changes to Kafka                                   |
+|  * Downstream consumers apply to search index, cache, DW, etc.          |
+|  * App code stays unchanged -- DB is the single source of truth         |
+|                                                                         |
+|  IF ASKED "how do you handle a regional outage?":                       |
+|  * DNS failover (Route53 health checks) to secondary region             |
+|  * Global load balancer (Cloudflare, GCLB) with anycast                 |
+|  * Async cross-region DB replication (accept small RPO)                 |
+|                                                                         |
+|  IF ASKED "dual-write vs CDC vs outbox?":                               |
+|  * Dual-write: risks split-brain on partial failure                     |
+|  * Outbox: writes intent inside DB tx, worker replays -- safe +         |
+|      simple                                                             |
+|  * CDC: zero coupling, best for large fan-out (search, cache, DW)       |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Backup+restore: RPO hours, RTO hours, ~1x cost                       |
+|  * Warm standby: RPO seconds, RTO minutes, ~1.5-2x cost                 |
+|  * Active-active multi-region: RPO ~0, RTO seconds, ~2-3x cost          |
+|  * Debezium CDC latency: typically 10-500ms end-to-end                  |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix, LinkedIn: Debezium CDC into Kafka for downstream fan-       |
+|      out                                                                |
+|  * AWS Aurora Global Database: async cross-region replication ~1s       |
+|      lag                                                                |
+|  * Shopify: CDC-based cache invalidation across services                |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Pick DR tier by RPO/RTO; use CDC (Debezium -> Kafka) to keep          |
+|      search/cache/analytics eventually consistent with the DB."         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 16
 

@@ -1829,3 +1829,63 @@
 ```
 
 *End of Distributed Key-Value Store System Design*
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED KV STORE (DYNAMO) — WHAT TO SAY                            |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Consistent hashing places keys on a ring of nodes; each key          |
+|      replicated to N=3 successors                                       |
+|  * Tunable consistency: quorum reads (R) + writes (W) with R + W >      |
+|      N gives strong-ish reads                                           |
+|  * Version vectors detect concurrent conflicting writes; sibling        |
+|      reconciliation on read                                             |
+|  * Anti-entropy: Merkle trees for periodic replica sync, hinted         |
+|      handoff for transient failures                                     |
+|  * Gossip for cluster membership + failure detection                    |
+|                                                                         |
+|  IF ASKED "why consistent hashing?":                                    |
+|  * Minimizes reshuffling when nodes join/leave (only 1/N keys           |
+|      move)                                                              |
+|  * Virtual nodes (vnodes) balance load across heterogeneous             |
+|      hardware                                                           |
+|                                                                         |
+|  IF ASKED "R + W > N -- what does that give me?":                       |
+|  * Read quorum overlaps write quorum -> reads see latest write          |
+|  * Common: N=3, W=2, R=2 -- tolerates 1 failure, strong-ish             |
+|  * Cassandra ONE/QUORUM/ALL levels are the same idea                    |
+|                                                                         |
+|  IF ASKED "how do you resolve conflicting writes?":                     |
+|  * Version vectors or Lamport timestamps track causal history           |
+|  * Read returns all conflicting siblings, app-level merge (like a       |
+|      shopping cart)                                                     |
+|  * OR last-write-wins (LWW) with timestamps -- simpler but data         |
+|      loss possible                                                      |
+|                                                                         |
+|  IF ASKED "hinted handoff?":                                            |
+|  * If a target replica is down, write to a peer with a HINT             |
+|  * Peer forwards the write when the target comes back                   |
+|  * Bounded queue -- if peer also fails, hint is dropped (anti-          |
+|      entropy fixes later)                                               |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Typical N (replication factor): 3                                    |
+|  * R = W = 2 (majority quorum for tolerate-1-failure)                   |
+|  * Virtual nodes per physical node: 128-256                             |
+|  * Cassandra: 100K-1M writes/sec per node                               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Amazon DynamoDB, Apache Cassandra, Scylla, Riak: Dynamo-style        |
+|  * Cassandra: gossip + LSM (RocksDB-style) + tunable consistency        |
+|  * Netflix: Cassandra + EVCache in front for caching                    |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Consistent hashing + N=3 replication + tunable quorum + version       |
+|      vectors + gossip -- Dynamo/Cassandra pattern."                     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

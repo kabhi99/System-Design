@@ -1172,3 +1172,58 @@ Similar to Snowflake but uses PostgreSQL shard IDs.
   |                                                                 |
   +================================================================-+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  UNIQUE ID GENERATOR (Snowflake) — WHAT TO SAY                          |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Default: Snowflake -- 64-bit ID = 1-bit sign + 41-bit ms             |
+|      timestamp + 10-bit worker + 12-bit sequence                        |
+|  * Sortable by time, no coordination between generators                 |
+|  * Alternatives: UUIDv4 (128-bit random), UUIDv7 (time-ordered),        |
+|      DB-sequence, ticket server                                         |
+|  * Choose based on: sortability, size, coordination cost, and           |
+|      collision tolerance                                                |
+|                                                                         |
+|  IF ASKED "why not UUID?":                                              |
+|  * UUIDv4: 128-bit, random -> bad for B-tree index locality             |
+|      (random inserts)                                                   |
+|  * UUIDv7: time-ordered, better for indexes, but still 128-bit          |
+|  * Snowflake: 64-bit, sortable, fits in a BIGINT                        |
+|                                                                         |
+|  IF ASKED "clock skew problems?":                                       |
+|  * If clock goes backward -> duplicate IDs possible                     |
+|  * Snowflake: pause generation until clock catches up                   |
+|  * Use NTP with monotonic guarantee (chrony)                            |
+|                                                                         |
+|  IF ASKED "how many IDs per second?":                                   |
+|  * Snowflake: 12-bit sequence = 4096 IDs/ms per worker =                |
+|      4M/sec/worker                                                      |
+|  * 1024 workers -> 4B IDs/sec globally                                  |
+|                                                                         |
+|  IF ASKED "how do worker IDs get assigned?":                            |
+|  * ZooKeeper / etcd hands out unique IDs on startup                     |
+|  * Or DB sequence at boot; or config-file-based                         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Snowflake: 64-bit ID, ~69 years of ms timestamps from custom         |
+|      epoch                                                              |
+|  * 12-bit sequence: 4096 IDs/ms/worker                                  |
+|  * 10-bit worker: 1024 workers max                                      |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Twitter Snowflake: original 2010 paper                               |
+|  * Instagram: adapted Snowflake for shard routing                       |
+|  * Discord: modified Snowflake for higher throughput                    |
+|  * MongoDB ObjectId: 12-byte time-based ID                              |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Snowflake (64-bit time+worker+seq) beats UUIDs for sortability,       |
+|      index locality, and size -- assign worker IDs via ZK/etcd."        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

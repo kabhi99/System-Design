@@ -1128,3 +1128,76 @@ from fundamentals to advanced topics, with detailed answers.
 +-------------------------------------------------------------------------+
 ```
 
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  KAFKA — WHAT TO SAY IN THE INTERVIEW                                   |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Kafka = distributed append-only commit log; producers append,        |
+|      consumers read at their own pace                                   |
+|  * Partitions = unit of parallelism + ordering; replicated across       |
+|      brokers for durability                                             |
+|  * Consumer groups: each partition consumed by exactly one              |
+|      consumer in the group                                              |
+|  * Guarantees: at-least-once by default; exactly-once (EOS) with        |
+|      transactions + idempotent producer                                 |
+|  * Retention: time-based (7d default) or size-based; replay by          |
+|      rewinding offset                                                   |
+|                                                                         |
+|  IF ASKED "how do you get exactly-once processing?":                    |
+|  * Producer: enable.idempotence=true (dedup per producer session)       |
+|  * Transactions: read-process-write in one atomic tx                    |
+|      (isolation.level=read_committed)                                   |
+|  * Effectively-once end-to-end when consumer + producer are both        |
+|      transactional                                                      |
+|                                                                         |
+|  IF ASKED "how does partition assignment work?":                        |
+|  * Consumer group coordinator assigns partitions to consumers           |
+|  * Rebalance on join/leave -- 'stop-the-world' unless cooperative       |
+|      rebalance enabled                                                  |
+|  * Assignment strategies: range, round-robin, sticky, cooperative-      |
+|      sticky                                                             |
+|                                                                         |
+|  IF ASKED "why NOT use Kafka?":                                         |
+|  * Point-to-point queues (RabbitMQ, SQS) are simpler for work           |
+|      distribution                                                       |
+|  * Kafka partition ordering ties fan-out to partition key -- hot        |
+|      keys hurt                                                          |
+|  * Small deployments: operational overhead of ZK/KRaft not worth        |
+|      it                                                                 |
+|                                                                         |
+|  IF ASKED "ZooKeeper vs KRaft?":                                        |
+|  * KRaft (KIP-500): Kafka manages its own metadata via built-in         |
+|      Raft                                                               |
+|  * Removes external ZK dependency, faster metadata ops, easier ops      |
+|  * Default in Kafka 3.5+ for new clusters                               |
+|                                                                         |
+|  IF ASKED "consumer lag alerts?":                                       |
+|  * Monitor lag = LOG-END-OFFSET - CURRENT-OFFSET                        |
+|  * Alert when lag grows unbounded (consumer can't keep up)              |
+|  * Fix: scale consumer group, tune batch size, check downstream         |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Kafka: 1M+ msgs/sec/broker with modest hardware                      |
+|  * Retention: default 7 days, configurable to indefinite                |
+|  * Replication factor: 3 typical (tolerate 1 broker failure with        |
+|      min.insync.replicas=2)                                             |
+|  * Consumer groups: 1000s of consumers per group possible               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * LinkedIn: Kafka origin, still runs trillions of msgs/day             |
+|  * Uber: Kafka + Flink for real-time analytics + change events          |
+|  * Netflix: Kafka backbone for event-driven microservices               |
+|  * Confluent: managed Kafka + Schema Registry + Connect                 |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Partitioned replicated commit log with consumer-group                 |
+|      parallelism; use transactions + idempotent producer for exactly-   |
+|      once and consumer-lag monitoring for backpressure."                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

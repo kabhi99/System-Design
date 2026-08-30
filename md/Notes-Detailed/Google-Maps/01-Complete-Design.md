@@ -1395,3 +1395,64 @@ square tiles. At zoom level z, there are 4^z tiles.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  GOOGLE MAPS — WHAT TO SAY IN THE INTERVIEW                             |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Split by concern: map tile serving (static, CDN), geocoding          |
+|      (address -> lat/lng), routing (graph search), real-time traffic    |
+|      (stream)                                                           |
+|  * Store road network as a graph; use CONTRACTION HIERARCHIES for       |
+|      continent-scale routing (not raw Dijkstra)                         |
+|  * Precompute + cache expensive routes (highway backbone); on-          |
+|      demand for last-mile                                               |
+|  * Real-time traffic: GPS pings from user devices -> Kafka ->           |
+|      compute edge weights, push to routing service                      |
+|  * Serve map tiles via CDN at multiple zoom levels (raster or           |
+|      vector)                                                            |
+|                                                                         |
+|  IF ASKED "why not just Dijkstra?":                                     |
+|  * Continent has ~100M+ edges -- Dijkstra is O(E log V), too slow       |
+|  * Contraction Hierarchies precompute shortcuts -> queries in           |
+|      milliseconds                                                       |
+|  * A* with lat/lng heuristic works for local, CH scales globally        |
+|                                                                         |
+|  IF ASKED "how do you index locations for search?":                     |
+|  * GEOHASH or S2 cells for 'nearby' queries                             |
+|  * Inverted index for text search + geo filter                          |
+|  * Elasticsearch or PostGIS for combined text+geo                       |
+|                                                                         |
+|  IF ASKED "how do you handle real-time traffic?":                       |
+|  * User GPS pings -> Kafka -> stream processor (Flink)                  |
+|  * Aggregate per road segment, recompute edge weights every ~5 min      |
+|  * Push new weights to routing service; ETA recomputes on demand        |
+|                                                                         |
+|  IF ASKED "how do you serve map tiles at scale?":                       |
+|  * Precompute tiles at ~20 zoom levels, store as PNG/vector             |
+|  * CDN caches globally; only cache-miss hits origin                     |
+|  * Vector tiles are smaller and rendered client-side                    |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * OpenStreetMap: ~100M road segments globally                          |
+|  * Zoom levels 0-20, ~ 4^20 tiles at max zoom                           |
+|  * Contraction Hierarchies: continent routing < 100 ms                  |
+|  * GPS ping rate: 1 ping / 5-10s per active user                        |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google, Uber: contraction hierarchies + real-time traffic            |
+|      overlay                                                            |
+|  * Mapbox: vector tiles + client-side rendering                         |
+|  * Waze: user-reported incidents fed into routing weights               |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Split map tiles (CDN) from routing (graph); use contraction           |
+|      hierarchies for continent-scale, and stream GPS pings into edge-   |
+|      weight updates for live traffic."                                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

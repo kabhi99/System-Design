@@ -1107,5 +1107,62 @@ DEADLOCKS
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DATABASE INTERNALS — WHAT TO SAY                                       |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Row-based storage (Postgres, MySQL) for OLTP: point                  |
+|      reads/writes touch whole rows                                      |
+|  * Column-based (Parquet, ClickHouse, Redshift) for OLAP:               |
+|      analytical aggregates scan few columns                             |
+|  * B+tree indexes for range queries; LSM trees (RocksDB,                |
+|      Cassandra) for write-heavy                                         |
+|  * Connection pooling is mandatory: DB connections are expensive        |
+|      (~1MB RAM + TCP)                                                   |
+|  * Read EXPLAIN plans -- watch for seq scan on big tables, missing      |
+|      indexes, join order                                                |
+|                                                                         |
+|  IF ASKED "B+tree vs LSM?":                                             |
+|  * B+tree: O(log N) reads AND writes, in-place updates                  |
+|  * LSM: buffered writes to memtable + SSTables, compaction merges       |
+|  * LSM wins on write-heavy (10x+ throughput); B+tree wins on reads      |
+|                                                                         |
+|  IF ASKED "what locks are there and when?":                             |
+|  * Row-level (SELECT ... FOR UPDATE) for tight contention               |
+|  * Table-level (DDL, TRUNCATE) -- avoid in prod                         |
+|  * Optimistic (version column, CAS) for low-contention                  |
+|  * Deadlocks: DB detects with wait-for graph, kills 1 tx                |
+|                                                                         |
+|  IF ASKED "how do you add an index safely on a huge table?":            |
+|  * CREATE INDEX CONCURRENTLY (Postgres) -- avoids locking writes        |
+|  * Slower to build (2-5x) but no downtime                               |
+|                                                                         |
+|  IF ASKED "connection pool sizing?":                                    |
+|  * Formula: threads_per_core * cores + spillover buffer                 |
+|  * PgBouncer/RDS Proxy to multiplex 1000s of clients over ~100 DB       |
+|      conns                                                              |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 1 Postgres connection: ~1MB RAM + PID + backend                      |
+|  * B+tree page: typically 8-16 KB                                       |
+|  * SSD random read: ~100us; sequential: ~1us/KB                         |
+|  * Typical OLTP DB: 5K-50K QPS per node                                 |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Cassandra, RocksDB, LevelDB: LSM engines for write-heavy             |
+|  * ClickHouse, Druid, Redshift: columnar for OLAP                       |
+|  * PgBouncer, RDS Proxy, ProxySQL: connection multiplexers              |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Row+B+tree for OLTP, column+LSM for scale-out/write-heavy, pool       |
+|      connections aggressively, always read your EXPLAIN plans."         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 20
 

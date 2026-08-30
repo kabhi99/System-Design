@@ -759,3 +759,74 @@ to production operations and system design scenarios.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  REDIS — WHAT TO SAY IN THE INTERVIEW                                   |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Single-threaded event loop (fast because all in-memory + no          |
+|      context switch)                                                    |
+|  * Data structures beyond string: hash, list, set, sorted set,          |
+|      hyperloglog, bitmap, streams, geo                                  |
+|  * Persistence: RDB snapshots (point-in-time) + AOF (append log);       |
+|      use both for durability                                            |
+|  * HA: Sentinel for master-replica auto-failover; Cluster for           |
+|      horizontal sharding                                                |
+|  * Common uses: cache, rate limit, session store, leaderboard,          |
+|      distributed lock, pub/sub, streams                                 |
+|                                                                         |
+|  IF ASKED "how do you scale Redis?":                                    |
+|  * Vertical: bigger box (up to ~500GB RAM)                              |
+|  * Read replicas: async replication, eventual consistency reads         |
+|  * Redis Cluster: shard by key hash across N masters (each with         |
+|      replicas)                                                          |
+|  * Hash tags: {user123}:profile and {user123}:friends land on same      |
+|      shard                                                              |
+|                                                                         |
+|  IF ASKED "persistence: RDB vs AOF?":                                   |
+|  * RDB: snapshot every N min, fast restart, may lose window of          |
+|      writes                                                             |
+|  * AOF: append every write, near-zero data loss, slower restart         |
+|  * Use BOTH: RDB for fast recovery, AOF for durability guarantee        |
+|                                                                         |
+|  IF ASKED "how does Redis do distributed locks?":                       |
+|  * SETNX with TTL + unique value + Lua release script                   |
+|  * Redlock for multi-Redis correctness (majority quorum)                |
+|  * For real correctness: use ZooKeeper/etcd, not Redis                  |
+|                                                                         |
+|  IF ASKED "eviction policies?":                                         |
+|  * allkeys-lru (default cache use), allkeys-lfu, volatile-lru,          |
+|      volatile-ttl                                                       |
+|  * noeviction: reject writes when full (default -- surprise!)           |
+|  * Choose based on access pattern (recency vs frequency)                |
+|                                                                         |
+|  IF ASKED "Redis vs Memcached?":                                        |
+|  * Redis: rich data structures, persistence, pub/sub, scripting         |
+|  * Memcached: simpler, multi-threaded, better multi-core scaling        |
+|      for pure K/V                                                       |
+|  * Redis wins ~95% of interviews; Memcached for pure K/V mega-          |
+|      scale                                                              |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis: 100K+ ops/sec/node, sub-ms latency                            |
+|  * Max value size: 512 MB (but keep values small)                       |
+|  * Cluster max nodes: 1000 (soft cap)                                   |
+|  * Typical hit-rate target: 80-99%                                      |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Twitter, Instagram, GitHub: Redis heavily as cache + queue           |
+|  * Discord: sorted sets for message pagination                          |
+|  * Stack Overflow: Redis as L2 cache in front of SQL                    |
+|  * AWS ElastiCache, GCP Memorystore: managed Redis                      |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Single-threaded in-memory server with rich data structures,           |
+|      RDB+AOF for durability, Sentinel/Cluster for HA/scale; the swiss-  |
+|      army knife for cache, queue, locks, and counters."                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

@@ -912,5 +912,64 @@ essential for system design interviews.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROTOCOLS DEEP DIVE — WHAT TO SAY                                      |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * TCP by default for reliability, ordering, congestion control         |
+|  * UDP for latency-sensitive lossy workloads: DNS, VoIP, gaming,        |
+|      QUIC/HTTP3                                                         |
+|  * TLS 1.3 for encryption (1-RTT handshake, or 0-RTT with               |
+|      resumption)                                                        |
+|  * gRPC (HTTP/2 + Protobuf) for internal service-to-service             |
+|  * WebRTC (SRTP + ICE + STUN/TURN) for peer-to-peer real-time           |
+|      media                                                              |
+|                                                                         |
+|  IF ASKED "TCP vs UDP?":                                                |
+|  * TCP: reliable, ordered, flow-controlled, ~1 RTT handshake            |
+|  * UDP: fire-and-forget, no ordering, no retransmit, ~0 setup           |
+|  * TCP for correctness (APIs, DB); UDP for latency (voice, gaming,      |
+|      DNS)                                                               |
+|                                                                         |
+|  IF ASKED "why HTTP/3 / QUIC?":                                         |
+|  * Solves TCP head-of-line blocking at packet level                     |
+|  * Faster handshake (0-RTT with cached crypto)                          |
+|  * Connection migration across network changes (5G -> WiFi)             |
+|                                                                         |
+|  IF ASKED "how does TLS work?":                                         |
+|  * Client hello -> server cert + ephemeral key -> shared symmetric      |
+|      key                                                                |
+|  * TLS 1.3: 1 RTT (or 0 RTT resumption), forward secrecy by             |
+|      default                                                            |
+|  * mTLS: both sides present certs -- used inside service mesh           |
+|                                                                         |
+|  IF ASKED "gRPC vs REST?":                                              |
+|  * gRPC: strong typing (proto), streaming, HTTP/2, binary --            |
+|      faster + smaller                                                   |
+|  * REST: text/JSON, cacheable, browser-friendly, easy to debug          |
+|  * Rule: gRPC internal, REST/JSON external                              |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * TCP handshake: 1 RTT; TLS 1.3: +1 RTT (0 with resumption)            |
+|  * gRPC over Protobuf: 3-10x smaller payload than JSON, 5-10x           |
+|      faster serialization                                               |
+|  * QUIC: 0-1 RTT setup vs TCP+TLS 2-3 RTT                               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google: QUIC/HTTP3 across all services (Search, YouTube)             |
+|  * Netflix: gRPC internal, REST external                                |
+|  * Zoom, Google Meet: WebRTC for browser peer-to-peer media             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "TCP+TLS for correctness, UDP/QUIC for latency, gRPC internal,         |
+|      REST external, WebRTC for real-time media."                        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 19
 

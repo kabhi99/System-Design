@@ -669,5 +669,70 @@ informed decisions and explain your choices in interviews.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SYSTEM DESIGN TRADEOFFS — WHAT TO SAY                                  |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Stateless app servers behind a LB; state lives in DB / cache /       |
+|      queue                                                              |
+|  * Async communication (queues) between services when latency           |
+|      isn't user-facing                                                  |
+|  * SQL by default; go NoSQL only when you can't scale writes            |
+|      vertically or you need a different data model                      |
+|  * Monolith first; extract microservices only when team/domain          |
+|      boundaries demand it                                               |
+|                                                                         |
+|  IF ASKED "SQL vs NoSQL?":                                              |
+|  * SQL: strong consistency, JOINs, transactions, mature tooling         |
+|  * NoSQL: horizontal scale, flexible schema, denormalized reads         |
+|  * Rule: pick SQL unless writes exceed one node's ceiling (~10K         |
+|      QPS)                                                               |
+|                                                                         |
+|  IF ASKED "push vs pull?":                                              |
+|  * Push: low latency, server pays cost, harder for slow consumers       |
+|  * Pull: consumer controls rate, higher latency, easier to scale        |
+|  * News feed at scale = hybrid (push for normal users, pull for         |
+|      celebs)                                                            |
+|                                                                         |
+|  IF ASKED "sync vs async?":                                             |
+|  * Sync: simple, low latency, tight coupling, fails when                |
+|      downstream fails                                                   |
+|  * Async (queue): decoupled, absorbs spikes, but eventual               |
+|      consistency                                                        |
+|                                                                         |
+|  IF ASKED "monolith vs microservices?":                                 |
+|  * Monolith: 1 deploy, 1 DB, easy dev; hard to scale teams              |
+|  * Microservices: independent scale/deploy; distributed-systems         |
+|      tax                                                                |
+|  * Move only when team size and domain complexity demand it             |
+|                                                                         |
+|  IF ASKED "latency vs throughput?":                                     |
+|  * Latency = time per request; Throughput = requests per second         |
+|  * Batching improves throughput but hurts latency                       |
+|  * Design targets both explicitly (p50/p99 latency AND QPS)             |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Typical SQL vertical ceiling: 10K-50K QPS per node                   |
+|  * Kafka: 1M+ msgs/sec/broker                                           |
+|  * Add-a-service overhead: ~5-20ms latency per network hop              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Shopify: monolith at massive scale (Rails), extracts only for        |
+|      isolation                                                          |
+|  * Amazon: forced microservice split via API mandate (2002)             |
+|  * Facebook: TAO for read-heavy graph (chose eventual consistency)      |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Default to stateless + SQL + monolith + sync; move to                 |
+|      stateful/NoSQL/microservices/async ONLY when a concrete            |
+|      constraint forces you."                                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 17
 

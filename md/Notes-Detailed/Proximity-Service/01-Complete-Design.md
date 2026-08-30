@@ -1684,3 +1684,60 @@ a massively read-heavy workload across the globe.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PROXIMITY SERVICE (YELP) — WHAT TO SAY                                 |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Split read path (search) from write path (business owner             |
+|      updates)                                                           |
+|  * Geospatial index: GEOHASH or QUADTREE for 'find within radius'       |
+|      queries                                                            |
+|  * Elasticsearch or PostGIS as the primary search engine (text +        |
+|      geo filter)                                                        |
+|  * Cache hot queries in Redis (top cities, popular categories)          |
+|  * Business data (photos, reviews) in a separate blob/DB layer          |
+|                                                                         |
+|  IF ASKED "geohash vs quadtree vs S2?":                                 |
+|  * Geohash: simple, string prefix = 'in this cell', uneven cells        |
+|      at poles                                                           |
+|  * Quadtree: adaptive to density (sparse rural, dense city)             |
+|  * S2: hierarchical, better math -- Google's choice for maps            |
+|  * In interviews, geohash is easiest to explain; quadtree if asked      |
+|      about density                                                      |
+|                                                                         |
+|  IF ASKED "how does GEOSEARCH work?":                                   |
+|  * Convert lat/lng to geohash prefix                                    |
+|  * Fetch cells in radius (may span 4-9 neighboring cells)               |
+|  * Filter by exact Haversine distance                                   |
+|                                                                         |
+|  IF ASKED "how do you rank results?":                                   |
+|  * Signals: distance, rating, review count, category match,             |
+|      personalization                                                    |
+|  * Combined score served from a ranking service (like                   |
+|      Elasticsearch script_score)                                        |
+|                                                                         |
+|  IF ASKED "cache strategy?":                                            |
+|  * Cache (city + category + radius) -> results in Redis                 |
+|  * TTL: 5-15 min; invalidate on business update via CDC                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Yelp scale: ~200M businesses globally                                |
+|  * Search latency SLO: <200 ms p99                                      |
+|  * Geohash precision: 6 chars = ~1.2km cell, 8 chars = ~40m             |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Yelp: Elasticsearch + geo_shape queries                              |
+|  * Foursquare / Swarm: quadtree-based indexing                          |
+|  * Uber Eats, DoorDash: H3 hex grid for proximity                       |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Geohash/quadtree + Elasticsearch/PostGIS for search, Redis cache      |
+|      for hot cities, and CDC to invalidate on business updates."        |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

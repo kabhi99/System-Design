@@ -547,4 +547,69 @@ think about tradeoffs, edge cases, and real-world constraints.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  INTERVIEW QUESTIONS TO ASK — WHAT TO SAY                               |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * First 5 min: clarify functional scope + traffic (DAU/QPS) +          |
+|      read/write ratio                                                   |
+|  * Next 5 min: SLOs (latency p99, availability), consistency            |
+|      needs, budget for staleness                                        |
+|  * During deep dive: ask about failure modes and multi-region           |
+|      requirements                                                       |
+|  * Save questions like 'what's the interviewer's bar' for the end       |
+|      -- they signal seniority                                           |
+|                                                                         |
+|  ALWAYS ASK FIRST:                                                      |
+|  * What are the core features (must-haves vs nice-to-haves)?            |
+|  * What's the DAU / peak QPS / storage growth?                          |
+|  * Read-heavy or write-heavy? What's the ratio?                         |
+|  * Are we building for a specific region or globally?                   |
+|                                                                         |
+|  ASK EARLY:                                                             |
+|  * What's the availability SLO -- 99.9% or 99.99%?                      |
+|  * Acceptable read/write latency (p50/p99)?                             |
+|  * Is eventual consistency OK, or do we need strong?                    |
+|  * Budget for stale data (seconds? minutes?)                            |
+|                                                                         |
+|  ASK DURING DEEP DIVE:                                                  |
+|  * How do we handle a full-region outage?                               |
+|  * What's the retention policy for user data?                           |
+|  * Are there GDPR/privacy constraints?                                  |
+|  * How do we deploy safely (canary, blue-green)?                        |
+|                                                                         |
+|  QUESTIONS THAT SIGNAL SENIORITY:                                       |
+|  * What's the on-call rotation like for this service?                   |
+|  * How do we measure user-visible success (KPIs)?                       |
+|  * What's the biggest scaling risk you foresee?                         |
+|                                                                         |
+|  DO NOT ASK:                                                            |
+|  * What tech stack should I use? (Pick one and justify)                 |
+|  * Should I use SQL or NoSQL? (Justify based on requirements)           |
+|  * Anything already in the prompt (shows you didn't listen)             |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Spend ~10% of the interview on clarifying questions                  |
+|  * Get concrete numbers before designing (DAU, QPS, storage,            |
+|      latency SLO)                                                       |
+|  * State assumptions explicitly if the interviewer won't give a         |
+|      number                                                             |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google interview rubric explicitly rewards 'ask before               |
+|      designing'                                                         |
+|  * Amazon Bar Raiser: probes on 'why did you assume X' -- show you      |
+|      thought                                                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Clarify scope + numbers + SLOs BEFORE drawing a single box; ask       |
+|      failure-mode questions during deep dive to show senior thinking."  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 END OF CHAPTER 23

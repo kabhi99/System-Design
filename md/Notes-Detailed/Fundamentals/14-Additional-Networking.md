@@ -593,5 +593,54 @@ interviews: OSI Model, IP addressing, and data integrity mechanisms.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ADDITIONAL NETWORKING — WHAT TO SAY IN THE INTERVIEW                   |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Walk the OSI stack top-down at sender, bottom-up at receiver:        |
+|      L7 HTTP -> L4 TCP -> L3 IP -> L2 Ethernet+MAC -> L1 physical       |
+|  * Client resolves domain via DNS, opens TCP (3-way handshake),         |
+|      then TLS if HTTPS                                                  |
+|  * Router forwards by IP across networks; switch forwards by MAC        |
+|      on LAN                                                             |
+|  * ARP resolves IP -> MAC on the local subnet                           |
+|                                                                         |
+|  IF ASKED "what OSI layer does X operate at?":                          |
+|  * L2 = Ethernet, MAC, ARP    L3 = IP, routing                          |
+|  * L4 = TCP, UDP, ports        L6 = TLS/SSL                             |
+|  * L7 = HTTP, gRPC, WebSocket, DNS, FTP                                 |
+|                                                                         |
+|  IF ASKED "public vs private IP?":                                      |
+|  * Private (RFC 1918): 10.0.0.0/8, 172.16.0.0/12, 192.168/16            |
+|  * NAT translates private -> public at the gateway                      |
+|  * IPv4 exhausted -> CIDR + NAT + long-term IPv6                        |
+|                                                                         |
+|  IF ASKED "how is data integrity guaranteed on the wire?":              |
+|  * L2 Ethernet CRC32, L3 IP header checksum, L4 TCP checksum            |
+|  * TCP retransmits on checksum failure or missing ACK                   |
+|  * TLS layers HMAC on top for tamper detection                          |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * IPv4 = 32 bits (~4.3B addresses); IPv6 = 128 bits (~3.4e38)          |
+|  * Typical MTU = 1500 bytes (Ethernet)                                  |
+|  * TCP checksum = 16 bits; Ethernet FCS = 32 bits                       |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * AWS VPC: RFC-1918 private ranges + NAT gateway for egress            |
+|  * Cloudflare: BGP anycast to route users to nearest edge PoP           |
+|  * Kubernetes: overlay network (Flannel/Calico) gives every pod an      |
+|      IP                                                                 |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Requests traverse the OSI stack; each layer adds a header +           |
+|      checksum on the way down and strips it on the way up."             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 14
 

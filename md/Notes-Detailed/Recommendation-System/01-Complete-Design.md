@@ -1795,3 +1795,66 @@ item, and uses these predictions to suggest items the user is likely to engage w
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  RECOMMENDATION SYSTEM — WHAT TO SAY                                    |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Two-stage funnel: CANDIDATE GENERATION (recall) -> RANKING           |
+|      (precision)                                                        |
+|  * Candidates: collaborative filtering (matrix factorization /          |
+|      user-item embeddings) + content-based + trending                   |
+|  * Ranker: DNN over (user features, item features, context) --          |
+|      optimize CTR / dwell / conversion                                  |
+|  * Serve via feature store + model server (TF Serving,                  |
+|      TorchServe); cache hot user recs in Redis                          |
+|  * Offline pipeline (Spark) refreshes embeddings daily; online          |
+|      updates via streaming (Flink)                                      |
+|                                                                         |
+|  IF ASKED "collaborative vs content-based?":                            |
+|  * Collaborative: 'users like you also liked' -- needs interaction      |
+|      data, cold-start fails                                             |
+|  * Content-based: 'similar items to what you liked' -- works cold-      |
+|      start, less serendipity                                            |
+|  * Hybrid in production always                                          |
+|                                                                         |
+|  IF ASKED "how do you handle cold start?":                              |
+|  * New user: onboarding survey, trending content, demographic           |
+|      default                                                            |
+|  * New item: content features (text embeddings, image embeddings)       |
+|                                                                         |
+|  IF ASKED "exploration vs exploitation?":                               |
+|  * Multi-armed bandits (epsilon-greedy, Thompson sampling)              |
+|  * Reserve X% of impressions to explore new/uncertain items             |
+|                                                                         |
+|  IF ASKED "how do you avoid filter bubbles?":                           |
+|  * Diversity constraint at ranking (max K per category)                 |
+|  * Explicit user controls (mute topic, 'not interested')                |
+|  * Serendipity injection: random or trending                            |
+|                                                                         |
+|  IF ASKED "how do you evaluate?":                                       |
+|  * Offline: NDCG, recall@K, MAP                                         |
+|  * Online: A/B test on CTR, dwell time, retention, revenue              |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Netflix: top ~500 candidates -> rank to top 20 shown                 |
+|  * YouTube: ~1M candidates -> ~hundreds -> shown ~20                    |
+|  * Embeddings: 64-256 dims typical                                      |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * YouTube: two-tower DNN candidate generator + DNN ranker              |
+|  * Netflix: matrix factorization + contextual bandits                   |
+|  * Spotify: collaborative filtering + audio embeddings for cold         |
+|      start                                                              |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Two-stage funnel: broad candidate generation                          |
+|      (CF+content+trending) then precise DNN ranker; refresh offline,    |
+|      serve online, always A/B test."                                    |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

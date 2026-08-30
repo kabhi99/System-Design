@@ -1465,3 +1465,62 @@ block storage.
 ```
 
 *End of S3 / Object Storage System Design Notes*
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  S3 / OBJECT STORAGE — WHAT TO SAY                                      |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Split control plane (metadata) from data plane (chunks)              |
+|  * Chunk each object into fixed-size blocks (typically 4-16 MB);        |
+|      store chunks across N nodes with erasure coding                    |
+|  * Metadata service (chunk locations, object ACLs) in a strongly-       |
+|      consistent KV store (like Spanner)                                 |
+|  * Write path: chunk -> hash -> write to N nodes (quorum); update       |
+|      metadata; return ETag (MD5) on success                             |
+|  * Read path: metadata lookup -> parallel chunk fetch ->                |
+|      reassemble                                                         |
+|                                                                         |
+|  IF ASKED "why erasure coding not just replication?":                   |
+|  * 3x replication = 200% storage overhead                               |
+|  * Reed-Solomon (10+4) = 40% overhead, still tolerates 4 failures       |
+|  * Only for warm/cold tiers; hot data uses replication for latency      |
+|                                                                         |
+|  IF ASKED "how do you get 11 9s durability?":                           |
+|  * Erasure coding + multi-AZ + versioning + async cross-region          |
+|      backup                                                             |
+|  * Detect bit rot with periodic scrubbing (checksum verification)       |
+|  * Auto-heal: rebuild missing shards from surviving ones                |
+|                                                                         |
+|  IF ASKED "how do you handle metadata scale?":                          |
+|  * Shard metadata by object key hash                                    |
+|  * Cache hot object metadata in Redis                                   |
+|  * Use consistent hashing for chunk placement across storage nodes      |
+|                                                                         |
+|  IF ASKED "multipart upload?":                                          |
+|  * Client splits big object into parts, uploads each with its own       |
+|      hash                                                               |
+|  * Server assembles on completeMultipartUpload; per-part retry          |
+|  * Enables resumable uploads for huge (multi-GB) objects                |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * S3 durability: 99.999999999% (11 nines)                              |
+|  * S3 chunk size: typically 4-16 MB                                     |
+|  * Erasure coding (10+4): 40% overhead, tolerates 4 failures            |
+|  * Multipart upload part size: 5 MB - 5 GB                              |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * AWS S3, Google Cloud Storage, Azure Blob                             |
+|  * Ceph, MinIO: open-source S3-compatible object stores                 |
+|  * Backblaze B2: erasure coding (17+3) at Backblaze scale               |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Chunk + erasure-code across nodes for durability, strongly-           |
+|      consistent metadata service, multipart for big uploads, and        |
+|      scrubbing for silent-corruption defense."                          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

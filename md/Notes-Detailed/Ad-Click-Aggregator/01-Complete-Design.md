@@ -1252,3 +1252,60 @@ to ensure accurate advertiser billing and campaign performance measurement.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  AD CLICK AGGREGATOR — WHAT TO SAY                                      |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Pipeline: tracker (web pixel / SDK) -> Kafka -> stream               |
+|      processor (Flink) -> aggregate store + fraud                       |
+|  * At-least-once delivery + idempotent aggregation (dedup on            |
+|      click_id)                                                          |
+|  * Sliding-window aggregation (per minute, hour, day) with              |
+|      WATERMARKS for late events                                         |
+|  * Fraud detection in-line: rate limit per user/IP, ML model on         |
+|      features (velocity, device)                                        |
+|  * Reconcile stream vs batch counts nightly to catch missed /           |
+|      duplicated events                                                  |
+|                                                                         |
+|  IF ASKED "how do you handle exactly-once counts?":                     |
+|  * Kafka + Flink with checkpointing gives effectively-once              |
+|  * Dedup key = click_id in a KV store with 24h TTL                      |
+|  * Idempotent writes to aggregate store (upsert by (ad_id,              |
+|      window_start))                                                     |
+|                                                                         |
+|  IF ASKED "late-arriving events?":                                      |
+|  * Watermark = event time - allowed lateness (e.g. 5 min)               |
+|  * Late events go to a side-output for reprocessing                     |
+|                                                                         |
+|  IF ASKED "how do you detect click fraud?":                             |
+|  * Rate limiting per user/IP/device fingerprint                         |
+|  * ML features: click velocity, viewport, mouse movement, IP            |
+|      reputation                                                         |
+|  * Post-hoc: batch pipeline flags suspicious sessions for refund        |
+|                                                                         |
+|  IF ASKED "how do advertisers see near-real-time counts?":              |
+|  * Aggregate to per-minute buckets in a fast KV (Redis / DynamoDB)      |
+|  * Dashboard reads pre-aggregated buckets, sub-second refresh           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Google Ads scale: 100B+ clicks/day                                   |
+|  * End-to-end latency (click -> dashboard): 1-5 min                     |
+|  * Kafka: 1M+ msgs/sec/broker; Flink: 10M+ events/sec/job               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google Ads, Meta Ads: Flink/Beam stream pipelines                    |
+|  * TikTok: Kafka + Flink + ClickHouse for real-time analytics           |
+|  * Twitter Heron: earlier-generation stream processor                   |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Kafka -> Flink windowed aggregation with watermarks + click_id        |
+|      dedup, fast KV for dashboards, batch reconciliation for            |
+|      correctness."                                                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

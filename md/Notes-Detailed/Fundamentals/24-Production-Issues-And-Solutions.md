@@ -943,3 +943,69 @@ Lag grows at: 8,000 msg/sec → 480K messages behind per minute
 | **Blast radius thinking** | "Is this affecting all users or just a segment? Can we isolate the impact?" |
 | **Prevention mindset** | "After fixing, I'd add monitoring for X and a circuit breaker on Y to prevent recurrence" |
 | **Blameless culture** | "The question isn't who made the mistake, but what systemic gap allowed it to reach production" |
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  PRODUCTION ISSUES — WHAT TO SAY                                        |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Show a systematic incident approach: detect -> mitigate -> root      |
+|      cause -> prevent                                                   |
+|  * Rollback FIRST, investigate SECOND -- restoring service beats        |
+|      finding root cause                                                 |
+|  * For every issue: talk about detection (metrics/alerts),              |
+|      mitigation (immediate), and prevention (post-mortem action items)  |
+|                                                                         |
+|  DB connection pool exhaustion:                                         |
+|  * Symptoms: 'too many connections' errors, latency spike               |
+|  * Mitigate: kill long queries, restart oldest connections, add         |
+|      PgBouncer                                                          |
+|  * Prevent: right-size pool, timeout idle conns, monitor conn           |
+|      usage                                                              |
+|                                                                         |
+|  Cache stampede (thundering herd on TTL expiry):                        |
+|  * Mitigate: distributed lock (SETNX) so one request rebuilds           |
+|  * Prevent: jitter TTLs, early refresh at 80% TTL, request              |
+|      coalescing                                                         |
+|                                                                         |
+|  Cascading failure (one service takes down the fleet):                  |
+|  * Mitigate: kill the failing service, use circuit breakers to          |
+|      isolate                                                            |
+|  * Prevent: bulkheads (isolated thread pools), timeout every            |
+|      downstream call, retry with jitter                                 |
+|                                                                         |
+|  Replication lag causing stale reads:                                   |
+|  * Mitigate: route critical reads to primary, monitor lag               |
+|  * Prevent: read-your-writes routing, session stickiness, DB-side       |
+|      monotonic reads                                                    |
+|                                                                         |
+|  Duplicate processing (missing idempotency):                            |
+|  * Mitigate: add dedup at the consumer via message ID                   |
+|  * Prevent: idempotency keys, transactional outbox for producers        |
+|                                                                         |
+|  Deployment causes outage:                                              |
+|  * Mitigate: instant rollback (blue-green or feature flag)              |
+|  * Prevent: canary rollout, automated rollback on error-rate spike      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Alert on error rate > 1% or latency p99 > 2x baseline                |
+|  * Circuit breaker: trip at 50% failure over 10s window, half-open      |
+|      after 30s                                                          |
+|  * Retry: exponential backoff with jitter (100ms base, 5x factor,       |
+|      max 30s)                                                           |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix Hystrix / resilience4j: circuit breaker + bulkhead           |
+|  * Google SRE book: canary + gradual rollout + error budget             |
+|  * Amazon: Well-Architected Framework -- reliability pillar             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Detect (metrics), mitigate (rollback + circuit breaker), root         |
+|      cause (post-mortem), prevent (add monitoring + guardrail) --       |
+|      always in that order."                                             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

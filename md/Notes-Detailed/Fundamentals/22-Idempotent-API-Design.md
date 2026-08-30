@@ -618,5 +618,58 @@ This chapter consolidates patterns for making non-idempotent operations safe.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  IDEMPOTENT API DESIGN — WHAT TO SAY                                    |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Client generates a UUID as Idempotency-Key header per logical        |
+|      operation                                                          |
+|  * Server stores (idempotency_key -> result, status) in Redis + DB      |
+|  * On duplicate key: return the stored result; do NOT re-execute        |
+|  * Wrap the write + key-insert in ONE DB transaction to avoid race      |
+|  * TTL the key for 24-72h; long enough to cover client retries          |
+|                                                                         |
+|  IF ASKED "why not just make everything PUT-idempotent?":               |
+|  * Business ops like 'charge card' are inherently POST-style            |
+|  * Idempotency key decouples idempotency from HTTP verb semantics       |
+|                                                                         |
+|  IF ASKED "how do you avoid the double-execute race?":                  |
+|  * SELECT ... FOR UPDATE on idempotency_keys within a tx                |
+|  * OR UNIQUE constraint on key + catch dup-key error and return         |
+|      cached result                                                      |
+|  * OR advisory lock keyed by hash(idempotency_key)                      |
+|                                                                         |
+|  IF ASKED "what to cache in the response?":                             |
+|  * Status code, response body, headers                                  |
+|  * Enough to reconstruct the exact original response                    |
+|                                                                         |
+|  IF ASKED "external service calls (Stripe, Twilio)?":                   |
+|  * Pass YOUR idempotency key downstream if their API supports it        |
+|  * Store the downstream response keyed by your key                      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis idempotency cache: <1ms lookup, TTL 24-72h                     |
+|  * Typical row size in idempotency_keys: 500B-2KB                       |
+|  * TTL should exceed max client retry window (usually 24h is            |
+|      plenty)                                                            |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Stripe: Idempotency-Key header, TTL 24h (industry reference)         |
+|  * AWS SQS: dedup within 5-min window on message ID                     |
+|  * Kafka producer: enable.idempotence=true for exactly-once per         |
+|      session                                                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Client-provided UUID + server-side (key -> result) cache,             |
+|      guarded by a UNIQUE constraint or SELECT FOR UPDATE inside the     |
+|      same tx."                                                          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 22
 

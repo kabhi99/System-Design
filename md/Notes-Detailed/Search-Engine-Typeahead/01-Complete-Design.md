@@ -1810,3 +1810,61 @@
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SEARCH + TYPEAHEAD — WHAT TO SAY                                       |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Two systems, related but different                                   |
+|  * Search: inverted index (Elasticsearch/Solr/Lucene), ranked by        |
+|      TF-IDF or BM25 + business signals                                  |
+|  * Typeahead: TRIE of top prefixes, cached in Redis; sub-100 ms         |
+|      responses                                                          |
+|  * Both are read-heavy -- shard by term (search) or by prefix           |
+|      (typeahead)                                                        |
+|  * Batch indexing pipeline (Spark/Flink) refreshes daily or on CDC      |
+|      events                                                             |
+|                                                                         |
+|  IF ASKED "how does the inverted index work?":                          |
+|  * For each term, store [doc_id, position, frequency] postings          |
+|      list                                                               |
+|  * Query: intersect postings for query terms, rank by BM25 +            |
+|      signals                                                            |
+|  * Compressed with delta encoding + variable-byte for size              |
+|                                                                         |
+|  IF ASKED "typeahead data structure?":                                  |
+|  * TRIE / prefix tree with top-K suggestions per node                   |
+|  * Redis sorted set per prefix (weight = frequency)                     |
+|  * Client-side cache of last N queries to avoid roundtrip               |
+|                                                                         |
+|  IF ASKED "how do you rank?":                                           |
+|  * BM25 or TF-IDF for term relevance                                    |
+|  * Plus: recency, personalization, click-through rate                   |
+|  * Learn-to-rank models (LambdaMART, XGBoost) on top                    |
+|                                                                         |
+|  IF ASKED "how do you handle typos?":                                   |
+|  * Fuzzy matching: Levenshtein distance up to 2                         |
+|  * Precomputed common misspelling -> canonical map                      |
+|  * Query rewriting with 'did you mean?'                                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Typeahead latency SLO: <100 ms p99                                   |
+|  * Top-K per prefix: usually K=5-10                                     |
+|  * Elasticsearch: ~1000 QPS/node with sub-100ms queries                 |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Google: BERT-based ranking on top of BM25                            |
+|  * Elasticsearch, Solr, Lucene: standard search stack                   |
+|  * Twitter Earlybird: real-time search index                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Inverted index for search (BM25 + signals), TRIE/sorted-set for       |
+|      typeahead, batch pipeline for reindexing, and learn-to-rank on     |
+|      top for relevance."                                                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

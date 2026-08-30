@@ -1933,3 +1933,61 @@ specifically for time-series patterns.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  TIME-SERIES DB — WHAT TO SAY                                           |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Data model: (metric, tags, timestamp, value) -- append-only,         |
+|      mostly recent writes, mostly recent reads                          |
+|  * Storage: columnar layout with delta + varint encoding (1-2           |
+|      bytes per point)                                                   |
+|  * LSM-style: memtable for hot writes -> flush to immutable chunks      |
+|  * Downsample as data ages: 1s -> 1min -> 1hr for years of              |
+|      retention                                                          |
+|  * Shard by (metric_name hash) + time range; parallel query fan-        |
+|      out                                                                |
+|                                                                         |
+|  IF ASKED "why not just use Postgres/MySQL?":                           |
+|  * TSDBs compress 10-100x better via delta encoding + timestamp         |
+|      coalescing                                                         |
+|  * Purpose-built for range scans, not point lookups                     |
+|  * OLTP DBs struggle at 1M+ writes/sec of tiny points                   |
+|                                                                         |
+|  IF ASKED "how do you handle high cardinality?":                        |
+|  * Cardinality = unique (metric, tag) combinations; explosion           |
+|      kills perf                                                         |
+|  * Aggregate at emit time, avoid unbounded labels (user_id,             |
+|      request_id)                                                        |
+|  * Prefer tracing/logs for high-cardinality per-event data              |
+|                                                                         |
+|  IF ASKED "retention tiers?":                                           |
+|  * Hot: 7d in memory + SSD, raw resolution                              |
+|  * Warm: 30-90d SSD, downsampled to 1-min                               |
+|  * Cold: 1-5y object storage (S3), downsampled to 1-hr                  |
+|                                                                         |
+|  IF ASKED "write path?":                                                |
+|  * Producer -> Kafka (durability) -> ingester -> memtable -> flush      |
+|  * Idempotent inserts via (metric, ts) unique key                       |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * 1-2 bytes per sample after compression                               |
+|  * Modern TSDBs: 1M+ writes/sec per node                                |
+|  * InfluxDB: chunks of ~1 hour written as immutable files               |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Prometheus TSDB, InfluxDB, TimescaleDB, VictoriaMetrics              |
+|  * Facebook Gorilla: influential TSDB paper (2015)                      |
+|  * Uber M3, Netflix Atlas: metrics at extreme scale                     |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Columnar delta-encoded append-only storage, LSM-style flush,          |
+|      downsample as data ages, shard by (metric, time), watch label      |
+|      cardinality."                                                      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

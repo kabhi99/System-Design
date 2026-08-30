@@ -1566,3 +1566,59 @@ privacy guarantees, and minimal battery drain.
 |                                                                         |
 +-------------------------------------------------------------------------+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  NEARBY FRIENDS — WHAT TO SAY IN THE INTERVIEW                          |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * WebSocket / long-lived connection per client for bi-directional      |
+|      push                                                               |
+|  * Location ingest: user pings every 10-30s -> location service ->      |
+|      Redis (geo index)                                                  |
+|  * Fan-out: for each user, find friends within radius via GEO           |
+|      commands; push updates via pub/sub                                 |
+|  * Privacy first: user opts in per friend, TTL on shared location       |
+|                                                                         |
+|  IF ASKED "how do you index locations for proximity?":                  |
+|  * Redis GEO commands (GEOADD, GEOSEARCH) -- geohash under the          |
+|      hood                                                               |
+|  * For massive scale: shard by geohash prefix across Redis cluster      |
+|  * S2 or H3 cells if you need hierarchical or hexagonal grids           |
+|                                                                         |
+|  IF ASKED "push vs pull?":                                              |
+|  * Push (pub/sub) for low-latency updates when friend enters            |
+|      radius                                                             |
+|  * Pull (client polls every 10s) for battery-friendly fallback          |
+|  * Hybrid: push while app foregrounded, pull when backgrounded          |
+|                                                                         |
+|  IF ASKED "how do you scale to 100M+ users?":                           |
+|  * Shard location service by user_id                                    |
+|  * Location updates are write-heavy: async write, no strong             |
+|      consistency needed                                                 |
+|  * Aggressive TTL (5 min) on stale locations                            |
+|                                                                         |
+|  IF ASKED "privacy?":                                                   |
+|  * Per-friend opt-in, expirable share links                             |
+|  * Precise location NEVER stored long-term (in-memory + short TTL)      |
+|  * Coarse-grained location for analytics only                           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Location update rate: 1 per 10-30s per active user                   |
+|  * Redis GEOSEARCH: <1 ms for radius query                              |
+|  * Location TTL: 5 min (auto-expire stale pings)                        |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Facebook Nearby Friends: opt-in, city-level default granularity      |
+|  * Snapchat Snap Map: real-time location with privacy controls          |
+|  * Uber: Redis geo + H3 cells for driver-rider matching                 |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Persistent WebSocket per client, Redis geo index for proximity,       |
+|      pub/sub fan-out, and aggressive TTL to protect privacy."           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

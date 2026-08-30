@@ -760,5 +760,58 @@ commonly asked in system design interviews.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ARCHITECTURAL PATTERNS — WHAT TO SAY IN THE INTERVIEW                  |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Client-server is the default: stateless app servers behind a         |
+|      load balancer, DB/cache as backends                                |
+|  * Go serverless (Lambda/Cloud Functions) for spiky, event-driven,      |
+|      low-QPS workloads with no ops overhead                             |
+|  * P2P + gossip for decentralized state propagation (cluster            |
+|      membership, failure detection, CRDT sync)                          |
+|  * Pick the pattern based on scale, ownership of state, and             |
+|      operational appetite                                               |
+|                                                                         |
+|  IF ASKED "when does serverless NOT work?":                             |
+|  * Long-running jobs (>15 min AWS Lambda limit)                         |
+|  * Sub-10ms latency SLOs (cold starts hurt)                             |
+|  * Sustained high QPS -- cost > VMs at ~30%+ utilization                |
+|  * Heavy binary/GPU workloads                                           |
+|                                                                         |
+|  IF ASKED "how does gossip protocol work?":                             |
+|  * Each node periodically syncs state with K random peers               |
+|  * Membership + failure detection converge in O(log N) rounds           |
+|  * Anti-entropy variant reconciles data (Cassandra hinted handoff)      |
+|                                                                         |
+|  IF ASKED "P2P vs client-server?":                                      |
+|  * P2P: no single point of failure, scales with peers (BitTorrent)      |
+|  * But: NAT traversal is hard, consistency harder, harder to audit      |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * AWS Lambda cold start: 100ms-1s (warm ~1ms)                          |
+|  * Lambda max timeout: 15 min; max memory: 10GB                         |
+|  * Gossip convergence: O(log N) rounds; typical 1-2s in a 100-node      |
+|      cluster                                                            |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Netflix: reserved-capacity EC2 + Lambda for edge/async               |
+|      workloads                                                          |
+|  * Cassandra: gossip protocol for cluster membership + failure          |
+|      detection                                                          |
+|  * BitTorrent, IPFS: P2P for content distribution without central       |
+|      server                                                             |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Client-server by default; serverless for spikes; P2P + gossip         |
+|      when you need decentralized state."                                |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 15
 

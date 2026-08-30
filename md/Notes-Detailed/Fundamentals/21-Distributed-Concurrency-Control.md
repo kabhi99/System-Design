@@ -1173,5 +1173,62 @@ simultaneously. This chapter covers patterns for safe coordination.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  DISTRIBUTED CONCURRENCY CONTROL — WHAT TO SAY                          |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * For simple mutual exclusion: Redis SETNX with TTL + Lua release      |
+|      script                                                             |
+|  * Always attach a FENCING TOKEN so a stale lock holder can't           |
+|      corrupt state                                                      |
+|  * For correctness-critical locks (leader election, financial):         |
+|      ZooKeeper / etcd (Raft consensus)                                  |
+|  * For multi-Redis correctness: Redlock across N independent Redis      |
+|      nodes (majority quorum)                                            |
+|  * Prefer optimistic concurrency (CAS on version column) whenever       |
+|      possible -- no lock at all                                         |
+|                                                                         |
+|  IF ASKED "why fencing tokens?":                                        |
+|  * Client acquires lock, then GC-pauses past the TTL                    |
+|  * Another client acquires the same lock                                |
+|  * First client wakes up, writes -- corruption!                         |
+|  * Fix: monotonically-increasing token, DB rejects writes with          |
+|      stale token                                                        |
+|                                                                         |
+|  IF ASKED "Redis SETNX vs Redlock vs ZooKeeper?":                       |
+|  * SETNX: simple, cheap, ~99% correct -- use for non-critical           |
+|      (rate limit, dedup)                                                |
+|  * Redlock: quorum across N Reds -- higher availability, still          |
+|      debated for correctness                                            |
+|  * ZK/etcd: real consensus, slower, use when correctness is a MUST      |
+|                                                                         |
+|  IF ASKED "how does leader election work?":                             |
+|  * Nodes race to CREATE ephemeral node in ZK/etcd                       |
+|  * Winner becomes leader; watchers get notified on session loss         |
+|  * Session heartbeat maintains leadership; heartbeat miss -> new        |
+|      election                                                           |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Redis SETNX + Lua: <1 ms                                             |
+|  * ZooKeeper / etcd leader election: 100ms-1s                           |
+|  * Redlock: N nodes, majority quorum ((N/2)+1), typical N=5             |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Kubernetes: uses etcd for leader election of controllers             |
+|  * Kafka (KRaft): built-in Raft for controller election, replaces       |
+|      ZooKeeper                                                          |
+|  * ClickHouse Keeper: ZK-compatible service for coordination            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Redis SETNX + fencing token for cheap locks; ZooKeeper/etcd when      |
+|      correctness matters; CAS/optimistic whenever the domain allows."   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 21
 

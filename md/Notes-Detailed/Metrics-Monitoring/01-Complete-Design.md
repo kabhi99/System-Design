@@ -1634,3 +1634,63 @@ the health and behavior of a system over time.
   |                                                                |
   +================================================================+
 ```
+
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  METRICS MONITORING (Prometheus/Datadog) — WHAT TO SAY                  |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Metrics pipeline: collector (pull or push) -> time-series DB ->      |
+|      query engine -> alerting + dashboards                              |
+|  * Pull model (Prometheus): server scrapes /metrics on every            |
+|      target; simple + service-discovery-driven                          |
+|  * Push model (StatsD, Datadog): agent on host sends metrics up;        |
+|      better for ephemeral workloads                                     |
+|  * Time-series storage: columnar (Prometheus TSDB), LSM-like, with      |
+|      downsampling + retention tiers                                     |
+|  * Alerts: PromQL/similar expression against metrics; deduplicate       |
+|      + route via Alertmanager/PagerDuty                                 |
+|                                                                         |
+|  IF ASKED "pull vs push?":                                              |
+|  * Pull: server discovers targets, easy to scale, but firewall-         |
+|      friendly?                                                          |
+|  * Push: works behind NAT, better for short-lived jobs (batch,          |
+|      Lambda)                                                            |
+|  * Prometheus supports push via Pushgateway for batch jobs              |
+|                                                                         |
+|  IF ASKED "how do you store trillions of data points?":                 |
+|  * Downsample: 1s -> 1min -> 1hr as data ages                           |
+|  * Tiered retention: 7d hot, 30d warm, 1yr cold                         |
+|  * Delta + varint encoding: 1-2 bytes per sample                        |
+|                                                                         |
+|  IF ASKED "how do you scale queries?":                                  |
+|  * Shard by metric name / label prefix                                  |
+|  * Cache heavy dashboards (Grafana query cache)                         |
+|  * Recording rules: precompute expensive aggregations                   |
+|                                                                         |
+|  IF ASKED "high-cardinality metrics?":                                  |
+|  * Careful with label combinations (user_id, request_id -> BOOM)        |
+|  * Aggregate at emit time; use tracing for high-cardinality per-        |
+|      request data                                                       |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * Prometheus: 1-2 bytes/sample with encoding                           |
+|  * Scrape interval: 15-60s typical                                      |
+|  * Retention: 15 days local, longer via remote_write (Thanos,           |
+|      Cortex)                                                            |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * Prometheus + Grafana + Alertmanager: open-source standard            |
+|  * Datadog, New Relic, Dynatrace: commercial SaaS                       |
+|  * Thanos, Cortex, Mimir: horizontally-scaled Prometheus long-term      |
+|      storage                                                            |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Collect (pull or push) -> TSDB with downsampling -> PromQL for        |
+|      queries + alerts; watch label cardinality religiously."            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```

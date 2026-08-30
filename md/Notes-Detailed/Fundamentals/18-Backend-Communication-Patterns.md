@@ -898,5 +898,62 @@ distributed systems and microservices architectures.
 +-------------------------------------------------------------------------+
 ```
 
+## INTERVIEW CRUX — SAY THIS
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  BACKEND COMMUNICATION PATTERNS — WHAT TO SAY                           |
+|                                                                         |
+|  DEFAULT ANSWER:                                                        |
+|  * Request-response for user-facing sync calls (REST/gRPC over          |
+|      HTTP)                                                              |
+|  * Async messaging (Kafka / SQS) between services for durability +      |
+|      decoupling                                                         |
+|  * Connection pooling on every DB / downstream client (10-100           |
+|      conns/instance)                                                    |
+|  * HTTP/2 multiplexing to avoid TCP connection blowup at high fan-      |
+|      out                                                                |
+|  * Sidecar pattern (Envoy) for cross-cutting concerns: TLS,             |
+|      retries, tracing                                                   |
+|                                                                         |
+|  IF ASKED "why HTTP/2 or gRPC over HTTP/1?":                            |
+|  * HTTP/1: 1 request per TCP conn -> head-of-line blocking,             |
+|      connection blowup                                                  |
+|  * HTTP/2: multiplexed streams over one conn -> 5-10x fewer conns       |
+|  * gRPC: HTTP/2 + Protobuf + streaming -- ideal for service-to-         |
+|      service                                                            |
+|                                                                         |
+|  IF ASKED "why connection pooling?":                                    |
+|  * TCP handshake + TLS handshake = 100+ ms without reuse                |
+|  * Pool avoids the cost -- pooled conns typically 10-100 per            |
+|      instance                                                           |
+|  * Tune pool max to avoid overwhelming downstream (DB, Redis)           |
+|                                                                         |
+|  IF ASKED "what is the sidecar pattern?":                               |
+|  * A proxy (Envoy, Linkerd) deployed next to each service pod           |
+|  * Handles TLS termination, retries, timeouts, tracing, mTLS            |
+|  * Service code stays language-agnostic                                 |
+|                                                                         |
+|  NUMBERS TO DROP:                                                       |
+|  * HTTP/1 default: 1-6 conns per host                                   |
+|  * HTTP/2: single conn, ~100 concurrent streams                         |
+|      (SETTINGS_MAX_CONCURRENT_STREAMS)                                  |
+|  * DB conn pool typical: 10-100 per app instance                        |
+|  * TCP handshake: ~1 RTT; +TLS handshake: 1-2 more RTTs                 |
+|                                                                         |
+|  REAL-WORLD PATTERNS TO NAME-DROP:                                      |
+|  * gRPC: Google's internal RPC standard, adopted at Netflix/Uber        |
+|  * Istio + Envoy: sidecar service mesh at scale (Airbnb, Stripe)        |
+|  * Uber: Ringpop + TChannel for internal RPC before adopting gRPC       |
+|                                                                         |
+|  ONE-LINE CRUX:                                                         |
+|  "Sync req-response for user calls, async queues between services,      |
+|      HTTP/2+gRPC + connection pooling for efficiency, sidecar for       |
+|      cross-cutting concerns."                                           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
 ## END OF CHAPTER 18
 
