@@ -487,7 +487,395 @@ Watch how the template + numbers give you a full sizing in one minute.
 
 ---
 
-## SECTION 25.13: QUICK-REFERENCE CHEAT CARD (one-page condensed)
+## SECTION 25.13: SCALE-UP LADDER — WHAT ONE NODE HANDLES & WHEN TO SUBSTITUTE
+
+**The single most useful table in this chapter.** For each component,
+here's what one node handles, and what you switch to when you outgrow it.
+Numbers are conservative, so they're safe to quote.
+
+### 25.13.1 SQL Database (Postgres / MySQL)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 5k QPS mixed           Single node                 Reads slow, or    |
+|  (1 box, 32-128 GB RAM)   vertical scale is enough    box too expensive |
+|                                                                         |
+|  5-50k read QPS           1 primary + N read replicas Writes hit primary|
+|                           (async replication, ~1s lag) ceiling          |
+|                                                                         |
+|  5-15k write QPS          Single primary              Need >15k writes  |
+|                           (write to primary only)                       |
+|                                                                         |
+|  15-100k write QPS        SHARD by user_id / tenant   Cross-shard joins |
+|                           (Vitess, Citus, or manual)  or transactions   |
+|                                                                         |
+|  100k+ write QPS,         Switch to NoSQL KV          Loss of SQL/JOINs |
+|  no cross-shard joins     (Cassandra, DynamoDB)       is acceptable     |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  1 node → + 3 read replicas → 4-16 shards          |
+|                       → Cassandra / DynamoDB                            |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.2 NoSQL Wide-Column / KV (Cassandra, DynamoDB, Scylla)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 10k writes/s           Single Cassandra node       Skip Cassandra —  |
+|                           (or DynamoDB on-demand)     use SQL instead   |
+|                                                                         |
+|  10k-100k writes/s        Cluster of 3-10 nodes       Need cross-region |
+|                           RF=3, quorum reads/writes   HA / write local  |
+|                                                                         |
+|  100k-1M writes/s         Cluster of 20-100 nodes     Hot partitions;   |
+|                           tune partition key hard     redesign schema   |
+|                                                                         |
+|  1M+ writes/s             Multi-DC Cassandra          Consider bespoke  |
+|                           (LinkedIn, Netflix scale)   (FoundationDB)    |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  3-node cluster → 10 nodes → 30 nodes multi-DC     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.3 Cache (Redis, Memcached)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 100k ops/s             Single Redis instance       RAM > 100 GB, or  |
+|  Hot set < 100 GB RAM     (one primary + 1 replica)   ops > node ceiling|
+|                                                                         |
+|  100k-500k ops/s          Redis primary + replicas    Single primary    |
+|  Hot set < 500 GB         (reads spread across)       cannot fan-out    |
+|                                                                         |
+|  500k-10M ops/s           REDIS CLUSTER (shards)      Cross-shard ops   |
+|  Hot set 500 GB - 5 TB    16384 slots hashed by key   (MULTI, scripts)  |
+|                                                       become painful    |
+|                                                                         |
+|  > 10M ops/s              Multi-region Redis Cluster  Consider TiKV     |
+|                           + client-side hashing       or DynamoDAX      |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  1 primary → + replicas → Redis Cluster (6-30      |
+|                        shards) → multi-region                           |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.4 Message Queue / Streaming (Kafka)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 100k msgs/s            RabbitMQ / SQS / Redis pub  Need replay,      |
+|                           (queues, not streams)       ordering, or fan- |
+|                                                       out to N consumers|
+|                                                                         |
+|  100k-1M msgs/s           Single Kafka cluster        Cluster too large |
+|  < 10 TB retention        3-5 brokers, RF=3           to manage         |
+|                                                                         |
+|  1M-10M msgs/s            Kafka cluster of 10-50      Cross-DC bandwidth|
+|                           brokers, tiered storage     for replication   |
+|                                                                         |
+|  10M+ msgs/s              Multi-cluster + MirrorMaker Consider Pulsar   |
+|                           (LinkedIn, Uber, Netflix)   (native multi-DC) |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  SQS → Kafka 3-broker → Kafka 10-30 broker         |
+|                        → multi-cluster Kafka / Pulsar                   |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.5 Application Server (stateless HTTP / gRPC)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 10k QPS                Single VM behind LB         CPU-bound or      |
+|  (1 medium instance)      (autoscale to 2 for HA)     latency SLO tight |
+|                                                                         |
+|  10k-100k QPS             Autoscaling group of        Cross-region      |
+|                           5-50 instances behind LB    latency for users |
+|                                                                         |
+|  100k-1M QPS              Multi-AZ autoscaling +      Global users need |
+|                           regional deployment         edge presence     |
+|                                                                         |
+|  1M+ QPS                  Multi-region + edge         Static edge only? |
+|                           (Cloudflare Workers, Lambda@Edge)             |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  1 VM → autoscaling group → multi-AZ → multi-region|
+|                        → edge compute                                   |
+|                                                                         |
+|  NOTE: App tier is trivially horizontal (stateless). The DB is almost   |
+|  always the bottleneck. Fix the DB before you scale the app tier.       |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.6 Load Balancer
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 10k conn/s             Nginx / HAProxy on 1 VM     Single point of   |
+|                           (works up to 50k on big VM) failure           |
+|                                                                         |
+|  10k-100k conn/s          Cloud L4 LB                 Global users,     |
+|                           (AWS NLB, GCP TCP LB)       geo-routing needed|
+|                                                                         |
+|  100k-1M conn/s           Cloud L7 LB (ALB)           Need custom logic |
+|                           + cluster of nginx/Envoy    at extreme scale  |
+|                                                                         |
+|  1M+ conn/s               Anycast DNS + regional      Almost never —    |
+|                           LBs (Cloudflare, Route53)   this is FAANG tier|
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  Nginx → cloud LB → anycast DNS + regional LBs     |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.7 Search (Elasticsearch / OpenSearch)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 1k QPS                 Single ES node              Index too big for |
+|  < 100 GB index           (m5.xlarge)                 one node's RAM    |
+|                                                                         |
+|  1k-10k QPS               3-node cluster              Query fan-out is  |
+|  100 GB - 1 TB index      RF=1 or 2, sharded by _id   the bottleneck    |
+|                                                                         |
+|  10k-100k QPS             10-50 node cluster with     Complex queries   |
+|  1-100 TB index           dedicated coordinating + hot/warm tiers       |
+|                                                                         |
+|  100k+ QPS                Purpose-built stack:        You are Twitter   |
+|                           Vespa (Yahoo) or Manticore  or Google         |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  1 node → 3-node cluster → hot/warm tiered cluster |
+|                        → Vespa / custom                                 |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.8 Object Storage (S3-style)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  SCALE                    SETUP                       WHEN TO LEAVE     |
+|                                                                         |
+|  < 100 TB / < 1k QPS      Single S3 bucket            Hot prefix limits |
+|                                                       (3.5k PUT/prefix) |
+|                                                                         |
+|  100 TB - 100 PB          Bucket with prefix-based    Cross-region      |
+|                           sharding (uuid-prefix)      access latency    |
+|                                                                         |
+|  100 PB+                  Multi-region S3 or          Cost / operations |
+|                           self-hosted (Ceph, MinIO)   at extreme scale  |
+|                                                                         |
+|  DEFAULT SUBSTITUTE:  1 bucket → prefix-sharded → multi-region          |
+|                        → self-hosted Ceph                               |
+|                                                                         |
+|  KEY GOTCHA: S3 rate-limits by KEY PREFIX. To get 100k QPS out of one   |
+|  bucket, spread keys across 30+ prefixes (hash the first N chars).      |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.13.9 Summary — the "if you outgrow, switch to" one-liner table
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  COMPONENT       ONE-NODE LIMIT          NEXT STEP → LAST STEP          |
+|                                                                         |
+|  SQL DB          10k writes/s            + replicas → shards → NoSQL    |
+|                  50k reads/s (w/ repl)                                  |
+|                                                                         |
+|  NoSQL KV        50k writes/s / node     10-node cluster → multi-DC     |
+|                                                                         |
+|  Redis           100k ops/s              + replicas → Redis Cluster     |
+|                                                                         |
+|  Memcached       300k ops/s              consistent-hashed pool         |
+|                                                                         |
+|  Kafka broker    1M msgs/s               multi-broker cluster           |
+|                                                                         |
+|  App server      10k QPS                 autoscale group → multi-region |
+|                                                                         |
+|  Nginx / HAProxy 50-100k QPS             cloud LB → anycast DNS         |
+|                                                                         |
+|  Elasticsearch   1k QPS                  3-node cluster → hot/warm tier |
+|                                                                         |
+|  S3 bucket       3.5k PUT / 5.5k GET     prefix sharding                |
+|                  per prefix                                             |
+|                                                                         |
+|  Postgres conns  ~ 500 direct            PgBouncer → RDS Proxy          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+---
+
+## SECTION 25.14: PRE-SIZED INFRA FOR STANDARD SCALE TIERS
+
+Rather than derive from scratch, memorize what a **Small / Medium /
+Large** system looks like. Then map any interview problem to one of
+these tiers and adjust.
+
+### 25.14.1 SMALL — 1M DAU (typical startup that's found PMF)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ASSUMPTIONS: 1M DAU, 10 actions/user/day, 1 KB avg payload,            |
+|               read:write = 20:1, peak = 3x                              |
+|                                                                         |
+|  DERIVED LOAD                                                           |
+|  * Total actions/day    = 10M                                           |
+|  * Avg QPS              = 100 QPS   (10M / 10^5)                        |
+|  * Peak QPS             = 300 QPS                                       |
+|  * Peak writes          = ~ 15 QPS                                      |
+|  * Peak reads           = ~ 285 QPS                                     |
+|  * Storage/day          = 10M × 1 KB = 10 GB (writes only ~500 MB)      |
+|  * Storage / 3 years    = ~ 500 GB                                      |
+|                                                                         |
+|  RECOMMENDED INFRA                                                      |
+|  * App tier             : 2-3 mid VMs (autoscaling)                     |
+|  * SQL DB               : 1 primary (Postgres) + 1 replica              |
+|  * Cache                : 1 Redis instance (16 GB)                      |
+|  * Object storage       : S3 (any bucket)                               |
+|  * Queue                : SQS or Redis lists                            |
+|  * LB                   : 1 cloud LB                                    |
+|  * Monitoring           : Datadog / Grafana Cloud                       |
+|                                                                         |
+|  MONTHLY COST           : ~ $2k – $10k                                  |
+|                                                                         |
+|  WHAT NOT TO DO: don't shard, don't run Kafka, don't build multi-region.|
+|  You are not big enough for that infra tax yet.                         |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.14.2 MEDIUM — 100M DAU (typical popular consumer app)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ASSUMPTIONS: 100M DAU, 20 actions/user/day, 1 KB payload,              |
+|               read:write = 50:1, peak = 3x                              |
+|                                                                         |
+|  DERIVED LOAD                                                           |
+|  * Total actions/day    = 2B                                            |
+|  * Avg QPS              = 20,000 QPS                                    |
+|  * Peak QPS             = 60,000 QPS                                    |
+|  * Peak writes          = ~ 1,200 QPS                                   |
+|  * Peak reads           = ~ 58,000 QPS                                  |
+|  * Storage/day          = 2B × 1 KB = 2 TB                              |
+|  * Storage / 3 years    = ~ 2 PB   (before compression)                 |
+|                                                                         |
+|  RECOMMENDED INFRA                                                      |
+|  * App tier             : 20-50 VMs, autoscaling, multi-AZ              |
+|  * SQL DB               : 4-shard Postgres (Vitess/Citus)               |
+|                           + 3 read replicas per shard                   |
+|  * Cache                : Redis Cluster, 6-10 shards (~ 500 GB hot set) |
+|  * Object storage       : S3 with prefix sharding                       |
+|  * Queue                : Kafka, 5-broker cluster                       |
+|  * Search               : ES cluster, 5 nodes                           |
+|  * LB                   : Cloud L7 LB (ALB) + CDN in front              |
+|  * Analytics            : Kafka → Flink → ClickHouse or BigQuery        |
+|                                                                         |
+|  MONTHLY COST           : ~ $100k – $500k                               |
+|                                                                         |
+|  KEY DESIGN DECISIONS: cache aggressively (50:1 read ratio), shard the  |
+|  DB, Kafka replaces SQS, add CDN for static + read-through.             |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.14.3 LARGE — 1B DAU (FAANG-tier consumer app)
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  ASSUMPTIONS: 1B DAU, 30 actions/user/day, 1 KB payload,                |
+|               read:write = 100:1, peak = 5x                             |
+|                                                                         |
+|  DERIVED LOAD                                                           |
+|  * Total actions/day    = 30B                                           |
+|  * Avg QPS              = 300,000 QPS                                   |
+|  * Peak QPS             = 1,500,000 QPS   (1.5M QPS)                    |
+|  * Peak writes          = ~ 15,000 QPS                                  |
+|  * Peak reads           = ~ 1.485M QPS                                  |
+|  * Storage/day          = 30B × 1 KB = 30 TB                            |
+|  * Storage / 5 years    = ~ 55 PB                                       |
+|                                                                         |
+|  RECOMMENDED INFRA                                                      |
+|  * App tier             : 500-2000 instances, multi-region              |
+|  * DB                   : Cassandra/DynamoDB, 50-200 nodes multi-DC     |
+|                           (SQL sharding doesn't scale here)             |
+|  * Cache                : Redis Cluster + CDN + client-side cache       |
+|                           (3-tier caching)                              |
+|  * Object storage       : S3 multi-region, custom sharding              |
+|  * Queue                : Kafka, 30+ broker cluster, tiered storage     |
+|  * Search               : Custom stack (Vespa) or 100-node ES           |
+|  * LB                   : Anycast DNS (Route53) + regional LBs          |
+|  * Edge                 : Cloudflare / Lambda@Edge for static + rules   |
+|  * Analytics            : Kafka → Flink → Druid + BigQuery/S3 warehouse |
+|                                                                         |
+|  MONTHLY COST           : ~ $10M+  (this is what "hyperscale" costs)    |
+|                                                                         |
+|  KEY DESIGN DECISIONS: multi-region is mandatory, DB is NoSQL (no       |
+|  cross-shard transactions), aggressive 3-tier caching, edge compute     |
+|  for latency, custom infra where OSS ceilings are hit.                  |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+### 25.14.4 Side-by-side comparison
+
+```
++-------------------------------------------------------------------------+
+|                                                                         |
+|  METRIC              SMALL (1M)      MEDIUM (100M)     LARGE (1B)       |
+|                                                                         |
+|  Avg QPS               100             20,000          300,000          |
+|  Peak QPS              300             60,000          1,500,000        |
+|  Storage / 3-5 yr      500 GB          2 PB            55 PB            |
+|  App servers           2-3             20-50           500-2000         |
+|  DB                    1 SQL + repl    4-8 SQL shards  50-200 NoSQL     |
+|  Cache                 1 Redis         Redis Cluster   3-tier + CDN     |
+|  Queue                 SQS             Kafka 5 brokers Kafka 30+ brokers|
+|  Regions               1               1-3             all continents   |
+|  Monthly cost          $2k – $10k      $100k – $500k   $10M+            |
+|  Team required         2-5 eng         50-100 eng      1000+ eng        |
+|                                                                         |
+|  INTERVIEW HACK: figure out which tier the problem is in, then quote    |
+|  the row. E.g. "This is a MEDIUM-scale problem: 20k avg QPS, 60k peak,  |
+|  4-shard SQL, Redis Cluster, Kafka for async."                          |
+|                                                                         |
++-------------------------------------------------------------------------+
+```
+
+---
+
+## SECTION 25.15: QUICK-REFERENCE CHEAT CARD (one-page condensed)
 
 Print this. Tape it to your monitor.
 
@@ -542,7 +930,7 @@ Print this. Tape it to your monitor.
 
 ---
 
-## SECTION 25.14: COMMON MISTAKES / RED FLAGS TO AVOID
+## SECTION 25.16: COMMON MISTAKES / RED FLAGS TO AVOID
 
 ```
 +-------------------------------------------------------------------------+
